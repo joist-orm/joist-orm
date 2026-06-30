@@ -1,3 +1,12 @@
+extend type Query {
+  author(id: ID!): Author!
+  authors(filter: AuthorFilter, limit: Int, offset: Int): AuthorsPage!
+}
+
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
 type Author {
   id: ID!
   firstName: String!
@@ -12,15 +21,13 @@ type Author {
   updatedAt: Date!
   mentor: Author
   publisher: Publisher
-  authors: [Author!]!
   books: [Book!]!
   image: Image
   graduated: Date
   favoriteColors: [Color!]!
-  favoriteShape: FavoriteShape!
+  favoriteShape: FavoriteShape
   tags: [Tag!]!
   currentDraftBook: Book
-  author: Image
   bookComments: String
   deletedAt: DateTime
   numberOfPublicReviews: Int
@@ -28,9 +35,9 @@ type Author {
   userOneToOne: User
   favoriteBook: Book
   numberOfPublicReviews2: Int
-  numberOfAtoms: Int
+  numberOfAtoms: BigInt
   tagsOfAllBooks: String!
-  nickNames: String
+  nickNames: [String!]
   graphqlOnlyField(arg: Int): Int!
   tasks: [Task!]!
   rangeOfBooks: BookRangeDetail
@@ -63,8 +70,8 @@ input SaveAuthorInput {
   deletedAt: DateTime
   ssn: String
   favoriteBookId: ID
-  numberOfAtoms: Int
-  nickNames: String
+  numberOfAtoms: BigInt
+  nickNames: [String!]
   rangeOfBooks: BookRange
   mentorNames: String
   isFunny: Boolean
@@ -76,6 +83,41 @@ type SaveAuthorResult {
   author: Author!
 }
 
-extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+type AuthorsPage {
+  entities: [Author!]!
+  pageInfo: PageInfo!
+}
+
+input AuthorFilter {
+  id: [ID!]
+  firstName: [String!]
+  lastName: [String!]
+  ssn: [String!]
+  initials: [String!]
+  numberOfBooks: [Int!]
+  bookComments: [String!]
+  isPopular: [Boolean!]
+  age: [Int!]
+  graduated: [Date!]
+  wasEverPopular: [Boolean!]
+  isFunny: [Boolean!]
+  mentorNames: [String!]
+  menteeNames: [String!]
+  deletedAt: [DateTime!]
+  numberOfPublicReviews: [Int!]
+  numberOfPublicReviews2: [Int!]
+  tagsOfAllBooks: [String!]
+  search: [String!]
+  imageFileName: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  rangeOfBooks: [BookRange!]
+  favoriteColors: [[Color!]!]
+  favoriteShape: [FavoriteShape!]
+  mentorId: [ID!]
+  rootMentorId: [ID!]
+  currentDraftBookId: [ID!]
+  favoriteBookId: [ID!]
+  publisherId: [ID!]
+  numberOfAtoms: [BigInt!]
 }

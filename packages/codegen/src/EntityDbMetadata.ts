@@ -27,6 +27,7 @@ import {
   isEnumTable,
   isJoinTable,
   isSubClassTable,
+  joinTableHasId,
   mapSimpleDbTypeToTypescriptType,
   parseOrder,
   tableToEntityName,
@@ -65,6 +66,29 @@ export type Entity = {
   /** The symbol pointing to the entity's config const. */
   configConst: Import;
   optsType: Import;
+  // The names of the entity's codegen'd types, i.e. `AuthorId`, that `resolveNameConflicts` rewrites
+  // to `Author_Id` when they would collide with another entity/enum name. The `Import`s above
+  // (`idType`/`orderType`/`optsType`) are rebuilt to match when that happens.
+  /** i.e. `AuthorId` (or `Author_Id` on conflict). */
+  idName: string;
+  /** i.e. `AuthorFields`. */
+  fieldsName: string;
+  /** i.e. `AuthorOpts`. */
+  optsName: string;
+  /** i.e. `AuthorIdsOpts`. */
+  idsOptsName: string;
+  /** i.e. `AuthorFilter`. */
+  filterName: string;
+  /** i.e. `AuthorGraphQLFilter`. */
+  graphqlFilterName: string;
+  /** i.e. `AuthorOrder`. */
+  orderName: string;
+  /** i.e. `AuthorFactoryExtras`. */
+  factoryExtrasName: string;
+  /** i.e. `AuthorScope`. */
+  scopeName: string;
+  /** i.e. `AuthorScopes`. */
+  scopesName: string;
 };
 
 export type DatabaseColumnType =
@@ -202,6 +226,25 @@ export type ManyToManyField = Field & {
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
   derived: "async" | "otherSide" | false;
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
+};
+
+/** I.e. a `Publisher.logoColors` m2m to the `color` enum table, backed by `publisher_logo_colors`. */
+export type ManyToManyEnumField = Field & {
+  kind: "m2mEnum";
+  joinTableName: string;
+  /** The entity's FK column, e.g. `publisher_id`. */
+  columnName: string;
+  /** The enum's FK column, e.g. `logo_color_id`. */
+  otherColumnName: string;
+  enumName: string;
+  enumType: Import;
+  enumDetailType: Import;
+  enumDetailsType: Import;
+  enumRows: EnumRow[];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -240,6 +283,7 @@ export class EntityDbMetadata {
   oneToOnes: OneToOneField[];
   manyToManys: ManyToManyField[];
   largeManyToManys: ManyToManyField[];
+  manyToManyEnums: ManyToManyEnumField[];
   polymorphics: PolymorphicField[];
   tableName: string;
   tagName: string;
@@ -333,10 +377,20 @@ export class EntityDbMetadata {
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
       .filter((r) => isJoinTable(config, r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
+      // Join tables whose "other" side is an enum table become EnumCollections instead.
+      .filter((r) => !isEnumTable(config, r.targetTable))
       .map((r) => newManyToManyField(config, this.entity, r))
       .filter((f) => !f.ignore);
     this.manyToManys = allManyToManys.filter((f) => !f.isLargeCollection);
     this.largeManyToManys = allManyToManys.filter((f) => f.isLargeCollection);
+
+    // A join table between us and an enum table, i.e. `Publisher.logoColors`.
+    this.manyToManyEnums = table.m2mRelations
+      .filter((r) => isJoinTable(config, r.joinTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .filter((r) => isEnumTable(config, r.targetTable))
+      .map((r) => newManyToManyEnumField(config, this.entity, r, enums))
+      .filter((f) => !f.ignore);
 
     this.polymorphics = polymorphicRelations(config, table).map((rc) =>
       newPolymorphicField(config, table, this.entity, rc),
@@ -691,6 +745,33 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
     derived,
+    hasJoinTableId: joinTableHasId(r.joinTable),
+  };
+}
+
+function newManyToManyEnumField(
+  config: Config,
+  entity: Entity,
+  r: M2MRelation,
+  enums: EnumMetadata,
+): ManyToManyEnumField {
+  const { foreignKey, targetForeignKey, targetTable } = r;
+  // For publisher_logo_colors.logo_color_id use the `logo_color_id` column i.e. `logoColors`
+  const fieldName = manyToManyName(targetForeignKey.columns[0]);
+  const enumName = tableToEntityName(config, targetTable);
+  return {
+    kind: "m2mEnum",
+    joinTableName: r.joinTable.name,
+    fieldName,
+    columnName: foreignKey.columns[0].name,
+    otherColumnName: targetForeignKey.columns[0].name,
+    enumName,
+    enumType: imp(`${enumName}@./entities.ts`),
+    enumDetailType: imp(`${plural(enumName)}@./entities.ts`),
+    enumDetailsType: imp(`${enumName}Details@./entities.ts`),
+    enumRows: enums[targetTable.name].rows,
+    ignore: isFieldIgnored(config, entity, fieldName),
+    hasJoinTableId: joinTableHasId(r.joinTable),
   };
 }
 
@@ -856,6 +937,7 @@ export function failIfOverlappingFieldNames(entity: EntityDbMetadata): void {
     ...entity.oneToOnes,
     ...entity.manyToManys,
     ...entity.largeManyToManys,
+    ...entity.manyToManyEnums,
     ...entity.polymorphics,
   ];
   Object.entries(groupBy(allFields, (f) => f.fieldName)).forEach(([fieldName, fields]) => {
@@ -868,6 +950,8 @@ export function failIfOverlappingFieldNames(entity: EntityDbMetadata): void {
 }
 
 export function makeEntity(entityName: string): Entity {
+  // Default to the conventional names; `resolveNameConflicts` rewrites them if they collide.
+  const names = entitySymbolNames(entityName);
   return {
     name: entityName,
     type: entityType(entityName),
@@ -875,13 +959,102 @@ export function makeEntity(entityName: string): Entity {
     typeForMetadataFile: entityTypeForMetadataFile(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
-    idType: imp(`t:${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    orderType: imp(`t:${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    optsType: imp(`t:${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    idType: entityTypeImport(entityName, names.idName),
+    orderType: entityTypeImport(entityName, names.orderName),
+    optsType: entityTypeImport(entityName, names.optsName),
     configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, {
       definedIn: `./codegen/${entityName}Codegen.ts`,
     }),
+    ...names,
   };
+}
+
+/**
+ * Collapses the per-relation `otherEntity` copies down to the one primary `Entity` per name.
+ *
+ * `makeEntity` mints a fresh `Entity` for every relation's `otherEntity`, so each entity ends up with
+ * many duplicate objects floating around. Pointing them all at the single `entitiesByName[name].entity`
+ * instance means later passes (i.e. `resolveNameConflicts`) only have to update one object per name.
+ *
+ * Must run after inheritance, since STI/CTI specialization both adds and re-points `otherEntity`s.
+ */
+export function canonicalizeOtherEntities(db: DbMetadata): void {
+  const canonical = (other: Entity) => db.entitiesByName[other.name]?.entity ?? other;
+  for (const meta of db.entities) {
+    for (const field of [
+      ...meta.manyToOnes,
+      ...meta.oneToManys,
+      ...meta.largeOneToManys,
+      ...meta.oneToOnes,
+      ...meta.manyToManys,
+      ...meta.largeManyToManys,
+    ]) {
+      field.otherEntity = canonical(field.otherEntity);
+    }
+    for (const poly of meta.polymorphics) {
+      for (const comp of poly.components) comp.otherEntity = canonical(comp.otherEntity);
+    }
+  }
+}
+
+/**
+ * Rewrites codegen'd type names that collide with another exported type name.
+ *
+ * `makeEntity` defaults each name to the conventional `${name}<Suffix>`, but if a separate entity or
+ * enum is literally named e.g. `AuthorScope` or `AuthorOrder`, our generated type of the same name
+ * would collide with it, so we fall back to `Author_Scope` / `Author_Order`.
+ *
+ * Relies on `canonicalizeOtherEntities` having run, so mutating each primary `meta.entity` also updates
+ * the `otherEntity` references that point at it (e.g. `Book.author: AuthorId` follows `Author`'s rename).
+ */
+export function resolveNameConflicts(config: Config, db: DbMetadata): void {
+  // The names exported into `entities.ts` that a codegen'd type could shadow.
+  const reserved = new Set<string>(db.entities.map((meta) => meta.name));
+  for (const enumData of Object.values(db.enums)) {
+    // An enum table exports its (singularized) type, its `Details` type/const, and its pluralized const,
+    // i.e. `ChangeRequestAssetScope`, `ChangeRequestAssetScopeDetails`, and `ChangeRequestAssetScopes`.
+    const enumName = tableToEntityName(config, enumData.table);
+    reserved.add(enumName).add(`${enumName}Details`).add(plural(enumName));
+  }
+  for (const pgEnum of Object.values(db.pgEnums)) reserved.add(pgEnum.name);
+  for (const meta of db.entities) {
+    if (hasNameConflict(meta.name, reserved)) applyEntityNames(meta.entity, reserved);
+  }
+}
+
+/** Computes the codegen'd type names for an entity, underscoring any that `reserved` already contains. */
+function entitySymbolNames(name: string, reserved?: Set<string>) {
+  const pick = (suffix: string) => (reserved?.has(`${name}${suffix}`) ? `${name}_${suffix}` : `${name}${suffix}`);
+  return {
+    idName: pick("Id"),
+    fieldsName: pick("Fields"),
+    optsName: pick("Opts"),
+    idsOptsName: pick("IdsOpts"),
+    filterName: pick("Filter"),
+    graphqlFilterName: pick("GraphQLFilter"),
+    orderName: pick("Order"),
+    factoryExtrasName: pick("FactoryExtras"),
+    scopeName: pick("Scope"),
+    scopesName: pick("Scopes"),
+  };
+}
+
+/** Returns true if any of the entity's conventional type names is already taken. */
+function hasNameConflict(name: string, reserved: Set<string>): boolean {
+  return Object.values(entitySymbolNames(name)).some((conventional) => reserved.has(conventional));
+}
+
+/** Rewrites an entity's type names (and the `Import`s built from them) to their de-conflicted form. */
+function applyEntityNames(entity: Entity, reserved: Set<string>): void {
+  const names = entitySymbolNames(entity.name, reserved);
+  Object.assign(entity, names);
+  entity.idType = entityTypeImport(entity.name, names.idName);
+  entity.orderType = entityTypeImport(entity.name, names.orderName);
+  entity.optsType = entityTypeImport(entity.name, names.optsName);
+}
+
+function entityTypeImport(entityName: string, symbolName: string): Import {
+  return imp(`t:${symbolName}@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` });
 }
 
 function metaName(entityName: string): string {

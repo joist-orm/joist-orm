@@ -24,10 +24,12 @@ import {
   type ManyToOneReference,
   mustBeSubType,
   newChangesProxy,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -103,8 +105,11 @@ export interface TaskNewFilter extends TaskFilter {
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
   selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  selfReferentialId?: ValueGraphQLFilter<TaskNewId>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  specialNewAuthorId?: ValueGraphQLFilter<AuthorId>;
   copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  copiedFromId?: ValueGraphQLFilter<TaskNewId>;
   newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   copiedTo?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
@@ -120,7 +125,14 @@ export interface TaskNewOrder extends TaskOrder {
 export interface TaskNewFactoryExtras {
 }
 
+export interface TaskNewScopes {
+}
+
+export type TaskNewScope = Scope<TaskNew, TaskNewScopes>;
+
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
+
+export const taskNewScope = newScopeFn<TaskNew, TaskNewScope>("TaskNew");
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));

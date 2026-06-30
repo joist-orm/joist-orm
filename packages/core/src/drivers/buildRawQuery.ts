@@ -3,6 +3,8 @@ import { kq, kqDot } from "../keywords";
 import { assertNever, cleanSql } from "../utils";
 import { buildWhereClause } from "./buildUtils";
 
+type QuerySettings = { limit?: number; offset?: number };
+
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.
  *
@@ -11,7 +13,7 @@ import { buildWhereClause } from "./buildUtils";
  */
 export function buildRawQuery(
   parsed: ParsedFindQuery,
-  settings: { limit?: number; offset?: number },
+  settings: QuerySettings,
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
@@ -89,7 +91,7 @@ export function buildRawQuery(
     } else if (t.join === "primary") {
       // handled above
     } else if (t.join === "lateral") {
-      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, t.settings ?? {});
       sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
       bindings.push(...subB);
     } else if (t.join === "cross") {
@@ -108,18 +110,22 @@ export function buildRawQuery(
   }
 
   if (parsed.groupBys && parsed.groupBys.length > 0) {
-    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
+    sql +=
+      " GROUP BY " +
+      parsed.groupBys
+        .map((gb) => ("expression" in gb ? gb.expression : kqDot(gb.alias, gb.column)))
+        .join(", ");
   }
 
   if (parsed.orderBys.length > 0) {
     sql += " ORDER BY " + parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column) + " " + ob.order).join(", ");
   }
 
-  if (limit) {
+  if (limit !== undefined) {
     sql += ` LIMIT ?`;
     bindings.push(limit);
   }
-  if (offset) {
+  if (offset !== undefined) {
     sql += ` OFFSET ?`;
     bindings.push(offset);
   }

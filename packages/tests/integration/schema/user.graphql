@@ -33,3 +33,27 @@ type SaveUserResult {
 }
 
 union UserFavoritePublisher = LargePublisher | SmallPublisher
+
+extend type Query {
+  user(id: ID!): User!
+  users(filter: UserFilter, limit: Int, offset: Int): UsersPage!
+}
+
+type UsersPage {
+  entities: [User!]!
+  pageInfo: PageInfo!
+}
+
+input UserFilter {
+  id: [ID!]
+  name: [String!]
+  email: [String!]
+  bio: [String!]
+  originalEmail: [String!]
+  trialPeriod: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  managerId: [ID!]
+  authorManyToOneId: [ID!]
+  favoritePublisherId: [ID!]
+}

@@ -8,6 +8,7 @@ import {
   EntityMetadata,
   getEmInternalApi,
   getInstanceData,
+  getMetadataForField,
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
@@ -247,11 +248,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   public get otherMeta(): EntityMetadata {
-    return (getMetadata(this.entity).allFields[this.fieldName] as OneToManyField).otherMetadata();
+    return this.#field.otherMetadata();
   }
 
   public get hasBeenSet(): boolean {

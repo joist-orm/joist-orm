@@ -22,23 +22,23 @@
     "pg-types": "^4.1.0"
   },
   "dependencies": {
-    "@dprint/formatter": "^0.2.1",
-    "@dprint/json": "0.15.6",
+    "@dprint/formatter": "^0.5.1",
+    "@dprint/json": "^0.21.3",
     "@types/prettier": "^3.0.0",
     "change-case": "^4.1.2",
-    "graphql": "^16.14.0",
+    "graphql": "^16.14.2",
     "pluralize": "^8.0.0",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "ts-poet": "^6.12.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.33",
+    "@swc/core": "^1.15.43",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.0.1",
     "jest": "30.4.2",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
   }
 }

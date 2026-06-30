@@ -64,4 +64,24 @@ exports.up = (b) => {
     id: { type: "id", primaryKey: true },
     name: { type: "varchar(255)", notNull: true },
   });
+
+  // For testing id-less m2m tables, i.e. the join table's primary key is just the
+  // composite of its two foreign keys, with no surrogate `id` column.
+  b.sql(`
+    CREATE TABLE book_to_tags (
+      "bookId" int NOT NULL REFERENCES book (id),
+      "tagId" int NOT NULL REFERENCES tags (id),
+      PRIMARY KEY ("bookId", "tagId")
+    );
+  `);
+
+  // Same id-less shape, but with a `createdAt` column (db default) alongside the FK-pair PK.
+  b.sql(`
+    CREATE TABLE database_owner_to_tags (
+      "databaseOwnerId" int NOT NULL REFERENCES database_owners (id),
+      "tagId" int NOT NULL REFERENCES tags (id),
+      "createdAt" timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      PRIMARY KEY ("databaseOwnerId", "tagId")
+    );
+  `);
 };

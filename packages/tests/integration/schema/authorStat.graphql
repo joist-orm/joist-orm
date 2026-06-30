@@ -1,14 +1,22 @@
+extend type Query {
+  authorStat(id: ID!): AuthorStat!
+  authorStats(filter: AuthorStatFilter, limit: Int, offset: Int): AuthorStatsPage!
+}
+
+extend type Mutation {
+  saveAuthorStat(input: SaveAuthorStatInput!): SaveAuthorStatResult!
+}
+
 type AuthorStat {
   id: ID!
   smallint: Int!
   integer: Int!
-  bigint: Int!
+  bigint: BigInt!
   decimal: Int!
   real: Int!
   smallserial: Int!
   serial: Int!
-  bigserial: Int!
-  doubleOrecision: Int!
+  bigserial: BigInt!
   createdAt: DateTime!
   updatedAt: DateTime!
   doublePrecision: Int!
@@ -16,21 +24,16 @@ type AuthorStat {
   nullableText: String
 }
 
-extend type Mutation {
-  saveAuthorStat(input: SaveAuthorStatInput!): SaveAuthorStatResult!
-}
-
 input SaveAuthorStatInput {
   id: ID
   smallint: Int
   integer: Int
-  bigint: Int
+  bigint: BigInt
   decimal: Int
   real: Int
   smallserial: Int
   serial: Int
-  bigserial: Int
-  doubleOrecision: Int
+  bigserial: BigInt
   doublePrecision: Int
   nullableInteger: Int
   nullableText: String
@@ -38,4 +41,26 @@ input SaveAuthorStatInput {
 
 type SaveAuthorStatResult {
   authorStat: AuthorStat!
+}
+
+type AuthorStatsPage {
+  entities: [AuthorStat!]!
+  pageInfo: PageInfo!
+}
+
+input AuthorStatFilter {
+  id: [ID!]
+  smallint: [Int!]
+  integer: [Int!]
+  nullableInteger: [Int!]
+  decimal: [Int!]
+  real: [Int!]
+  smallserial: [Int!]
+  serial: [Int!]
+  doublePrecision: [Int!]
+  nullableText: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  bigint: [BigInt!]
+  bigserial: [BigInt!]
 }

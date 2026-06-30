@@ -28,11 +28,13 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
   type ReactiveField,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -128,10 +130,12 @@ export interface CommentGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  userId?: ValueGraphQLFilter<UserId>;
   userAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentId?: ValueGraphQLFilter<IdOf<CommentParent>>;
   parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
   parentBook?: EntityGraphQLFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
   parentBookReview?: EntityGraphQLFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
@@ -154,7 +158,14 @@ export interface CommentFactoryExtras {
   withParentTags?: string;
 }
 
+export interface CommentScopes {
+}
+
+export type CommentScope = Scope<Comment, CommentScopes>;
+
 export const commentConfig = new ConfigApi<Comment, Context>();
+
+export const commentScope = newScopeFn<Comment, CommentScope>("Comment");
 
 commentConfig.addRule("parentTags", newRequiredRule("parentTags"));
 commentConfig.addRule(newRequiredRule("createdAt"));

@@ -1,12 +1,13 @@
 import {
   CustomReference,
   Entity,
-  getLens,
+  getLensPath,
   getMetadata,
-  isLensLoaded,
+  isLensLoadedPath,
   Lens,
-  lensToLoadHint,
-  loadLens,
+  lensPathToLoadHint,
+  lensToPath,
+  loadLensPath,
   Reference,
 } from "../index";
 import { lazyField } from "../newEntity";
@@ -21,13 +22,15 @@ import { lazyField } from "../newEntity";
 export function hasOneThrough<T extends Entity, U extends Entity, N extends never | undefined, V extends U | N>(
   lens: (lens: Lens<T>) => Lens<V>,
 ): Reference<T, U, N> {
+  const paths = lensToPath(lens);
+  const loadHint = lensPathToLoadHint<T>(paths);
   return lazyField((entity: T) => {
     const meta = getMetadata(entity);
     return new CustomReference<T, U, N>(entity, {
-      load: (entity, opts) => loadLens(entity, lens, opts),
-      get: () => getLens(meta, entity, lens),
-      isLoaded: () => isLensLoaded(entity, lens),
-      loadHint: () => lensToLoadHint(lens),
+      load: (entity, opts) => loadLensPath(entity, paths, opts),
+      get: () => getLensPath(meta, entity, paths),
+      isLoaded: () => isLensLoadedPath(entity, paths),
+      loadHint,
     });
   });
 }

@@ -1,7 +1,9 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
-import { ConfigApi } from "./config";
+import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
+import { getMetadataForType } from "./configure";
+import { EnumMetadata } from "./EnumMetadata";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
@@ -15,6 +17,17 @@ export function getMetadata<T extends Entity>(
   return (
     typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getInstanceData(param).metadata
   ) as EntityMetadata;
+}
+
+/** Returns the metadata layer that declares `fieldName`, i.e. `Task.tags` for `TaskOld.tags`. */
+export function getMetadataForField(meta: EntityMetadata, fieldName: string): EntityMetadata {
+  if (!meta.allFields[fieldName]) throw new Error(`Field '${fieldName}' not found on ${meta.type}`);
+  // I.e. `TaskOld.tags` is an STI-inherited `Task.tags` and should walk up, but `SmallPublisherGroup.publishers`
+  // is a CTI-specialized `PublisherGroup.publishers` and should stay on `SmallPublisherGroup`.
+  while (!(fieldName in meta.fields) && meta.allFields[fieldName]?.specialized !== true && meta.baseType) {
+    meta = getMetadataForType(meta.baseType);
+  }
+  return meta;
 }
 
 /**
@@ -46,11 +59,21 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
-  allFields: Record<string, Field & { aliasSuffix: string }>;
+  allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
+  /** The lazy list of non-read-only reactables for this metadata and its base types. */
+  reactables?: Reactable[];
+  /** The lazy lookup of non-read-only reactables by source field name. */
+  reactablesByField?: ReadonlyMap<string, Reactable[]>;
+  /** The lazy list of all reactables for this metadata and its base types. */
+  reactablesIncludingReadOnly?: Reactable[];
+  /** The lazy lookup of all reactables by source field name. */
+  reactablesIncludingReadOnlyByField?: ReadonlyMap<string, Reactable[]>;
+  /** The lazy list of reactive validation rules for this metadata and its subtypes. */
+  reactiveRules?: ReactiveRule[];
   orderBy: string | undefined;
   /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */
   uniqueBy?: string[][];
@@ -61,6 +84,12 @@ export interface EntityMetadata<T extends Entity = any> {
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
   subTypes: EntityMetadata[];
+  /** The lazy lookup of subtypes by type name, i.e. `Animal.metadata.subTypesByType.get("Dog")`. */
+  subTypesByType?: ReadonlyMap<string, EntityMetadata>;
+  /** The lazy lookup of STI subtypes by discriminator value, i.e. `Task.metadata.subTypesByStiValue.get(1)`. */
+  subTypesByStiValue?: ReadonlyMap<unknown, EntityMetadata>;
+  /** The lazy STI discriminator column name, i.e. `Task.metadata.stiDiscriminatorColumnName`. */
+  stiDiscriminatorColumnName?: string;
   /** If the schema is lacking deferred FKs, this is our insertion order. */
   nonDeferredFkOrder?: number;
 }
@@ -73,6 +102,7 @@ export type Field =
   | LargeOneToManyField
   | ManyToOneField
   | ManyToManyField
+  | ManyToManyEnumField
   | OneToOneField
   | PolymorphicField;
 
@@ -167,6 +197,32 @@ export type ManyToManyField = {
   immutable: false;
   joinTableName: string;
   columnNames: [string, string];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
+};
+
+/**
+ * A many-to-many between an entity and an enum "table", e.g. `Publisher.logoColors` backed by a
+ * `publisher_logo_colors` join table joining `publishers` to the `color` enum table.
+ *
+ * To the user this looks like an array of enum codes (`Color[]`), but unlike an enum-array column it
+ * is lazy (needs a load hint) because it lives in its own join table.
+ */
+export type ManyToManyEnumField = {
+  kind: "m2mEnum";
+  fieldName: string;
+  fieldIdName: undefined;
+  required: false;
+  derived: false;
+  /** The enum's metadata, used to map enum codes <-> their numeric ids. */
+  enumDetailType: EnumMetadata<any, any, number>;
+  serde: undefined;
+  immutable: false;
+  joinTableName: string;
+  /** `[entityColumn, enumColumn]`, e.g. `["publisher_id", "color_id"]`. */
+  columnNames: [string, string];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
 };
 
 export type OneToOneField = {
@@ -208,6 +264,10 @@ export function isManyToOneField(ormField: Field): ormField is ManyToOneField {
 
 export function isManyToManyField(ormField: Field): ormField is ManyToManyField {
   return ormField.kind === "m2m";
+}
+
+export function isManyToManyEnumField(ormField: Field): ormField is ManyToManyEnumField {
+  return ormField.kind === "m2mEnum";
 }
 
 export function isOneToOneField(ormField: Field): ormField is OneToOneField {

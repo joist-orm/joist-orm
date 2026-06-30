@@ -21,9 +21,11 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -90,7 +92,14 @@ export interface ChildOrder {
 export interface ChildFactoryExtras {
 }
 
+export interface ChildScopes {
+}
+
+export type ChildScope = Scope<Child, ChildScopes>;
+
 export const childConfig = new ConfigApi<Child, Context>();
+
+export const childScope = newScopeFn<Child, ChildScope>("Child");
 
 childConfig.addRule(newRequiredRule("createdAt"));
 childConfig.addRule(newRequiredRule("updatedAt"));

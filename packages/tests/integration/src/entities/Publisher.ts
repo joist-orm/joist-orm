@@ -2,10 +2,10 @@ import {
   cannotBeUpdated,
   Collection,
   hasAsyncProperty,
+  hasAsyncReactiveField,
   hasCustomCollection,
   hasReactiveField,
   hasReactiveProperty,
-  hasAsyncReactiveField,
   hasReactiveReference,
   isLoaded,
   Loaded,
@@ -16,6 +16,7 @@ import {
 import {
   Author,
   BookReview,
+  Color,
   publisherConfig as config,
   Image,
   ImageType,
@@ -33,6 +34,8 @@ export const publisherTransientFields = {
   changedInBeforeCommit: [] as string[],
   bookAdvanceTitlesSnapshotCalcs: 0,
   numberOfBookAdvancesSnapshotCalcs: 0,
+  logoColorsReactionInvoked: 0,
+  observedLogoColors: [] as Color[],
 };
 
 export abstract class Publisher extends PublisherCodegen {
@@ -251,6 +254,12 @@ config.addRule({ authors_ro: { books_ro: { randomComment_ro: "text_ro" } }, name
 // Used to verify `addRule`/`addReaction`'s wrappedFn does not leak a CTI subtype's load
 // hint into a sibling subtype's `em.populate` (issue: closure-cached `loadHint`).
 config.addReaction("ctiHintIsolation", { commentParentInfo_ro: {}, name: {} }, () => {});
+
+// Example of a reaction to an enum m2m (EnumCollection) membership change
+config.addReaction("logoColorsReaction", "logoColors", (p) => {
+  p.transientFields.logoColorsReactionInvoked++;
+  p.transientFields.observedLogoColors = [...p.logoColors.get];
+});
 
 // For testing touchOnChange from base types
 config.touchOnChange("tags");

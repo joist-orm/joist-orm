@@ -356,7 +356,13 @@ function queryRequiredAliasesOutsideConditions(query: ParsedFindQuery, keepAlias
   const required = new Set<string>();
   for (const alias of keepAliases) required.add(alias);
   for (const orderBy of query.orderBys) required.add(orderBy.alias);
-  for (const groupBy of query.groupBys ?? []) required.add(groupBy.alias);
+  for (const groupBy of query.groupBys ?? []) {
+    if ("expression" in groupBy) {
+      addSelectAliases(query, required, groupBy.expression);
+    } else {
+      required.add(groupBy.alias);
+    }
+  }
   for (const select of query.selects) {
     if (typeof select === "string") {
       addSelectAliases(query, required, select);

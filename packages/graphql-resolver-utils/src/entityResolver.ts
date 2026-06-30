@@ -22,11 +22,11 @@ import {
   ManyToManyField,
   ManyToOneField,
   MaybeAbstractEntityConstructor,
-  Property,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
   PrimaryKeyField,
+  Property,
   ReactiveGetter,
   ReadOnlyCollection,
   Reference,
@@ -34,7 +34,7 @@ import {
 import { Resolver } from "./context";
 import { convertInfoToLoadHint } from "./hint";
 
-type GraphQLPrimitive = string | Date | boolean | number | null | undefined;
+type GraphQLPrimitive = string | Date | boolean | number | bigint | null | undefined;
 
 /**
  * Maps properties like `Entity.firstName: string` to field resolver functions like `firstName(): Promise<string>`.
@@ -57,7 +57,7 @@ export type EntityResolver<T extends Entity> = {
         : T[P] extends ReadOnlyCollection<any, infer U>
           ? Resolver<T, Record<string, any>, U[]>
           : T[P] extends Reference<any, infer U, infer N>
-            ? Resolver<T, Record<string, any>, U>
+            ? Resolver<T, Record<string, any>, U | N>
             : T[P] extends Property<any, infer V>
               ? Resolver<T, Record<string, any>, V>
               : T[P] extends ReactiveGetter<any, infer V>

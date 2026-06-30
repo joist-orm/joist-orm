@@ -7,6 +7,7 @@ import {
   getEmInternalApi,
   getInstanceData,
   getMetadata,
+  getMetadataForField,
   IdOf,
   ManyToManyField,
   toTaggedId,
@@ -210,11 +211,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   get otherMeta(): EntityMetadata {
-    return (getMetadata(this.entity).allFields[this.fieldName] as ManyToManyField).otherMetadata();
+    return this.#field.otherMetadata();
   }
 
   get joinTableName(): string {
@@ -235,6 +236,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   get otherColumnName(): string {
     return this.#field.columnNames[1];
+  }
+
+  get hasJoinTableId(): boolean {
+    return this.#field.hasJoinTableId;
   }
 
   get #isCascadeDelete(): boolean {

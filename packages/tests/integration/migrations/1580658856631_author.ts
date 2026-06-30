@@ -196,6 +196,20 @@ export function up(b: MigrationBuilder): void {
   // Verifies that partial unique indexes do not result in o2o collections
   b.createIndex("authors", ["publisher_id"], { unique: true, where: "first_name = 'Jim'" });
 
+  // For testing closure table derived m2m in the blog's managersClosure orientation.
+  createEntityTable(b, "employees", {
+    name: { type: "varchar(255)", notNull: true },
+    manager_id: foreignKey("employees", { notNull: false, otherFieldName: "reports" }),
+  });
+  createManyToManyTable(
+    b,
+    "employee_to_managers_closure",
+    // managers => select `manager_id` from m2m rows where I'm the employee
+    { table: "employees", column: "manager_id", collectionName: "managersClosure" },
+    // employees => select `employee_id` from m2m rows where I'm the manager
+    { table: "employees", column: "employee_id", collectionName: "managerOfClosure" },
+  );
+
   // for testing required enums
   createEnumTable(b, "advance_status", [
     ["PENDING", "Pending"],
@@ -437,6 +451,8 @@ export function up(b: MigrationBuilder): void {
   createManyToManyTable(b, "task_to_tags", "tasks", "tags");
   // for testing table-per-class m2m
   createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
+  // for testing m2m between an entity and an enum table (an `EnumCollection`)
+  createManyToManyTable(b, "publisher_logo_colors", "publishers", { table: "color", column: "logo_color_id" });
   // for testing m2m renames and name inference
   createManyToManyTable(
     b,

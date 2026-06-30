@@ -13,17 +13,17 @@
   "peerDependencies": {
     "joist-core": "workspace:*",
     "joist-utils": "workspace:*",
-    "pg": "^8.16.3"
+    "pg": "^8.22.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.33",
+    "@swc/core": "^1.15.43",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "jest": "30.4.2",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
   }
 }

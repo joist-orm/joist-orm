@@ -28,12 +28,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -138,6 +140,7 @@ export interface TaskGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
   copiedFrom?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  copiedFromId?: ValueGraphQLFilter<TaskId>;
   copiedFromTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   copiedTo?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
@@ -166,7 +169,14 @@ export interface TaskFactoryExtras {
   withAsyncDerived?: string | null;
 }
 
+export interface TaskScopes {
+}
+
+export type TaskScope = Scope<Task, TaskScopes>;
+
 export const taskConfig = new ConfigApi<Task, Context>();
+
+export const taskScope = newScopeFn<Task, TaskScope>("Task");
 
 taskConfig.addRule(newRequiredRule("durationInDays"));
 taskConfig.addRule(newRequiredRule("createdAt"));

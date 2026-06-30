@@ -1031,6 +1031,20 @@ describe("EntityManager", () => {
     expect((result as Author).firstName).toEqual("new name");
   });
 
+  it("returns flushed entities in registration order", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    const a2 = em.create(Author, { firstName: "a2" });
+    await em.flush();
+
+    a2.firstName = "a2 updated";
+    a1.firstName = "a1 updated";
+
+    const results = await em.flush();
+
+    expect(results).toEqual([a1, a2]);
+  });
+
   it("returns deleted entities from flush()", async () => {
     const em = newEntityManager();
 
@@ -1277,11 +1291,10 @@ describe("EntityManager", () => {
         JSON.stringify(
           [
             {
-              code: "invalid_type",
               expected: "string",
-              received: "undefined",
+              code: "invalid_type",
               path: ["street"],
-              message: "Required",
+              message: "Invalid input: expected string, received undefined",
             },
           ],
           undefined,
@@ -1300,11 +1313,10 @@ describe("EntityManager", () => {
         JSON.stringify(
           [
             {
-              code: "invalid_type",
               expected: "string",
-              received: "undefined",
+              code: "invalid_type",
               path: ["street"],
-              message: "Required",
+              message: "Invalid input: expected string, received undefined",
             },
           ],
           undefined,

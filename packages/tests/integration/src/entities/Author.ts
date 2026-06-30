@@ -8,6 +8,7 @@ import {
   ReactiveManyToMany,
   ReactiveReference,
   Reference,
+  aliases,
   cannotBeUpdated,
   hasAsyncMethod,
   hasManyDerived,
@@ -22,7 +23,17 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookRange, BookReview, Comment, Publisher, authorConfig as config } from "./entities";
+import {
+  AuthorCodegen,
+  Book,
+  BookRange,
+  BookReview,
+  Comment,
+  Publisher,
+  Tag,
+  authorConfig as config,
+  authorScope as scope,
+} from "./entities";
 
 /**
  * The Author entity represents a writer who can publish books.
@@ -31,6 +42,34 @@ import { AuthorCodegen, Book, BookRange, BookReview, Comment, Publisher, authorC
  * @generated Author.md
  */
 export class Author extends AuthorCodegen {
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
+  static popular = scope((a) => a.isPopular.eq(true));
+  static popularAdult = Author.popular.adult;
+  static recentAdults = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
+  static recentAdultsViaAdult = Author.adult.orderBy({ createdAt: "DESC" });
+  static senior = scope({ age: { gte: 65 } });
+  // Top-level `or` in a scope declaration, enabled by the `FilterWithAlias` arg type
+  static popularOrSenior = scope({ or: [{ isPopular: true }, { age: { gte: 65 } }] });
+  static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
+  static named2 = scope.fn((prefix: string) => ({ firstName: { like: `${prefix}%` } }));
+  // Introduces its own join aliases so the conditions can `or` across two joined tables,
+  // which a plain nested filter (joins AND together) cannot express.
+  static titleOrRated = scope((a) => {
+    const [b, r] = aliases(Book, BookReview);
+    return {
+      where: { books: { as: b, reviews: { as: r } } },
+      conditions: { or: [b.title.eq("b1"), r.rating.eq(3)] },
+    };
+  });
+  // use relation filters
+  /**
+   * Example of an async boolean that can be navigated via a lens.
+   * @generated Author.md
+   */
+  static hasBooks = scope({ books: true });
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
+
   /**
    * All reviews across all of this author's books.
    * @generated Author.md
@@ -134,6 +173,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
     setPublisherInFlush: undefined as Publisher | undefined,
+    deleteTagDuringReaction: undefined as Tag | undefined,
     firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
@@ -268,6 +308,10 @@ export class Author extends AuthorCodegen {
       return a.menteesRecursive.get.flatMap((m) => m.firstName).join(", ");
     },
   );
+
+  readonly reputationScore: Property<Author, number> = hasProperty({ mentor: "reputationScore" }, (a) => {
+    return a.mentor.get?.reputationScore.get ?? 0;
+  });
 
   /**
    * Example of a derived async enum.
@@ -524,6 +568,14 @@ config.addReaction("rr", "rootMentor", (a) => {
 // set-via-hook reaction
 config.addReaction("setViaHook", "graduated", (a) => {
   a.transientFields.reactions.setViaHook += 1;
+});
+
+// Tests em.delete-ing an entity (particularly a newly-created entity) from a reaction
+config.addReaction("deleteTag", "graduated", (a) => {
+  const tag = a.transientFields.deleteTagDuringReaction;
+  if (!tag) return;
+  a.transientFields.deleteTagDuringReaction = undefined;
+  a.em.delete(tag);
 });
 
 // immutable field reaction

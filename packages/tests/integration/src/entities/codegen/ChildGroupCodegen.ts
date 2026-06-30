@@ -23,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -94,7 +96,9 @@ export interface ChildGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   childGroup?: EntityGraphQLFilter<Child, ChildId, GraphQLFilterOf<Child>, never>;
+  childGroupId?: ValueGraphQLFilter<ChildId>;
   parentGroup?: EntityGraphQLFilter<ParentGroup, ParentGroupId, GraphQLFilterOf<ParentGroup>, never>;
+  parentGroupId?: ValueGraphQLFilter<ParentGroupId>;
   childItems?: EntityGraphQLFilter<ChildItem, ChildItemId, GraphQLFilterOf<ChildItem>, null | undefined>;
 }
 
@@ -110,7 +114,14 @@ export interface ChildGroupOrder {
 export interface ChildGroupFactoryExtras {
 }
 
+export interface ChildGroupScopes {
+}
+
+export type ChildGroupScope = Scope<ChildGroup, ChildGroupScopes>;
+
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
+
+export const childGroupScope = newScopeFn<ChildGroup, ChildGroupScope>("ChildGroup");
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
 childGroupConfig.addRule(newRequiredRule("updatedAt"));

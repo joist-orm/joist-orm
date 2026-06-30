@@ -6,6 +6,7 @@ import {
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
+  type EnumCollection,
   failNoIdYet,
   type FilterOf,
   type Flavor,
@@ -22,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -43,6 +46,7 @@ import {
   type AuthorId,
   type AuthorOrder,
   type BookAdvance,
+  Color,
   type Comment,
   type Critic,
   type CriticId,
@@ -106,6 +110,7 @@ export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   country?: ValueGraphQLFilter<string>;
   rating?: ValueGraphQLFilter<number>;
   spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  spotlightAuthorId?: ValueGraphQLFilter<AuthorId>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   usersAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -121,7 +126,14 @@ export interface LargePublisherOrder extends PublisherOrder {
 export interface LargePublisherFactoryExtras {
 }
 
+export interface LargePublisherScopes {
+}
+
+export type LargePublisherScope = Scope<LargePublisher, LargePublisherScopes>;
+
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
+
+export const largePublisherScope = newScopeFn<LargePublisher, LargePublisherScope>("LargePublisher");
 
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));
@@ -158,6 +170,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   declare readonly group: ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
   declare readonly tags: Collection<LargePublisher, Tag>;
   declare readonly tasks: Collection<LargePublisher, TaskOld>;
+  declare readonly logoColors: EnumCollection<LargePublisher, Color>;
 
   get id(): LargePublisherId {
     return this.idMaybe || failNoIdYet("LargePublisher");

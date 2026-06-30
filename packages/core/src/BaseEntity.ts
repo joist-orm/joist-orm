@@ -133,6 +133,9 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
+
+  /** A bag of non-persisted state, typically for flags that control business logic behavior. */
+  declare readonly transientFields: Record<string, unknown>;
 }
 
 function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string): string {
@@ -159,7 +162,7 @@ function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string
  * on its `Object.create`-d instances.
  */
 export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, isNew: boolean): void {
-  const data = new InstanceData(em, (entity.constructor as any).metadata, isNew);
+  const data = new InstanceData(em, entity, (entity.constructor as any).metadata, isNew);
   // This makes it non-enumerable to avoid Jest/recursive things tripping over it
   Object.defineProperty(entity, "__data", { value: data, enumerable: false, writable: false, configurable: false });
 }

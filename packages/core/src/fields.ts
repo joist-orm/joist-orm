@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { type Field, getMetadata } from "./EntityMetadata";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
 import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";
@@ -78,8 +78,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   const currentValue = getField(entity, fieldName);
   const isReference = field.kind === "m2o" || field.kind === "poly";
+  const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
-  if (isReference && !equalOrSameEntity(currentValue, newValue)) {
+  if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);
   }
 
@@ -96,7 +97,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
         // Otherwise just let data[fieldName] get the even-newer value, and keep
         // flushedData[fieldName] as the last-micro-flushed value.
       }
-    } else if (!equalOrSameEntity(currentValue, newValue)) {
+    } else if (!currentEqualsNew) {
       // This is the 1st rqf-loop change for this field, so let data[fieldName]
       // get the even newer value, but keep the last-micro-flushed value in flushedData.
       flushedData[fieldName] = currentValue;
@@ -105,12 +106,12 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
-    if (equalOrSameEntity(originalData[fieldName], newValue)) {
+    if (fieldValueEquals(field, originalData[fieldName], newValue)) {
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
-      delete originalData[fieldName];
+      instanceData.markFieldClean(fieldName);
 
       fieldLogger?.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
@@ -125,7 +126,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   }
 
   // Push this logic into a field serde type abstraction?
-  if (equalOrSameEntity(currentValue, newValue)) {
+  if (currentEqualsNew) {
     // If we're doing `entity.field = undefined`, we'll be equal, but mark ourselves as "set"
     // so that defaults know to respect the intent of keeping this field undefined.
     if (!(fieldName in data)) data[fieldName] = undefined;
@@ -134,7 +135,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   // Only save the currentValue on the 1st change of this field
   if (!(fieldName in originalData)) {
-    originalData[fieldName] = currentValue;
+    instanceData.markFieldDirty(fieldName, currentValue);
   }
   fieldLogger?.logSet(entity, fieldName, newValue);
   rm.queueDownstreamReactables(entity, fieldName);
@@ -144,6 +145,16 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   pluginManager.beforeSetField(entity, fieldName, newValue);
   data[fieldName] = newValue;
   return true;
+}
+
+function fieldValueEquals(field: Field, a: unknown, b: unknown): boolean {
+  // Primitive scalar sets are the common path, so avoid Date/Temporal/entity checks when both values cannot need them.
+  if (field.kind !== "m2o" && field.kind !== "poly" && isNonObjectValue(a) && isNonObjectValue(b)) return a === b;
+  return equalOrSameEntity(a, b);
+}
+
+function isNonObjectValue(value: unknown): boolean {
+  return value === null || typeof value !== "object";
 }
 
 function equalOrSameEntity(a: any, b: any): boolean {
@@ -156,13 +167,13 @@ function equalOrSameEntity(a: any, b: any): boolean {
   );
 }
 
-function equalArrays(a: any[], b: any[]): boolean {
+export function equalArrays(a: any[], b: any[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((_: any, i) => equal(a[i], b[i]));
 }
 
 const Temporal = maybeRequireTemporal()?.Temporal;
-function equal(a: any, b: any): boolean {
+export function equal(a: any, b: any): boolean {
   if (a === b) return true;
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   if (Temporal) {

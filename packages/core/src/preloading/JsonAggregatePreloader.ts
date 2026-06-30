@@ -2,8 +2,9 @@ import { AliasAssigner } from "../AliasAssigner";
 import { ConditionBuilder } from "../ConditionBuilder";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadata, getMetadataForField, ManyToManyEnumField } from "../EntityMetadata";
 import { EntityOrId, HintNode } from "../HintTree";
+import { ManyToManyLike } from "../JoinRows";
 import { keyToNumber, keyToTaggedId } from "../keys";
 import { kq, kqDot } from "../keywords";
 import { LoadHint, NestedLoadHint } from "../loadHints";
@@ -114,6 +115,11 @@ function calcLateralJoins<I extends EntityOrId>(
     const field = parentMeta.allFields[key];
     // AsyncProperties don't have fields, which is fine, skip for now...
     if (field && canPreload(parentMeta, field)) {
+      // Enum m2ms have no "other" entity to join/hydrate; just aggregate the join table's enum ids.
+      if (field.kind === "m2mEnum") {
+        results.push(calcEnumLateralJoin(assigner, root, subTree, parentAlias, field, key, pathPrefix));
+        return;
+      }
       const otherMeta = field.otherMetadata();
       const otherField = otherMeta.allFields[field.otherFieldName];
 
@@ -173,8 +179,8 @@ function calcLateralJoins<I extends EntityOrId>(
         });
       } else if (otherField.kind === "m2m") {
         m2mAlias = assigner.getAlias(otherField.joinTableName);
-        // Get the m2m row's id to track in JoinRows
-        selects.unshift(kqDot(m2mAlias, "id"));
+        // Get the m2m row's id to track in JoinRows; id-less tables have no surrogate id.
+        if (otherField.hasJoinTableId) selects.unshift(kqDot(m2mAlias, "id"));
         m2mTable = {
           join: "inner",
           table: otherField.joinTableName,
@@ -205,6 +211,15 @@ function calcLateralJoins<I extends EntityOrId>(
         });
       }
 
+      // For m2m, order by the join-row's id so preloaded results match the order the lazy batch
+      // loader returns (which orders by join-row id). Id-less join tables have no surrogate id,
+      // so order by the other entity's FK column (matching the lazy loader & getOthers). Otherwise,
+      // order by the target entity's id.
+      const orderBy =
+        otherField.kind === "m2m" && !otherField.hasJoinTableId
+          ? `${kq(m2mAlias!)}.${kq(otherField.columnNames[0])}`
+          : `${kq(m2mAlias ?? otherAlias)}.id`;
+
       const join: LateralJoinTable = {
         join: "lateral",
         alias: otherAlias,
@@ -213,10 +228,7 @@ function calcLateralJoins<I extends EntityOrId>(
         fromAlias: "unset",
         table: otherMeta.tableName,
         query: {
-          // For m2m, order by the join-row's id so preloaded results match the
-          // order the lazy batch loader returns (which orders by join-row id).
-          // Otherwise, order by the target entity's id.
-          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`],
+          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${orderBy}) as _`],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),
@@ -229,8 +241,8 @@ function calcLateralJoins<I extends EntityOrId>(
 
       // Pre-compute column names so we don't re-read them per entity
       const columnNames = columns.map((c) => c.columnName);
-      // If we've snuck the m2m row id into the json array, ignore it
-      const m2mOffset = field.kind === "m2m" ? 1 : 0;
+      // If we've snuck the m2m row id into the json array, ignore it (id-less tables have no id)
+      const m2mOffset = field.kind === "m2m" && field.hasJoinTableId ? 1 : 0;
 
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         const { em } = root;
@@ -259,7 +271,7 @@ function calcLateralJoins<I extends EntityOrId>(
             const m2m = (parent as any)[key];
             getEmInternalApi(em)
               .joinRows(m2m)
-              .addPreloadedRow(m2m, array[0] as any, parent, entity);
+              .addPreloadedRow(m2m, field.hasJoinTableId ? (array[0] as any) : undefined, parent, entity);
           }
           // Within each child, look for grandchildren
           subJoins.forEach((sub, i) => {
@@ -279,6 +291,89 @@ function calcLateralJoins<I extends EntityOrId>(
   });
 
   return results;
+}
+
+/**
+ * Builds the `CROSS JOIN LATERAL` that aggregates an enum-m2m join table (e.g. `publisher_logo_colors`)
+ * into a json array of enum ids, e.g. `[[1], [3]]` (or `[[1, id], [3, id]]` for id-ful join tables).
+ */
+function calcEnumLateralJoin<I extends EntityOrId>(
+  assigner: AliasAssigner,
+  root: { tree: HintNode<I>; alias: string; meta: EntityMetadata },
+  subTree: HintNode<I>,
+  parentAlias: string,
+  field: ManyToManyEnumField,
+  key: string,
+  pathPrefix: string,
+): AggregateJoinResult {
+  const [entityColumn, enumColumn] = field.columnNames;
+  const jtAlias = `_${assigner.getAlias(field.joinTableName)}`;
+  const relationAlias = `_${assigner.getLiteralAlias(`${pathPrefix}${key.toLowerCase()}`)}`;
+
+  const parts = [kqDot(jtAlias, enumColumn)];
+  if (field.hasJoinTableId) parts.push(kqDot(jtAlias, "id"));
+
+  const cb = new ConditionBuilder();
+  cb.addRawCondition({
+    aliases: [jtAlias, parentAlias],
+    condition: `${kqDot(jtAlias, entityColumn)} = ${kqDot(parentAlias, "id")}`,
+    pruneable: true,
+  });
+
+  const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
+  if (needsSubSelect) {
+    cb.addRawCondition({
+      aliases: [root.alias],
+      condition: `${kqDot(root.alias, "id")} = ANY(?)`,
+      bindings: [
+        [...subTree.entities]
+          .filter((e) => typeof e === "string" || !e.isNewEntity)
+          .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+      ],
+      pruneable: true,
+    });
+  }
+
+  const orderBy = `${kq(jtAlias)}.${kq(field.hasJoinTableId ? "id" : enumColumn)}`;
+  const join: LateralJoinTable = {
+    join: "lateral",
+    alias: jtAlias,
+    fromAlias: "unset",
+    table: field.joinTableName,
+    query: {
+      selects: [`json_agg(json_build_array(${parts.join(", ")}) order by ${orderBy}) as _`],
+      tables: [{ join: "primary", table: field.joinTableName, alias: jtAlias }],
+      condition: cb.toExpressionFilter(),
+      orderBys: [],
+    },
+  };
+
+  const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
+    const { em } = root;
+    if (subTree.entitiesKind === "instances" && !subTree.entities.has(root as any)) return;
+    if (subTree.entitiesKind === "ids" && !subTree.entities.has(root.idTagged as any)) return;
+    const like: ManyToManyLike = {
+      entity: parent,
+      joinTableName: field.joinTableName,
+      columnName: entityColumn,
+      otherColumnName: enumColumn,
+      fieldName: key,
+      meta: getMetadataForField(getMetadata(parent), key),
+      otherEnum: field.enumDetailType,
+      hasJoinTableId: field.hasJoinTableId,
+    };
+    const api = getEmInternalApi(em);
+    const joinRows = api.joinRows(like);
+    const codes: any[] = [];
+    for (const array of arrays) {
+      const enumId = array[0] as number;
+      joinRows.addPreloadedRow(like, field.hasJoinTableId ? (array[1] as number) : undefined, parent, enumId);
+      codes.push(field.enumDetailType.findById(enumId)!.code);
+    }
+    api.setPreloadedRelation(parent.idTagged, key, codes);
+  };
+
+  return { alias: jtAlias, relationAlias, join, hydrator };
 }
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */

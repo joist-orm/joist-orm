@@ -1,0 +1,42 @@
+extend type Query {
+  employee(id: ID!): Employee!
+  employees(filter: EmployeeFilter, limit: Int, offset: Int): EmployeesPage!
+}
+
+extend type Mutation {
+  saveEmployee(input: SaveEmployeeInput!): SaveEmployeeResult!
+}
+
+type Employee {
+  id: ID!
+  name: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  manager: Employee
+  reports: [Employee!]!
+  managersClosure: [Employee!]!
+  managerOfClosure: [Employee!]!
+}
+
+input SaveEmployeeInput {
+  id: ID
+  name: String
+  managerId: ID
+}
+
+type SaveEmployeeResult {
+  employee: Employee!
+}
+
+type EmployeesPage {
+  entities: [Employee!]!
+  pageInfo: PageInfo!
+}
+
+input EmployeeFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  managerId: [ID!]
+}

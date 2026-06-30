@@ -6,6 +6,7 @@ import { generateEntityFile } from "./generateEntityFile";
 import { generateEntityTestFile } from "./generateEntityTestFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
+import { findAllEntityScopes } from "./findEntityScopes";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
@@ -25,6 +26,7 @@ export interface CodegenPlugin {
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
 export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const { entities, enums, pgEnums } = dbMeta;
+  const entityNames = entities.map((meta) => meta.entity.name);
 
   // Find existing entities so that, besides just using `overwrite: false`, we can completely
   // skip making test files except for the _first_ time we create an entity. This achieves
@@ -33,9 +35,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   // Sync documentation: backfill .md from existing JSDocs, then sync MD -> JSDoc
   if (config.docs) {
-    const entityNames = entities.map((meta) => meta.entity.name);
     await syncDocs(config.entitiesDirectory, entityNames);
   }
+
+  const scopeMembersByEntity = await findAllEntityScopes(
+    config,
+    entities.map((meta) => meta.entity),
+  );
 
   const entityFiles = entities
     .map((meta) => {
@@ -44,7 +50,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       return [
         {
           name: `./codegen/${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, dbMeta, meta),
+          contents: generateEntityCodegenFile(config, dbMeta, meta, scopeMembersByEntity[entityName] ?? []),
           overwrite: true,
         },
         ...(hasEntityFile

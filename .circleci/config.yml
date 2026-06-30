@@ -13,7 +13,8 @@ workflows:
               node-version:
                 - "22" # EOL 30 Apr 2027
                 - "24" # EOL 30 Apr 2028
-                - "25" # Current
+                - "25" # EOL 01 Jun 2026
+                - "26" # Current
                 - "bun"
 
 jobs:
@@ -74,7 +75,7 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --include packages/orm --exclude packages/tests/bun run test
+                command: bash scripts/ci-cpu-report.sh tests-node-<< parameters.node-version >> -- yarn workspaces foreach --worktree --parallel --jobs unlimited --include 'packages/tests/*' --include packages/orm --exclude packages/tests/bun run test
       # For bun (with the default node-pg/knex driver), run only the bun:test-based tests
       - when:
           condition:
@@ -82,9 +83,11 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspace joist-tests-bun run test
+                command: bash scripts/ci-cpu-report.sh tests-bun -- yarn workspace joist-tests-bun run test
 
       - store_test_results:
+          path: ./artifacts
+      - store_artifacts:
           path: ./artifacts
       # Publish 'next' releases on every merge to main
       - when:
@@ -95,7 +98,9 @@ jobs:
           steps:
             - run:
                 name: Publish Next Release
-                command: ./scripts/publish-next.sh
+                command: |
+                  export NPM_ID_TOKEN="$(circleci run oidc get --claims '{"aud":"npm:registry.npmjs.org"}')"
+                  ./scripts/publish-next.sh
       # Publish stable releases on every merge to release branch
       - when:
           condition:
@@ -105,4 +110,6 @@ jobs:
           steps:
             - run:
                 name: Release
-                command: yarn semantic-release
+                command: |
+                  export NPM_ID_TOKEN="$(circleci run oidc get --claims '{"aud":"npm:registry.npmjs.org"}')"
+                  yarn semantic-release

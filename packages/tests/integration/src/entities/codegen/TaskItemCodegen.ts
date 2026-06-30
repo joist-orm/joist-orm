@@ -22,9 +22,11 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setOpts,
   type TaggedId,
   toIdOf,
@@ -91,8 +93,11 @@ export interface TaskItemGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   newTask?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  newTaskId?: ValueGraphQLFilter<TaskNewId>;
   oldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  oldTaskId?: ValueGraphQLFilter<TaskOldId>;
   task?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  taskId?: ValueGraphQLFilter<TaskId>;
   taskTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   taskTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
 }
@@ -109,7 +114,14 @@ export interface TaskItemOrder {
 export interface TaskItemFactoryExtras {
 }
 
+export interface TaskItemScopes {
+}
+
+export type TaskItemScope = Scope<TaskItem, TaskItemScopes>;
+
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
+
+export const taskItemScope = newScopeFn<TaskItem, TaskItemScope>("TaskItem");
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));

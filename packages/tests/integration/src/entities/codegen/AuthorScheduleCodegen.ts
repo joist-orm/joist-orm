@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -79,6 +81,7 @@ export interface AuthorScheduleGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
 }
 
 export interface AuthorScheduleOrder {
@@ -92,7 +95,14 @@ export interface AuthorScheduleOrder {
 export interface AuthorScheduleFactoryExtras {
 }
 
+export interface AuthorScheduleScopes {
+}
+
+export type AuthorScheduleScope = Scope<AuthorSchedule, AuthorScheduleScopes>;
+
 export const authorScheduleConfig = new ConfigApi<AuthorSchedule, Context>();
+
+export const authorScheduleScope = newScopeFn<AuthorSchedule, AuthorScheduleScope>("AuthorSchedule");
 
 authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));

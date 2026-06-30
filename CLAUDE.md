@@ -16,8 +16,10 @@ To run tests in this project:
 
 3. To run a specific test file:
    ```bash
-   yarn jest -- [test-file-pattern]
+   yarn jest --runInBand -- [test-file-pattern]
    ```
+
+4. DB-backed integration tests share the same test database, so never run multiple Jest processes in parallel. Run one `jest --runInBand` command with all target files, or run commands sequentially with `&&`.
 
 ## Project Structure
 
@@ -37,9 +39,11 @@ To run tests in this project:
 - Tests should be run from the `packages/tests/integration/` directory
 - The project uses Jest for testing
 - Do not use extraneous local variables
+- Avoid unnecessary allocations, particularly in hot spots or common code paths
 - Do not use boilerplate comments that describe "what" the code is doing, only use comments to explain "why" or rationale
 - Test assertions should use `toMatchEntity` as much as possible
 - Never use `expect.objectContaining`, `toContain`, or `not.toContain`; use `toMatchObject` instead
 - For DB row assertions, use `toMatchObject` on the whole array instead of per-row `length` checks, e.g. `expect(rows).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }])`
+- When asserting on emitted SQL, assert the full query string(s) via `expect(queries).toMatchInlineSnapshot(...)` (reset with `resetQueryCount()` and isolate the queries you care about); never partial-match with `toMatch`/regex fragments or `queries.find(...)`
 - Use tagged ids for `em.load`/`em.loadAll` calls, e.g. `em.load(Author, "a:1")` not `em.load(Author, "1")`
 - Put helper/private functions at the bottom of the file, exported/public functions at the top

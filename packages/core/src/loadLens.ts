@@ -88,20 +88,42 @@ export async function loadLens<T extends Entity, U, V>(
   fn: (lens: Lens<T>) => Lens<U, V>,
   opts: { forceReload?: boolean; sql?: boolean } = {},
 ): Promise<V> {
+  return loadLensPath(start, collectPaths(fn), opts);
+}
+
+/** Loads a precomputed lens path, avoiding repeated lambda/proxy evaluation for long-lived relation declarations. */
+export function loadLensPath<T extends Entity, V>(
+  start: T | readonly T[],
+  paths: string[],
+  opts: { forceReload?: boolean; sql?: boolean } = {},
+): Promise<V> {
   // Probe for the meta, so we can track when/if it needs to flip to a collection (even after hitting undefined)
   const meta = Array.isArray(start)
     ? isEntity(start[0]) && getMetadata(start[0])
     : isEntity(start) && getMetadata(start);
   // This should only happen for `start=[]`, which we know should return `[]`
-  if (!meta) return [] as V;
+  if (!meta) return [] as unknown as Promise<V>;
 
   // If we're already loaded, just return
-  if (!opts.forceReload && isLensLoaded(start, fn)) {
-    return getLens(meta, start, fn);
+  if (!opts.forceReload && isLensLoadedPath(start, paths)) {
+    // Keep this synchronous to avoid adding a promise turn; this preserves nuanced hook timing in production code.
+    return getLensPath(meta, start, paths) as Promise<V>;
   }
 
-  const paths = collectPaths(fn);
+  return loadLensPathAsync(meta, start, paths, opts);
+}
 
+/**
+ * Loads an unloaded lens path, keeping the already-loaded shortcut in `loadLensPath` synchronous.
+ *
+ * I.e. this avoids adding an extra promise turn for already-loaded paths during concurrent hooks.
+ */
+async function loadLensPathAsync<T extends Entity, V>(
+  meta: EntityMetadata,
+  start: T | readonly T[],
+  paths: string[],
+  opts: { forceReload?: boolean; sql?: boolean },
+): Promise<V> {
   // See if we can load this via SQL
   if (opts.sql) {
     // Are all paths SQL query-able?
@@ -163,7 +185,7 @@ export async function loadLens<T extends Entity, U, V>(
       // current is undefined; see if we should flip to a list ... which means we can early return
       if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
-    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
+    currentMeta = nextMeta(current, field);
   }
   return current!;
 }
@@ -220,7 +242,11 @@ export function getLens<T, U, V>(
   start: T | readonly T[],
   fn: (lens: Lens<T>) => Lens<U, V>,
 ): V {
-  const paths = collectPaths(fn);
+  return getLensPath(startMeta, start, collectPaths(fn));
+}
+
+/** Synchronously traverses a precomputed lens path. */
+export function getLensPath<T, V>(startMeta: EntityMetadata, start: T | readonly T[], paths: string[]): V {
   let currentMeta: EntityMetadata | undefined = startMeta;
   let current: any = start;
   let seenSoftDeleted = false;
@@ -256,9 +282,16 @@ export function getLens<T, U, V>(
       // current is undefined; see if we should flip to a list ... which means we can early return
       if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
-    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
+    currentMeta = nextMeta(current, field);
   }
   return current!;
+}
+
+/** Returns the next runtime metadata, preserving subtype-specific fields after base-typed traversals. */
+function nextMeta(current: unknown, field: Field | undefined): EntityMetadata | undefined {
+  const entity = Array.isArray(current) ? current[0] : current;
+  if (isEntity(entity)) return getMetadata(entity);
+  return field && "otherMetadata" in field ? field.otherMetadata() : undefined;
 }
 
 function maybeAdd(set: Set<any>, value: any) {
@@ -267,9 +300,13 @@ function maybeAdd(set: Set<any>, value: any) {
 
 /** Returns whether a lens is loaded; primarily for deeply loaded instances in tests. */
 export function isLensLoaded<T, U, V>(start: T | readonly T[], fn: (lens: Lens<T>) => Lens<U, V>): boolean {
+  return isLensLoadedPath(start, collectPaths(fn));
+}
+
+/** Returns whether a precomputed lens path is loaded; primarily for deeply loaded instances in tests. */
+export function isLensLoadedPath<T>(start: T | readonly T[], paths: string[]): boolean {
   // This is a huge copy/paste of `getLens` but we check `isNotLoaded` and early return
   // as soon as we find any not-loaded relation
-  const paths = collectPaths(fn);
   let current: any = start;
   let seenSoftDeleted = false;
   // Now evaluate each step of the path
@@ -300,9 +337,14 @@ export function isLensLoaded<T, U, V>(start: T | readonly T[], fn: (lens: Lens<T
 
 /** Accepts a lens like `a => a.books.reviews` and returns a hint like `{ books: { reviews: {} } }`. */
 export function lensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): LoadHint<T> {
-  const paths = collectPaths(fn);
+  return lensPathToLoadHint(collectPaths(fn));
+}
+
+/** Accepts lens paths like `[books, reviews]` and returns a hint like `{ books: { reviews: {} } }`. */
+export function lensPathToLoadHint<T extends Entity>(paths: string[]): LoadHint<T> {
   let current = {};
-  for (const path of paths.reverse()) {
+  for (let i = paths.length - 1; i >= 0; i--) {
+    const path = paths[i];
     current = { [path]: current };
   }
   return current as LoadHint<T>;
@@ -310,7 +352,7 @@ export function lensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Le
 
 /** Accepts a lens like `a => a.books.reviews` and returns the paths like `[books, reviews]`. */
 export function lensToPath<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): string[] {
-  return collectPaths(fn);
+  return [...collectPaths(fn)];
 }
 
 function isNotLoaded(object: any, path: string): boolean {

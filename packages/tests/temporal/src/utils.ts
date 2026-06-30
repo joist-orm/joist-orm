@@ -1,4 +1,4 @@
-import { Temporal } from "temporal-polyfill";
+import { Temporal } from "joist-orm";
 
 export const jan1 = Temporal.PlainDate.from("2018-01-01");
 export const jan2 = Temporal.PlainDate.from("2018-01-02");

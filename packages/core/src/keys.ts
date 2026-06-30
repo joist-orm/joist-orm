@@ -158,20 +158,22 @@ export function tagId(
   metaOrCstr: HasTagName | EntityConstructor<any>,
   id: string | number | null | undefined,
 ): string | undefined {
+  const tag = tagName(metaOrCstr);
   if (typeof id === "number") {
-    return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
+    return `${tag}${tagDelimiter}${id}`;
   }
   if (id === null || id === undefined) {
     return undefined;
   }
-  if (id.includes(tagDelimiter)) {
-    const [tag] = id.split(tagDelimiter);
-    if (tag !== tagName(metaOrCstr)) {
-      throw new Error(`Invalid tagged id, expected tag ${tagName(metaOrCstr)}, got ${id}`);
+  // Avoid using includes/split, for a faster indexOf + length + startsWith
+  const delimiterIndex = id.indexOf(tagDelimiter);
+  if (delimiterIndex !== -1) {
+    if (delimiterIndex !== tag.length || !id.startsWith(tag)) {
+      throw new Error(`Invalid tagged id, expected tag ${tag}, got ${id}`);
     }
     return id;
   }
-  return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
+  return `${tag}${tagDelimiter}${id}`;
 }
 
 /** Adds the tag prefixes. */

@@ -30,6 +30,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -39,6 +40,7 @@ import {
   type ReactiveManyToManyOtherSide,
   type ReactiveReference,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -299,10 +301,15 @@ export interface AuthorGraphQLFilter {
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  mentorId?: ValueGraphQLFilter<AuthorId>;
   rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  rootMentorId?: ValueGraphQLFilter<AuthorId>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  currentDraftBookId?: ValueGraphQLFilter<BookId>;
   favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  favoriteBookId?: ValueGraphQLFilter<BookId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
+  publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     LargePublisherId,
@@ -396,7 +403,27 @@ export interface AuthorFactoryExtras {
   withRangeOfBooks?: BookRange | null;
 }
 
+export interface AuthorScopes {
+  adult: AuthorScope;
+  active: AuthorScope;
+  popular: AuthorScope;
+  popularAdult: AuthorScope;
+  recentAdults: AuthorScope;
+  recentAdultsViaAdult: AuthorScope;
+  senior: AuthorScope;
+  popularOrSenior: AuthorScope;
+  named: (prefix: string) => AuthorScope;
+  named2: (prefix: string) => AuthorScope;
+  titleOrRated: AuthorScope;
+  hasBooks: AuthorScope;
+  booksReviewedBy: (reviewer: Author) => AuthorScope;
+}
+
+export type AuthorScope = Scope<Author, AuthorScopes>;
+
 export const authorConfig = new ConfigApi<Author, Context>();
+
+export const authorScope = newScopeFn<Author, AuthorScope>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));

@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -73,6 +75,7 @@ export interface BookReviewGraphQLFilter {
   id?: ValueGraphQLFilter<BookReviewId>;
   rating?: ValueGraphQLFilter<number>;
   book?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  bookId?: ValueGraphQLFilter<AuthorId>;
 }
 
 export interface BookReviewOrder {
@@ -84,7 +87,14 @@ export interface BookReviewOrder {
 export interface BookReviewFactoryExtras {
 }
 
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
+
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
+
+export const bookReviewScope = newScopeFn<BookReview, BookReviewScope>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("book"));

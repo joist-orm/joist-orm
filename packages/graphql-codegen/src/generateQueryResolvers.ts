@@ -4,7 +4,7 @@ import { CodegenFile, code, imp } from "ts-poet";
 import { getEntitiesImportPath } from "./utils";
 
 const queryResolvers = imp("t:QueryResolvers@src/generated/graphql-types.ts");
-const makeRunResolver = imp("makeRunInputMutation@src/resolvers/testUtils.ts");
+const makeRunQuery = imp("makeRunQuery@src/resolvers/testUtils.ts");
 
 /**
  * Generates top-level query resolvers.
@@ -14,13 +14,14 @@ export function generateQueryResolvers(config: Config, db: DbMetadata): CodegenF
   const resolvers = db.entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
+    const type = imp(`${name}@${entitiesPath}`);
     return {
       name: `resolvers/${camelName}/${camelName}Query.ts`,
       overwrite: false,
       contents: code`
           export const ${camelName}: Pick<${queryResolvers}, "${camelName}"> = {
             async ${camelName}(_, args, ctx) {
-              return ctx.em.load(${name}, args.id);
+              return ctx.em.load(${type}, args.id);
             },
           };
         `,
@@ -38,12 +39,12 @@ export function generateQueryResolvers(config: Config, db: DbMetadata): CodegenF
         describe("${camelName}", () => {
           it.withCtx("returns a ${sentenceCase(name)}", async (ctx) => {
             const ${tagName} = ${imp(`new${name}@${entitiesPath}`)}(ctx.em);
-            const result = await run(ctx, {}, "${camelName}", () => ({ id: ${tagName}.id }));
+            const result = await run(ctx, () => ({ id: ${tagName}.id }));
             expect(result).toMatchEntity(${tagName});
           });
         });
 
-        const run = ${makeRunResolver}(${resolverConst});
+        const run = ${makeRunQuery}(${resolverConst});
       `,
     };
   });

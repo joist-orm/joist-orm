@@ -109,4 +109,20 @@ describe("syncDocs", () => {
     const files = await fs.readdir(testDir);
     expect(files).toMatchObject(["Author.ts"]);
   });
+
+  it("skips entities with no ts file", async () => {
+    await fs.writeFile(join(testDir, "Author.md"), "## Overview\nThe Author entity.\n", "utf-8");
+
+    await syncDocs(testDir, ["Author"]);
+
+    const files = await fs.readdir(testDir);
+    expect(files).toMatchObject(["Author.md"]);
+  });
+
+  it("skips entities with no ts or md file", async () => {
+    await syncDocs(testDir, ["Author"]);
+
+    const files = await fs.readdir(testDir);
+    expect(files).toMatchObject([]);
+  });
 });

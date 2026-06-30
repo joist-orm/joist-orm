@@ -4,6 +4,8 @@ import { EntityMetadata } from "./EntityMetadata";
 
 /** The `#orm` metadata field we track on each instance. */
 export class InstanceData {
+  /** The entity this instance data belongs to. */
+  readonly entity: Entity;
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   readonly em: EntityManager;
   /** A pointer to our entity type's metadata. */
@@ -32,11 +34,14 @@ export class InstanceData {
   #new?: Operation;
   /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
   createId: string | undefined;
+  /** The zero-based order this entity was registered with its EntityManager. */
+  entityIndex: number = -1;
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
 
   /** Creates the `#orm` field. */
-  constructor(em: EntityManager, metadata: EntityMetadata, isNew: boolean) {
+  constructor(em: EntityManager, entity: Entity, metadata: EntityMetadata, isNew: boolean) {
+    this.entity = entity;
     this.em = em;
     this.metadata = metadata;
     if (isNew) {
@@ -44,6 +49,7 @@ export class InstanceData {
       this.data = {};
       this.row = {};
       this.flushedData = undefined;
+      if (em) this.markMaybePending();
     } else {
       this.#new = undefined;
       this.data = {};
@@ -69,6 +75,7 @@ export class InstanceData {
     if (this.#deleted === Operation.Pending || this.#deleted === Operation.Flushed) {
       this.#deleted = Operation.Complete;
     }
+    this.unmarkMaybePending();
   }
 
   /** Our public-facing `isNewEntity`. */
@@ -118,7 +125,7 @@ export class InstanceData {
   }
 
   /** Called by `em.delete`, returns true if this is new information. */
-  markDeleted(entity: Entity): boolean {
+  markDeleted(): boolean {
     if (this.#deleted === undefined) {
       // Let any OneToManyCollection/ReactiveField/ReactiveReference.get caches know that they should recalc
       // (i.e. their filterDeleted logic) by asserting the `deleteBook.author` field is changing.
@@ -126,8 +133,8 @@ export class InstanceData {
         // We only do reference/collection fields and skip the primitives, b/c we assume something like
         // `{ books: "title" }` doesn't need `resetIsLoaded(..., "title")` b/c the same hint will also
         // be watching "did books change", and so get reset that way.
-        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m") {
-          getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(entity, field.fieldName);
+        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m" || field.kind === "m2mEnum") {
+          getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(this.entity, field.fieldName);
         } else if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
           // Any reactable watching these fields will also be watching reference/collection
         } else if (field.kind === "o2m" || field.kind === "o2o") {
@@ -139,6 +146,7 @@ export class InstanceData {
         }
       }
       this.#deleted = Operation.Pending;
+      this.markMaybePending();
       return true;
     }
     return false;
@@ -147,6 +155,35 @@ export class InstanceData {
   fixupCreatedThenDeleted(): void {
     // Ideally we could do this via `resetAfterFlushed`?
     this.#deleted = Operation.Complete;
+    this.unmarkMaybePending();
+  }
+
+  /** Marks this entity as needing a flush even if no fields changed. */
+  markTouched(): void {
+    this.isTouched = true;
+    this.markMaybePending();
+  }
+
+  /** Marks a field as dirty with its pre-mutation value. */
+  markFieldDirty(fieldName: string, value: any): void {
+    this.originalData[fieldName] = value;
+    this.markMaybePending();
+  }
+
+  /** Marks a reverted field as clean again. */
+  markFieldClean(fieldName: string): void {
+    delete this.originalData[fieldName];
+    this.markMaybePending();
+  }
+
+  /** Marks this entity as a possible flush candidate. */
+  markMaybePending(): void {
+    getEmInternalApi(this.em).markMaybePending(this.entity);
+  }
+
+  /** Removes this entity from the possible flush candidate set. */
+  private unmarkMaybePending(): void {
+    getEmInternalApi(this.em).unmarkMaybePending(this.entity);
   }
 
   /** Remembers a reference value that may need to be reverse-walked later. */

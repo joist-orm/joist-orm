@@ -1,7 +1,7 @@
 import { createFromBuffer } from "@dprint/formatter";
-import { getBuffer } from "@dprint/json";
-import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
-import { promises as fs } from "fs";
+import { getPath } from "@dprint/json";
+import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
+import { promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
 import ts from "typescript";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { getStiEntities } from "./inheritance";
 import { logger } from "./logger";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
-const jsonFormatter = createFromBuffer(getBuffer());
+const jsonFormatter = createFromBuffer(readFileSync(getPath()));
 
 const fieldConfig = z
   .object({
@@ -68,8 +68,8 @@ const entityConfig = z
   .object({
     tag: z.string(),
     tableName: z.optional(z.string()),
-    fields: z.optional(z.record(fieldConfig)),
-    relations: z.optional(z.record(relationConfig)),
+    fields: z.optional(z.record(z.string(), fieldConfig)),
+    relations: z.optional(z.record(z.string(), relationConfig)),
     /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
     abstract: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
@@ -115,7 +115,7 @@ export const config = z
       }),
     ),
     /**
-     * Allows the user to have codegen output `Temporal` types (via `temporal-polyfill`) instead of the base JS `Date`
+     * Allows the user to have codegen output `Temporal` types instead of the base JS `Date`
      *
      * Additionally, allows for specifying the default time zone for `Temporal` types when converting dates to/from
      * the database.
@@ -133,7 +133,7 @@ export const config = z
     createFlushFunction: z.optional(z.union([z.boolean(), z.array(z.string())])),
     entitiesDirectory: z.string().default("./src/entities"),
     codegenPlugins: z.optional(z.array(z.string())),
-    entities: z.record(entityConfig).default({}),
+    entities: z.record(z.string(), entityConfig).default({}),
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
@@ -141,6 +141,8 @@ export const config = z
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
     esm: z.optional(z.boolean()),
+    /** Controls the style of GraphQL pagination scaffolding. */
+    paginationStyle: z.optional(z.union([z.literal("cursor"), z.literal("limit")])).default("cursor"),
     /** Enables documentation syncing between .md files and JSDocs. */
     docs: z.optional(z.boolean()),
     /** Output a metadata-docs.ts file with entity/field documentation available at runtime. */
@@ -192,6 +194,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
       ...entity.manyToOnes,
       ...entity.oneToManys,
       ...entity.manyToManys,
+      ...entity.manyToManyEnums,
       ...entity.oneToOnes,
       ...entity.largeOneToManys,
       ...entity.largeManyToManys,
@@ -325,7 +328,7 @@ export async function loadConfig(): Promise<Config> {
     const result = config.safeParse(stripLegacyConfigKeys(JSON.parse(content.toString())));
     if (!result.success) {
       throw new Error(
-        `Invalid joist-config.json: ${result.error.errors
+        `Invalid joist-config.json: ${result.error.issues
           .map((ze) => `${ze.path.map(String).join("/")} ${ze.message}`)
           .join("\n")}`,
       );
@@ -346,11 +349,14 @@ export async function loadConfig(): Promise<Config> {
  * such that no changes to the config show up as noops to the scm.
  */
 export async function writeConfig(config: Config): Promise<void> {
-  const sorted = sortKeys(config);
+  const sorted: Partial<Config> = sortKeys(config);
   delete sorted.__tableToEntityName;
   delete sorted.allowImportingTsExtensions;
+  if (sorted.paginationStyle === "cursor") {
+    delete sorted.paginationStyle;
+  }
   const input = JSON.stringify(sorted);
-  const content = jsonFormatter.formatText("test.json", input);
+  const content = jsonFormatter.formatText({ filePath: "test.json", fileText: input });
   await fs.writeFile(configPath, content);
 }
 

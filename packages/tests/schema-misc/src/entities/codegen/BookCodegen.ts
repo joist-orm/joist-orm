@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   type Changes,
+  type Collection,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -11,6 +12,7 @@ import {
   type Flavor,
   getField,
   type GraphQLFilterOf,
+  hasManyToMany,
   hasOne,
   isLoaded,
   type JsonPayload,
@@ -21,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -44,6 +48,8 @@ import {
   type Entity,
   EntityManager,
   newBook,
+  type Tag,
+  type TagId,
 } from "../entities";
 
 export type BookId = Flavor<string, "Book">;
@@ -52,27 +58,33 @@ export interface BookFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface BookOpts {
   title: string;
   author: Author | AuthorId;
+  tags?: Tag[];
 }
 
 export interface BookIdsOpts {
   authorId?: AuthorId | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface BookFilter {
   id?: ValueFilter<BookId, never> | null;
   title?: ValueFilter<string, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface BookOrder {
@@ -84,7 +96,14 @@ export interface BookOrder {
 export interface BookFactoryExtras {
 }
 
+export interface BookScopes {
+}
+
+export type BookScope = Scope<Book, BookScopes>;
+
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = newScopeFn<Book, BookScope>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("author"));
@@ -112,6 +131,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   declare readonly __type: { 0: "Book" };
 
   readonly author: ManyToOneReference<Book, Author, never> = hasOne();
+  readonly tags: Collection<Book, Tag> = hasManyToMany(); // book_to_tags bookId tagId
 
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");

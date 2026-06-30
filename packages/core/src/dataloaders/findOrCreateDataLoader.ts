@@ -88,15 +88,13 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
 
       // If we didn't find it in the EM, do the db query/em.create
-      const entities = (
-        await em.find(
-          type,
-          // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
-          Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
-          // Always include soft-deleted rows so findOrCreate can resurrect them instead of creating duplicates.
-          { softDeletes: "include" },
-        )
-      ).filter((e) => !e.isDeletedEntity);
+      const entities = await em.find(
+        type,
+        // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
+        Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
+        // Always include soft-deleted rows so findOrCreate can resurrect them instead of creating duplicates.
+        { softDeletes: "include" },
+      );
       let entity: T;
       if (entities.length > 1) {
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
@@ -111,7 +109,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
       return keys.map(() => entity);
     },
-    // Our filter tuple is a complex object, so object-hash it to ensure caching works
+    // Our filter tuple is a complex object, so use a stable cache key to ensure caching works.
     { cacheKeyFn: whereFilterHash as any },
   );
 }

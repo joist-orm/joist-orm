@@ -1,6 +1,5 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactablesIncludingReadOnly } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -33,27 +32,33 @@ export class IsLoadedCache {
   // A dumb cache for things that are hard selectively invalidate (o2m.get, recursive collections,
   // and custom references/collections), so any mutation resets these.
   #naiveCache = new Set<IsLoadedCachable>();
-  // Counter to try and fast-path resetIsLoaded
-  #dirtySets = 0;
+  // Counter to skip reactive hint walking when no smart cache sets are populated.
+  #smartDirtySets = 0;
+  // Counter to fast-path resetIsLoaded when the naive cache is empty.
+  #naiveDirtySets = 0;
 
   /** Adds a ReactiveField/Relation/Collection to be invalidated when its dependencies change. */
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
     const set = ((this.#smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
-    if (set.size === 0) this.#dirtySets++;
+    if (set.size === 0) {
+      this.#smartDirtySets++;
+    }
     set.add(target);
   }
 
   addNaive(target: IsLoadedCachable): void {
-    if (this.#naiveCache.size === 0) this.#dirtySets++;
+    if (this.#naiveCache.size === 0) this.#naiveDirtySets++;
     this.#naiveCache.add(target);
   }
 
   /** Resets any in-memory #isLoaded/#isCached caches that depend on `entity.fieldName`. */
   resetIsLoaded(entity: Entity, fieldName: string): void {
-    if (this.#dirtySets === 0) return;
+    if (this.#smartDirtySets === 0 && this.#naiveDirtySets === 0) return;
     // Reset caches that we can deterministically find by walking the reactivity hints
-    this.#resetDownstreamReactables(getMetadata(entity), fieldName);
+    if (this.#smartDirtySets > 0) {
+      this.#resetDownstreamReactables(getMetadata(entity), fieldName);
+    }
     // We could use this to invalidate m2o.get, but it doesn't work for collections
     // with an orderBy, when the orderBy changes, so for now we use the blunt naiveCache.
     // const field = meta.allFields[fieldName];
@@ -68,7 +73,7 @@ export class IsLoadedCache {
     if (this.#naiveCache.size > 0) {
       for (const target of this.#naiveCache.values()) target.resetIsLoaded();
       this.#naiveCache.clear();
-      this.#dirtySets--;
+      this.#naiveDirtySets--;
     }
   }
 
@@ -79,26 +84,26 @@ export class IsLoadedCache {
    */
   #resetDownstreamReactables(meta: EntityMetadata, fieldName: string): void {
     // These are reactables in other entities that are watching/reacting to this entity/fieldName
-    const reactables = getReactablesIncludingReadOnly(meta);
+    const reactables = meta.reactablesIncludingReadOnlyByField!.get(fieldName);
+    if (reactables === undefined) return;
     for (const r of reactables) {
+      if (this.#smartDirtySets === 0) return;
       // I.e. we've written to Author.firstName, and this reactable in Book/otherMeta depends on it
-      if (r.fields.includes(fieldName)) {
-        const otherMeta = getMetadata(r.cstr);
-        // Find any cache entries for this cstr + name
-        const set = this.#smartCache[otherMeta.tagName]?.[r.name];
-        if (set?.size > 0) {
-          for (const target of set) {
-            target.resetIsLoaded();
-            // Is this target itself a RF/RR? If so, transitively reset its cache as well.
-            const otherMeta = getMetadata(target.entity);
-            const otherField = otherMeta.allFields[target.fieldName];
-            if ("derived" in otherField && otherField.derived) {
-              this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
-            }
+      const otherMeta = getMetadata(r.cstr);
+      // Find any cache entries for this cstr + name
+      const set = this.#smartCache[otherMeta.tagName]?.[r.name];
+      if (set?.size > 0) {
+        for (const target of set) {
+          target.resetIsLoaded();
+          // Is this target itself a RF/RR? If so, transitively reset its cache as well.
+          const otherMeta = getMetadata(target.entity);
+          const otherField = otherMeta.allFields[target.fieldName];
+          if ("derived" in otherField && otherField.derived) {
+            this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
           }
-          set.clear();
-          this.#dirtySets--;
         }
+        set.clear();
+        this.#smartDirtySets--;
       }
     }
   }

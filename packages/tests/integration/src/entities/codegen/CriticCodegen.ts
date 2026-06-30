@@ -24,10 +24,12 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -109,7 +111,9 @@ export interface CriticGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteLargePublisher?: EntityGraphQLFilter<LargePublisher, LargePublisherId, GraphQLFilterOf<LargePublisher>, null>;
+  favoriteLargePublisherId?: ValueGraphQLFilter<LargePublisherId>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
+  groupId?: ValueGraphQLFilter<PublisherGroupId>;
   groupSmallPublisherGroup?: EntityGraphQLFilter<
     SmallPublisherGroup,
     SmallPublisherGroupId,
@@ -132,7 +136,14 @@ export interface CriticOrder {
 export interface CriticFactoryExtras {
 }
 
+export interface CriticScopes {
+}
+
+export type CriticScope = Scope<Critic, CriticScopes>;
+
 export const criticConfig = new ConfigApi<Critic, Context>();
+
+export const criticScope = newScopeFn<Critic, CriticScope>("Critic");
 
 criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));

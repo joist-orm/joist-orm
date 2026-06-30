@@ -1,12 +1,18 @@
 import {
   BaseEntity,
   type Changes,
+  type Collection,
   ConfigApi,
   type DeepPartialOrNull,
+  type EntityFilter,
+  type EntityGraphQLFilter,
   type EntityMetadata,
   failNoIdYet,
+  type FilterOf,
   type Flavor,
   getField,
+  type GraphQLFilterOf,
+  hasManyToMany,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -15,9 +21,11 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -29,30 +37,43 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type DatabaseOwner, databaseOwnerMeta, type Entity, EntityManager, newDatabaseOwner } from "../entities";
+import {
+  type DatabaseOwner,
+  databaseOwnerMeta,
+  type Entity,
+  EntityManager,
+  newDatabaseOwner,
+  type Tag,
+  type TagId,
+} from "../entities";
 
 export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;
 
 export interface DatabaseOwnerFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface DatabaseOwnerOpts {
   name: string;
+  tags?: Tag[];
 }
 
 export interface DatabaseOwnerIdsOpts {
+  tagIds?: TagId[] | null;
 }
 
 export interface DatabaseOwnerFilter {
   id?: ValueFilter<DatabaseOwnerId, never> | null;
   name?: ValueFilter<string, never>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface DatabaseOwnerGraphQLFilter {
   id?: ValueGraphQLFilter<DatabaseOwnerId>;
   name?: ValueGraphQLFilter<string>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface DatabaseOwnerOrder {
@@ -63,7 +84,14 @@ export interface DatabaseOwnerOrder {
 export interface DatabaseOwnerFactoryExtras {
 }
 
+export interface DatabaseOwnerScopes {
+}
+
+export type DatabaseOwnerScope = Scope<DatabaseOwner, DatabaseOwnerScopes>;
+
 export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
+
+export const databaseOwnerScope = newScopeFn<DatabaseOwner, DatabaseOwnerScope>("DatabaseOwner");
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
@@ -88,6 +116,8 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   static readonly metadata: EntityMetadata<DatabaseOwner>;
 
   declare readonly __type: { 0: "DatabaseOwner" };
+
+  readonly tags: Collection<DatabaseOwner, Tag> = hasManyToMany(); // database_owner_to_tags databaseOwnerId tagId
 
   get id(): DatabaseOwnerId {
     return this.idMaybe || failNoIdYet("DatabaseOwner");

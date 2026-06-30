@@ -6,6 +6,7 @@ import {
   getEmInternalApi,
   getInstanceData,
   getMetadata,
+  getMetadataForField,
   isLoaded,
   ManyToManyField,
   ReadOnlyCollection,
@@ -181,7 +182,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   maybeCascadeDelete(): void {
     if (this.#isCascadeDelete) {
       const jr = getEmInternalApi(this.entity.em).joinRows(this);
-      jr.getOthers(this.columnName, this.entity).forEach((e) => this.entity.em.delete(e));
+      (jr.getOthers(this.columnName, this.entity) as U[]).forEach((e) => this.entity.em.delete(e));
     }
   }
 
@@ -195,7 +196,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   // Properties needed for JoinRows/ManyToManyCollection compatibility
   get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   get fieldName(): string {
@@ -216,6 +217,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   get otherColumnName(): string {
     return this.#field.columnNames[1];
+  }
+
+  get hasJoinTableId(): boolean {
+    return this.#field.hasJoinTableId;
   }
 
   get otherFieldName(): string {

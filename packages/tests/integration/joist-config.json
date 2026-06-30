@@ -1,6 +1,6 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
-  "codemodVersion": 2,
+  "codemodVersion": 3,
   "contextType": "Context@src/context",
   "docs": true,
   "entities": {
@@ -74,6 +74,7 @@
       "tag": "c"
     },
     "CriticColumn": { "tag": "cc" },
+    "Employee": { "relations": { "managersClosure": { "derived": "async" } }, "tag": "e" },
     "Image": { "tag": "i" },
     "LargePublisher": {
       "fields": { "rating": { "notNull": true } },
@@ -146,5 +147,6 @@
   },
   "entitiesDirectory": "./src/entities",
   "outputDocs": true,
+  "paginationStyle": "limit",
   "transactionType": "PoolClient@pg"
 }

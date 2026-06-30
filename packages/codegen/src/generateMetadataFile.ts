@@ -256,6 +256,26 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         immutable: false,
         joinTableName: "${m2m.joinTableName}",
         columnNames: ["${m2m.columnName}", "${m2m.otherColumnName}"],
+        hasJoinTableId: ${m2m.hasJoinTableId},
+      }
+    `;
+  });
+
+  dbMetadata.manyToManyEnums.forEach((m2m) => {
+    const { fieldName, enumDetailType } = m2m;
+    fields[fieldName] = code`
+      {
+        kind: "m2mEnum",
+        fieldName: "${fieldName}",
+        fieldIdName: undefined,
+        required: false,
+        derived: false,
+        enumDetailType: ${enumDetailType},
+        serde: undefined,
+        immutable: false,
+        joinTableName: "${m2m.joinTableName}",
+        columnNames: ["${m2m.columnName}", "${m2m.otherColumnName}"],
+        hasJoinTableId: ${m2m.hasJoinTableId},
       }
     `;
   });

@@ -26,10 +26,12 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -110,7 +112,9 @@ export interface TaskOldFilter extends TaskFilter {
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
   parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  parentOldTaskId?: ValueGraphQLFilter<TaskOldId>;
   copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedFromId?: ValueGraphQLFilter<TaskOldId>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
@@ -127,7 +131,14 @@ export interface TaskOldOrder extends TaskOrder {
 export interface TaskOldFactoryExtras {
 }
 
+export interface TaskOldScopes {
+}
+
+export type TaskOldScope = Scope<TaskOld, TaskOldScopes>;
+
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
+
+export const taskOldScope = newScopeFn<TaskOld, TaskOldScope>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));

@@ -5,5 +5,5 @@ import { entityResolver } from "src/resolvers/utils";
 
 export const authorResolvers: AuthorResolvers = {
   ...entityResolver(getMetadata(Author)),
-  graphqlOnlyField: (_, args) => args + 2,
+  graphqlOnlyField: (_, args) => (args.arg ?? 0) + 2,
 };

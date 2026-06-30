@@ -22,6 +22,8 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
   let { meta, fieldName } = collection;
   // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
   // correct meta by walking the inheritance tree until we find the meta that actually has the root m2o field
+  // We intentionally don't use getMetadataForField here because CTI-specialized fields stay on the subtype metadata,
+  // while these raw recursive CTEs need the metadata/table that physically owns the FK column.
   while (!(collection.m2oFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getBatchLoader(recursiveParentsOperation, batchKey, async (children) => {

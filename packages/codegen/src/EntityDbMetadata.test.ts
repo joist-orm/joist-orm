@@ -1,5 +1,12 @@
 import { config } from "./config";
-import { collectionName, makeEntity, oneToOneName, referenceName } from "./EntityDbMetadata";
+import {
+  canonicalizeOtherEntities,
+  collectionName,
+  makeEntity,
+  oneToOneName,
+  referenceName,
+  resolveNameConflicts,
+} from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
 const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] }, foreignKey: { columns: [{}] } };
@@ -93,6 +100,87 @@ describe("EntityDbMetadata", () => {
     });
   });
 
+  describe("canonicalizeOtherEntities", () => {
+    it("points relation otherEntitys at the single primary instance", () => {
+      const author = fakeMeta("Author");
+      const book = fakeMeta("Book");
+      // A fresh, duplicate `Author` object, as `makeEntity` produces for each relation
+      book.manyToOnes = [{ otherEntity: makeEntity("Author") }];
+      const db = asDb([author, book]);
+      canonicalizeOtherEntities(db);
+      expect(book.manyToOnes[0].otherEntity).toBe(author.entity);
+    });
+  });
+
+  describe("resolveNameConflicts", () => {
+    it("defaults to conventional names", () => {
+      expect(makeEntity("Author")).toMatchObject({
+        idName: "AuthorId",
+        fieldsName: "AuthorFields",
+        optsName: "AuthorOpts",
+        idsOptsName: "AuthorIdsOpts",
+        filterName: "AuthorFilter",
+        graphqlFilterName: "AuthorGraphQLFilter",
+        orderName: "AuthorOrder",
+        factoryExtrasName: "AuthorFactoryExtras",
+        scopeName: "AuthorScope",
+        scopesName: "AuthorScopes",
+      });
+    });
+
+    it("leaves names alone when there is no conflict", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("Book")];
+      resolveNameConflicts(defaultConfig, asDb(entities));
+      expect(entities[0].entity).toMatchObject({ scopeName: "AuthorScope", orderName: "AuthorOrder" });
+    });
+
+    it("falls back to underscore names when an entity is named EntityScope", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("AuthorScope")];
+      resolveNameConflicts(defaultConfig, asDb(entities));
+      // Only the colliding symbol is underscored; the rest stay conventional
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", orderName: "AuthorOrder" });
+    });
+
+    it("falls back to underscore names for any colliding codegen'd type", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("AuthorOrder"), fakeMeta("AuthorFilter")];
+      resolveNameConflicts(defaultConfig, asDb(entities));
+      expect(entities[0].entity).toMatchObject({
+        orderName: "Author_Order",
+        filterName: "Author_Filter",
+        optsName: "AuthorOpts",
+      });
+    });
+
+    it("rewrites cross-entity references to stay in sync", () => {
+      const author = fakeMeta("Author");
+      const book = fakeMeta("Book");
+      book.manyToOnes = [{ otherEntity: makeEntity("Author") }];
+      // An entity named `AuthorId` collides with Author's own `AuthorId` type
+      const db = asDb([author, book, fakeMeta("AuthorId")]);
+      canonicalizeOtherEntities(db);
+      resolveNameConflicts(defaultConfig, db);
+      expect(author.entity.idName).toEqual("Author_Id");
+      // Book's m2o points at Author's single primary instance, so it follows the rename
+      expect(book.manyToOnes[0].otherEntity.idName).toEqual("Author_Id");
+    });
+
+    it("falls back when an enum is named EntityScope", () => {
+      const entities = [fakeMeta("Author")];
+      // The `author_scopes` enum table is exported as the singularized `AuthorScope`, and its pluralized
+      // metadata const `AuthorScopes` collides with the entity's `Scopes` type, so both are underscored.
+      const enums = [{ table: { name: "author_scopes" } }];
+      resolveNameConflicts(defaultConfig, asDb(entities, enums));
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
+    });
+
+    it("falls back when a pg enum is named EntityOrder", () => {
+      const entities = [fakeMeta("Author")];
+      const pgEnums = [{ name: "AuthorOrder" }];
+      resolveNameConflicts(defaultConfig, asDb(entities, [], pgEnums));
+      expect(entities[0].entity).toMatchObject({ orderName: "Author_Order" });
+    });
+  });
+
   describe("referenceName", () => {
     it("returns the camel case of the column name without an id prefix", () => {
       // For `image.book_id` create `Image.book`
@@ -126,3 +214,26 @@ describe("EntityDbMetadata", () => {
     });
   });
 });
+
+function fakeMeta(name: string): any {
+  return {
+    name,
+    entity: makeEntity(name),
+    manyToOnes: [],
+    oneToManys: [],
+    largeOneToManys: [],
+    oneToOnes: [],
+    manyToManys: [],
+    largeManyToManys: [],
+    polymorphics: [],
+  };
+}
+
+function asDb(entities: any[], enums: any[] = [], pgEnums: any[] = []): any {
+  return {
+    entities,
+    entitiesByName: Object.fromEntries(entities.map((e) => [e.name, e])),
+    enums: Object.fromEntries(enums.map((e) => [e.table.name, e])),
+    pgEnums: Object.fromEntries(pgEnums.map((e) => [e.name, e])),
+  };
+}

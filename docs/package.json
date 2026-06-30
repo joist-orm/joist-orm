@@ -11,17 +11,18 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.39.2",
+    "@astrojs/starlight": "0.40.0",
     "@astrojs/starlight-tailwind": "5.0.0",
-    "astro": "6.3.2",
-    "sharp": "^0.34.5",
+    "astro": "^6.4.8",
+    "sharp": "^0.35.2",
     "starlight-blog": "^0.26.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
-    "@tailwindcss/vite": "^4.3.0",
-    "starlight-llms-txt": "^0.9.0",
-    "tailwindcss": "^4.3.0",
-    "typescript": "^5.9.3"
+    "@astrojs/markdown-remark": "7.2.0",
+    "@tailwindcss/vite": "^4.3.1",
+    "starlight-llms-txt": "^0.10.0",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3"
   }
 }

@@ -10,6 +10,10 @@
   "main": "build/index.js",
   "exports": {
     ".": "./build/index.js",
+    "./index.js": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
     "./tests": "./build/tests.js"
   },
   "types": "build/index.d.ts",
@@ -24,17 +28,17 @@
     "joist-test-utils": "workspace:*"
   },
   "dependencies": {
-    "graphql": "^16.14.0"
+    "graphql": "^16.14.2"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.33",
+    "@swc/core": "^1.15.43",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.0.1",
     "jest": "30.4.2",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
   }
 }

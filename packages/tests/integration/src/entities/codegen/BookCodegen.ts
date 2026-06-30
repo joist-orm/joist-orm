@@ -27,12 +27,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -162,9 +164,13 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  prequelId?: ValueGraphQLFilter<BookId>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  reviewerId?: ValueGraphQLFilter<AuthorId>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
+  randomCommentId?: ValueGraphQLFilter<CommentId>;
   sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -196,7 +202,15 @@ export interface BookFactoryExtras {
   withSearch?: string | null;
 }
 
+export interface BookScopes {
+  fromLargePubs: BookScope;
+}
+
+export type BookScope = Scope<Book, BookScopes>;
+
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = newScopeFn<Book, BookScope>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("order"));

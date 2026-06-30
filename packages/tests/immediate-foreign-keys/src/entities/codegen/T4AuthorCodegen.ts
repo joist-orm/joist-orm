@@ -23,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -79,6 +81,7 @@ export interface T4AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<T4AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
   favoriteBook?: EntityGraphQLFilter<T4Book, T4BookId, GraphQLFilterOf<T4Book>, never>;
+  favoriteBookId?: ValueGraphQLFilter<T4BookId>;
   t4Books?: EntityGraphQLFilter<T4Book, T4BookId, GraphQLFilterOf<T4Book>, null | undefined>;
 }
 
@@ -91,7 +94,14 @@ export interface T4AuthorOrder {
 export interface T4AuthorFactoryExtras {
 }
 
+export interface T4AuthorScopes {
+}
+
+export type T4AuthorScope = Scope<T4Author, T4AuthorScopes>;
+
 export const t4AuthorConfig = new ConfigApi<T4Author, Context>();
+
+export const t4AuthorScope = newScopeFn<T4Author, T4AuthorScope>("T4Author");
 
 t4AuthorConfig.addRule(newRequiredRule("firstName"));
 t4AuthorConfig.addRule(newRequiredRule("favoriteBook"));

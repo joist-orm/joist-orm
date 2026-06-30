@@ -1,7 +1,7 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import { Entity } from "../Entity";
 import { appendStack, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata, LargeOneToManyField } from "../EntityMetadata";
+import { EntityMetadata, getMetadataForField, LargeOneToManyField } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
 import { lazyField } from "../newEntity";
 import { remove } from "../utils";
@@ -84,7 +84,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   // These are public to our internal implementation but not exposed in the Collection API

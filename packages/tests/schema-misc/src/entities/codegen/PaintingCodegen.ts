@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -79,6 +81,7 @@ export interface PaintingGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   artist?: EntityGraphQLFilter<Artist, ArtistId, GraphQLFilterOf<Artist>, never>;
+  artistId?: ValueGraphQLFilter<ArtistId>;
 }
 
 export interface PaintingOrder {
@@ -92,7 +95,14 @@ export interface PaintingOrder {
 export interface PaintingFactoryExtras {
 }
 
+export interface PaintingScopes {
+}
+
+export type PaintingScope = Scope<Painting, PaintingScopes>;
+
 export const paintingConfig = new ConfigApi<Painting, Context>();
+
+export const paintingScope = newScopeFn<Painting, PaintingScope>("Painting");
 
 paintingConfig.addRule(newRequiredRule("title"));
 paintingConfig.addRule(newRequiredRule("createdAt"));

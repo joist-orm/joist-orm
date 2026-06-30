@@ -1,7 +1,6 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactables, getReactablesIncludingReadOnly } from "./caches";
-import { Reactable } from "./config";
+import { type Reactable } from "./config";
 import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
@@ -50,47 +49,43 @@ export class ReactionsManager {
    */
   queueDownstreamReactables(entity: Entity, fieldName: string): void {
     // Use the reverse index of Reactables that configureMetadata sets up
-    for (const r of this.getReactables(entity)) {
-      if (r.fields.includes(fieldName)) {
-        // We always queue the reactable/entity, even if we're mid-flush or even mid-recalc, to avoid:
-        // - firstName is changed from a1 to a2
-        // - this triggers firstName's reactable to `Author.initials` to be queued
-        // - during the 1st em.flush loop, we recalc `Author.initials` and it didn't change
-        // - during the 1st em.flush loop, a hook changes firstName from a2 to b2
-        // - if we skip re-queuing firstName's reactables, we will miss that initials needs
-        //   its `.load()` called again so that it's `setField` marks `initials` as
-        //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
-        this.getPending(r).todo.add(entity);
-        this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
-        this.#needsRecalc[r.kind] = true;
-        this.logger?.logQueued(entity, fieldName, r);
-      }
+    for (const r of this.getReactablesByField(entity, fieldName)) {
+      // We always queue the reactable/entity, even if we're mid-flush or even mid-recalc, to avoid:
+      // - firstName is changed from a1 to a2
+      // - this triggers firstName's reactable to `Author.initials` to be queued
+      // - during the 1st em.flush loop, we recalc `Author.initials` and it didn't change
+      // - during the 1st em.flush loop, a hook changes firstName from a2 to b2
+      // - if we skip re-queuing firstName's reactables, we will miss that initials needs
+      //   its `.load()` called again so that it's `setField` marks `initials` as
+      //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
+      this.getPending(r).todo.add(entity);
+      this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
+      this.#needsRecalc[r.kind] = true;
+      this.logger?.logQueued(entity, fieldName, r);
     }
   }
 
   /** Dequeues reactivity on `fieldName`, i.e. if it's no longer dirty. */
   dequeueDownstreamReactables(entity: Entity, fieldName: string): void {
     // Use the reverse index of Reactables that configureMetadata sets up
-    for (const r of this.getReactables(entity)) {
-      if (r.fields.includes(fieldName)) {
-        const pending = this.getPending(r);
-        if (pending.done.has(entity)) {
-          // Ironically, if we've already run this reactable, asking to dequeue probably means
-          // we need to run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
-          // - firstName = a1 from db
-          // - firstName is changed to a2, triggers initials reactable
-          // - firstName is changed back to a1, which is the original value, so setField
-          //   thinks we can dequeue the reactable
-          // - but actually our reactable needs to be re-run with the restored value
-          pending.todo.add(entity);
-          this.#needsRecalc[r.kind] = true;
-        } else if (r.fields.length === 1) {
-          // We can only delete/dequeue a reaction if `fieldName` is the only or last field
-          // that had triggered `r` to run. Since we don't track that currently, i.e. we'd
-          // need to have a `Pending.dirtyFields`, for now just only dequeue if `r` only
-          // has one field (which is us) anyway.
-          pending.todo.delete(entity);
-        }
+    for (const r of this.getReactablesByField(entity, fieldName)) {
+      const pending = this.getPending(r);
+      if (pending.done.has(entity)) {
+        // Ironically, if we've already run this reactable, asking to dequeue probably means
+        // we need to run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
+        // - firstName = a1 from db
+        // - firstName is changed to a2, triggers initials reactable
+        // - firstName is changed back to a1, which is the original value, so setField
+        //   thinks we can dequeue the reactable
+        // - but actually our reactable needs to be re-run with the restored value
+        pending.todo.add(entity);
+        this.#needsRecalc[r.kind] = true;
+      } else if (r.fields.length === 1) {
+        // We can only delete/dequeue a reaction if `fieldName` is the only or last field
+        // that had triggered `r` to run. Since we don't track that currently, i.e. we'd
+        // need to have a `Pending.dirtyFields`, for now just only dequeue if `r` only
+        // has one field (which is us) anyway.
+        pending.todo.delete(entity);
       }
     }
   }
@@ -161,12 +156,11 @@ export class ReactionsManager {
           pending.todo.clear();
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream entities
-          const entities = (await followReverseHint(r.name, todo, r.path))
-            .filter((entity) => !entity.isDeletedEntity)
-            .filter((e) => e instanceof r.cstr);
-          this.logger?.logWalked(todo, r, entities, "recalc");
-          entities.forEach((entity) => {
-            const key = `${entity.toTaggedString()}_${r.name}`;
+          const entities = r.path.length === 0 ? todo : await followReverseHint(r.name, todo, r.path);
+          const actionableEntities = entities.filter((entity) => !entity.isDeletedEntity && entity instanceof r.cstr);
+          this.logger?.logWalked(todo, r, actionableEntities, "recalc");
+          actionableEntities.forEach((entity) => {
+            const key = makeActionKey(entity, r);
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop
             if (actionsMap.has(key)) return;
@@ -227,8 +221,8 @@ export class ReactionsManager {
 
       if (failures.length > 0) throw failures[0];
       // Record any successful actions that should only run once so we don't run them again
-      actions.forEach(({ key, r }) => {
-        if (r.runOnce) this.processedActions.add(key);
+      actions.forEach((action) => {
+        if (action.r.runOnce) this.processedActions.add(action.key);
       });
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
@@ -318,8 +312,20 @@ export class ReactionsManager {
   private getReactables(entity: Entity): Reactable[] {
     // If two books are getting merged, and so a normally-immutable `BookReview.book` is being changed,
     // then even normally-immutable fields need to be recalculated.
-    return getEmInternalApi(this.em).isMerging(entity)
-      ? getReactablesIncludingReadOnly(getMetadata(entity))
-      : getReactables(getMetadata(entity));
+    const meta = getMetadata(entity);
+    return getEmInternalApi(this.em).isMerging(entity) ? meta.reactablesIncludingReadOnly! : meta.reactables!;
   }
+
+  private getReactablesByField(entity: Entity, fieldName: string): Reactable[] {
+    const meta = getMetadata(entity);
+    const byField = getEmInternalApi(this.em).isMerging(entity)
+      ? meta.reactablesIncludingReadOnlyByField!
+      : meta.reactablesByField!;
+    return byField.get(fieldName) ?? [];
+  }
+}
+
+/** Returns a stable dedupe key for retry/runOnce reaction bookkeeping. */
+function makeActionKey(entity: Entity, r: Reactable): string {
+  return `${entity.toTaggedString()}_${r.name}`;
 }

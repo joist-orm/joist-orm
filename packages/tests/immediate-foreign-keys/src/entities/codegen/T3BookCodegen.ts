@@ -23,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -79,6 +81,7 @@ export interface T3BookGraphQLFilter {
   id?: ValueGraphQLFilter<T3BookId>;
   title?: ValueGraphQLFilter<string>;
   author?: EntityGraphQLFilter<T3Author, T3AuthorId, GraphQLFilterOf<T3Author>, never>;
+  authorId?: ValueGraphQLFilter<T3AuthorId>;
   t3Authors?: EntityGraphQLFilter<T3Author, T3AuthorId, GraphQLFilterOf<T3Author>, null | undefined>;
 }
 
@@ -91,7 +94,14 @@ export interface T3BookOrder {
 export interface T3BookFactoryExtras {
 }
 
+export interface T3BookScopes {
+}
+
+export type T3BookScope = Scope<T3Book, T3BookScopes>;
+
 export const t3BookConfig = new ConfigApi<T3Book, Context>();
+
+export const t3BookScope = newScopeFn<T3Book, T3BookScope>("T3Book");
 
 t3BookConfig.addRule(newRequiredRule("title"));
 t3BookConfig.addRule(newRequiredRule("author"));

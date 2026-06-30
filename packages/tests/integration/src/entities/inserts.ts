@@ -39,6 +39,7 @@ export function insertAuthor(row: {
   graduated?: any;
   number_of_atoms?: string;
   number_of_public_reviews?: number;
+  created_at?: any;
   updated_at?: any;
   deleted_at?: any;
   certificate?: any;
@@ -78,6 +79,7 @@ export function insertBook(row: {
   id?: number;
   title: string;
   author_id: number | null;
+  reviewer_id?: number | null;
   prequel_id?: number | null;
   deleted_at?: Date;
   order?: number;
@@ -194,6 +196,7 @@ export async function insertLargePublisher(row: {
   base_async_default?: string;
   spotlight_author_id?: number;
   rating?: number;
+  type_id?: number;
 }) {
   const { country = "country", shared_column, ...others } = row;
   await testDriver.insert("publishers", {
@@ -262,6 +265,10 @@ export function insertBookToTag(row: { id?: number; book_id: number; tag_id: num
   return testDriver.insert("books_to_tags", row);
 }
 
+export function insertTaskToTag(row: { id?: number; task_id: number; tag_id: number }) {
+  return testDriver.insert("task_to_tags", row);
+}
+
 export function deleteBookToTag(id: number) {
   return testDriver.delete("books_to_tags", id);
 }
@@ -270,12 +277,25 @@ export function insertPublisherToTag(row: { id?: number; publisher_id: number; t
   return testDriver.insert("publishers_to_tags", row);
 }
 
+export function insertPublisherLogoColor(row: { id?: number; publisher_id: number; logo_color_id: number }) {
+  return testDriver.insert("publisher_logo_colors", row);
+}
+
 export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
   return testDriver.insert("authors_to_tags", row);
 }
 
 export function insertAuthorToBestReview(row: { author_id: number; book_review_id: number }) {
   return testDriver.insert("authors_to_best_reviews", row);
+}
+
+export function insertEmployee(row: { id?: number; name: string; manager_id?: number }) {
+  return testDriver.insert("employees", row);
+}
+
+/** Inserts a row into the blog-oriented employee managers closure table. */
+export function insertEmployeeToManagersClosure(row: { employee_id: number; manager_id: number }) {
+  return testDriver.insert("employee_to_managers_closure", row);
 }
 
 export function insertAuthorToMenteesClosure(row: { mentor_id: number; mentee_id: number }) {

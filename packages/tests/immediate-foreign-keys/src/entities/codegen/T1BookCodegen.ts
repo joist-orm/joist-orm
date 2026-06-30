@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -73,6 +75,7 @@ export interface T1BookGraphQLFilter {
   id?: ValueGraphQLFilter<T1BookId>;
   title?: ValueGraphQLFilter<string>;
   author?: EntityGraphQLFilter<T1Author, T1AuthorId, GraphQLFilterOf<T1Author>, never>;
+  authorId?: ValueGraphQLFilter<T1AuthorId>;
 }
 
 export interface T1BookOrder {
@@ -84,7 +87,14 @@ export interface T1BookOrder {
 export interface T1BookFactoryExtras {
 }
 
+export interface T1BookScopes {
+}
+
+export type T1BookScope = Scope<T1Book, T1BookScopes>;
+
 export const t1BookConfig = new ConfigApi<T1Book, Context>();
+
+export const t1BookScope = newScopeFn<T1Book, T1BookScope>("T1Book");
 
 t1BookConfig.addRule(newRequiredRule("title"));
 t1BookConfig.addRule(newRequiredRule("author"));

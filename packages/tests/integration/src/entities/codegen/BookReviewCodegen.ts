@@ -27,12 +27,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReactiveManyToManyOtherSide,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -119,7 +121,9 @@ export interface BookReviewGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  bookId?: ValueGraphQLFilter<BookId>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
+  criticId?: ValueGraphQLFilter<CriticId>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
   bestReviewAuthors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -143,7 +147,14 @@ export interface BookReviewFactoryExtras {
   withIsTestChain?: boolean;
 }
 
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
+
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
+
+export const bookReviewScope = newScopeFn<BookReview, BookReviewScope>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));

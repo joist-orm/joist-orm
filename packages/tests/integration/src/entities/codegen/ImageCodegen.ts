@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -106,8 +108,11 @@ export interface ImageGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<ImageType>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  bookId?: ValueGraphQLFilter<BookId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
+  publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     LargePublisherId,
@@ -136,7 +141,14 @@ export interface ImageOrder {
 export interface ImageFactoryExtras {
 }
 
+export interface ImageScopes {
+}
+
+export type ImageScope = Scope<Image, ImageScopes>;
+
 export const imageConfig = new ConfigApi<Image, Context>();
+
+export const imageScope = newScopeFn<Image, ImageScope>("Image");
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

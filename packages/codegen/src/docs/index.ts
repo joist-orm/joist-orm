@@ -24,7 +24,7 @@ export async function syncDocs(entitiesDir: string, entityNames: string[]): Prom
     }),
   );
 
-  const dirty = stats.filter((s) => !cache.isUpToDate(s.entityName, s.tsMtime, s.mdMtime));
+  const dirty = stats.filter((s) => s.tsMtime !== -1 && !cache.isUpToDate(s.entityName, s.tsMtime, s.mdMtime));
 
   if (dirty.length > 0) {
     // Step 1: backfill .md from .ts

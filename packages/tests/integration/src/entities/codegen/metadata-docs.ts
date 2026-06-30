@@ -50,6 +50,11 @@ export const docs = {
   Comment: { comment: "", fields: {}, operations: undefined },
   Critic: { comment: "", fields: {}, operations: undefined },
   CriticColumn: { comment: "", fields: {}, operations: undefined },
+  Employee: {
+    comment: "",
+    fields: { managersClosure: "Tracks self and all recursive managers for the closure-table blog scenario." },
+    operations: undefined,
+  },
   Image: { comment: "", fields: {}, operations: undefined },
   LargePublisher: {
     comment: "",

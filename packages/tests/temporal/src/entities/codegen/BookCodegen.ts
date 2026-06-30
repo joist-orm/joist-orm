@@ -21,12 +21,15 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
+  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -35,7 +38,6 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   type Author,
   type AuthorId,
@@ -98,6 +100,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
 }
 
 export interface BookOrder {
@@ -114,7 +117,14 @@ export interface BookOrder {
 export interface BookFactoryExtras {
 }
 
+export interface BookScopes {
+}
+
+export type BookScope = Scope<Book, BookScopes>;
+
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = newScopeFn<Book, BookScope>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("publishedAt"));

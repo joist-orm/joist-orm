@@ -62,13 +62,23 @@ export function isJoinTable(config: Config, t: Table): boolean {
   }
   return getOrElse(joinTables, t.name, () => {
     const { columns } = t;
-    const hasOnePk = columns.filter((c) => c.isPrimaryKey).length === 1;
-    const hasTwoFks = columns.filter((c) => c.isForeignKey).length === 2;
-    const hasThreeColumns = columns.length === 3;
-    const hasFourColumnsOneIsCreatedAt =
-      columns.length === 4 && columns.filter((c) => c.name === "created_at" || c.name === "createdAt").length === 1;
-    return hasOnePk && hasTwoFks && (hasThreeColumns || hasFourColumnsOneIsCreatedAt);
+    const fks = columns.filter((c) => c.isForeignKey);
+    const pks = columns.filter((c) => c.isPrimaryKey);
+    // Every join table is two FKs, plus either a surrogate `id` PK ("id-ful") or no surrogate
+    // at all, in which case the two FKs are themselves the composite PK ("id-less").
+    if (fks.length !== 2) return false;
+    if (!joinTableHasId(t) && !(pks.length === 2 && pks.every((c) => c.isForeignKey))) return false;
+    // Any column beyond the two FKs and the optional `id` PK must be a single created_at.
+    const others = columns.length - fks.length - (joinTableHasId(t) ? 1 : 0);
+    const createdAts = columns.filter((c) => c.name === "created_at" || c.name === "createdAt").length;
+    return others === 0 || (others === 1 && createdAts === 1);
   });
+}
+
+/** Whether a join table has a surrogate `id` primary key (vs. an id-less FK-pair composite PK). */
+export function joinTableHasId(t: Table): boolean {
+  const pks = t.columns.filter((c) => c.isPrimaryKey);
+  return pks.length === 1 && !pks[0].isForeignKey;
 }
 
 function getOrElse<K, V>(map: Map<K, V>, key: K, fn: () => V): V {
@@ -94,10 +104,10 @@ export function tableToEntityName(config: Config, table: Table): string {
 }
 
 export const dateCode = code`Date`;
-export const plainDateCode = code`${imp("Temporal@temporal-polyfill")}.PlainDate`;
-export const plainTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainTime`;
-export const plainDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainDateTime`;
-export const zonedDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+export const plainDateCode = code`${imp("Temporal@joist-orm")}.PlainDate`;
+export const plainTimeCode = code`${imp("Temporal@joist-orm")}.PlainTime`;
+export const plainDateTimeCode = code`${imp("Temporal@joist-orm")}.PlainDateTime`;
+export const zonedDateTimeCode = code`${imp("Temporal@joist-orm")}.ZonedDateTime`;
 
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
 export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: DatabaseColumnType): PrimitiveTypescriptType {

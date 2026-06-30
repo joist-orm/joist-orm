@@ -244,6 +244,7 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity
 }
 
 type BindingColumn = OpColumn & Pick<Column, "dbValue">;
+type EntityWithData = Entity & { __data: { data: Record<string, unknown> } };
 
 /**
  * Builds a *columnar* array of bindings for the given `entities` and `columns`.
@@ -257,14 +258,19 @@ function collectBindings(
   columns: BindingColumn[],
   fixups: InsertFixup[] | undefined,
 ): any[][] {
-  const bindings: any[][] = [];
-  for (const column of columns) {
-    const columnValues: any[] = [];
-    for (const entity of entities) {
-      const { data } = getInstanceData(entity);
-      columnValues.push(column.dbValue(data, entity, tableName, fixups) ?? null);
+  const entityCount = entities.length;
+  const bindings: any[][] = new Array(columns.length);
+  const entitiesWithData = entities as EntityWithData[];
+  // Cache data separately; this benchmarks faster than `entities[i].__data.data` in the inner loop.
+  const entityData = new Array(entityCount);
+  for (let i = 0; i < entityCount; i++) entityData[i] = entitiesWithData[i].__data.data;
+  for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
+    const column = columns[columnIndex];
+    const columnValues: any[] = new Array(entityCount);
+    for (let entityIndex = 0; entityIndex < entityCount; entityIndex++) {
+      columnValues[entityIndex] = column.dbValue(entityData[entityIndex], entities[entityIndex], tableName, fixups) ?? null;
     }
-    bindings.push(columnValues);
+    bindings[columnIndex] = columnValues;
   }
   return bindings;
 }

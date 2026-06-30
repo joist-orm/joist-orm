@@ -75,8 +75,8 @@ export function buildKnexQuery(
     });
 
   parsed.groupBys &&
-    parsed.groupBys.forEach(({ alias, column }) => {
-      query.groupByRaw(kqDot(alias, column));
+    parsed.groupBys.forEach((groupBy) => {
+      query.groupByRaw("expression" in groupBy ? groupBy.expression : kqDot(groupBy.alias, groupBy.column));
     });
 
   if (parsed.ctes && parsed.ctes.length > 0) {

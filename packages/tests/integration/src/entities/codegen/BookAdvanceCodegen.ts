@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -95,7 +97,9 @@ export interface BookAdvanceGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   status?: ValueGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  bookId?: ValueGraphQLFilter<BookId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
+  publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     LargePublisherId,
@@ -122,7 +126,14 @@ export interface BookAdvanceOrder {
 export interface BookAdvanceFactoryExtras {
 }
 
+export interface BookAdvanceScopes {
+}
+
+export type BookAdvanceScope = Scope<BookAdvance, BookAdvanceScopes>;
+
 export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
+
+export const bookAdvanceScope = newScopeFn<BookAdvance, BookAdvanceScope>("BookAdvance");
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
 bookAdvanceConfig.addRule(newRequiredRule("updatedAt"));

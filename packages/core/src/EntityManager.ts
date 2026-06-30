@@ -1,6 +1,7 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
 import { BatchLoader } from "./batchloaders/BatchLoader";
+import { enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader";
 import { loadOperation } from "./batchloaders/loadBatchLoader";
 import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
 import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
@@ -14,14 +15,14 @@ import { populateBatchLoader, populateOperation } from "./batchloaders/populateB
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
 import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { getReactiveRules } from "./caches";
-import { constraintNameToValidationError, ReactiveRule } from "./config";
+import { constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
-import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
+import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
+import { findPaginatedDataLoader } from "./dataloaders/findPaginatedDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
@@ -43,7 +44,7 @@ import {
   Field,
   FieldLogger,
   FieldLoggerWatch,
-  FilterWithAlias,
+  FindFilter,
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
@@ -54,13 +55,13 @@ import {
   GraphQLFilterWithAlias,
   InstanceData,
   isLoadedReference,
-  keyToTaggedId,
+  keyToNumber,
   Lens,
   loadLens,
+  mergeFindOptions,
   OneToManyCollection,
   optimizeCollectionJoins,
   ParsedFindQuery,
-  parseFindQuery,
   PartialOrNull,
   Plugin,
   PolymorphicReferenceImpl,
@@ -79,7 +80,7 @@ import {
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows, ManyToManyLike } from "./JoinRows";
-import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { isLoadedForPopulate, Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
 import { resetFactoryCreated } from "./newTestInstance";
@@ -90,10 +91,11 @@ import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
+import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -123,29 +125,20 @@ export interface EntityConstructor<T> {
   getInstanceData(entity: Entity): InstanceData;
 }
 
-/** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
+/** Options for the auto-batchable `em.find` queries. */
 export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
+  limit?: number | undefined;
+  offset?: number | undefined;
   softDeletes?: "include" | "exclude";
   allowMultipleLeftJoins?: boolean;
   optimizeJoinsToExists?: boolean;
 }
 
-/**
- * Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed.
- *
- * We allow `offset` to be optional, b/c sometimes queries will just want to do a `limit`, but we
- * require `limit` to ensure the caller is using `findPaginated` for its intended purpose.
- */
-export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit: number | undefined;
-  offset?: number;
-}
-
-export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit?: number | null;
-  offset?: number | null;
+export interface FindGqlFilterOptions<T extends Entity> extends Omit<FindFilterOptions<T>, "limit" | "offset"> {
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }
 
 /** Options for the `findCount`. */
@@ -205,7 +198,6 @@ export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
 
 export type FindOperation =
   | typeof findOperation
-  | "findPaginated"
   | typeof findByUniqueOperation
   | typeof findCountOperation
   | typeof findIdsOperation
@@ -213,6 +205,7 @@ export type FindOperation =
   | typeof loadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
+  | typeof enumCollectionLoadOperation
   | typeof oneToManyLoadOperation
   | typeof oneToManyFindOperation
   | typeof oneToOneLoadOperation
@@ -248,6 +241,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
   readonly #entitiesArray: Entity[] = [];
+  // Incrementally track dirty entities so we don't have to scan `#entityArray` during flush
+  readonly #maybePendingFlushEntities: Set<Entity> = new Set();
   // Indexes the currently loaded entities by their tagged ids and `toTaggedString` ids (i.e. `a#`). This fixes
   // real-world performance issues where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   readonly #entitiesById: Map<string, Entity> = new Map();
@@ -266,6 +261,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * so that both see the most accurate state.
    */
   #pendingDeletes: Entity[] = [];
+  #hasAnyDeletes = false;
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
@@ -324,6 +320,24 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
       pluginManager,
+
+      markMaybePending(entity: EntityW): void {
+        em.#maybePendingFlushEntities.add(entity as Entity);
+      },
+
+      unmarkMaybePending(entity: EntityW): void {
+        em.#maybePendingFlushEntities.delete(entity as Entity);
+      },
+
+      hasAnyDeletes(): boolean {
+        return em.#hasAnyDeletes;
+      },
+
+      pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[] {
+        return em.#pendingDeletes
+          .filter((entity) => entity instanceof type && entity.idMaybe !== undefined)
+          .map((entity) => keyToNumber(getMetadata(entity), entity.id));
+      },
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -400,7 +414,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     for (const joinRows of Object.values(this.#joinRows)) {
       const todo = joinRows.toTodo();
-      if (todo) {
+      // Enum m2ms (EnumCollections) aren't entity-to-entity, so skip them here.
+      if (todo && !todo.m2m.otherEnum) {
         for (const row of todo.newRows) {
           const entities = Object.values(row.columns) as [Entity, Entity];
           changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
@@ -440,67 +455,29 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * For more complex conditions, use the `find` overload that has a `conditions` option.
    *
    * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
-   * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
-   * or `OFFSET`; for those, see `findPaginated`.
+   * to avoid N+1s, including queries that use `LIMIT` or `OFFSET`.
    */
-  public async find<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-  ): Promise<T[]>;
+  public async find<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, where: FindFilter<T>): Promise<T[]>;
   public async find<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
-    const settings = { where, ...rest };
-    const result = await findDataLoader(this, type, settings, populate)
-      .load(settings)
-      .catch(function find(err) {
-        throw appendStack(err, new Error());
-      });
-    if (populate) {
-      await this.populate(result, populate);
-    }
-    return result;
-  }
-
-  /**
-   * Finds entities of `type` with the `where` filter, without auto-batching, so this method
-   * may call N+1s if called in a loop.
-   *
-   * The `where` filter is one of Joist's "join literals", which can combine both joining into
-   * related entities and simple column conditions in a single literal. All conditions are ANDed.
-   * For more complex conditions, use the `find` overload that has a `conditions` option.
-   *
-   * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
-   * of this, you should prefer using `find`, unless you explicitly pagination support.
-   */
-  public async findPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T>,
-  ): Promise<T[]>;
-  public async findPaginated<T extends EntityW, const H extends LoadHint<T>>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T> & { populate: H },
-  ): Promise<Loaded<T, H>[]>;
-  async findPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T> & { populate?: any },
-  ): Promise<T[]> {
-    const { populate, limit, offset, ...rest } = options || {};
-    const meta = getMetadata(type);
-    const query = parseFindQuery(meta, where, rest);
-    const rows = await this.executeFind(meta, "findPaginated", query, { ...rest, limit, offset, checkLimit: false });
-    const result = this.hydrate(type, rows);
+    const normalized = mergeFindOptions(where, rest);
+    const settings = { where: normalized.where, ...normalized.options };
+    const result = await (
+      hasPaginationSettings(normalized.options)
+        ? findPaginatedDataLoader(this, type, settings, populate)
+        : findDataLoader(this, type, settings, populate)
+    ).catch(function find(err) {
+      throw appendStack(err, new Error());
+    });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -522,18 +499,67 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       keepAliases?: string[];
     },
   ) {
-    const { checkLimit, ...driverSettings } = settings;
+    const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
+    return this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit);
+  }
+
+  /** Executes a query that has already had find hooks and optimizations applied. */
+  private async executePreparedFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    findSettings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+    checkLimit: boolean | undefined,
+  ) {
     const { pluginManager } = getEmInternalApi(this);
-    pluginManager.beforeFind(meta, operation, parsed, driverSettings);
-    optimizeCollectionJoins(parsed, settings);
-    const rows = await this.driver.executeFind(this, parsed, driverSettings);
+    const rows = await this.driver.executeFind(this, parsed, findSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
-    const shouldCheck = checkLimit ?? !("limit" in settings && settings.limit === undefined);
+    const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);
     if (shouldCheck && rows.length >= this.entityLimit) {
       throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
     }
     pluginManager.afterFind(meta, operation, rows);
     return rows;
+  }
+
+  /**
+   * Runs pre-SQL find hooks and optimizations against a parsed query.
+   *
+   * This allows plugins to see "pre-batched" / "logical" query ASTs, instead of our
+   * more complicated `_find` batched queries. The flow would be:
+   *
+   * - A loader calls `prepareFind(originalQuery)`
+   * - Plugins inspect/modify the query as/if needed
+   * - The loader crafts a new, more complicated query that embeds the originalQuery
+   * - The loader calls `executePreparedFind` with the 2nd query
+   */
+  private prepareFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    settings: {
+      limit?: number;
+      offset?: number;
+      checkLimit?: boolean;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+  ) {
+    const { checkLimit, ...findSettings } = settings;
+    const { pluginManager } = getEmInternalApi(this);
+    // Plugins may mutate the settings object, so return the post-hook version that loaders must reuse.
+    pluginManager.beforeFind(meta, operation, parsed, findSettings);
+    optimizeCollectionJoins(parsed, settings);
+    return { checkLimit, findSettings };
   }
 
   /**
@@ -548,51 +574,34 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public async findGql<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindFilterOptions<T> & { populate?: H },
+    options?: FindGqlFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: FindFilterOptions<T> & { populate?: any },
+    options?: FindGqlFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.find(type, where as any, options);
-  }
-
-  /**
-   * Works exactly like `findPaginated` but accepts "less than greatly typed" GraphQL filters.
-   *
-   * I.e. filtering by `null` on fields that are non-`nullable`.
-   */
-  public async findGqlPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T>,
-  ): Promise<T[]>;
-  public async findGqlPaginated<T extends EntityW, const H extends LoadHint<T>>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T> & { populate: H },
-  ): Promise<Loaded<T, H>[]>;
-  async findGqlPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
-  ): Promise<T[]> {
-    return this.findPaginated(type, where as any, options as any);
+    if (!options) {
+      return this.find(type, where as any);
+    }
+    const normalized = { ...options };
+    if ("limit" in normalized) normalized.limit = normalized.limit ?? undefined;
+    if ("offset" in normalized) normalized.offset = normalized.offset ?? undefined;
+    return this.find(type, where as any, normalized as any);
   }
 
   public async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
   ): Promise<T | undefined>;
   public async findOne<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T | undefined> {
     const list = await this.find(type, where, options);
@@ -608,16 +617,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
   ): Promise<T>;
   public async findOneOrFail<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T> {
     const list = await this.find(type, where, options);
@@ -659,6 +668,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return undefined;
     } else {
       const [entity] = this.hydrate(type, [row]);
+      if (this.#hasAnyDeletes && entity.isDeletedEntity) {
+        return undefined;
+      }
       if (populate) {
         await this.populate(entity, populate);
       }
@@ -676,20 +688,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   async findCount<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const settings = { where, ...options };
-    let count = await findCountDataLoader(this, type, settings)
-      .load(settings)
-      .catch(function findCount(err) {
-        throw appendStack(err, new Error());
-      });
+    const normalized = mergeCountOptions(where, options);
+    const settings = { where: normalized.where, ...normalized.options } as any;
+    let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
+      throw appendStack(err, new Error());
+    });
     // If the user is do "count all", we can adjust the number up/down based on
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
     // clause before knowing if it should adjust teh amount.
-    const isSelectAll = Object.keys(where).length === 0;
+    const isSelectAll = isSelectAllFilter(where, options.conditions);
     if (isSelectAll) {
       const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
       for (const entity of tagged) {
@@ -715,15 +726,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   async findIds<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
-    const settings = { where, ...options };
-    return findIdsDataLoader(this, type, settings)
-      .load(settings)
-      .catch(function findIds(err) {
-        throw appendStack(err, new Error());
-      });
+    const normalized = mergeCountOptions(where, options);
+    const settings = { where: normalized.where, ...normalized.options };
+    return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
+      throw appendStack(err, new Error());
+    });
   }
 
   /**
@@ -997,6 +1007,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               case "primaryKey":
               case "o2m":
               case "m2m":
+              case "m2mEnum":
               case "o2o":
               case "lo2m":
                 return undefined;
@@ -1134,6 +1145,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           kind === "primitive" ||
           kind === "primaryKey" ||
           kind === "enum" ||
+          kind === "m2mEnum" ||
           kind === "poly" ||
           kind === "m2o" ||
           kind === "lo2m"
@@ -1220,34 +1232,56 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hint?: any,
   ): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagId(meta, id));
-    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
-    if (idsToLoad.length > 0) {
+
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
+    const ids = new Array<string>(_ids.length);
+    const entities = new Array<T | undefined>(_ids.length);
+    let idsToLoad: string[] | undefined;
+    let positionsToLoad: number[] | undefined;
+
+    for (let i = 0; i < _ids.length; i++) {
+      const id = tagId(meta, _ids[i]);
+      ids[i] = id;
+      const entity = this.findExistingInstance<T>(id);
+      if (entity) {
+        entities[i] = entity;
+      } else {
+        (idsToLoad ??= []).push(id);
+        (positionsToLoad ??= []).push(i);
+      }
+    }
+
+    if (idsToLoad && idsToLoad.length > 0) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAll(err) {
           throw appendStack(err, new Error());
         });
+      for (const i of positionsToLoad!) {
+        entities[i] = this.findExistingInstance<T>(ids[i]);
+      }
     }
-    const entities: T[] = [];
-    for (const id of ids) {
-      const entity = this.findExistingInstance(id);
-      if (entity) entities.push(entity as T);
+
+    let idsNotFound: string[] | undefined;
+    for (let i = 0; i < entities.length; i++) {
+      if (entities[i] === undefined) {
+        (idsNotFound ??= []).push(ids[i]);
+      }
     }
-    if (entities.length !== ids.length) {
-      const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
+    if (idsNotFound) {
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
+    const loadedEntities = entities as T[];
     if (hint) {
-      await this.populate(entities as T[], hint);
+      await this.populate(loadedEntities, hint);
     }
     if (meta.inheritanceType === "sti" && meta.baseType) {
-      const wrongType = entities.filter((e) => !(e instanceof meta.cstr));
+      const wrongType = loadedEntities.filter((e) => !(e instanceof meta.cstr));
       if (wrongType.length > 0) {
         throw new Error(`${wrongType.join(", ")} were not of type ${meta.cstr.name}`);
       }
     }
-    return entities as T[];
+    return loadedEntities;
   }
 
   /**
@@ -1266,20 +1300,41 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hint?: any,
   ): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagId(meta, id));
-    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
-    if (idsToLoad.length > 0) {
+
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
+    const ids = new Array<string>(_ids.length);
+    const entities: T[] = [];
+    let idsToLoad: string[] | undefined;
+
+    // Ensure the ids are tagged, and find any not-yet-loaded
+    for (let i = 0; i < _ids.length; i++) {
+      const id = tagId(meta, _ids[i]);
+      ids[i] = id;
+      const entity = this.findExistingInstance<T>(id);
+      if (entity) {
+        entities.push(entity);
+      } else {
+        (idsToLoad ??= []).push(id);
+      }
+    }
+
+    if (idsToLoad && idsToLoad.length > 0) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAllIfExists(err) {
           throw appendStack(err, new Error());
         });
+      // Now that everything is loaded, recalc `entities`
+      entities.length = 0;
+      for (const id of ids) {
+        const entity = this.findExistingInstance<T>(id);
+        if (entity) entities.push(entity);
+      }
     }
-    const entities = ids.map((id) => this.findExistingInstance(id)).filter(Boolean);
     if (hint) {
-      await this.populate(entities as T[], hint);
+      await this.populate(entities, hint);
     }
-    return entities as T[];
+    return entities;
   }
 
   /**
@@ -1419,6 +1474,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
+    // Avoid building a HintTree/batchloader for persisted entities when everything is already loaded; in the phase 9
+    // benchmark this moved already-loaded populates from ~1.10ms to ~0.89ms, and nested already-loaded populates from
+    // ~2.39ms to ~1.94ms.
+    if (!opts.forceReload && list.every((entity) => !entity.isNewEntity && isLoadedForPopulate(entity, hintOpt as H))) {
+      return fn ? fn(entityOrList as any) : (entityOrList as any);
+    }
+
     const meta = getMetadata(list[0]);
 
     if (this.#preloader) {
@@ -1495,8 +1557,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   delete(entityOrArray: Entity | Entity[]): void {
     for (const entity of toArray(entityOrArray)) {
       // Early return if already deleted.
-      const alreadyMarked = getInstanceData(entity).markDeleted(entity);
+      const alreadyMarked = getInstanceData(entity).markDeleted();
       if (!alreadyMarked) continue;
+      // This monotonic flag lets find hot paths skip scanning results until a delete has ever happened in this EM.
+      this.#hasAnyDeletes = true;
       // Any derived fields that read this entity will need recalc-d
       this.#rm.queueAllDownstreamFields(entity, "deleted");
       // Synchronously unhook the entity if the relations are loaded
@@ -1603,7 +1667,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
         const alreadyRanHooks = new Set<Entity>();
 
-        findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+        findPendingFlushEntities(
+          this.#maybePendingFlushEntities,
+          hooksInvoked,
+          pendingFlush,
+          pendingHooks,
+          alreadyRanHooks,
+        );
 
         // If we're re-looping for AsyncReactiveField, make sure to bump updatedAt
         // each time, so that for an INSERT-then-UPDATE the triggers don't think the
@@ -1633,9 +1703,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             recalcSynchronousDerivedFields(todos);
 
             // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
-            await this.flushDeletes();
-            // The hooks could have changed fields, so recalc again.
-            await this.#rm.recalcPendingReactables("reactables");
+            // Reactions (the recalc below) can themselves `em.delete` entities, so keep draining
+            // until both deletes and recalcs have settled.
+            do {
+              await this.flushDeletes();
+              // The hooks could have changed fields, so recalc again.
+              await this.#rm.recalcPendingReactables("reactables");
+            } while (this.#pendingDeletes.length > 0);
             // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
             // deletes have been processed
             if (this.#rm.hasPendingTypeErrors) {
@@ -1647,7 +1721,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             for (const e of pendingHooks) hooksInvoked.add(e);
             pendingHooks.clear();
             // See if the hooks mutated any new, not-yet-hooksInvoked entities
-            findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+            findPendingFlushEntities(
+              this.#maybePendingFlushEntities,
+              hooksInvoked,
+              pendingFlush,
+              pendingHooks,
+              alreadyRanHooks,
+            );
             // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
             // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
             // suppressed errors so that we will fail after simpleValidation.
@@ -1710,7 +1790,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos)) {
+            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
@@ -1785,7 +1865,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
-      return [...allFlushedEntities];
+      return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
@@ -1808,7 +1888,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           throw new ValidationErrors(message);
         }
       }
-      if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
+      if (e instanceof InMemoryRollbackError) {
+        return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
+      }
       throw e;
     } finally {
       this.#rm.clearSuppressedTypeErrors();
@@ -1950,11 +2032,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options?: { overwriteExisting?: boolean },
   ): T[] {
     const maybeBaseMeta = getMetadata(type);
+    const taggedIdPrefix = `${maybeBaseMeta.tagName}:`;
+    const overwriteExisting = options?.overwriteExisting === true;
 
     let i = 0;
     const entities = new Array(rows.length);
     for (const row of rows) {
-      const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
+      const id = row["id"];
+      const taggedId = id === undefined || id === null ? fail("No id column was available") : `${taggedIdPrefix}${id}`;
       // See if this is already in our UoW
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {
@@ -1963,22 +2048,34 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // Pass id as a hint that we're in hydrate mode
         entity = newEntity(this, asConcreteCstr(meta.cstr), false) as T;
         getInstanceData(entity).row = row;
-        this.#doRegister(entity as any, taggedId);
-      } else if (options?.overwriteExisting === true) {
+        this.#doRegister(entity as any, taggedId, meta, true);
+      } else if (overwriteExisting) {
         // Usually if the entity already exists, we don't write over it, but in this case we assume that
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
         // First swap out the old row with the new row
-        getInstanceData(entity).row = row;
+        const instanceData = getInstanceData(entity);
+        instanceData.row = row;
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
-        const { data, originalData } = getInstanceData(entity);
-        const changedFields = (entity as any).changes.fieldsWithoutRelations;
-        for (const fieldName of Object.keys(data)) {
-          const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-          serde.setOnEntity(data, row);
-          // Make the field look not-dirty
-          if (changedFields.includes(fieldName)) {
-            delete originalData[fieldName];
+        const { data } = instanceData;
+        const dataKeys = Object.keys(data);
+        if (dataKeys.length > 0) {
+          const allFields = getMetadata(entity).allFields;
+          const changedFields = (entity as any).changes.fieldsWithoutRelations;
+          if (changedFields.length === 0) {
+            for (const fieldName of dataKeys) {
+              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+              serde.setOnEntity(data, row);
+            }
+          } else {
+            for (const fieldName of dataKeys) {
+              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+              serde.setOnEntity(data, row);
+              // Make the field look not-dirty
+              if (changedFields.includes(fieldName)) {
+                instanceData.markFieldClean(fieldName);
+              }
+            }
           }
         }
       }
@@ -1999,7 +2096,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public touch(entity: EntityW): void;
   public touch(entities: EntityW[]): void;
   public touch(entityOrEntities: EntityW | EntityW[]): void {
-    for (const entity of toArray(entityOrEntities)) getInstanceData(entity).isTouched = true;
+    for (const entity of toArray(entityOrEntities)) {
+      getInstanceData(entity).markTouched();
+    }
   }
 
   /**
@@ -2109,9 +2208,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Run the beforeDelete hook before we unhook the entity
       const todos = createTodos(entities);
       await beforeDelete(this.ctx, todos);
-      // For all relations, unhook the entity from the other side
-      // (...we're using `concat` because `.push(...reallyBigArray)` with ~100k relations can blow the stack size
-      relationsToCleanup = relationsToCleanup.concat(entities.flatMap(getRelations));
+      // For all relations, unhook the entity from the other side; this append path is optimized for
+      // large deletes with ~100k relations by avoiding `flatMap` intermediates and `concat` copies.
+      for (const entity of entities) {
+        const relations = getRelations(entity);
+        const start = relationsToCleanup.length;
+        relationsToCleanup.length += relations.length;
+        for (let i = 0; i < relations.length; i++) {
+          relationsToCleanup[start + i] = relations[i];
+        }
+      }
       entities = this.#pendingDeletes;
       this.#pendingDeletes = [];
     }
@@ -2179,10 +2285,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
     if (this.#indexManager.shouldIndexType(entities.length)) {
-      this.#indexManager.enableIndexingForType(meta, entities);
+      this.#indexManager.enableIndexingForType(meta, entities, where);
       return (
         this.#indexManager
-          .findMatching(meta, where)
+          .findMatching(meta, entities, where)
           // Still filter by `instanceof cstr` to handle subtyping
           .filter((e) => e instanceof cstr && !e.isDeletedEntity)
       );
@@ -2280,14 +2386,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         if (!(oldInstanceData.isNewEntity || oldInstanceData.isDirtyEntity)) continue;
         const { originalData: oldOriginalData, data: oldData } = oldInstanceData;
         const newEntity = mapEntity(oldEntity);
-        const { originalData: newOriginalData, data: newData } = (newEntity as any).__data as InstanceData;
+        const newInstanceData = (newEntity as any).__data as InstanceData;
+        const { data: newData } = newInstanceData;
         // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
         // only care about changed fields, which are enumerated by originalData
         const maybeEntity = (value: any) => (isEntity(value) ? mapEntity(value as Entity) : value);
         const fields = Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData);
         for (const field of fields) {
           // copy over originalData so .changes is consistent across ems
-          if (field in oldOriginalData) newOriginalData[field] = maybeEntity(oldOriginalData[field]);
+          if (field in oldOriginalData) newInstanceData.markFieldDirty(field, maybeEntity(oldOriginalData[field]));
           newData[field] = maybeEntity(oldData[field]);
         }
       }
@@ -2298,7 +2405,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const newEntity = mapEntity(oldEntity);
       if (oldEntity.isDeletedEntity) {
         // If the old entity was deleted, that should be persisted in the new em
-        ((newEntity as any).__data as InstanceData).markDeleted(newEntity);
+        ((newEntity as any).__data as InstanceData).markDeleted();
         // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
         // out regardless
         continue;
@@ -2487,11 +2594,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by #doCreate and hydrate. */
-  #doRegister(entity: Entity, id?: string): void {
+  #doRegister(entity: Entity, id?: string, meta?: EntityMetadata, skipDuplicateCheck: boolean = false): void {
     // Keep our indexes up to date...
     const maybeId = id ?? entity.idTaggedMaybe;
     if (maybeId) {
-      if (this.findExistingInstance(maybeId) !== undefined) {
+      if (!skipDuplicateCheck && this.findExistingInstance(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
       this.#entitiesById.set(maybeId, entity);
@@ -2499,9 +2606,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Also register by the `a#1` style tagged string for new entities
       this.#entitiesById.set(entity.toTaggedString(), entity);
     }
+    getInstanceData(entity).entityIndex = this.#entitiesArray.length;
     this.#entitiesArray.push(entity);
 
-    const meta = getMetadata(entity);
+    meta ??= getMetadata(entity);
     const set = this.#entitiesByTag.get(meta.tagName) ?? [];
     if (set.length === 0) this.#entitiesByTag.set(meta.tagName, set);
     set.push(entity);
@@ -2514,9 +2622,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         .join(", ");
       throw new Error(`More than ${this.entityLimit} entities have been instantiated (top entities: ${topTypes})`);
     }
-
-    // If indexing is enabled for this type, add it...
-    this.#indexManager.maybeIndexEntity(entity);
   }
 }
 
@@ -2549,6 +2654,10 @@ export interface EntityManagerInternalApi {
   pluginManager: PluginManager;
   clearDataloaders(): void;
   clearPreloadedRelations(): void;
+  markMaybePending(entity: EntityW): void;
+  unmarkMaybePending(entity: EntityW): void;
+  hasAnyDeletes(): boolean;
+  pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[];
   setIsRefreshing(isRefreshing: boolean): void;
 }
 
@@ -2646,13 +2755,13 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = getReactiveRules(todo.metadata);
+    const rules = todo.metadata.reactiveRules!;
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter((e) => {
         // If the rule is for a different subtype, skip it
         if (!(e instanceof rule.source)) return false;
-        // Any new-or-deleted entity fires every rule (getReactiveRules has already filtered out read-only)
+        // Any new-or-deleted entity fires every rule (reactiveRules has already filtered out read-only)
         if (e.isNewEntity || e.isDeletedEntity) return true;
         // Otherwise see if the changed fields overlaps with the rule's fields
         const changedFields = (e as any).changes.fieldsWithoutRelations as string[];
@@ -2667,22 +2776,26 @@ async function validateReactiveRules(
   });
 
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
-    const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns));
-    // Do the first side
-    const p1 = getReactiveRules(todo.m2m.meta)
-      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+    // For enum m2ms the columns include the enum's numeric id, so keep only the entity values.
+    const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns)).filter(isEntity);
+    // The owning-entity side (applies to both entity-to-entity and entity-to-enum m2ms).
+    const a = todo.m2m.meta
+      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
       });
-    // And the second side
-    const p2 = getReactiveRules(todo.m2m.otherMeta)
-      .filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
-      .map((rule) => {
-        const triggered = entities.filter((e) => e instanceof todo.m2m.otherMeta.cstr);
-        return followAndQueue(triggered, rule);
-      });
-    return [...p1, ...p2];
+    // The "other" side only exists for entity-to-entity m2ms; enums have no reverse field.
+    const { otherMeta, otherFieldName } = todo.m2m;
+    const b = otherMeta
+      ? otherMeta
+          .reactiveRules!.filter((rule) => rule.fields.includes(otherFieldName!))
+          .map((rule) => {
+            const triggered = entities.filter((e) => e instanceof otherMeta.cstr);
+            return followAndQueue(triggered, rule);
+          })
+      : [];
+    return [...a, ...b];
   });
 
   failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
@@ -2789,7 +2902,10 @@ function entitiesFromTodos(
   }
   for (const todo of Object.values(joinRowTodos)) {
     [...todo.newRows, ...todo.deletedRows].forEach((row) => {
-      Object.values(row.columns).forEach((entity) => entities.add(entity));
+      // For enum m2ms, a column value is the enum's numeric id rather than an entity.
+      Object.values(row.columns).forEach((value) => {
+        if (isEntity(value)) entities.add(value);
+      });
     });
   }
   return [...entities];
@@ -2946,7 +3062,7 @@ function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, n
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
         const orm = getInstanceData(e);
-        orm.originalData[updatedAt] = getField(e, updatedAt);
+        orm.markFieldDirty(updatedAt, getField(e, updatedAt));
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
         rm.queueDownstreamReactables(e, updatedAt);
@@ -2987,15 +3103,12 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
       throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, row.id)} must be instantiated via a subtype`);
     }
     // Look for the CTI __class from the driver telling us which subtype to instantiate
-    return maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta;
+    return maybeBaseMeta.subTypesByType!.get(row.__class) ?? maybeBaseMeta;
   } else if (maybeBaseMeta.inheritanceType === "sti") {
     // Look for the STI discriminator value
     const baseMeta = getBaseMeta(maybeBaseMeta);
-    const field = baseMeta.fields[baseMeta.stiDiscriminatorField!];
-    if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
-    const columnName = field.serde.columns[0].columnName;
-    const value = row[columnName];
-    return baseMeta.subTypes.find((st) => st.stiDiscriminatorValue === value) ?? baseMeta;
+    const value = row[baseMeta.stiDiscriminatorColumnName!];
+    return baseMeta.subTypesByStiValue!.get(value) ?? baseMeta;
   } else {
     throw new Error("Unknown inheritance type");
   }
@@ -3004,7 +3117,7 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
 /** Sets the `Animal.type` enum to the right subtype value. */
 function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): void {
   const typeName = entity.constructor.name;
-  const st = baseMeta.subTypes.find((st) => st.type === typeName);
+  const st = baseMeta.subTypesByType!.get(typeName);
   if (st) {
     const field = baseMeta.fields[baseMeta.stiDiscriminatorField!] as EnumField;
     const code = (field.enumDetailType.findById(st.stiDiscriminatorValue!) as any).code;
@@ -3015,22 +3128,29 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
 }
 
 function findPendingFlushEntities<Entity extends EntityW>(
-  entities: readonly Entity[],
+  maybePendingFlushEntities: Set<Entity>,
   hooksInvoked: Set<Entity>,
   pendingFlush: Set<Entity>,
   pendingHooks: Set<Entity>,
   alreadyRanHooks: Set<Entity>,
 ): void {
-  for (const e of entities) {
-    if (getInstanceData(e).pendingOperation !== "none") {
-      if (!hooksInvoked.has(e)) {
-        pendingHooks.add(e);
-      } else {
-        alreadyRanHooks.add(e);
-      }
-      pendingFlush.add(e);
+  for (const e of maybePendingFlushEntities) {
+    if (getInstanceData(e).pendingOperation === "none") {
+      maybePendingFlushEntities.delete(e);
+      continue;
     }
+    if (!hooksInvoked.has(e)) {
+      pendingHooks.add(e);
+    } else {
+      alreadyRanHooks.add(e);
+    }
+    pendingFlush.add(e);
   }
+}
+
+/** Returns true if the caller explicitly asked `find` to use SQL pagination. */
+function hasPaginationSettings(options: object): boolean {
+  return "limit" in options || "offset" in options;
 }
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */

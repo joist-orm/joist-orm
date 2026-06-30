@@ -38,10 +38,13 @@ export type ValueGraphQLFilter<V> =
       iregex?: V | null;
       nregex?: V | null;
       niregex?: V | null;
+      search?: V | null;
       between?: readonly V[] | null;
       contains?: V | null;
       overlaps?: V | null;
       containedBy?: V | null;
+      pathExists?: string | null;
+      pathIsTrue?: string | null;
     }
   | { op: Operator; value: V | readonly V[] | undefined | null }
   | V

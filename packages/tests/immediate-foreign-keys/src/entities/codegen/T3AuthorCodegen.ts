@@ -23,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -79,6 +81,7 @@ export interface T3AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<T3AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
   favoriteBook?: EntityGraphQLFilter<T3Book, T3BookId, GraphQLFilterOf<T3Book>, never>;
+  favoriteBookId?: ValueGraphQLFilter<T3BookId>;
   t3Books?: EntityGraphQLFilter<T3Book, T3BookId, GraphQLFilterOf<T3Book>, null | undefined>;
 }
 
@@ -91,7 +94,14 @@ export interface T3AuthorOrder {
 export interface T3AuthorFactoryExtras {
 }
 
+export interface T3AuthorScopes {
+}
+
+export type T3AuthorScope = Scope<T3Author, T3AuthorScopes>;
+
 export const t3AuthorConfig = new ConfigApi<T3Author, Context>();
+
+export const t3AuthorScope = newScopeFn<T3Author, T3AuthorScope>("T3Author");
 
 t3AuthorConfig.addRule(newRequiredRule("firstName"));
 t3AuthorConfig.addRule(newRequiredRule("favoriteBook"));

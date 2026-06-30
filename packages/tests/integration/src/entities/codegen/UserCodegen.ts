@@ -30,12 +30,14 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
   type ReadOnlyCollection,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -162,8 +164,10 @@ export interface UserGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -171,6 +175,7 @@ export interface UserGraphQLFilter {
   parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
+  favoritePublisherId?: ValueGraphQLFilter<IdOf<UserFavoritePublisher>>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     IdOf<LargePublisher>,
@@ -203,7 +208,14 @@ export interface UserOrder {
 export interface UserFactoryExtras {
 }
 
+export interface UserScopes {
+}
+
+export type UserScope = Scope<User, UserScopes>;
+
 export const userConfig = new ConfigApi<User, Context>();
+
+export const userScope = newScopeFn<User, UserScope>("User");
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));

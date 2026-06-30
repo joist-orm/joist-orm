@@ -171,8 +171,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         const otherMeta = field.otherMetadata();
         const maybeSoftDelete = otherMeta.timestampFields?.deletedAt;
 
-        // Incremental handling
-        const anyValueHasOp = values.some((v) => v && typeof v === "object" && !isEntity(v) && "op" in v);
+        // Incremental handling. Detect incremental mode by a meaningful `op` value--`op: undefined`/`op: null`
+        // is the natural shape of an optional field and must behave like "no op", consistent with how
+        // updatePartial treats `value === undefined` and how delete/remove are read by truthiness.
+        const anyValueHasOp = values.some((v: any) => v && typeof v === "object" && !isEntity(v) && v.op != null);
         if (anyValueHasOp) {
           let anyValueMissingOp = false;
           const current = (entity as any)[name];
@@ -198,6 +200,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
                 current.add(other);
               } else if (op === "incremental") {
                 // This is a marker entry, just ignore it
+              } else {
+                // A child entered incremental mode (a sibling had a real op) but has no op of its own;
+                // never silently skip it--flag it so the guard below throws instead of dropping the row.
+                anyValueMissingOp = true;
               }
             }),
           );

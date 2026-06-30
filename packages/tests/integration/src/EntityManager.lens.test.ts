@@ -6,11 +6,13 @@ import {
   insertComment,
   insertImage,
   insertPublisher,
+  insertTask,
+  insertTaskItem,
   insertTag,
 } from "@src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { getLens, getMetadata, Lens, lensToPath, testing } from "joist-orm";
-import { Author, Book, Image, newAuthor, newBook, Publisher, Tag } from "./entities";
+import { getLens, getMetadata, Lens, lensToLoadHint, lensToPath, loadLensPath, testing } from "joist-orm";
+import { Author, Book, Image, newAuthor, newBook, Publisher, Tag, TaskItem, TaskNew } from "./entities";
 
 const { isAllSqlPaths } = testing;
 
@@ -45,6 +47,18 @@ describe("EntityManager.lens", () => {
     expect(numberOfQueries).toEqual(2);
   });
 
+  it("returns already-loaded paths synchronously", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "1", { author: "publisher" });
+
+    const result = loadLensPath(b1, ["author", "publisher"]) as unknown;
+
+    expect(result).toMatchEntity({ name: "p1" });
+  });
+
   it("does not compile if lens is incorrect", async () => {
     // @ts-expect-error
     const f1 = (b: Lens<Book>) => b.author.foo;
@@ -55,6 +69,19 @@ describe("EntityManager.lens", () => {
 
   it("can be converted to paths", async () => {
     const f1 = (b: Lens<Book>) => b.author.publisher;
+    expect(lensToPath(f1)).toEqual(["author", "publisher"]);
+  });
+
+  it("returns a defensive copy of paths", async () => {
+    const f1 = (b: Lens<Book>) => b.author.publisher;
+    const paths = lensToPath(f1);
+    paths.reverse();
+    expect(lensToPath(f1)).toEqual(["author", "publisher"]);
+  });
+
+  it("can be converted to paths after load hints", async () => {
+    const f1 = (b: Lens<Book>) => b.author.publisher;
+    expect(lensToLoadHint(f1)).toEqual({ author: { publisher: {} } });
     expect(lensToPath(f1)).toEqual(["author", "publisher"]);
   });
 
@@ -203,6 +230,17 @@ describe("EntityManager.lens", () => {
     // Use `toStrictEqual` to ensure the list is not `[undefined]`
     expect(publishers).toStrictEqual([]);
     expect(getLens(getMetadata(t1), t1, (t) => t.books.author.publisher)).toStrictEqual([]);
+  });
+
+  it("can navigate subtype-specific nullable references then collections", async () => {
+    await insertTask({ type: "NEW" });
+    await insertTaskItem({ task_id: 1 });
+    const em = newEntityManager();
+    const ti1 = await em.load(TaskItem, "ti:1");
+
+    const books = await ti1.load((ti) => (ti.task as Lens<TaskNew>).specialNewAuthor.books);
+
+    expect(books).toEqual([]);
   });
 
   it("can navigate across soft-deleted references from an entity", async () => {

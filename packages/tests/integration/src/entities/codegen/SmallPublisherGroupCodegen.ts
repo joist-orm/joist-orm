@@ -19,9 +19,11 @@ import {
   type LoadHint,
   loadLens,
   newChangesProxy,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -83,7 +85,16 @@ export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
 export interface SmallPublisherGroupFactoryExtras {
 }
 
+export interface SmallPublisherGroupScopes {
+}
+
+export type SmallPublisherGroupScope = Scope<SmallPublisherGroup, SmallPublisherGroupScopes>;
+
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
+
+export const smallPublisherGroupScope = newScopeFn<SmallPublisherGroup, SmallPublisherGroupScope>(
+  "SmallPublisherGroup",
+);
 
 declare module "joist-core" {
   interface TypeMap {

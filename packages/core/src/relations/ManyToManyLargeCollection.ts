@@ -1,7 +1,7 @@
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { Entity } from "../Entity";
 import { appendStack, IdOf } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadataForField } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
 import { lazyField, resolveOtherMeta } from "../newEntity";
 import { remove } from "../utils";
@@ -14,6 +14,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   columnName: string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
+  hasJoinTableId: boolean,
 ): LargeCollection<T, U> {
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
@@ -26,6 +27,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
       otherMeta,
       otherFieldName,
       otherColumnName,
+      hasJoinTableId,
     );
   });
 }
@@ -49,6 +51,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     public otherMeta: EntityMetadata,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
+    public hasJoinTableId: boolean = true,
   ) {}
 
   async find(id: IdOf<U>): Promise<U | undefined> {
@@ -126,7 +129,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
   }
 
   public get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   public toString(): string {

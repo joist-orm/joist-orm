@@ -289,13 +289,13 @@ describe("ReactiveReference", () => {
        "    Author.rf -> [ a:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
        "Validating from 3 changed entities... (em.entities=3)↩",
-       "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:124) to validate↩",
+       "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:133) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:447) to validate↩",
+       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:491) to validate↩",
        "    [ b:1 ] -> [ a:1 ]↩",
-       "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:76) to validate↩",
+       "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:85) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:207) to validate↩",
+       "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:210) to validate↩",
        "    [ b:1 ] -> [ p:1 ]↩",
      ]
     `);

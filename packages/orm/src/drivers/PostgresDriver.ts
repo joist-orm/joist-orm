@@ -11,17 +11,13 @@ import {
   EntityManager,
   fail,
   generateOps,
-  getMetadata,
   getRuntimeConfig,
   IdAssigner,
   InsertOp,
-  JoinRow,
   JoinRowOperation,
   JoinRowTodo,
-  keyToNumber,
   kq,
   kqDot,
-  ManyToManyLike,
   OpColumn,
   ParsedFindQuery,
   partition,
@@ -149,10 +145,10 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       ...ops.inserts.map((op) => batchInsert(client, op, onQuery)),
       ...ops.updates.map((op) => batchUpdate(client, op, onQuery)),
       ...ops.deletes.map((op) => batchDelete(client, op, onQuery)),
-      ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
+      ...Object.entries(joinRows).flatMap(([joinTableName, todo]) => {
         return [
-          m2mBatchInsert(client, joinTableName, m2m, newRows, onQuery),
-          m2mBatchDelete(client, joinTableName, m2m, deletedRows, onQuery),
+          m2mBatchInsert(client, joinTableName, todo, onQuery),
+          m2mBatchDelete(client, joinTableName, todo, onQuery),
         ];
       }),
     ]);
@@ -248,44 +244,52 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: ManyToManyLike,
-  newRows: JoinRow[],
-  onQuery: OnQuery,
-) {
+async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
+  const { m2m, newRows } = todo;
   if (newRows.length === 0) return;
-  const meta1 = getMetadata(m2m.entity);
-  const meta2 = m2m.otherMeta;
-  const col1Values = newRows.map((row) => keyToNumber(meta1, row.columns[m2m.columnName].idTagged));
-  const col2Values = newRows.map((row) => keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged));
-  const sql = cleanSql(`
-    WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-    INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-    SELECT * FROM data
-    ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
-    RETURNING id;
-  `);
-  const pgSql = toPgParams(sql);
-  onQuery?.(pgSql);
-  const { rows } = await client.query(pgSql, [col1Values, col2Values]);
-  for (let i = 0; i < rows.length; i++) {
-    newRows[i].id = rows[i].id;
-    newRows[i].op = JoinRowOperation.Flushed;
+  const col1Values = newRows.map((row) => todo.dbValue(row, m2m.columnName));
+  const col2Values = newRows.map((row) => todo.dbValue(row, m2m.otherColumnName));
+  if (m2m.hasJoinTableId) {
+    const sql = cleanSql(`
+      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
+      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
+      SELECT * FROM data
+      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
+      RETURNING id;
+    `);
+    const pgSql = toPgParams(sql);
+    onQuery?.(pgSql);
+    const { rows } = await client.query(pgSql, [col1Values, col2Values]);
+    for (let i = 0; i < rows.length; i++) {
+      newRows[i].id = rows[i].id;
+      newRows[i].op = JoinRowOperation.Flushed;
+      newRows[i].persisted = true;
+    }
+  } else {
+    // Id-less join tables have no surrogate id to return; the FK pair is the PK, so just
+    // insert and let any duplicate be a no-op.
+    const sql = cleanSql(`
+      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
+      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
+      SELECT * FROM data
+      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO NOTHING;
+    `);
+    const pgSql = toPgParams(sql);
+    onQuery?.(pgSql);
+    await client.query(pgSql, [col1Values, col2Values]);
+    for (const row of newRows) {
+      row.op = JoinRowOperation.Flushed;
+      row.persisted = true;
+    }
   }
 }
 
-async function m2mBatchDelete(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: ManyToManyLike,
-  deletedRows: JoinRow[],
-  onQuery: OnQuery,
-) {
+async function m2mBatchDelete(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
+  const { m2m, deletedRows } = todo;
   if (deletedRows.length === 0) return;
-  // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
-  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+  // Rows with a surrogate id are deleted by id; rows without one — id-less tables, or `remove`s
+  // done against an unloaded ManyToManyCollection — are deleted by their (col1, col2) composite.
+  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== undefined);
   if (haveIds.length > 0) {
     const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
     onQuery?.(pgSql);
@@ -295,18 +299,8 @@ async function m2mBatchDelete(
     const data = noIds
       // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
       // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-      .filter((row) => {
-        const e1 = row.columns[m2m.columnName];
-        const e2 = row.columns[m2m.columnName];
-        return !e1.isNewEntity && !e2.isNewEntity;
-      })
-      .map(
-        (e) =>
-          [
-            keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
-            keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
-          ] as any,
-      );
+      .filter((row) => !todo.isNew(row, m2m.columnName) && !todo.isNew(row, m2m.otherColumnName))
+      .map((row) => [todo.dbValue(row, m2m.columnName), todo.dbValue(row, m2m.otherColumnName)] as any);
     if (data.length > 0) {
       const pgSql = toPgParams(`
         DELETE FROM ${kq(joinTableName)}
@@ -319,6 +313,7 @@ async function m2mBatchDelete(
   }
   deletedRows.forEach((row) => {
     row.id = undefined;
+    row.persisted = false;
     row.op = JoinRowOperation.Flushed;
   });
 }

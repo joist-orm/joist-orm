@@ -33,7 +33,7 @@ export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
-export { JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
+export { JoinColumnValue, JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
 export * from "./PendingChanges";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
@@ -123,6 +123,8 @@ export {
 } from "./rules";
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
+export * from "./scopes";
+export { Temporal } from "./temporal";
 export * from "./temporalMappers";
 export { isInTrustedContext, runInTrustedContext } from "./trusted";
 export * from "./typeMap";

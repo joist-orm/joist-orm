@@ -23,12 +23,15 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
+  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -36,7 +39,6 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { Temporal } from "temporal-polyfill";
 import type { Context } from "../../context.js";
 import {
   type Author,
@@ -111,7 +113,14 @@ export interface AuthorOrder {
 export interface AuthorFactoryExtras {
 }
 
+export interface AuthorScopes {
+}
+
+export type AuthorScope = Scope<Author, AuthorScopes>;
+
 export const authorConfig = new ConfigApi<Author, Context>();
+
+export const authorScope = newScopeFn<Author, AuthorScope>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));

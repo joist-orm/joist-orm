@@ -21,12 +21,15 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
+  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -35,7 +38,6 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
@@ -144,7 +146,14 @@ export interface AuthorOrder {
 export interface AuthorFactoryExtras {
 }
 
+export interface AuthorScopes {
+}
+
+export type AuthorScope = Scope<Author, AuthorScopes>;
+
 export const authorConfig = new ConfigApi<Author, Context>();
+
+export const authorScope = newScopeFn<Author, AuthorScope>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("birthday"));

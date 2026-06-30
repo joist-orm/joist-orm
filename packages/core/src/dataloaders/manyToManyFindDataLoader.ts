@@ -60,7 +60,13 @@ async function load<T extends Entity, U extends Entity>(
         };
       }),
     },
-    orderBys: [{ alias, column: "id", order: "ASC" }],
+    // Id-less join tables have no surrogate id to order by, so order by the FK columns instead.
+    orderBys: collection.hasJoinTableId
+      ? [{ alias, column: "id", order: "ASC" }]
+      : [
+          { alias, column: collection.columnName, order: "ASC" },
+          { alias, column: collection.otherColumnName, order: "ASC" },
+        ],
   };
 
   const rows = await em["executeFind"](collection.otherMeta, manyToManyFindOperation, query, {});

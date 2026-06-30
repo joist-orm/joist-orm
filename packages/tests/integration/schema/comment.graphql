@@ -4,7 +4,7 @@ type Comment {
   createdAt: DateTime!
   updatedAt: DateTime!
   parent: CommentParent
-  user: User!
+  user: User
   likedByUsers: [User!]!
   parentTags: String!
 }
@@ -26,3 +26,24 @@ type SaveCommentResult {
 }
 
 union CommentParent = Author | Book | BookReview | Publisher | TaskOld
+
+extend type Query {
+  comment(id: ID!): Comment!
+  comments(filter: CommentFilter, limit: Int, offset: Int): CommentsPage!
+}
+
+type CommentsPage {
+  entities: [Comment!]!
+  pageInfo: PageInfo!
+}
+
+input CommentFilter {
+  id: [ID!]
+  parentTaggedId: [String!]
+  parentTags: [String!]
+  text: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  userId: [ID!]
+  parentId: [ID!]
+}

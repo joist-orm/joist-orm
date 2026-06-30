@@ -7,7 +7,7 @@ import { newPgConnectionConfig } from "joist-utils";
 import { createKnex } from "joist-orm/knex";
 import { Knex } from "knex";
 import pg from "pg";
-import { Temporal } from "temporal-polyfill";
+import { Temporal } from "joist-orm";
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;

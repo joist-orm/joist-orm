@@ -1,16 +1,10 @@
+import { type Intl, type Temporal as TemporalType, type toTemporalInstant } from "temporal-polyfill";
 import { fail } from "./utils";
 
-// temporal-polyfill 1.0+ is ESM-only (its package.json `exports` expose only an `import`
-// condition), so we force ESM type resolution via `resolution-mode: "import"`; a normal import
-// would resolve in this CommonJS module's `require` mode and fail to find the type declarations.
-type TemporalModule = typeof import("temporal-polyfill", { with: { "resolution-mode": "import" } });
-
 type RequireTemporal = {
-  Temporal: TemporalModule["Temporal"];
-  toTemporalInstant: TemporalModule["toTemporalInstant"];
-  // temporal-polyfill 1.0 exposes `Intl` only as a type namespace, not a value export, and
-  // nothing reads this field, so we type it as the host `Intl` that the global branch assigns.
-  Intl: typeof globalThis.Intl;
+  Temporal: typeof TemporalType;
+  toTemporalInstant: typeof toTemporalInstant;
+  Intl: typeof Intl;
 };
 let temporal: RequireTemporal | undefined | false;
 
@@ -33,7 +27,7 @@ export const Temporal = new Proxy(
       return Reflect.get(requireTemporal().Temporal, property, receiver);
     },
   },
-) as TemporalModule["Temporal"];
+) as typeof TemporalType;
 
 /**
  * A type-only `Temporal` namespace that merges with the `const Temporal` above.
@@ -43,14 +37,14 @@ export const Temporal = new Proxy(
  * versions don't, so we add it here by pointing the names at `temporal-polyfill`'s types.
  */
 export declare namespace Temporal {
-  export type Instant = InstanceType<TemporalModule["Temporal"]["Instant"]>;
-  export type ZonedDateTime = InstanceType<TemporalModule["Temporal"]["ZonedDateTime"]>;
-  export type PlainDate = InstanceType<TemporalModule["Temporal"]["PlainDate"]>;
-  export type PlainTime = InstanceType<TemporalModule["Temporal"]["PlainTime"]>;
-  export type PlainDateTime = InstanceType<TemporalModule["Temporal"]["PlainDateTime"]>;
-  export type PlainYearMonth = InstanceType<TemporalModule["Temporal"]["PlainYearMonth"]>;
-  export type PlainMonthDay = InstanceType<TemporalModule["Temporal"]["PlainMonthDay"]>;
-  export type Duration = InstanceType<TemporalModule["Temporal"]["Duration"]>;
+  export type Instant = TemporalType.Instant;
+  export type ZonedDateTime = TemporalType.ZonedDateTime;
+  export type PlainDate = TemporalType.PlainDate;
+  export type PlainTime = TemporalType.PlainTime;
+  export type PlainDateTime = TemporalType.PlainDateTime;
+  export type PlainYearMonth = TemporalType.PlainYearMonth;
+  export type PlainMonthDay = TemporalType.PlainMonthDay;
+  export type Duration = TemporalType.Duration;
 }
 
 /**

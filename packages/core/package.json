@@ -34,7 +34,7 @@
     "jest": "30.4.2",
     "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "temporal-polyfill": "^1.0.1",
+    "temporal-polyfill": "^0.3.2",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "6.0.3"

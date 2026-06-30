@@ -1,5 +1,6 @@
+import type { Temporal } from "temporal-polyfill";
 import { CustomSerde } from "./serde";
-import { maybeRequireTemporal, type Temporal } from "./temporal";
+import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";
 
 const { Temporal: t } = maybeRequireTemporal() ?? {};

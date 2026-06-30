@@ -1,3 +1,4 @@
+import type { Temporal } from "temporal-polyfill";
 import { Field, PolymorphicField, SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { InsertFixup } from "./drivers/EntityWriter";
 import {
@@ -11,7 +12,7 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 import { getRuntimeConfig } from "./runtimeConfig";
-import { requireTemporal, type Temporal } from "./temporal";
+import { requireTemporal } from "./temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers";
 import { groupBy } from "./utils";
 

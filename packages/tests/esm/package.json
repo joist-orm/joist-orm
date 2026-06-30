@@ -18,7 +18,7 @@
   "dependencies": {
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^8.0.4",
-    "temporal-polyfill": "^1.0.1"
+    "temporal-polyfill": "^0.3.2"
   },
   "devDependencies": {
     "@graphql-codegen/add": "^7.0.1",

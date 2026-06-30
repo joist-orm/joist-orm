@@ -1,3 +1,71 @@
+# [2.3.0](https://github.com/joist-orm/joist-orm/compare/v2.2.0...v2.3.0) (2026-06-30)
+
+
+### Bug Fixes
+
+* Add missing keys to ValueGraphQLFilter. ([#1906](https://github.com/joist-orm/joist-orm/issues/1906)) ([d0e985d](https://github.com/joist-orm/joist-orm/commit/d0e985df10eaf3d0fda56f46c09de8fcafcda916))
+* Align m2o & poly behavior on empty arrays. ([#1900](https://github.com/joist-orm/joist-orm/issues/1900)) ([e9e1e97](https://github.com/joist-orm/joist-orm/commit/e9e1e97bcdcf23ebe9eb21fe187a5eb72c561d4c))
+* Avoid conflicts across all symbols. ([#1903](https://github.com/joist-orm/joist-orm/issues/1903)) ([6f1e9a4](https://github.com/joist-orm/joist-orm/commit/6f1e9a4e064ba79bae239ef490dc07d8d731a9a5))
+* Avoid conflicts scope type names. ([#1901](https://github.com/joist-orm/joist-orm/issues/1901)) ([a01a040](https://github.com/joist-orm/joist-orm/commit/a01a0401755e9c2f0f951e6f85e234547cb6317d))
+* Avoid conflicts with enum names. ([#1902](https://github.com/joist-orm/joist-orm/issues/1902)) ([0aa13ba](https://github.com/joist-orm/joist-orm/commit/0aa13bace03c0872959b4c6f89e7b08f9a367401))
+* avoid recursive property populate deadlocks ([#1868](https://github.com/joist-orm/joist-orm/issues/1868)) ([9fef862](https://github.com/joist-orm/joist-orm/commit/9fef862ad13a34581752c2935294dca6f75b5f55))
+* Cache loader promises within an entity. ([#1874](https://github.com/joist-orm/joist-orm/issues/1874)) ([b40b649](https://github.com/joist-orm/joist-orm/commit/b40b64995cc0609e15241e3b126c3c0fe6dff4d8))
+* Call beforeFind with pre-batch ASTs. ([#1837](https://github.com/joist-orm/joist-orm/issues/1837)) ([da84dd9](https://github.com/joist-orm/joist-orm/commit/da84dd9d427ccce676eb1030c71da2bd6aca4561))
+* Call plugins beforeFind pre-batching. ([#1853](https://github.com/joist-orm/joist-orm/issues/1853)) ([3d46e1e](https://github.com/joist-orm/joist-orm/commit/3d46e1ec79dd232bec1acf124bc26281cbec49d4))
+* Exclude em.deleted entities from findCount. ([#1883](https://github.com/joist-orm/joist-orm/issues/1883)) ([b92d782](https://github.com/joist-orm/joist-orm/commit/b92d7825851a33c87e0d6f0468585e3d3bf3b8ee))
+* find should not return pending-delete entities. ([#1871](https://github.com/joist-orm/joist-orm/issues/1871)) ([99879a6](https://github.com/joist-orm/joist-orm/commit/99879a6be695bfcb4d6759d16e0d1d9e21309068))
+* Fix m2o typing of entityResolver. ([#1855](https://github.com/joist-orm/joist-orm/issues/1855)) ([370bd49](https://github.com/joist-orm/joist-orm/commit/370bd49d5dc914b624ac07e6f238e332d7a18d3f))
+* Fix markdown docs backfill on missing files. ([#1867](https://github.com/joist-orm/joist-orm/issues/1867)) ([d473533](https://github.com/joist-orm/joist-orm/commit/d4735331484e2bdcf6c08e444ffcb3de2375e006))
+* Fix reaction-deleted entities failing m2ms. ([#1896](https://github.com/joist-orm/joist-orm/issues/1896)) ([b3789e5](https://github.com/joist-orm/joist-orm/commit/b3789e55a5b20d9624203a5b0e8e444af4c2a13f))
+* Fix regression in batched queries. ([#1851](https://github.com/joist-orm/joist-orm/issues/1851)) ([5d3266d](https://github.com/joist-orm/joist-orm/commit/5d3266de8c4a1d21273c0058f3a78c83907df6d3))
+* Fix regression in STI-specialized fields. ([#1877](https://github.com/joist-orm/joist-orm/issues/1877)) ([cd1b8c1](https://github.com/joist-orm/joist-orm/commit/cd1b8c19ba3ceb9d1b5e18a1aa7f96a050cc0f3a))
+* Handle cycles in recursive Properties. ([#1873](https://github.com/joist-orm/joist-orm/issues/1873)) ([0aa88ca](https://github.com/joist-orm/joist-orm/commit/0aa88ca81383f89a7aad7ec77ede11bbc054e11d))
+* Keep loadLens sync for already-loaded paths. ([#1862](https://github.com/joist-orm/joist-orm/issues/1862)) ([ee17a50](https://github.com/joist-orm/joist-orm/commit/ee17a50967a17fe6fa9c719f0deac7cade78aee4))
+* Keep plugin-added CTEs. ([#1852](https://github.com/joist-orm/joist-orm/issues/1852)) ([5d771cb](https://github.com/joist-orm/joist-orm/commit/5d771cb2a928ca122ea0d22d185c0c08c3f8d916))
+* load m2m join rows via base meta for mixed STI subtypes. ([#1876](https://github.com/joist-orm/joist-orm/issues/1876)) ([4e374d0](https://github.com/joist-orm/joist-orm/commit/4e374d010c3e4333d9e28b32de6dbb5a99ca3b00))
+* Re-fix the AuthorScopes enum/scope type conflict. ([#1907](https://github.com/joist-orm/joist-orm/issues/1907)) ([4ae00ed](https://github.com/joist-orm/joist-orm/commit/4ae00edbcb93ec98850e893b72b93c456681399b))
+* Restore em.flush return order. ([#1863](https://github.com/joist-orm/joist-orm/issues/1863)) ([8a381e7](https://github.com/joist-orm/joist-orm/commit/8a381e745fed354b827aaa0a91c7a83411d8a94a))
+* Restore old recursive behavior. ([#1878](https://github.com/joist-orm/joist-orm/issues/1878)) ([612cd8e](https://github.com/joist-orm/joist-orm/commit/612cd8e36bd29753107f6fe9c22856a9ec1c38c6))
+* Simplify previous reputationScore fix. ([#1872](https://github.com/joist-orm/joist-orm/issues/1872)) ([2b90165](https://github.com/joist-orm/joist-orm/commit/2b90165551fda6a7eb4047db511f9dd7e322f874))
+* Skip preloading GraphQL fields with arguments. ([#1891](https://github.com/joist-orm/joist-orm/issues/1891)) ([8338255](https://github.com/joist-orm/joist-orm/commit/83382556489452b235efb058ad2a29873d961597))
+* Tighten op handling in upsert. ([#1910](https://github.com/joist-orm/joist-orm/issues/1910)) ([dd62414](https://github.com/joist-orm/joist-orm/commit/dd624146aacca8248d7b0c2d566de128bcf2a3f3))
+
+
+### Features
+
+* Add EnumCollections for m2ms to enums. ([#1908](https://github.com/joist-orm/joist-orm/issues/1908)) ([0ba7a74](https://github.com/joist-orm/joist-orm/commit/0ba7a74ce26c9fb5cbabe3fa7b3121c62a92d460))
+* Add list query scaffolding. ([#1865](https://github.com/joist-orm/joist-orm/issues/1865)) ([fa59472](https://github.com/joist-orm/joist-orm/commit/fa59472340b92dc33d49fc5c0ee09202fdd6192c))
+* Always define transientFields. ([#1881](https://github.com/joist-orm/joist-orm/issues/1881)) ([52c46ae](https://github.com/joist-orm/joist-orm/commit/52c46ae8c22d09399051a7a83a74270fd923b115))
+* Batch em.findPaginated. ([#1836](https://github.com/joist-orm/joist-orm/issues/1836)) ([0a6bb59](https://github.com/joist-orm/joist-orm/commit/0a6bb592b2ae5b20391d544fa957650db70700e8))
+* Implement constant optimization to batched queries. ([#1909](https://github.com/joist-orm/joist-orm/issues/1909)) ([c405d57](https://github.com/joist-orm/joist-orm/commit/c405d57747cabfbc9bd93f66f91fced5f986131a))
+* Node 26 native temporal support ([#1889](https://github.com/joist-orm/joist-orm/issues/1889)) ([bd8ee90](https://github.com/joist-orm/joist-orm/commit/bd8ee90369181d2299a7349b5052305d7edcd77c))
+* Prune boolean expressions. ([#1879](https://github.com/joist-orm/joist-orm/issues/1879)) ([14b4410](https://github.com/joist-orm/joist-orm/commit/14b4410e369c9a97296bbdee74a305a0a44d116a))
+* Rails-style scopes ([#1892](https://github.com/joist-orm/joist-orm/issues/1892)) ([f043156](https://github.com/joist-orm/joist-orm/commit/f0431566dec13aad8dbb1db94ad5081d1ff69be6))
+* Remove findPaginated. ([#1838](https://github.com/joist-orm/joist-orm/issues/1838)) ([46650ae](https://github.com/joist-orm/joist-orm/commit/46650ae1cc2855054c39cadd28c34960ac72265f))
+* Support m2m tables w/o id columns. ([#1904](https://github.com/joist-orm/joist-orm/issues/1904)) ([62620f4](https://github.com/joist-orm/joist-orm/commit/62620f40ee95202f5b38dbd1713f7b2b4abc103c))
+
+
+### Performance Improvements
+
+* Add todo creation benchmarks ([b551cdb](https://github.com/joist-orm/joist-orm/commit/b551cdb4619c7a52dd14d292def2c498b34d4c9c))
+* Avoid array copies in maybeIndexEntity. ([#1860](https://github.com/joist-orm/joist-orm/issues/1860)) ([fa60e11](https://github.com/joist-orm/joist-orm/commit/fa60e111b4ca656a5431da2fde4a886e29cb94c1))
+* Avoid Array.concat b/c it makes copies. ([#1858](https://github.com/joist-orm/joist-orm/issues/1858)) ([3c5c67c](https://github.com/joist-orm/joist-orm/commit/3c5c67c32e08c6f9ef31f0c73aa10ee57231b9f0))
+* Benchmark results. ([f931cba](https://github.com/joist-orm/joist-orm/commit/f931cba360feb4192eb461f5066546bfa2a43e32))
+* Cache hasOneThrough's lens path. ([#1856](https://github.com/joist-orm/joist-orm/issues/1856)) ([3312cdd](https://github.com/joist-orm/joist-orm/commit/3312cddd744b314f7b5469f7b4c3a0bffa376fb6))
+* Keep separate smart/naive set counters. ([#1857](https://github.com/joist-orm/joist-orm/issues/1857)) ([fd06be3](https://github.com/joist-orm/joist-orm/commit/fd06be37f25e719da4bc860223b9156adab1399a))
+* Lazily build find indexes ([1fdce8d](https://github.com/joist-orm/joist-orm/commit/1fdce8d358a3436279a2276fc4e731d6760a80d1))
+* Only index when fields are queried. ([#1861](https://github.com/joist-orm/joist-orm/issues/1861)) ([57f93b8](https://github.com/joist-orm/joist-orm/commit/57f93b82e0b4bac0bd6af0d71211864e4e68d120))
+* Optimize already-loaded populate paths ([c1247f2](https://github.com/joist-orm/joist-orm/commit/c1247f20b70b0fb206e76be8e84caf2f0a336ead))
+* Optimize entity hydration registration ([8f821e2](https://github.com/joist-orm/joist-orm/commit/8f821e20d5a09fe231196b2d8cb3429a05a44c33))
+* Optimize entity writer binding collection ([5850dae](https://github.com/joist-orm/joist-orm/commit/5850dae96fc1f45e44f8a9f1f3c5e74da5bb7cdf))
+* Optimize field mutation equality checks ([1977fdc](https://github.com/joist-orm/joist-orm/commit/1977fdc32d8e4d8352b602ceea448625d02c46eb))
+* Optimize find filter cache keys ([575bb7e](https://github.com/joist-orm/joist-orm/commit/575bb7e859b6b83f26ad4c66fbb925773edaa61c))
+* Optimize identity-map loadAll paths ([98f0b33](https://github.com/joist-orm/joist-orm/commit/98f0b33b3f14bde7ebda2d427c833c762e2c9455))
+* Optimize reactive queue lookups ([f322f6b](https://github.com/joist-orm/joist-orm/commit/f322f6bca433e643fc4ff796db68c3b40d627fc9))
+* Optimize sparse flush scanning ([36d6a73](https://github.com/joist-orm/joist-orm/commit/36d6a73bc10f253f9326e908d45f31c063f20079))
+* Skip await if the path is us. ([3fed339](https://github.com/joist-orm/joist-orm/commit/3fed339b15e2331a4f2efa7f86dc2c984a91a946))
+* Use hintKey instead of JSON.stringify directly. ([#1859](https://github.com/joist-orm/joist-orm/issues/1859)) ([c5c92ec](https://github.com/joist-orm/joist-orm/commit/c5c92ec9698801341510312bac9f4450a2c66e39))
+
 # [2.2.0](https://github.com/joist-orm/joist-orm/compare/v2.1.0...v2.2.0) (2026-05-18)
 
 

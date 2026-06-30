@@ -1,6 +1,6 @@
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
+import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import { promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
 import ts from "typescript";

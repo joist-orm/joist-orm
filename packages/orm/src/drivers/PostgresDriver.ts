@@ -289,7 +289,16 @@ async function m2mBatchDelete(client: pg.PoolClient, joinTableName: string, todo
   if (deletedRows.length === 0) return;
   // Rows with a surrogate id are deleted by id; rows without one — id-less tables, or `remove`s
   // done against an unloaded ManyToManyCollection — are deleted by their (col1, col2) composite.
-  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== undefined);
+  const [haveIds, noIds] = partition(deletedRows, (r) => {
+    // We used to use `id !== -1` as a marker for "row is/is-not persisted in the db" -- but when adding support
+    // for id-column-less m2m tables, we couldn't use `id === -1` as this marker anymore, so now rely on a dedicated
+    // `persisted` key instead.
+    //
+    // So, ideally, this `id !== -1` could go away _except_ that our internal verisoning plugin leverages this "m2m rows
+    // with an id=-1 delete by their FK values" to handle our versioned m2m tables. And for now it's easier to
+    // keep/restore this `id !== -1` than refactor that.
+    return r.id !== undefined && r.id !== -1;
+  });
   if (haveIds.length > 0) {
     const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
     onQuery?.(pgSql);

@@ -15,7 +15,7 @@ import { populateBatchLoader, populateOperation } from "./batchloaders/populateB
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
 import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { constraintNameToValidationError, type ReactiveRule } from "./config";
+import { type ConfigData, constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
@@ -76,6 +76,7 @@ import {
   ValidationError,
   ValidationErrors,
   ValidationRule,
+  type ValidationRuleInternal,
   ValidationRuleResult,
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
@@ -96,7 +97,7 @@ import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { isSelectAllFilter } from "./scopes";
-import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
+import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
@@ -1773,6 +1774,65 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       };
 
+      // Runs `addFlushRule`s, which look exactly like regular validation rules but fire here,
+      // after the INSERT/UPDATE/DELETEs have hit the db (but before COMMIT), so that any
+      // `em.find`s they make query the just-flushed/changed state within the transaction.
+      const runFlushValidation = async (
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ) => {
+        // Drop the pre-flush find/query caches so flush rules' `em.find`s re-query and see the
+        // just-flushed rows, instead of stale results cached earlier in this same flush.
+        this.#dataloaders = {};
+        this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
+        try {
+          // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
+          this.#isValidating = true;
+          await validateSimpleRules(entityTodos, (config) => config.flushRules);
+          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, (meta) => meta.reactiveFlushRules!);
+        } finally {
+          this.#isValidating = false;
+        }
+      };
+
+      // Flush rules run once, at the end, over just the flushed entities/join-rows whose type has
+      // flush rules (see `meta.hasFlushRules`). We accumulate that subset here as we flush — deduping
+      // across the RQF loop below (which resets entity dirty-state) — so we neither keep every todo
+      // nor re-scan/merge them afterwards; apps without flush rules leave these empty and pay ~nothing.
+      const flushRuleTodos: Record<string, Todo> = {};
+      const flushRuleJoinRowTodos: Record<string, JoinRowTodo> = {};
+      const flushRuleSeen = new Set<unknown>();
+      function collectFlushRuleTodos(
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ): void {
+        if (skipValidation) return;
+        for (const todo of Object.values(entityTodos)) {
+          if (!todo.metadata.hasFlushRules) continue;
+          for (const key of ["inserts", "updates", "deletes"] as const) {
+            for (const e of todo[key]) {
+              if (!flushRuleSeen.has(e)) {
+                flushRuleSeen.add(e);
+                getTodo(flushRuleTodos, e)[key].push(e);
+              }
+            }
+          }
+        }
+        for (const [table, todo] of Object.entries(joinRowTodos)) {
+          if (!todo.m2m.meta.hasFlushRules && !todo.m2m.otherMeta?.hasFlushRules) continue;
+          const into = (flushRuleJoinRowTodos[table] ??= { ...todo, newRows: [], deletedRows: [] });
+          for (const key of ["newRows", "deletedRows"] as const) {
+            for (const r of todo[key]) {
+              if (!flushRuleSeen.has(r)) {
+                flushRuleSeen.add(r);
+                into[key].push(r);
+              }
+            }
+          }
+        }
+      }
+
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
@@ -1792,6 +1852,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           do {
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
+              // Accumulate the flush-rule-relevant subset before the RQF loop clobbers/resets these
+              collectFlushRuleTodos(entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1824,6 +1886,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               entityTodos = {};
             }
           } while (Object.keys(entityTodos).length > 0);
+          // Now that all SQL has hit the db (but before COMMIT), run any `addFlushRule`s so their
+          // `em.find`s see the changed state. `flushRuleTodos` is only non-empty if a flushed entity
+          // actually has flush rules, so apps without them skip this (and its logging) entirely.
+          if (Object.keys(flushRuleTodos).length > 0 || Object.keys(flushRuleJoinRowTodos).length > 0) {
+            // Make just-inserted entities findable by id (like the RQF loop does) so flush rules'
+            // `em.find`s return these same instances rather than hydrating duplicate ones.
+            for (const e of allFlushedEntities) {
+              if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
+            }
+            await runFlushValidation(flushRuleTodos, flushRuleJoinRowTodos);
+          }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
           if (this.mode === "in-memory-writes") {
@@ -2738,6 +2811,8 @@ async function validateReactiveRules(
   logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
+  // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveFlushRules`
+  getRules: (meta: EntityMetadata) => ReactiveRule[] = (meta) => meta.reactiveRules!,
 ): Promise<void> {
   logger?.logStartingValidate(em, todos);
 
@@ -2766,7 +2841,7 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = todo.metadata.reactiveRules!;
+    const rules = getRules(todo.metadata);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter((e) => {
@@ -2790,8 +2865,8 @@ async function validateReactiveRules(
     // For enum m2ms the columns include the enum's numeric id, so keep only the entity values.
     const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns)).filter(isEntity);
     // The owning-entity side (applies to both entity-to-entity and entity-to-enum m2ms).
-    const a = todo.m2m.meta
-      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+    const a = getRules(todo.m2m.meta)
+      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
@@ -2799,8 +2874,8 @@ async function validateReactiveRules(
     // The "other" side only exists for entity-to-entity m2ms; enums have no reverse field.
     const { otherMeta, otherFieldName } = todo.m2m;
     const b = otherMeta
-      ? otherMeta
-          .reactiveRules!.filter((rule) => rule.fields.includes(otherFieldName!))
+      ? getRules(otherMeta)
+          .filter((rule) => rule.fields.includes(otherFieldName!))
           .map((rule) => {
             const triggered = entities.filter((e) => e instanceof otherMeta.cstr);
             return followAndQueue(triggered, rule);
@@ -2824,12 +2899,16 @@ async function validateReactiveRules(
 // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
 // because even for reactive validations on mutated entities, we defer to addReactiveValidations
 // to mark only the rules that need to run.
-async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
+async function validateSimpleRules(
+  todos: Record<string, Todo>,
+  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `flushRules`
+  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
+): Promise<void> {
   const p = Object.values(todos).flatMap(({ inserts, updates }) => {
     return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
-        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
+        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => getRules(m.config.__data));
         return rules
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));

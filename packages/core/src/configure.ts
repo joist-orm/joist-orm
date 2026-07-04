@@ -100,6 +100,31 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
       // immutable fields (so all read-only, and so not "reactive") need to run on initial entity creation.
       return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
     });
+    defineLazyGetter(meta, "reactiveFlushRules", function buildReactiveFlushRules() {
+      // Same "AndSub" reasoning as `reactiveRules`, just for the post-flush/pre-commit flush rules.
+      return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveFlushRules);
+    });
+    defineLazyGetter(meta, "hasFlushRules", function buildHasFlushRules() {
+      // True if flushing an entity of this type could trigger flush-rule work, so `em.flush` can
+      // skip the whole flush-rule pass otherwise. We need *both* checks because hinted and
+      // non-hinted flush rules are stored in different places:
+      //
+      // 1. Hinted flush rules are reverse-indexed onto their *trigger* entity's `reactiveFlushRules`,
+      //    which is often a *different* entity than the one the rule is declared on. I.e. a rule
+      //    `config.addFlushRule({ books: "title" }, fn)` declared on `Author` lands on
+      //    `Book.reactiveFlushRules`, so flushing a Book must run it even though `Book`'s own
+      //    `config.__data.flushRules` is empty — hence checking `reactiveFlushRules`, not `flushRules`.
+      //
+      // 2. Non-hinted flush rules are *not* reverse-indexed at all; they run on every insert/update of
+      //    the entity they're declared on (via `validateSimpleRules`). I.e. `config.addFlushRule(fn)` on
+      //    `Author` only ever shows up in `Author.config.__data.flushRules` with `hint === undefined`,
+      //    so `reactiveFlushRules` would miss it. (We filter to `hint === undefined` because hinted
+      //    rules are already covered by check #1.)
+      return (
+        meta.reactiveFlushRules!.length > 0 ||
+        getBaseSelfAndSubMetas(meta).some((m) => m.config.__data.flushRules.some((r) => r.hint === undefined))
+      );
+    });
   }
 }
 
@@ -275,6 +300,25 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         for (const { kind, entity, path, fields } of reversals) {
           if (kind === "update") {
             getMetadata(entity).config.__data.reactiveRules.push({
+              source: entity,
+              cstr: meta.cstr,
+              name,
+              fields,
+              path,
+              fn,
+            });
+          }
+        }
+      }
+    }
+
+    // Same reverse-indexing as `rules` above, but for `flushRules` -> `reactiveFlushRules`.
+    for (const { name, hint, fn } of meta.config.__data.flushRules) {
+      if (hint) {
+        const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
+        for (const { kind, entity, path, fields } of reversals) {
+          if (kind === "update") {
+            getMetadata(entity).config.__data.reactiveFlushRules.push({
               source: entity,
               cstr: meta.cstr,
               name,

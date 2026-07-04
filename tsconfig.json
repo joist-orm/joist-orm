@@ -15,6 +15,7 @@
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },
     { "path": "./packages/tests/uuid-ids" },
+    { "path": "./packages/tests/vitest" },
     { "path": "./packages/test-utils" },
     { "path": "./packages/utils" }
   ],

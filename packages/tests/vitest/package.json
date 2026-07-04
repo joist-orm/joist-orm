@@ -1,0 +1,33 @@
+{
+  "name": "joist-tests-vitest",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/tests/vitest"
+  },
+  "scripts": {
+    "migrate": "env-cmd tsx ../../migration-utils",
+    "test": "vitest run",
+    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "codegen": "env-cmd tsx ../../codegen"
+  },
+  "dependencies": {
+    "joist-orm": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "dotenv": "^8.2.0",
+    "env-cmd": "^11.0.0",
+    "joist-codegen": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "prettier": "^3.8.4",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "tsx": "^4.22.4",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

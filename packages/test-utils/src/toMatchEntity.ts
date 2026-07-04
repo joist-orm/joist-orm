@@ -17,7 +17,12 @@ import { CustomMatcherResult } from "./index";
 
 // This might be undefined if running outside of jest
 const jestMatchers = (globalThis as any)[Symbol.for("$$jest-matchers-object")];
-const matchers = jestMatchers?.matchers;
+// Vitest also populates the `$$jest-matchers-object` symbol, but the matchers it stores there are
+// chai-based and assume `this` is a chai Assertion (with a `this.assert` method), which our custom
+// matcher's `this` context is not--so calling them throws `this.assert is not a function`. Only take
+// the Jest fast-path under actual Jest, and route Vitest through the `this.equals` path below (like Bun).
+const isVitest = typeof process !== "undefined" && process.env?.VITEST === "true";
+const matchers = isVitest ? undefined : jestMatchers?.matchers;
 
 /**
  * Provides convenient `toMatchObject`-style matching for Joist entities.
@@ -52,8 +57,23 @@ export function toMatchEntity<T>(this: any, actual: unknown, expected: MatchedEn
       // @ts-ignore
       return matchers.toMatchObject.call(this, cleanActual, cleanExpected);
     }
+  } else if (isVitest) {
+    // `deepMirror` already pruned `cleanActual` down to the subset of keys that `cleanExpected`
+    // declares, so a full `this.equals` deep-equality behaves like Jest's `toMatchObject`. We pass
+    // `this.customTesters` so `areEntitiesEqual` still applies. Building the diff into `message`
+    // (like Jest's `toMatchObject`) keeps the failure output readable both in the terminal and in
+    // `toThrowErrorMatchingInlineSnapshot`, instead of the default `expect([object Object])...`.
+    const pass = this.equals(cleanActual, cleanExpected, this.customTesters);
+    return {
+      pass,
+      message: () => {
+        const hint = this.utils.matcherHint("toMatchEntity", undefined, undefined, { isNot: this.isNot });
+        const diff = this.utils.diff(cleanExpected, cleanActual);
+        return diff ? `${hint}\n\n${diff}` : hint;
+      },
+    };
   } else {
-    // this is bun--it's matcherHint actually seems to do `toMatchObject` already?
+    // This is Bun, whose matcher `this.utils` only exposes `matcherHint`.
     return {
       pass: this.equals(cleanActual, cleanExpected),
       message: () => this.utils.matcherHint("toMatchEntity", cleanActual, cleanExpected),

@@ -1,7 +1,7 @@
-import { Book, newAuthor, newBook, newPublisher } from "@src/entities";
-import { newEntityManager } from "@src/testEm";
 import { withLoaded } from "joist-orm";
+import { Book, newAuthor, newBook, newPublisher } from "src/entities";
 import { insertAuthor, insertBook } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("withLoaded", () => {
   it("with a async property", async () => {

@@ -1,18 +1,4 @@
 import {
-  Author,
-  Book,
-  BookReview,
-  Comment,
-  Critic,
-  newAuthor,
-  newLargePublisher,
-  newSmallPublisher,
-  Publisher,
-  PublisherGroup,
-  User,
-} from "@src/entities";
-import { newEntityManager } from "@src/testEm";
-import {
   Entity,
   LoadHint,
   Loaded,
@@ -25,6 +11,20 @@ import {
   isTypeOrSubType,
   reverseReactiveHint,
 } from "joist-orm";
+import {
+  Author,
+  Book,
+  BookReview,
+  Comment,
+  Critic,
+  Publisher,
+  PublisherGroup,
+  User,
+  newAuthor,
+  newLargePublisher,
+  newSmallPublisher,
+} from "src/entities";
+import { newEntityManager } from "src/testEm";
 
 const am = getMetadata(Author);
 

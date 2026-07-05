@@ -1,4 +1,4 @@
-import { newEntityManager, queries } from "@src/setupDbTests";
+import { newEntityManager, queries } from "src/setupDbTests";
 import { newT1Book } from "./entities";
 
 // T1: no cycles, t1_books.author_id is nullable

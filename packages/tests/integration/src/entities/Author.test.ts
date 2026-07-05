@@ -1,3 +1,6 @@
+import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
+import { newPgConnectionConfig } from "joist-utils";
+import pgStructure from "pg-structure";
 import {
   insertAuthor,
   insertBook,
@@ -5,12 +8,9 @@ import {
   insertComment,
   insertPublisher,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
-import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
-import { newPgConnectionConfig } from "joist-utils";
-import pgStructure from "pg-structure";
+} from "src/entities/inserts";
 import { jan1, jan2 } from "src/testDates";
+import { newEntityManager } from "src/testEm";
 import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
 import { makeApiCall } from "../setupDbTests";
 import { zeroTo } from "../utils";

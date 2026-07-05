@@ -1,6 +1,6 @@
-import { Book, DatabaseOwner, newTag, Tag } from "@src/entities";
-import { newEntityManager, queries, resetQueryCount } from "@src/setupDbTests";
 import { JsonAggregatePreloader } from "joist-orm";
+import { Book, DatabaseOwner, newTag, Tag } from "src/entities";
+import { newEntityManager, queries, resetQueryCount } from "src/setupDbTests";
 import { insertAuthor, insertBook, insertBookToTag, insertDatabaseOwner, insertTag, select } from "./inserts";
 
 // `book_to_tags` and `database_owner_to_tags` are id-less join tables, i.e. their primary key is

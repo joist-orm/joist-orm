@@ -1,4 +1,4 @@
-import { knex } from "@src/setupDbTests";
+import { knex } from "src/setupDbTests";
 
 // Note this test infrastructure exist solely to test Joist itself, i.e. to use
 // the low-level driver infra to setup/assert against data. Downstream applications

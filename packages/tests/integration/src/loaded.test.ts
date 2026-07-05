@@ -1,7 +1,7 @@
-import { Author } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertComment } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
 import { isLoaded } from "joist-orm";
+import { Author } from "src/entities";
+import { insertAuthor, insertBook, insertBookReview, insertComment } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("isLoaded", () => {
   describe("with a string hint", () => {

@@ -1,3 +1,4 @@
+import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
 import {
   insertAuthor,
   insertBook,
@@ -7,9 +8,8 @@ import {
   insertPublisher,
   insertTag,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
-import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
+} from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 import { Author, Book, Comment, Image, newAuthor, newBook, Publisher, Tag } from "./entities";
 import { jan1 } from "./testDates";
 import { twoOf } from "./utils";

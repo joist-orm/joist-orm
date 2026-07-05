@@ -1,5 +1,5 @@
-import { Author, Book } from "@src/entities";
 import { EntityConstructor } from "joist-orm";
+import { Author, Book } from "src/entities";
 
 describe("EntityConstructor", () => {
   it("can be used with includes", () => {

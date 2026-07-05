@@ -1,5 +1,5 @@
-import { insertEmployee, insertEmployeeToManagersClosure, select } from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
+import { insertEmployee, insertEmployeeToManagersClosure, select } from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { Employee } from "./entities";
 
 describe("Employee", () => {

@@ -16,11 +16,8 @@ export default defineConfig({
     env,
   },
   resolve: {
-    // Codegen emits `src/...` imports and the tests use `@src/...`; map both to ./src.
+    // Codegen and the tests both import via `src/...`; map that to ./src.
     // `process.cwd()` is the package dir, since `vitest run` is invoked from here.
-    alias: [
-      { find: /^@src\//, replacement: `${process.cwd()}/src/` },
-      { find: /^src\//, replacement: `${process.cwd()}/src/` },
-    ],
+    alias: [{ find: /^src\//, replacement: `${process.cwd()}/src/` }],
   },
 });

@@ -1,8 +1,8 @@
-import { Author, Comment, newAuthor, newBook } from "@src/entities";
-import { insertAuthor } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
 import { getInstanceData } from "joist-orm";
+import { Author, Comment, newAuthor, newBook } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
 import { jan1 } from "src/testDates";
+import { newEntityManager } from "src/testEm";
 
 const inspect = Symbol.for("nodejs.util.inspect.custom");
 

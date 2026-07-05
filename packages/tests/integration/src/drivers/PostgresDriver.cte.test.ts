@@ -1,6 +1,6 @@
-import { insertAuthor } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
 import { ParsedFindQuery } from "joist-orm";
+import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("PostgresDriver.cte", () => {
   it("can execute a ParsedFindQuery with two CTEs", async () => {

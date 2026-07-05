@@ -1,9 +1,5 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
-import { Author, BookRange, type Publisher } from "@src/entities";
-import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
-import { type Resolver } from "@src/generated/graphql-types";
-import { newEntityManager } from "@src/testEm";
 import {
   type FieldNode,
   type GraphQLResolveInfo,
@@ -14,6 +10,10 @@ import {
 } from "graphql";
 import { convertInfoToLoadHint, entityResolver } from "joist-graphql-resolver-utils";
 import { getMetadata } from "joist-orm";
+import { Author, BookRange, type Publisher } from "src/entities";
+import { insertAuthor, insertBook, insertPublisher, update } from "src/entities/inserts";
+import { type Resolver } from "src/generated/graphql-types";
+import { newEntityManager } from "src/testEm";
 
 describe("entityResolver", () => {
   let schema: GraphQLSchema;

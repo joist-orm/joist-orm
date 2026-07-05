@@ -13,7 +13,6 @@
     "outDir": "./build",
     "rootDir": "./",
     "paths": {
-      "@src/*": ["./src/*"],
       "src/*": ["./src/*"]
     }
   },

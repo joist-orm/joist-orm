@@ -1,9 +1,9 @@
-import { User } from "@src/entities";
-import { insertUser, select } from "@src/entities/inserts";
-import { PasswordValue } from "@src/entities/types";
-import { jan1, jan2 } from "@src/testDates";
+import { User } from "src/entities";
+import { insertUser, select } from "src/entities/inserts";
+import { PasswordValue } from "src/entities/types";
+import { jan1, jan2 } from "src/testDates";
 
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager } from "src/testEm";
 
 const PASSWORD = "correct.horse.battery.staple";
 const PASSWORD_ENCODED = "Y29ycmVjdC5ob3JzZS5iYXR0ZXJ5LnN0YXBsZQ==";

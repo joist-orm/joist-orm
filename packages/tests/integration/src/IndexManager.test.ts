@@ -1,6 +1,6 @@
-import { newEntityManager } from "@src/testEm";
 import { indexThreshold } from "joist-core/build/IndexManager";
 import { getEmInternalApi } from "joist-orm";
+import { newEntityManager } from "src/testEm";
 import { Author, newAuthor, newPublisher } from "./entities";
 import { zeroTo } from "./utils";
 

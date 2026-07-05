@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertUser, insertUserToParent, select, update } from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { RecursiveCycleError, withLoaded } from "joist-orm";
+import { insertAuthor, insertBook, insertUser, insertUserToParent, select, update } from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { Author, Book, newAuthor, newBook, newUser, User } from "../entities";
 
 describe("RecursiveCollection", () => {

@@ -5,8 +5,8 @@ import {
   insertPublisher,
   insertSmallPublisherGroup,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
+} from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { Book, BookReview, newBookReview, newLargePublisher, Publisher, SmallPublisherGroup } from "../entities";
 
 describe("AsyncReactiveField", () => {

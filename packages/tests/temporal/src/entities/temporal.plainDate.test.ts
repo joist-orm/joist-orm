@@ -1,7 +1,6 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1, jan2, jan3 } from "@src/utils";
-import { JsonAggregatePreloader, PrimitiveField, alias, getMetadata } from "joist-orm";
-import { Temporal } from "joist-orm";
+import { JsonAggregatePreloader, PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
+import { knex, newEntityManager } from "src/setupDbTests";
+import { jan1, jan2, jan3 } from "src/utils";
 import { Author, Book, newAuthor, newBook } from "./entities";
 
 describe("plainDate", () => {

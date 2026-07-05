@@ -1,10 +1,10 @@
-import { EntityManager } from "@src/entities";
+import { createKnex } from "joist-orm/knex";
 import { PostgresDriver, PostgresDriverOpts } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { createKnex } from "joist-orm/knex";
 import { Knex } from "knex";
 import pg from "pg";
+import { EntityManager } from "src/entities";
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;

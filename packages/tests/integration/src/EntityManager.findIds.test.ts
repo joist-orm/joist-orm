@@ -1,5 +1,5 @@
-import { insertAuthor, insertPublisher } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { insertAuthor, insertPublisher } from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { oneTo } from "src/utils";
 import { Author, Publisher } from "./entities";
 

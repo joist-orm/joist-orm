@@ -1,7 +1,7 @@
-import { Author, Book } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertLargePublisher } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { isScope, resolveScope } from "joist-orm";
+import { Author, Book } from "src/entities";
+import { insertAuthor, insertBook, insertBookReview, insertLargePublisher } from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 import { jan1, jan2, jan3 } from "./testDates";
 
 describe("EntityManager.scopes", () => {

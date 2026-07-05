@@ -1,7 +1,6 @@
-import { Author, AuthorId, BookId, FavoriteShape, ImageId, newAuthor, PublisherId } from "@src/entities";
-import { newEntityManager } from "@src/testEm";
 import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
+import { Author, AuthorId, BookId, FavoriteShape, ImageId, newAuthor, PublisherId } from "src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -11,6 +10,7 @@ import {
   insertSmallPublisherGroup,
   insertTag,
 } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("Entity.json", () => {
   it("can toJSON a primitive", async () => {

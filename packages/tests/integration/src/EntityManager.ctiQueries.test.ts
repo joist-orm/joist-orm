@@ -1,3 +1,4 @@
+import { alias, aliases, getMetadata, parseFindQuery } from "joist-orm";
 import {
   AdvanceStatus,
   Author,
@@ -7,9 +8,7 @@ import {
   newSmallPublisher,
   Publisher,
   SmallPublisher,
-} from "@src/entities";
-import { newEntityManager } from "@src/testEm";
-import { alias, aliases, getMetadata, parseFindQuery } from "joist-orm";
+} from "src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -17,6 +16,7 @@ import {
   insertLargePublisher,
   insertPublisher,
 } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 const am = getMetadata(Author);
 const bam = getMetadata(BookAdvance);

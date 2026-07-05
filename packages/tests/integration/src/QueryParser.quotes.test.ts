@@ -1,6 +1,6 @@
-import { Book } from "@src/entities";
-import { knex } from "@src/testEm";
 import { buildQuery } from "joist-knex";
+import { Book } from "src/entities";
+import { knex } from "src/testEm";
 
 describe("QueryParser", () => {
   it("quotes with abbreviation", () => {

@@ -1,7 +1,7 @@
-import { Critic, newCritic, newPublisherGroup, newTag, Publisher, PublisherGroup } from "@src/entities";
-import { insertCritic, insertPublisher, insertPublisherGroup, select } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { LoadHint } from "joist-orm";
+import { Critic, newCritic, newPublisherGroup, newTag, Publisher, PublisherGroup } from "src/entities";
+import { insertCritic, insertPublisher, insertPublisherGroup, select } from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("OneToManyLargeCollection", () => {
   it("can percolate large to entity", async () => {

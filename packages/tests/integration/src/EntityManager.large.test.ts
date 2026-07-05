@@ -1,6 +1,6 @@
-import { insertTag } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
-import { zeroTo } from "@src/utils";
+import { insertTag } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
+import { zeroTo } from "src/utils";
 import { Tag, newPublisher } from "./entities";
 
 jest.setTimeout(30_000);

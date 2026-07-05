@@ -1,3 +1,4 @@
+import { getEmInternalApi, noValue } from "joist-orm";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -10,9 +11,8 @@ import {
   insertTag,
   select,
   update,
-} from "@src/entities/inserts";
-import { knex, newEntityManager } from "@src/testEm";
-import { getEmInternalApi, noValue } from "joist-orm";
+} from "src/entities/inserts";
+import { knex, newEntityManager } from "src/testEm";
 import {
   Author,
   Book,

@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "@src/entities";
+import { Author, Book, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "src/entities";
 import {
   insertAuthor,
   insertAuthorToBestReview,
@@ -6,8 +6,8 @@ import {
   insertBook,
   insertBookReview,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+} from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("ReactiveManyToMany", () => {
   describe("loading behavior", () => {

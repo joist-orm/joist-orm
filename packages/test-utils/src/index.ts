@@ -32,6 +32,16 @@ declare module "bun:test" {
   }
 }
 
+// @ts-ignore
+declare module "vitest" {
+  interface Assertion<T = any> {
+    toMatchEntity(expected: MatchedEntity<T>): void;
+  }
+  interface AsymmetricMatchersContaining {
+    toMatchEntity(expected: MatchedEntity<any>): void;
+  }
+}
+
 /**
  * A custom equality tester for Jest, i.e. install it like:
  *

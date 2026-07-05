@@ -1,0 +1,21 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./build",
+    "rootDir": "./",
+    "types": ["vitest/globals", "node"],
+    "paths": {
+      "@src/*": ["./src/*"],
+      "src/*": ["./src/*"]
+    }
+  },
+  "include": ["./src", "./migrations", "./vitest.config.ts"],
+  "references": [
+    { "path": "../../codegen" },
+    { "path": "../../graphql-codegen" },
+    { "path": "../../migration-utils" },
+    { "path": "../../orm" },
+    { "path": "../../utils" },
+    { "path": "../../test-utils" }
+  ]
+}

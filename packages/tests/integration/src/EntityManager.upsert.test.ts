@@ -12,8 +12,8 @@ import {
   insertTag,
   select,
   update,
-} from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+} from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
 import { jan1 } from "./testDates";
 
@@ -598,7 +598,13 @@ describe("EntityManager.upsert", () => {
       const em = newEntityManager();
       // When one child has a real op but a sibling has `op: undefined`
       await expect(
-        em.upsert(Author, { firstName: "a2", books: [{ op: "include", id: "b:1" }, { op: undefined, title: "b2" }] }),
+        em.upsert(Author, {
+          firstName: "a2",
+          books: [
+            { op: "include", id: "b:1" },
+            { op: undefined, title: "b2" },
+          ],
+        }),
       ).rejects.toThrow("all children must have the `op` key");
     });
 
@@ -607,7 +613,10 @@ describe("EntityManager.upsert", () => {
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       // When we mix the `incremental` sentinel with a real `include` op
-      const a2 = await em.upsert(Author, { firstName: "a2", books: [{ op: "incremental" }, { op: "include", id: "b:1" }] });
+      const a2 = await em.upsert(Author, {
+        firstName: "a2",
+        books: [{ op: "incremental" }, { op: "include", id: "b:1" }],
+      });
       await em.flush();
       // Then the include is applied and the marker is ignored
       expect(await a2.books.load()).toMatchEntity([{ id: "b:1" }]);

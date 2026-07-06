@@ -1,5 +1,5 @@
-import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "@src/entities";
 import { CustomCollection, CustomReference, getProperties } from "joist-orm";
+import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "src/entities";
 
 describe("getProperties", () => {
   it("should work", () => {

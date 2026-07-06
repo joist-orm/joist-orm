@@ -1,6 +1,6 @@
-import { Author, newAuthor } from "@src/entities";
-import { newEntityManager } from "@src/testEm";
 import { deTagId, getMetadata, tagId, tagIds } from "joist-orm";
+import { Author, newAuthor } from "src/entities";
+import { newEntityManager } from "src/testEm";
 
 describe("taggedIds", () => {
   it("can tag id", async () => {

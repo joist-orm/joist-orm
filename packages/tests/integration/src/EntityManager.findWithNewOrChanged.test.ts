@@ -1,6 +1,6 @@
-import { insertAuthor, insertPublisher } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
 import { getEmInternalApi } from "joist-orm";
+import { insertAuthor, insertPublisher } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 import { zeroTo } from "src/utils";
 import { Author, newPublisher } from "./entities";
 

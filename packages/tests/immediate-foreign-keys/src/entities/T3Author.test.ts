@@ -1,4 +1,4 @@
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "src/setupDbTests";
 import { newT3Author } from "./entities";
 
 describe("T3Author", () => {

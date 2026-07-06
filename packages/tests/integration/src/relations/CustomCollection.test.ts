@@ -1,7 +1,7 @@
-import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertImage, insertPublisher } from "src/entities/inserts";
 import { Book, Image, ImageType, Publisher } from "../entities";
 
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager } from "src/testEm";
 
 describe("CustomCollection", () => {
   it("can load a collection", async () => {

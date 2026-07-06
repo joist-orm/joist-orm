@@ -1,3 +1,4 @@
+import { RecursiveCycleError, testing } from "joist-orm";
 import {
   insertAuthor,
   insertBook,
@@ -10,10 +11,9 @@ import {
   insertPublisherGroup,
   insertTag,
   update,
-} from "@src/entities/inserts";
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { RecursiveCycleError, testing } from "joist-orm";
+} from "src/entities/inserts";
 import { jan1, jan2 } from "src/testDates";
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
 
 const { partitionHint } = testing;

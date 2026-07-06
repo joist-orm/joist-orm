@@ -1,6 +1,6 @@
-import { Author, Book } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
 import { stripAnsi } from "joist-utils";
+import { Author, Book } from "src/entities";
+import { newEntityManager } from "src/setupDbTests";
 import { describe, expect, it } from "vitest";
 
 // These exercise `toMatchEntity` under Vitest. Before the runner-detection fix in

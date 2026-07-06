@@ -1,3 +1,4 @@
+import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
 import {
   Author,
   Book,
@@ -12,10 +13,9 @@ import {
   newTag,
   SmallPublisher,
   Tag,
-} from "@src/entities";
-import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
-import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
+} from "src/entities";
+import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 const sm = expect.stringMatching;
 

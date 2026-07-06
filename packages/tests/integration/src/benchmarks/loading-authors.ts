@@ -1,6 +1,6 @@
-import { Author, Book } from "@src/entities";
-import { knex, newEntityManager, testDriver } from "@src/testEm";
 import postgres from "postgres";
+import { Author, Book } from "src/entities";
+import { knex, newEntityManager, testDriver } from "src/testEm";
 
 async function main() {
   const mitata = await import("mitata");

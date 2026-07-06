@@ -5,7 +5,6 @@
     "rootDir": "./",
     "types": ["vitest/globals", "node"],
     "paths": {
-      "@src/*": ["./src/*"],
       "src/*": ["./src/*"]
     }
   },

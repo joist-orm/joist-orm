@@ -1,7 +1,7 @@
-import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
-import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { setDefaultEntityLimit } from "joist-orm";
 import { promiseHooks } from "node:v8";
+import { insertAuthor, insertBook, insertPublisher, update } from "src/entities/inserts";
+import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher, SmallPublisher } from "./entities";
 
 describe("EntityManager.populate", () => {

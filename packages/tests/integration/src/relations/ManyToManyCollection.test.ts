@@ -7,8 +7,8 @@ import {
   insertPublisher,
   insertTag,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+} from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
 import { twoOf, zeroTo } from "../utils";
 

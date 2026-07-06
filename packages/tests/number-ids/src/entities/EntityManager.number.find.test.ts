@@ -1,5 +1,5 @@
-import { Book, newAuthor } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { Book, newAuthor } from "src/entities";
+import { newEntityManager } from "src/setupDbTests";
 
 describe("EntityManager.number.find", () => {
   it("does not fail on new entities", async () => {

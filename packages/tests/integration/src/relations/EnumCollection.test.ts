@@ -1,6 +1,6 @@
-import { insertPublisher, insertPublisherLogoColor, select } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import { run } from "joist-test-utils";
+import { insertPublisher, insertPublisherLogoColor, select } from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { Color, Publisher, SmallPublisher, newSmallPublisher } from "../entities";
 
 describe("EnumCollection", () => {

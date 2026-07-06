@@ -1,6 +1,6 @@
 import { expect } from "@jest/globals";
-import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 import { Author, Book, Publisher, newAuthor, newBook, newCritic, newPublisher, newUser } from "../entities";
 
 describe("OneToManyCollection", () => {

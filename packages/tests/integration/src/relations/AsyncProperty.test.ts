@@ -1,5 +1,5 @@
-import { Author, SmallPublisher } from "@src/entities";
-import { newEntityManager } from "@src/testEm";
+import { Author, SmallPublisher } from "src/entities";
+import { newEntityManager } from "src/testEm";
 
 describe("AsyncProperty", () => {
   it("throws when loading a new entity", async () => {

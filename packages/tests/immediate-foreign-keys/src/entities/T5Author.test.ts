@@ -1,4 +1,4 @@
-import { newEntityManager, queries } from "@src/setupDbTests";
+import { newEntityManager, queries } from "src/setupDbTests";
 import { T5BookReview, newT5Book, newT5BookReview } from "./entities";
 
 // T5: Three levels with 1st not-null and 2nd nullable

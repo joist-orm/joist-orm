@@ -1,6 +1,6 @@
-import { insertAuthor, insertPublisher } from "@src/entities/inserts";
-import { zeroTo } from "@src/utils";
 import { aliases, type ParsedFindQuery, Plugin } from "joist-orm";
+import { insertAuthor, insertPublisher } from "src/entities/inserts";
+import { zeroTo } from "src/utils";
 import {
   AdvanceStatus,
   Author,
@@ -13,8 +13,8 @@ import {
   PublisherType,
 } from "./entities";
 
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import { jan1 } from "src/testDates";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 
 describe("EntityManager.find.batch", () => {
   it("batches queries loaded at the same time", async () => {

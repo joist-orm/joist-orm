@@ -1,7 +1,6 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1, ten01, ten01AndMicros, ten02, ten03 } from "@src/utils";
-import { PrimitiveField, alias, getMetadata } from "joist-orm";
-import { Temporal } from "joist-orm";
+import { PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
+import { knex, newEntityManager } from "src/setupDbTests";
+import { jan1, ten01, ten01AndMicros, ten02, ten03 } from "src/utils";
 import { Author, newAuthor } from "./entities";
 
 describe("plainTime", () => {

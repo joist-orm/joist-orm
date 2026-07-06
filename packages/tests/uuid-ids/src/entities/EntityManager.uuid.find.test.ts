@@ -1,6 +1,6 @@
-import { Book, BookStatus, BookStatusDetails, newAuthor, newBook } from "@src/entities";
-import { insertAuthor } from "@src/entities/inserts";
-import { insert, newEntityManager } from "@src/setupDbTests";
+import { Book, BookStatus, BookStatusDetails, newAuthor, newBook } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
+import { insert, newEntityManager } from "src/setupDbTests";
 
 describe("EntityManager.uuid.find", () => {
   describe("em.find", () => {

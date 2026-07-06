@@ -1,4 +1,5 @@
 import { expect } from "@jest/globals";
+import { getInstanceData, getMetadata, type MaybeAbstractEntityConstructor } from "joist-orm";
 import {
   Author,
   Book,
@@ -16,7 +17,7 @@ import {
   SmallPublisher,
   Tag,
   User,
-} from "@src/entities";
+} from "src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -27,8 +28,7 @@ import {
   insertTag,
   insertUser,
   select,
-} from "@src/entities/inserts";
-import { getInstanceData, getMetadata, type MaybeAbstractEntityConstructor } from "joist-orm";
+} from "src/entities/inserts";
 
 describe("EntityManager.reactions", () => {
   it.withCtx("creates the right internal reactions", async () => {

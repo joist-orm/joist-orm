@@ -1881,15 +1881,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
         }
       }
+      // node-pg keeps the DETAIL line (i.e. "Key (identity_id, final_id)=(102591, null) already exists")
+      // on a separate `detail` field, so keep it to suffix onto messages to help debugging.
+      const detail = e && typeof e === "object" && "detail" in e && typeof e.detail === "string" ? e.detail : undefined;
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];
         if (message) {
-          throw new ValidationErrors(message);
+          const errors = new ValidationErrors(message);
+          // Keep the user-facing `errors[].message` pretty, but suffix the DETAIL onto the top-level
+          // `message` so the debugging context survives into logs/stack traces.
+          if (detail) errors.message = `${message} — ${detail}`;
+          throw errors;
         }
       }
       if (e instanceof InMemoryRollbackError) {
         return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
+      }
+      // For raw (non-pretty) pg errors, fold the DETAIL into `message` so it survives into logs.
+      if (detail && e instanceof Error) {
+        e.message = `${e.message} — ${detail}`;
       }
       throw e;
     } finally {

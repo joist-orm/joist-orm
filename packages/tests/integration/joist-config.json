@@ -92,7 +92,10 @@
         "numberOfBookReviews": { "derived": "async" },
         "titlesOfFavoriteBooks": { "derived": "async" }
       },
-      "relations": { "authors": { "orderBy": "numberOfBooks" }, "favoriteAuthor": { "derived": "async" } },
+      "relations": {
+        "authors": { "orderBy": "numberOfBooks", "softDeletes": "include" },
+        "favoriteAuthor": { "derived": "async" }
+      },
       "tag": "p"
     },
     "PublisherGroup": {
@@ -112,7 +115,7 @@
       "tag": "p"
     },
     "SmallPublisherGroup": { "relations": { "publishers": { "subType": "SmallPublisher" } }, "tag": "pg" },
-    "Tag": { "tag": "t" },
+    "Tag": { "relations": { "authors": { "softDeletes": "include" } }, "tag": "t" },
     "Task": {
       "fields": {
         "asyncDerived": { "derived": "async" },

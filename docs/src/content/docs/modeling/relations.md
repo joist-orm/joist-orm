@@ -105,6 +105,14 @@ console.log(a2.books.get.length);
 console.log(a2.books.get[0].title);
 ```
 
+:::tip[Info]
+
+By default, `Collection`s filter out [soft-deleted](../advanced/soft-deletes.md) entities, so `a2.books.get` (and `await a2.books.load()`) will not include any soft-deleted books; use `a2.books.getWithDeleted` to include them.
+
+If a specific collection should _always_ include soft-deleted entities, you can opt it out of this filtering by setting [`"softDeletes": "include"`](/getting-started/configuration/#entitiesrelations) on the relation in `joist-config.json`.
+
+:::
+
 If a one-to-many collection is loaded, it can also be set, like `a1.books.set([b1, b2])`. Besides updating the value of `a1.books.get`, both the `b1.author` and `b2.author` references will be updated to `a1`.
 
 :::tip[Info]
@@ -142,6 +150,8 @@ export abstract class BookCodegen {
 ```
 
 These collections work similarly to a `hasMany` collection. When determining if a table is a "join table", joist checks if the table has two foreign key columns, an optional `created_at` column, and no other columns, with the primary key being either a single surrogate `id` column or the composite of the two foreign keys (an "id-less" join table). Joist also requires that the foreign keys are both `not null` and that the pair of foreign keys is unique — for id-less tables the composite primary key provides this, while id-ful tables need an explicit unique constraint on the pair.
+
+Like `hasMany` collections, `hasManyToMany` collections also filter out [soft-deleted](../advanced/soft-deletes.md) entities from `.get`/`.load` by default, and support the same `getWithDeleted` accessor and [`"softDeletes": "include"`](/getting-started/configuration/#entitiesrelations) opt-out.
 
 If one side of the join table points at an [enum table](/modeling/enum-tables/) instead of an entity, Joist generates an `EnumCollection` (which looks like "an array of enum values") on the entity side rather than a `hasManyToMany`; see [Enum Collections](/modeling/enum-tables/#enum-collections).
 

@@ -270,10 +270,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
+    const includeSoftDeleted = this.#field.softDeletes === "include";
     const list =
       opts?.withDeleted === true
         ? [...entities]
-        : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
     if (this.#field.orderBy) {
       const { field, direction } = this.#field.orderBy;
       list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));

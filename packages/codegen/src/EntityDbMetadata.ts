@@ -17,6 +17,7 @@ import {
   isReactiveReference,
   ormMaintainedFields,
   serdeConfig,
+  softDeletesConfig,
   superstructConfig,
   zodSchemaConfig,
 } from "./config";
@@ -204,6 +205,7 @@ export type OneToManyField = Field & {
   otherColumnNotNull: boolean;
   isLargeCollection: boolean;
   orderBy: { field: string; direction: "ASC" | "DESC" } | undefined;
+  softDeletes: "include" | "exclude" | undefined;
 };
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
@@ -226,6 +228,7 @@ export type ManyToManyField = Field & {
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
   derived: "async" | "otherSide" | false;
+  softDeletes: "include" | "exclude" | undefined;
   /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
   hasJoinTableId: boolean;
 };
@@ -700,6 +703,7 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     orderBy: parseOrder(orderBy),
+    softDeletes: softDeletesConfig(config, entity, fieldName),
   };
 }
 
@@ -745,6 +749,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
     derived,
+    softDeletes: softDeletesConfig(config, entity, fieldName),
     hasJoinTableId: joinTableHasId(r.joinTable),
   };
 }

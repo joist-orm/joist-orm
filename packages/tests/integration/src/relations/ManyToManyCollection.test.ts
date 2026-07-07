@@ -10,6 +10,7 @@ import {
 } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
+import { jan1 } from "../testDates";
 import { twoOf, zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
@@ -999,5 +1000,35 @@ describe("ManyToManyCollection", () => {
     await em.flush();
     // And no join row was written
     expect(await select("book_reviews_to_tags")).toMatchObject([]);
+  });
+
+  // `Tag.authors` is configured with `softDeletes: "include"` in joist-config.json
+  describe("softDeletes: include", () => {
+    it("m2m.get includes soft-deleted entities when configured", async () => {
+      // Given a tag with an active author a1 and a soft-deleted author a2
+      await insertAuthor({ id: 1, first_name: "a1" });
+      await insertAuthor({ id: 2, first_name: "a2", deleted_at: jan1 });
+      await insertTag({ id: 3, name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 3 });
+      await insertAuthorToTag({ author_id: 2, tag_id: 3 });
+      const em = newEntityManager();
+      const tag = await em.load(Tag, "t:3", "authors");
+      // Then the soft-deleted author is still included in both get and load
+      expect(tag.authors.get).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(await tag.authors.load()).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
+    it("m2m.get without the flag still hides soft-deleted entities", async () => {
+      // Given a tag with a soft-deleted book (`Tag.books` is not configured to include soft-deletes)
+      await insertAuthor({ id: 1, first_name: "a1" });
+      await insertBook({ id: 2, title: "b1", author_id: 1, deleted_at: jan1 });
+      await insertTag({ id: 3, name: "t1" });
+      await insertBookToTag({ book_id: 2, tag_id: 3 });
+      const em = newEntityManager();
+      const tag = await em.load(Tag, "t:3", "books");
+      // Then the soft-deleted book is hidden from get but present in getWithDeleted
+      expect(tag.books.get).toEqual([]);
+      expect(tag.books.getWithDeleted).toMatchEntity([{ title: "b1" }]);
+    });
   });
 });

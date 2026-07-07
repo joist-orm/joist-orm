@@ -72,9 +72,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true
-      ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    if (opts?.withDeleted === true) return [...entities];
+    // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
+    const includeSoftDeleted = this.#field.softDeletes === "include";
+    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {

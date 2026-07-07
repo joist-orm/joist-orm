@@ -157,6 +157,8 @@ export type OneToManyField = {
   serde: undefined;
   immutable: false;
   orderBy?: { field: string; direction: "ASC" | "DESC" };
+  /** When `"include"`, this collection's `.get`/`.load` returns soft-deleted entities instead of hiding them. */
+  softDeletes?: "include" | "exclude";
 };
 
 export type LargeOneToManyField = {
@@ -199,6 +201,8 @@ export type ManyToManyField = {
   columnNames: [string, string];
   /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
   hasJoinTableId: boolean;
+  /** When `"include"`, this collection's `.get`/`.load` returns soft-deleted entities instead of hiding them. */
+  softDeletes?: "include" | "exclude";
 };
 
 /**

@@ -40,6 +40,13 @@ const relationConfig = z
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    /**
+     * Controls whether this collection's `.get`/`.load` hide soft-deleted entities.
+     *
+     * Defaults to `"exclude"` (soft-deleted entities are hidden); set to `"include"` to have
+     * this specific o2m/m2m always return soft-deleted entities from `.get`/`.load`.
+     */
+    softDeletes: z.optional(z.union([z.literal("include"), z.literal("exclude")])),
     // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
     stiType: z.optional(z.string()),
     /**
@@ -295,6 +302,11 @@ export function fieldTypeConfig(config: Config, entity: Entity, fieldName: strin
 
 export function isLargeCollection(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.relations?.[fieldName]?.large === true;
+}
+
+/** Whether a collection should include (or exclude) soft-deleted entities from `.get`/`.load`. */
+export function softDeletesConfig(config: Config, entity: Entity, fieldName: string): "include" | "exclude" | undefined {
+  return config.entities[entity.name]?.relations?.[fieldName]?.softDeletes;
 }
 
 export function isFieldIgnored(

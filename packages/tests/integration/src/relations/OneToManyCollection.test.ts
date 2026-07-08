@@ -2,6 +2,7 @@ import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 import { Author, Book, Publisher, newAuthor, newBook, newCritic, newPublisher, newUser } from "../entities";
+import { jan1 } from "../testDates";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -895,5 +896,47 @@ describe("OneToManyCollection", () => {
     const authors1 = p.authors.get;
     const authors2 = p.authors.get;
     expect(authors1 === authors2).toEqual(true);
+  });
+
+  // `Publisher.authors` is configured with `softDeletes: "include"` in joist-config.json
+  describe("softDeletes: include", () => {
+    it("o2m.get includes soft-deleted entities when configured", async () => {
+      // Given a publisher with an active author a1 and a soft-deleted author a2
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1, deleted_at: jan1 });
+      const em = newEntityManager();
+      const p1 = await em.load(Publisher, "p:1", "authors");
+      // Then the soft-deleted author is still included in both get and load
+      expect(p1.authors.get).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(await p1.authors.load()).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
+    it("o2m.get still hides pending-hard-deleted entities", async () => {
+      // Given a publisher with an active author a1 and a soft-deleted author a2
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1, deleted_at: jan1 });
+      const em = newEntityManager();
+      const p1 = await em.load(Publisher, "p:1", "authors");
+      const a1 = await em.load(Author, "a:1");
+      // When a1 is marked for a hard delete
+      em.delete(a1);
+      // Then get drops the hard-deleted a1 but keeps the soft-deleted a2
+      expect(p1.authors.get).toMatchEntity([{ firstName: "a2" }]);
+      // And getWithDeleted still shows both
+      expect(p1.authors.getWithDeleted).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
+    it("o2m.get without the flag still hides soft-deleted entities", async () => {
+      // Given an author with a soft-deleted book (`Author.books` is not configured to include soft-deletes)
+      await insertAuthor({ id: 1, first_name: "a1" });
+      await insertBook({ id: 2, title: "b1", author_id: 1, deleted_at: jan1 });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1", "books");
+      // Then the soft-deleted book is hidden from get but present in getWithDeleted
+      expect(a1.books.get).toEqual([]);
+      expect(a1.books.getWithDeleted).toMatchEntity([{ title: "b1" }]);
+    });
   });
 });

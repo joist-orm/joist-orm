@@ -220,6 +220,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serde: undefined,
         immutable: false,
         ${maybeOrderBy(o2m)}
+        ${maybeSoftDeletes(o2m)}
       }
     `;
   });
@@ -257,6 +258,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         joinTableName: "${m2m.joinTableName}",
         columnNames: ["${m2m.columnName}", "${m2m.otherColumnName}"],
         hasJoinTableId: ${m2m.hasJoinTableId},
+        ${maybeSoftDeletes(m2m)}
       }
     `;
   });
@@ -328,6 +330,11 @@ function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Co
 
 function maybeOrderBy(f: OneToManyField): Code | "" {
   return f.orderBy ? code`orderBy: { field: "${f.orderBy.field}", direction: "${f.orderBy.direction}" },` : "";
+}
+
+/** Emits the `softDeletes` config, i.e. `softDeletes: "include",`, for relations that opt out of hiding soft-deletes. */
+function maybeSoftDeletes(f: { softDeletes: "include" | "exclude" | undefined }): Code | "" {
+  return f.softDeletes ? code`softDeletes: "${f.softDeletes}",` : "";
 }
 
 /** We sanitize/cleanStringValue all varchars, unless opted out by the column default/arrays/custom serdes. */

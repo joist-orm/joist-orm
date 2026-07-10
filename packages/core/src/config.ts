@@ -115,7 +115,7 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /**
-   * Adds a "flush rule" that runs like a regular validation rule (see {@link addRule}), but *after*
+   * Adds a "commit rule" that runs like a regular validation rule (see {@link addRule}), but *after*
    * the entity's `INSERT`/`UPDATE`/`DELETE` has been flushed to the database and *before* the
    * transaction `COMMIT`s, i.e. still within the transaction.
    *
@@ -128,13 +128,13 @@ export class ConfigApi<T extends Entity, C> {
    * Like `addRule`, if a `hint` is passed the rule is reactive: it runs whenever any field in the
    * hint changes (walking back to the owning entity), and the lambda gets a `Reacted` view.
    */
-  addFlushRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
-  addFlushRule(rule: ValidationRule<T>): void;
-  addFlushRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+  addCommitRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addCommitRule(rule: ValidationRule<T>): void;
+  addCommitRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
     // Keep the name for easy debugging/tracing later
-    const name = `addFlushRule(${getCallerName()})`;
-    this.ensurePreBoot(name, "addFlushRule");
-    pushValidationRule(this.__data.flushRules, name, ruleOrHint, maybeRule);
+    const name = `addCommitRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addCommitRule");
+    pushValidationRule(this.__data.commitRules, name, ruleOrHint, maybeRule);
   }
 
   /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
@@ -457,8 +457,8 @@ export class ConfigData<T extends Entity, C> {
   runHooksBefore: EntityConstructor<any>[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
-  /** The "flush rules" for this entity type, i.e. validation rules that run post-flush/pre-commit. */
-  flushRules: ValidationRuleInternal<T>[] = [];
+  /** The "commit rules" for this entity type, i.e. validation rules that run post-flush/pre-commit. */
+  commitRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
   /** The hooks for this entity type. */
@@ -478,8 +478,8 @@ export class ConfigData<T extends Entity, C> {
 
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
-  // An array of the reactive *flush* rules (post-flush/pre-commit) that depend on this entity
-  reactiveFlushRules: ReactiveRule[] = [];
+  // An array of the reactive *commit* rules (post-flush/pre-commit) that depend on this entity
+  reactiveCommitRules: ReactiveRule[] = [];
   // An array of the reactive fields and reactions that depend on this entity
   reactables: Reactable[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
@@ -570,7 +570,7 @@ function getStackFromObject(): { stack?: string } {
   }
 }
 
-/** Pushes a validation rule (either the raw or hinted/reactive form) onto `rules`, shared by `addRule`/`addFlushRule`. */
+/** Pushes a validation rule (either the raw or hinted/reactive form) onto `rules`, shared by `addRule`/`addCommitRule`. */
 function pushValidationRule<T extends Entity>(
   rules: ValidationRuleInternal<T>[],
   name: string,

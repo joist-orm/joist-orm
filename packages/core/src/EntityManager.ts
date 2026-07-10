@@ -488,12 +488,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return result;
   }
 
-  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addFlushRule`. */
+  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addCommitRule`. */
   #assertFindAllowed(method: string): void {
     if (this.#findRestricted) {
       throw new Error(
         `em.${method} cannot be called from a validation rule (added via config.addRule), because rules run ` +
-          `before the flush and would query stale, pre-flush data. Use config.addFlushRule instead, which runs ` +
+          `before the flush and would query stale, pre-flush data. Use config.addCommitRule instead, which runs ` +
           `after the INSERT/UPDATE/DELETEs are flushed (within the same transaction) and so sees the changed state.`,
       );
     }
@@ -1775,7 +1775,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           await pluginManager.beforeValidate(changedEntities);
           if (validate) {
             // Regular rules run pre-flush, so `em.find*` would query stale data; block it and steer
-            // users to `config.addFlushRule` (which runs post-flush). Only rules are restricted —
+            // users to `config.addCommitRule` (which runs post-flush). Only rules are restricted —
             // `afterValidation` hooks & plugins below are left free to query.
             this.#findRestricted = true;
             try {
@@ -1799,14 +1799,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       };
 
-      // Runs `addFlushRule`s, which look exactly like regular validation rules but fire here,
+      // Runs `addCommitRule`s, which look exactly like regular validation rules but fire here,
       // after the INSERT/UPDATE/DELETEs have hit the db (but before COMMIT), so that any
       // `em.find`s they make query the just-flushed/changed state within the transaction.
-      const runFlushValidation = async (
+      const runCommitValidation = async (
         entityTodos: Record<string, Todo>,
         joinRowTodos: Record<string, JoinRowTodo>,
       ) => {
-        // Drop the pre-flush find/query caches so flush rules' `em.find`s re-query and see the
+        // Drop the pre-flush find/query caches so commit rules' `em.find`s re-query and see the
         // just-flushed rows, instead of stale results cached earlier in this same flush.
         this.#dataloaders = {};
         this.#batchLoaders = {};
@@ -1814,43 +1814,43 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         try {
           // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
           this.#isValidating = true;
-          await validateSimpleRules(entityTodos, (config) => config.flushRules);
-          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, (meta) => meta.reactiveFlushRules!);
+          await validateSimpleRules(entityTodos, (config) => config.commitRules);
+          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, (meta) => meta.reactiveCommitRules!);
         } finally {
           this.#isValidating = false;
         }
       };
 
-      // Flush rules run once, at the end, over just the flushed entities/join-rows whose type has
-      // flush rules (see `meta.hasFlushRules`). We accumulate that subset here as we flush — deduping
+      // Commit rules run once, at the end, over just the flushed entities/join-rows whose type has
+      // commit rules (see `meta.hasCommitRules`). We accumulate that subset here as we flush — deduping
       // across the RQF loop below (which resets entity dirty-state) — so we neither keep every todo
-      // nor re-scan/merge them afterwards; apps without flush rules leave these empty and pay ~nothing.
-      const flushRuleTodos: Record<string, Todo> = {};
-      const flushRuleJoinRowTodos: Record<string, JoinRowTodo> = {};
-      const flushRuleSeen = new Set<unknown>();
-      function collectFlushRuleTodos(
+      // nor re-scan/merge them afterwards; apps without commit rules leave these empty and pay ~nothing.
+      const commitRuleTodos: Record<string, Todo> = {};
+      const commitRuleJoinRowTodos: Record<string, JoinRowTodo> = {};
+      const commitRuleSeen = new Set<unknown>();
+      function collectCommitRuleTodos(
         entityTodos: Record<string, Todo>,
         joinRowTodos: Record<string, JoinRowTodo>,
       ): void {
         if (skipValidation) return;
         for (const todo of Object.values(entityTodos)) {
-          if (!todo.metadata.hasFlushRules) continue;
+          if (!todo.metadata.hasCommitRules) continue;
           for (const key of ["inserts", "updates", "deletes"] as const) {
             for (const e of todo[key]) {
-              if (!flushRuleSeen.has(e)) {
-                flushRuleSeen.add(e);
-                getTodo(flushRuleTodos, e)[key].push(e);
+              if (!commitRuleSeen.has(e)) {
+                commitRuleSeen.add(e);
+                getTodo(commitRuleTodos, e)[key].push(e);
               }
             }
           }
         }
         for (const [table, todo] of Object.entries(joinRowTodos)) {
-          if (!todo.m2m.meta.hasFlushRules && !todo.m2m.otherMeta?.hasFlushRules) continue;
-          const into = (flushRuleJoinRowTodos[table] ??= { ...todo, newRows: [], deletedRows: [] });
+          if (!todo.m2m.meta.hasCommitRules && !todo.m2m.otherMeta?.hasCommitRules) continue;
+          const into = (commitRuleJoinRowTodos[table] ??= { ...todo, newRows: [], deletedRows: [] });
           for (const key of ["newRows", "deletedRows"] as const) {
             for (const r of todo[key]) {
-              if (!flushRuleSeen.has(r)) {
-                flushRuleSeen.add(r);
+              if (!commitRuleSeen.has(r)) {
+                commitRuleSeen.add(r);
                 into[key].push(r);
               }
             }
@@ -1877,8 +1877,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           do {
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
-              // Accumulate the flush-rule-relevant subset before the RQF loop clobbers/resets these
-              collectFlushRuleTodos(entityTodos, joinRowTodos);
+              // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
+              collectCommitRuleTodos(entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1911,16 +1911,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               entityTodos = {};
             }
           } while (Object.keys(entityTodos).length > 0);
-          // Now that all SQL has hit the db (but before COMMIT), run any `addFlushRule`s so their
-          // `em.find`s see the changed state. `flushRuleTodos` is only non-empty if a flushed entity
-          // actually has flush rules, so apps without them skip this (and its logging) entirely.
-          if (Object.keys(flushRuleTodos).length > 0 || Object.keys(flushRuleJoinRowTodos).length > 0) {
-            // Make just-inserted entities findable by id (like the RQF loop does) so flush rules'
+          // Now that all SQL has hit the db (but before COMMIT), run any `addCommitRule`s so their
+          // `em.find`s see the changed state. `commitRuleTodos` is only non-empty if a flushed entity
+          // actually has commit rules, so apps without them skip this (and its logging) entirely.
+          if (Object.keys(commitRuleTodos).length > 0 || Object.keys(commitRuleJoinRowTodos).length > 0) {
+            // Make just-inserted entities findable by id (like the RQF loop does) so commit rules'
             // `em.find`s return these same instances rather than hydrating duplicate ones.
             for (const e of allFlushedEntities) {
               if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
             }
-            await runFlushValidation(flushRuleTodos, flushRuleJoinRowTodos);
+            await runCommitValidation(commitRuleTodos, commitRuleJoinRowTodos);
           }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
@@ -2836,7 +2836,7 @@ async function validateReactiveRules(
   logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
-  // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveFlushRules`
+  // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveCommitRules`
   getRules: (meta: EntityMetadata) => ReactiveRule[] = (meta) => meta.reactiveRules!,
 ): Promise<void> {
   logger?.logStartingValidate(em, todos);
@@ -2926,7 +2926,7 @@ async function validateReactiveRules(
 // to mark only the rules that need to run.
 async function validateSimpleRules(
   todos: Record<string, Todo>,
-  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `flushRules`
+  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `commitRules`
   getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
 ): Promise<void> {
   const p = Object.values(todos).flatMap(({ inserts, updates }) => {

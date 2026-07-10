@@ -2,10 +2,10 @@ import { AuthorScheduleCodegen, authorScheduleConfig as config } from "./entitie
 
 export class AuthorSchedule extends AuthorScheduleCodegen {
   transientFields = {
-    /** How many sibling schedules the flush rule's `em.find` saw. */
-    flushRuleFindCount: -1,
-    /** Whether the flush rule's `em.find` returned this same in-memory instance. */
-    flushRuleFoundSelf: false,
+    /** How many sibling schedules the commit rule's `em.find` saw. */
+    commitRuleFindCount: -1,
+    /** Whether the commit rule's `em.find` returned this same in-memory instance. */
+    commitRuleFoundSelf: false,
     /** Opt-in to have the regular rule attempt an (illegal) `em.find`, to exercise the guard. */
     tryFindInRegularRule: false,
   };
@@ -19,15 +19,15 @@ config.addRule((as) => {
   }
 });
 
-// A *flush* rule: runs post-flush/pre-commit, so its `em.find` sees the changed state, i.e. the
+// A *commit* rule: runs post-flush/pre-commit, so its `em.find` sees the changed state, i.e. the
 // sibling schedules that were just INSERTed (within the transaction). This lets us enforce a
 // cross-row invariant that a regular rule cannot express, e.g. "at most 2 schedules per author".
-config.addFlushRule("author", async (as) => {
+config.addCommitRule("author", async (as) => {
   const author = as.author.get.fullNonReactiveAccess;
   const found = await as.em.find(AuthorSchedule, { author });
-  as.transientFields.flushRuleFindCount = found.length;
+  as.transientFields.commitRuleFindCount = found.length;
   // The found rows are hydrated back to the same in-memory instances (not duplicates).
-  as.transientFields.flushRuleFoundSelf = found.includes(as.fullNonReactiveAccess);
+  as.transientFields.commitRuleFoundSelf = found.includes(as.fullNonReactiveAccess);
   if (found.length > 2) {
     return "An author cannot have more than 2 schedules";
   }

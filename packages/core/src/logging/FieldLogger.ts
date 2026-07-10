@@ -77,3 +77,16 @@ export class FieldLogger {
         : blue; // otherwise strings/dates/numbers are blue;
   }
 }
+
+class NoopFieldLogger extends FieldLogger {
+  constructor() {
+    super([]);
+  }
+
+  logCreate(entity: Entity): void {}
+
+  logSet(entity: Entity, fieldName: string, value: unknown): void {}
+}
+
+/** A shared no-op logger that avoids optional chaining in hot field access paths. */
+export const noopFieldLogger: FieldLogger = new NoopFieldLogger();

@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { type Reactable } from "./config";
 import { EntityManager, getEmInternalApi, NoIdError } from "./index";
-import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
+import { globalLogger, noopReactionLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 import { runInTrustedContext } from "./trusted";
 
@@ -31,7 +31,7 @@ export class ReactionsManager {
   private processedActions: Set<string> = new Set();
   #needsRecalc = { populate: false, query: false, reaction: false };
   // Accessible for EntityManager.runValidation to reuse
-  logger: ReactionLogger | undefined = globalLogger;
+  logger: ReactionLogger = globalLogger ?? noopReactionLogger;
   private em: EntityManager;
   /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
   private suppressedTypeErrors: Error[] = [];
@@ -61,7 +61,7 @@ export class ReactionsManager {
       this.getPending(r).todo.add(entity);
       this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
       this.#needsRecalc[r.kind] = true;
-      this.logger?.logQueued(entity, fieldName, r);
+      this.logger.logQueued(entity, fieldName, r);
     }
   }
 
@@ -96,7 +96,7 @@ export class ReactionsManager {
       this.getPending(r).todo.add(entity);
       this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
       this.#needsRecalc[r.kind] = true;
-      this.logger?.logQueuedAll(entity, reason, r);
+      this.logger.logQueuedAll(entity, reason, r);
     }
   }
 
@@ -128,7 +128,7 @@ export class ReactionsManager {
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
   async recalcPendingReactables(kind: "reactables" | "reactiveQueries") {
-    if (this.needsRecalc(kind)) this.logger?.logStartingRecalc(this.em, kind);
+    if (this.needsRecalc(kind)) this.logger.logStartingRecalc(this.em, kind);
 
     let loops = 0;
     while (this.needsRecalc(kind)) {
@@ -158,7 +158,7 @@ export class ReactionsManager {
           // Walk back from the source to any downstream entities
           const entities = r.path.length === 0 ? todo : await followReverseHint(r.name, todo, r.path);
           const actionableEntities = entities.filter((entity) => !entity.isDeletedEntity && entity instanceof r.cstr);
-          this.logger?.logWalked(todo, r, actionableEntities, "recalc");
+          this.logger.logWalked(todo, r, actionableEntities, "recalc");
           actionableEntities.forEach((entity) => {
             const key = makeActionKey(entity, r);
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
@@ -172,13 +172,13 @@ export class ReactionsManager {
       );
 
       const actions = [...actionsMap.values()];
-      this.logger?.logLoadingStart(this.em, actions);
+      this.logger.logLoadingStart(this.em, actions);
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
-      const startTime = this.logger?.now() ?? 0;
+      const startTime = this.logger.now();
       const results = await runInTrustedContext(() => Promise.allSettled(actions.map((a) => this.#doAction(a))));
-      const endTime = this.logger?.now() ?? 0;
-      this.logger?.logLoadingEnd(this.em, endTime - startTime);
+      const endTime = this.logger.now();
+      this.logger.logLoadingEnd(this.em, endTime - startTime);
 
       const actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
       const failures: any[] = [];
@@ -202,11 +202,11 @@ export class ReactionsManager {
       if (actionsPendingAssignedIds.size > 0) {
         await this.em.assignNewIds();
         const actions = [...actionsPendingAssignedIds.values()];
-        this.logger?.logLoadingStart(this.em, actions);
-        const startTime = this.logger?.now() ?? 0;
+        this.logger.logLoadingStart(this.em, actions);
+        const startTime = this.logger.now();
         const results = await runInTrustedContext(() => Promise.allSettled(actions.map((a) => this.#doAction(a))));
-        const endTime = this.logger?.now() ?? 0;
-        this.logger?.logLoadingEnd(this.em, endTime - startTime);
+        const endTime = this.logger.now();
+        this.logger.logLoadingEnd(this.em, endTime - startTime);
         results.forEach((result, i) => {
           if (result.status === "rejected") {
             if (result.reason instanceof TypeError) {
@@ -237,12 +237,12 @@ export class ReactionsManager {
     const actions = [...this.actionsPendingTypeErrors.values()];
     this.actionsPendingTypeErrors.clear();
 
-    const startTime = this.logger?.now() ?? 0;
+    const startTime = this.logger.now();
     const results = await runInTrustedContext(() =>
       Promise.allSettled(actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a))),
     );
-    const endTime = this.logger?.now() ?? 0;
-    this.logger?.logLoadingEnd(this.em, endTime - startTime);
+    const endTime = this.logger.now();
+    this.logger.logLoadingEnd(this.em, endTime - startTime);
 
     const failures: any[] = [];
     results.forEach((result) => {
@@ -269,7 +269,7 @@ export class ReactionsManager {
   }
 
   setLogger(logger: ReactionLogger | undefined): void {
-    this.logger = logger;
+    this.logger = logger ?? noopReactionLogger;
   }
 
   clearSuppressedTypeErrors(): void {

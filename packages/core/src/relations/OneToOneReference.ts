@@ -195,7 +195,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
       }
     }
     const { fieldLogger } = getEmInternalApi(this.entity.em);
-    fieldLogger?.logSet(this.entity, this.fieldName, other);
+    fieldLogger.logSet(this.entity, this.fieldName, other);
     this.loaded = other;
     this._isLoaded = true;
     // This will no-op and mark other dirty if necessary

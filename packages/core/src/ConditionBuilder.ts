@@ -10,7 +10,7 @@ import {
   skipCondition,
 } from "./QueryParser";
 import { Column } from "./serde";
-import { partition } from "./utils";
+import { fail, partition } from "./utils";
 
 type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 

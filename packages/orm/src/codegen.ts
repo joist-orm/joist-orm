@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { joistCodegen, maybeSetExitCode } from "joist-codegen";
 
 // Re-export everything from joist-codegen

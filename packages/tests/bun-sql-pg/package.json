@@ -24,7 +24,7 @@
     "@types/node": "^26.0.1",
     "jest": "30.4.2",
     "joist-codegen": "workspace:*",
-    "joist-migration-utils": "workspace:*",
+    "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",

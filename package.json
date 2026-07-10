@@ -2,7 +2,8 @@
   "version": "2.0.3",
   "name": "joist",
   "scripts": {
-    "build": "tspc --build",
+    "build": "tsc --build",
+    "clean": "rm -rf build && find packages -type d -name build -prune -exec rm -rf '{}' + && find packages -name '*.tsbuildinfo' -delete",
     "semantic-release": "semantic-release",
     "publish-next": "./scripts/publish-next.sh",
     "trust-npm-circleci": "node ./scripts/trust-npm-circleci.mjs",
@@ -52,10 +53,6 @@
     "expect-type": "^1.3.0",
     "mprocs": "^0.9.6",
     "semantic-release": "^25.0.5",
-    "ts-patch": "^4.0.1",
-    "typescript-transform-paths": "^4.0.0"
-  },
-  "dependencies": {
     "typescript": "6.0.3"
   },
   "resolutions": {

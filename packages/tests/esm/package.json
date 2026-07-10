@@ -16,6 +16,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
+    "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^8.0.4",
     "temporal-polyfill": "^0.3.2"
@@ -31,9 +32,11 @@
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
     "joist-codegen": "workspace:*",
+    "joist-core": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
+    "joist-utils": "workspace:*",
     "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "superstruct": "^2.0.2",

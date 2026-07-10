@@ -17,7 +17,7 @@
     "build"
   ],
   "peerDependencies": {
-    "joist-core": "workspace:*",
+    "joist-codegen": "workspace:*",
     "joist-utils": "workspace:*",
     "pg-types": "^4.1.0"
   },

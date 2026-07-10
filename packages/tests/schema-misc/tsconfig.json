@@ -1,19 +1,16 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../../tsconfig.test.json",
   "compilerOptions": {
-    "outDir": "./build",
-    "rootDir": "./",
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
     "paths": {
-      "src/*": ["./src/*"],
-    },
+      "src/*": ["./src/*"]
+    }
   },
   "include": ["./src", "./migrations"],
   "references": [
-    { "path": "../../codegen" },
-    { "path": "../../graphql-codegen" },
-    { "path": "../../migration-utils" },
+    { "path": "../../core" },
     { "path": "../../orm" },
-    { "path": "../../utils" },
     { "path": "../../test-utils" },
-  ],
+    { "path": "../../utils" }
+  ]
 }

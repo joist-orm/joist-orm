@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { joistMigrate } from "joist-migration-utils";
 
 // Re-export everything from joist-migration-utils

@@ -10,6 +10,7 @@ import { kq, kqDot } from "../keywords";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { JoinResult, PreloadHydrator, PreloadPlugin } from "../plugins/PreloadPlugin";
 import { getTables, JoinTable, LateralJoinTable, ParsedFindQuery } from "../QueryParser";
+import { fail } from "../utils";
 import { canPreload } from "./canPreload";
 import { partitionHint } from "./partitionHint";
 

@@ -1,16 +1,18 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.package.json",
   "compilerOptions": {
     "outDir": "./build",
     "rootDir": "./src"
   },
   "include": ["./src"],
   "references": [
-    { "path": "../core" },
     { "path": "../codegen" },
+    { "path": "../core" },
     { "path": "../graphql-codegen" },
+    { "path": "../graphql-resolver-utils" },
     { "path": "../knex" },
     { "path": "../migration-utils" },
+    { "path": "../test-utils" },
     { "path": "../utils" }
   ]
 }

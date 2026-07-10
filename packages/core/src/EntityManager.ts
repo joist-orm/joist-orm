@@ -251,6 +251,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
+  // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
+  #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
@@ -469,6 +471,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
+    this.#assertFindAllowed("find");
     const { populate, ...rest } = options || {};
     const normalized = mergeFindOptions(where, rest);
     const settings = { where: normalized.where, ...normalized.options };
@@ -483,6 +486,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addFlushRule`. */
+  #assertFindAllowed(method: string): void {
+    if (this.#findRestricted) {
+      throw new Error(
+        `em.${method} cannot be called from a validation rule (added via config.addRule), because rules run ` +
+          `before the flush and would query stale, pre-flush data. Use config.addFlushRule instead, which runs ` +
+          `after the INSERT/UPDATE/DELETEs are flushed (within the same transaction) and so sees the changed state.`,
+      );
+    }
   }
 
   /** Runs the post-parse find pipeline: plugins mutate the logical AST, then Joist optimizes/prunes before SQL. */
@@ -653,6 +667,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: UniqueFilter<T>,
     options: { populate?: any; softDeletes?: "include" | "exclude" } = {},
   ): Promise<T | undefined> {
+    this.#assertFindAllowed("findByUnique");
     const { populate, softDeletes = "exclude" } = options;
     const entries = Object.entries(where);
     if (entries.length !== 1) {
@@ -692,6 +707,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
+    this.#assertFindAllowed("findCount");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
@@ -730,6 +746,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
+    this.#assertFindAllowed("findIds");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options };
     return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
@@ -1757,15 +1774,23 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           this.#isValidating = true;
           await pluginManager.beforeValidate(changedEntities);
           if (validate) {
-            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-            // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
-            await validateSimpleRules(entityTodos);
-            // After we've let any "author is not set" simple rules fail before prematurely throwing
-            // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-            // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
-            // that the user should see.
-            if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            // Regular rules run pre-flush, so `em.find*` would query stale data; block it and steer
+            // users to `config.addFlushRule` (which runs post-flush). Only rules are restricted —
+            // `afterValidation` hooks & plugins below are left free to query.
+            this.#findRestricted = true;
+            try {
+              // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+              // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
+              await validateSimpleRules(entityTodos);
+              // After we've let any "author is not set" simple rules fail before prematurely throwing
+              // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+              // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+              // that the user should see.
+              if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+              await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            } finally {
+              this.#findRestricted = false;
+            }
             await afterValidation(this.ctx, entityTodos);
           }
           await pluginManager.afterValidate(changedEntities);

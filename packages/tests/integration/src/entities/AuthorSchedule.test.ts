@@ -1,4 +1,4 @@
-import { Author, AuthorSchedule, newAuthor } from "../entities";
+import { Author, AuthorSchedule, newAuthor, newAuthorSchedule } from "../entities";
 import { select } from "./inserts";
 import { newEntityManager } from "../testEm";
 
@@ -16,12 +16,20 @@ describe("AuthorSchedule flush rules", () => {
     await expect(em.flush()).rejects.toThrow("An author cannot have more than 2 schedules");
     // The flush rule saw the changed (post-flush) state: all 3 sibling rows...
     expect(schedules[0].transientFields.flushRuleFindCount).toBe(3);
-    // ...hydrated back to the same in-memory instances (not duplicates)...
+    // ...hydrated back to the same in-memory instances (not duplicates).
     expect(schedules[0].transientFields.flushRuleFoundSelf).toBe(true);
-    // ...whereas the regular rule, running pre-flush, saw none of them yet.
-    expect(schedules[0].transientFields.regularRuleFindCount).toBe(0);
     // And because the flush rule threw before COMMIT, the transaction rolled back.
     expect(await select("author_schedules")).toMatchObject([]);
+  });
+
+  it("bars a regular validation rule from calling em.find", async () => {
+    const em = newEntityManager();
+    const schedule = newAuthorSchedule(em);
+    // Opt the regular rule into attempting an `em.find`, which Joist should reject.
+    schedule.transientFields.tryFindInRegularRule = true;
+    await expect(em.flush()).rejects.toThrow(
+      "em.find cannot be called from a validation rule (added via config.addRule)",
+    );
   });
 
   it("allows a flush that stays within the flush rule's limit", async () => {

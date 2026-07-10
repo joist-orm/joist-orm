@@ -1,19 +1,22 @@
 import { AuthorScheduleCodegen, authorScheduleConfig as config } from "./entities";
 
 export class AuthorSchedule extends AuthorScheduleCodegen {
-  /** How many sibling schedules each rule's `em.find` saw. */
   transientFields = {
-    regularRuleFindCount: -1,
+    /** How many sibling schedules the flush rule's `em.find` saw. */
     flushRuleFindCount: -1,
+    /** Whether the flush rule's `em.find` returned this same in-memory instance. */
     flushRuleFoundSelf: false,
+    /** Opt-in to have the regular rule attempt an (illegal) `em.find`, to exercise the guard. */
+    tryFindInRegularRule: false,
   };
 }
 
-// A *regular* validation rule: runs pre-flush, so its `em.find` only sees rows already committed
-// to the db, i.e. NOT the sibling schedules being INSERTed in this same `em.flush`.
-config.addRule("author", async (as) => {
-  const author = as.author.get.fullNonReactiveAccess;
-  as.transientFields.regularRuleFindCount = (await as.em.find(AuthorSchedule, { author })).length;
+// A *regular* validation rule may NOT call `em.find*` (Joist rejects the find), because it runs pre-flush
+// and would query stale, pre-flush data; this rule attempts it only when a test opts in, to exercise the guard.
+config.addRule((as) => {
+  if (as.transientFields.tryFindInRegularRule) {
+    return as.em.find(AuthorSchedule, {}).then(() => undefined);
+  }
 });
 
 // A *flush* rule: runs post-flush/pre-commit, so its `em.find` sees the changed state, i.e. the

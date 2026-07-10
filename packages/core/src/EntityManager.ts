@@ -83,6 +83,7 @@ import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows, ManyToManyLike } from "./JoinRows";
 import { isLoadedForPopulate, Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
+import { noopFieldLogger } from "./logging/FieldLogger";
 import { newEntity } from "./newEntity";
 import { resetFactoryCreated } from "./newTestInstance";
 import { PendingChange } from "./PendingChanges";
@@ -279,7 +280,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     afterCommit: [],
   };
   readonly #preloader: PreloadPlugin | undefined;
-  #fieldLogger: FieldLogger | undefined;
+  #fieldLogger: FieldLogger = noopFieldLogger;
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
   /** Track `a#1`, `a#2`, etc indexes for `em.create`-d entities. */
@@ -2355,7 +2356,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     const writeFn = getDefaultWriteFn(this.ctx);
     if (typeof arg === "boolean") {
-      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;
+      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : noopFieldLogger;
     } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
@@ -2674,7 +2675,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // api will be undefined during getFakeInstance
     const api = getEmInternalApi(this);
-    api?.fieldLogger?.logCreate(entity);
+    api?.fieldLogger.logCreate(entity);
 
     setOpts(entity, opts, { partial, calledFromConstructor: true });
 
@@ -2758,7 +2759,7 @@ export interface EntityManagerInternalApi {
   isValidating: boolean;
   checkWritesAllowed: () => void;
   isMerging: (entity: Entity) => boolean;
-  get fieldLogger(): FieldLogger | undefined;
+  get fieldLogger(): FieldLogger;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
   clearDataloaders(): void;
@@ -2833,13 +2834,13 @@ export class TooManyError extends Error {
  */
 async function validateReactiveRules(
   em: EntityManager,
-  logger: ReactionLogger | undefined,
+  logger: ReactionLogger,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
   // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveCommitRules`
   getRules: (meta: EntityMetadata) => ReactiveRule[] = (meta) => meta.reactiveRules!,
 ): Promise<void> {
-  logger?.logStartingValidate(em, todos);
+  logger.logStartingValidate(em, todos);
 
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
@@ -2857,7 +2858,7 @@ async function validateReactiveRules(
       entities = new Set();
       fns.set(rule.fn, entities);
     }
-    logger?.logWalked(triggered, rule, found, "validate");
+    logger.logWalked(triggered, rule, found, "validate");
     found.forEach((entity) => {
       entities.add(entity);
     });

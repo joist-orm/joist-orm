@@ -119,3 +119,26 @@ export function setReactionLogging(arg: boolean | ReactionLogger): void {
 function maybeDotPath(r: Reactable): string {
   return r.path.length > 0 ? `.${r.path.join(".")}.` : ".";
 }
+
+class NoopReactionLogger extends ReactionLogger {
+  now(): number {
+    return 0;
+  }
+
+  logQueued(entity: Entity, fieldName: string, r: Reactable): void {}
+
+  logQueuedAll(entity: Entity, reason: string, r: Reactable): void {}
+
+  logStartingRecalc(em: EntityManager, kind: "reactables" | "reactiveQueries"): void {}
+
+  logStartingValidate(em: EntityManager, todos: Record<string, Todo>): void {}
+
+  logWalked(todo: Entity[], r: Reactable | ReactiveRule, entities: Entity[], action: "recalc" | "validate"): void {}
+
+  logLoadingStart(em: EntityManager, actions: ReactiveAction[]): void {}
+
+  logLoadingEnd(em: EntityManager, millis: number): void {}
+}
+
+/** A shared no-op logger that avoids optional chaining in hot reaction paths. */
+export const noopReactionLogger: ReactionLogger = new NoopReactionLogger();

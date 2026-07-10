@@ -113,7 +113,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       data[fieldName] = newValue;
       instanceData.markFieldClean(fieldName);
 
-      fieldLogger?.logSet(entity, fieldName, newValue);
+      fieldLogger.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
         rm.queueDownstreamReactables(entity, fieldName);
       } else {
@@ -137,7 +137,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   if (!(fieldName in originalData)) {
     instanceData.markFieldDirty(fieldName, currentValue);
   }
-  fieldLogger?.logSet(entity, fieldName, newValue);
+  fieldLogger.logSet(entity, fieldName, newValue);
   rm.queueDownstreamReactables(entity, fieldName);
 
   indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);

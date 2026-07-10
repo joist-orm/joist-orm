@@ -109,6 +109,28 @@ config.addRule(["books", "firstName:ro"], (a) => {
 
 :::
 
+## Commit Rules
+
+Regular validation rules run *before* Joist issues any SQL, against the "work in progress" changed entities in memory.
+
+This means an `em.find` would query the **pre-flush** state of the database, and not see any of the just-changed values.
+
+Because this is a footgun, Joist disallows calling `em.find` (and the other `em.findX` query methods) from a regular `config.addRule`, and throws:
+
+```
+em.find cannot be called from a validation rule (added via config.addRule), because rules run
+before the flush and would query stale, pre-flush data. Use config.addCommitRule instead.
+```
+
+When you have a rule that wants to *query against the changed state*, use `config.addCommitRule`.
+
+Commit rules look exactly like regular validation rules, but they run *after* the `INSERT`/`UPDATE`/`DELETE`s have been flushed to the database, and *before* the transaction `COMMIT`s. Because the transaction is still open, if a commit rule fails, the whole transaction is safely rolled back.
+
+Like `addRule`, commit rules can be either:
+
+- **Simple** — `config.addCommitRule(fn)`, run on every insert/update of the entity, or
+- **Reactive** — `config.addCommitRule(hint, fn)`, run whenever any field in the [reactive hint](#reactive-hints) changes (walking back to the owning entity), with the lambda passed the same `Reacted<Entity, Hint>` view as reactive validation rules.
+
 ## Built-in Rules
 
 ### Required Fields

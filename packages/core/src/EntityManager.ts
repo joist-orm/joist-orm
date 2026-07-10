@@ -15,7 +15,7 @@ import { populateBatchLoader, populateOperation } from "./batchloaders/populateB
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
 import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { constraintNameToValidationError, type ReactiveRule } from "./config";
+import { type ConfigData, constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
@@ -76,6 +76,7 @@ import {
   ValidationError,
   ValidationErrors,
   ValidationRule,
+  type ValidationRuleInternal,
   ValidationRuleResult,
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
@@ -96,7 +97,7 @@ import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { isSelectAllFilter } from "./scopes";
-import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
+import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
@@ -250,6 +251,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
+  // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
+  #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
@@ -468,6 +471,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
+    this.#assertFindAllowed("find");
     const { populate, ...rest } = options || {};
     const normalized = mergeFindOptions(where, rest);
     const settings = { where: normalized.where, ...normalized.options };
@@ -482,6 +486,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addCommitRule`. */
+  #assertFindAllowed(method: string): void {
+    if (this.#findRestricted) {
+      throw new Error(
+        `em.${method} cannot be called from a validation rule (added via config.addRule), because rules run ` +
+          `before the flush and would query stale, pre-flush data. Use config.addCommitRule instead, which runs ` +
+          `after the INSERT/UPDATE/DELETEs are flushed (within the same transaction) and so sees the changed state.`,
+      );
+    }
   }
 
   /** Runs the post-parse find pipeline: plugins mutate the logical AST, then Joist optimizes/prunes before SQL. */
@@ -652,6 +667,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: UniqueFilter<T>,
     options: { populate?: any; softDeletes?: "include" | "exclude" } = {},
   ): Promise<T | undefined> {
+    this.#assertFindAllowed("findByUnique");
     const { populate, softDeletes = "exclude" } = options;
     const entries = Object.entries(where);
     if (entries.length !== 1) {
@@ -691,6 +707,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
+    this.#assertFindAllowed("findCount");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
@@ -729,6 +746,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
+    this.#assertFindAllowed("findIds");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options };
     return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
@@ -1756,15 +1774,23 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           this.#isValidating = true;
           await pluginManager.beforeValidate(changedEntities);
           if (validate) {
-            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-            // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
-            await validateSimpleRules(entityTodos);
-            // After we've let any "author is not set" simple rules fail before prematurely throwing
-            // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-            // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
-            // that the user should see.
-            if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            // Regular rules run pre-flush, so `em.find*` would query stale data; block it and steer
+            // users to `config.addCommitRule` (which runs post-flush). Only rules are restricted —
+            // `afterValidation` hooks & plugins below are left free to query.
+            this.#findRestricted = true;
+            try {
+              // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+              // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
+              await validateSimpleRules(entityTodos);
+              // After we've let any "author is not set" simple rules fail before prematurely throwing
+              // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+              // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+              // that the user should see.
+              if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+              await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            } finally {
+              this.#findRestricted = false;
+            }
             await afterValidation(this.ctx, entityTodos);
           }
           await pluginManager.afterValidate(changedEntities);
@@ -1772,6 +1798,65 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           this.#isValidating = false;
         }
       };
+
+      // Runs `addCommitRule`s, which look exactly like regular validation rules but fire here,
+      // after the INSERT/UPDATE/DELETEs have hit the db (but before COMMIT), so that any
+      // `em.find`s they make query the just-flushed/changed state within the transaction.
+      const runCommitValidation = async (
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ) => {
+        // Drop the pre-flush find/query caches so commit rules' `em.find`s re-query and see the
+        // just-flushed rows, instead of stale results cached earlier in this same flush.
+        this.#dataloaders = {};
+        this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
+        try {
+          // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
+          this.#isValidating = true;
+          await validateSimpleRules(entityTodos, (config) => config.commitRules);
+          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, (meta) => meta.reactiveCommitRules!);
+        } finally {
+          this.#isValidating = false;
+        }
+      };
+
+      // Commit rules run once, at the end, over just the flushed entities/join-rows whose type has
+      // commit rules (see `meta.hasCommitRules`). We accumulate that subset here as we flush — deduping
+      // across the RQF loop below (which resets entity dirty-state) — so we neither keep every todo
+      // nor re-scan/merge them afterwards; apps without commit rules leave these empty and pay ~nothing.
+      const commitRuleTodos: Record<string, Todo> = {};
+      const commitRuleJoinRowTodos: Record<string, JoinRowTodo> = {};
+      const commitRuleSeen = new Set<unknown>();
+      function collectCommitRuleTodos(
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ): void {
+        if (skipValidation) return;
+        for (const todo of Object.values(entityTodos)) {
+          if (!todo.metadata.hasCommitRules) continue;
+          for (const key of ["inserts", "updates", "deletes"] as const) {
+            for (const e of todo[key]) {
+              if (!commitRuleSeen.has(e)) {
+                commitRuleSeen.add(e);
+                getTodo(commitRuleTodos, e)[key].push(e);
+              }
+            }
+          }
+        }
+        for (const [table, todo] of Object.entries(joinRowTodos)) {
+          if (!todo.m2m.meta.hasCommitRules && !todo.m2m.otherMeta?.hasCommitRules) continue;
+          const into = (commitRuleJoinRowTodos[table] ??= { ...todo, newRows: [], deletedRows: [] });
+          for (const key of ["newRows", "deletedRows"] as const) {
+            for (const r of todo[key]) {
+              if (!commitRuleSeen.has(r)) {
+                commitRuleSeen.add(r);
+                into[key].push(r);
+              }
+            }
+          }
+        }
+      }
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
@@ -1792,6 +1877,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           do {
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
+              // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
+              collectCommitRuleTodos(entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1824,6 +1911,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               entityTodos = {};
             }
           } while (Object.keys(entityTodos).length > 0);
+          // Now that all SQL has hit the db (but before COMMIT), run any `addCommitRule`s so their
+          // `em.find`s see the changed state. `commitRuleTodos` is only non-empty if a flushed entity
+          // actually has commit rules, so apps without them skip this (and its logging) entirely.
+          if (Object.keys(commitRuleTodos).length > 0 || Object.keys(commitRuleJoinRowTodos).length > 0) {
+            // Make just-inserted entities findable by id (like the RQF loop does) so commit rules'
+            // `em.find`s return these same instances rather than hydrating duplicate ones.
+            for (const e of allFlushedEntities) {
+              if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
+            }
+            await runCommitValidation(commitRuleTodos, commitRuleJoinRowTodos);
+          }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
           if (this.mode === "in-memory-writes") {
@@ -2738,6 +2836,8 @@ async function validateReactiveRules(
   logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
+  // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveCommitRules`
+  getRules: (meta: EntityMetadata) => ReactiveRule[] = (meta) => meta.reactiveRules!,
 ): Promise<void> {
   logger?.logStartingValidate(em, todos);
 
@@ -2766,7 +2866,7 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = todo.metadata.reactiveRules!;
+    const rules = getRules(todo.metadata);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter((e) => {
@@ -2790,8 +2890,8 @@ async function validateReactiveRules(
     // For enum m2ms the columns include the enum's numeric id, so keep only the entity values.
     const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns)).filter(isEntity);
     // The owning-entity side (applies to both entity-to-entity and entity-to-enum m2ms).
-    const a = todo.m2m.meta
-      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+    const a = getRules(todo.m2m.meta)
+      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
@@ -2799,8 +2899,8 @@ async function validateReactiveRules(
     // The "other" side only exists for entity-to-entity m2ms; enums have no reverse field.
     const { otherMeta, otherFieldName } = todo.m2m;
     const b = otherMeta
-      ? otherMeta
-          .reactiveRules!.filter((rule) => rule.fields.includes(otherFieldName!))
+      ? getRules(otherMeta)
+          .filter((rule) => rule.fields.includes(otherFieldName!))
           .map((rule) => {
             const triggered = entities.filter((e) => e instanceof otherMeta.cstr);
             return followAndQueue(triggered, rule);
@@ -2824,12 +2924,16 @@ async function validateReactiveRules(
 // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
 // because even for reactive validations on mutated entities, we defer to addReactiveValidations
 // to mark only the rules that need to run.
-async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
+async function validateSimpleRules(
+  todos: Record<string, Todo>,
+  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `commitRules`
+  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
+): Promise<void> {
   const p = Object.values(todos).flatMap(({ inserts, updates }) => {
     return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
-        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
+        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => getRules(m.config.__data));
         return rules
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));

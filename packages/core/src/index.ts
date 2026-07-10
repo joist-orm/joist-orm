@@ -119,6 +119,7 @@ export {
   ValidationError,
   ValidationErrors,
   ValidationRule,
+  ValidationRuleInternal,
   ValidationRuleResult,
 } from "./rules";
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";

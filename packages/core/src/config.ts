@@ -111,28 +111,30 @@ export class ConfigApi<T extends Entity, C> {
     // Keep the name for easy debugging/tracing later
     const name = `addRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addRule");
-    if (typeof ruleOrHint === "function") {
-      const fn = ruleOrHint;
-      this.__data.rules.push({ name, fn, hint: undefined });
-    } else {
-      const hint = ruleOrHint;
-      // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
-      // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
-      const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-      const fn = (entity: T) => {
-        const meta = getMetadata(entity);
-        let loadHint = loadHints.get(meta);
-        if (loadHint === undefined) {
-          loadHint = convertToLoadHint<T>(meta, hint);
-          loadHints.set(meta, loadHint);
-        }
-        if (Object.keys(loadHint).length > 0) {
-          return entity.em.populate(entity, loadHint).then(maybeRule!);
-        }
-        return maybeRule!(entity);
-      };
-      this.__data.rules.push({ name, fn, hint });
-    }
+    pushValidationRule(this.__data.rules, name, ruleOrHint, maybeRule);
+  }
+
+  /**
+   * Adds a "commit rule" that runs like a regular validation rule (see {@link addRule}), but *after*
+   * the entity's `INSERT`/`UPDATE`/`DELETE` has been flushed to the database and *before* the
+   * transaction `COMMIT`s, i.e. still within the transaction.
+   *
+   * The point of running this late is that any `em.find`s the rule makes will query the _changed_
+   * state (the just-flushed rows), instead of the pre-flush state that regular `addRule` rules see.
+   * This is useful for cross-row invariants that are easiest to express as a query, e.g. "at most
+   * one active `AuthorSchedule` per author", where the rule wants to `em.find` the sibling rows
+   * that were themselves just inserted/updated in this same flush.
+   *
+   * Like `addRule`, if a `hint` is passed the rule is reactive: it runs whenever any field in the
+   * hint changes (walking back to the owning entity), and the lambda gets a `Reacted` view.
+   */
+  addCommitRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addCommitRule(rule: ValidationRule<T>): void;
+  addCommitRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+    // Keep the name for easy debugging/tracing later
+    const name = `addCommitRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addCommitRule");
+    pushValidationRule(this.__data.commitRules, name, ruleOrHint, maybeRule);
   }
 
   /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
@@ -455,6 +457,8 @@ export class ConfigData<T extends Entity, C> {
   runHooksBefore: EntityConstructor<any>[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
+  /** The "commit rules" for this entity type, i.e. validation rules that run post-flush/pre-commit. */
+  commitRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
   /** The hooks for this entity type. */
@@ -474,6 +478,8 @@ export class ConfigData<T extends Entity, C> {
 
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
+  // An array of the reactive *commit* rules (post-flush/pre-commit) that depend on this entity
+  reactiveCommitRules: ReactiveRule[] = [];
   // An array of the reactive fields and reactions that depend on this entity
   reactables: Reactable[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
@@ -561,5 +567,35 @@ function getStackFromObject(): { stack?: string } {
     throw Error("");
   } catch (err) {
     return err as Error;
+  }
+}
+
+/** Pushes a validation rule (either the raw or hinted/reactive form) onto `rules`, shared by `addRule`/`addCommitRule`. */
+function pushValidationRule<T extends Entity>(
+  rules: ValidationRuleInternal<T>[],
+  name: string,
+  ruleOrHint: ValidationRule<T> | any,
+  maybeRule: ValidationRule<any> | undefined,
+): void {
+  if (typeof ruleOrHint === "function") {
+    rules.push({ name, fn: ruleOrHint, hint: undefined });
+  } else {
+    const hint = ruleOrHint;
+    // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
+    // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
+    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
+    const fn = (entity: T) => {
+      const meta = getMetadata(entity);
+      let loadHint = loadHints.get(meta);
+      if (loadHint === undefined) {
+        loadHint = convertToLoadHint<T>(meta, hint);
+        loadHints.set(meta, loadHint);
+      }
+      if (Object.keys(loadHint).length > 0) {
+        return entity.em.populate(entity, loadHint).then(maybeRule!);
+      }
+      return maybeRule!(entity);
+    };
+    rules.push({ name, fn, hint });
   }
 }

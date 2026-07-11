@@ -106,8 +106,8 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
     });
     defineLazyGetter(meta, "hasCommitRules", function buildHasCommitRules() {
       // True if flushing an entity of this type could trigger commit-rule work, so `em.flush` can
-      // skip the whole commit-rule pass otherwise. We need *both* checks because hinted and
-      // non-hinted commit rules are stored in different places:
+      // skip the whole commit-rule pass otherwise. Hinted, non-hinted, and delete commit rules
+      // are stored in different places:
       //
       // 1. Hinted commit rules are reverse-indexed onto their *trigger* entity's `reactiveCommitRules`,
       //    which is often a *different* entity than the one the rule is declared on. I.e. a rule
@@ -120,9 +120,15 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
       //    `Author` only ever shows up in `Author.config.__data.commitRules` with `hint === undefined`,
       //    so `reactiveCommitRules` would miss it. (We filter to `hint === undefined` because hinted
       //    rules are already covered by check #1.)
+      //
+      // 3. Commit delete rules are non-reactive and stored separately on `commitDeleteRules`.
       return (
         meta.reactiveCommitRules!.length > 0 ||
-        getBaseSelfAndSubMetas(meta).some((m) => m.config.__data.commitRules.some((r) => r.hint === undefined))
+        getBaseSelfAndSubMetas(meta).some(
+          (m) =>
+            m.config.__data.commitDeleteRules.length > 0 ||
+            m.config.__data.commitRules.some((r) => r.hint === undefined),
+        )
       );
     });
   }

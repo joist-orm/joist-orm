@@ -137,6 +137,24 @@ export class ConfigApi<T extends Entity, C> {
     pushValidationRule(this.__data.commitRules, name, ruleOrHint, maybeRule);
   }
 
+  /** Adds a validation rule that runs only when this entity is being deleted. */
+  addDeleteRule(rule: ValidationRule<T>): void {
+    const name = `addDeleteRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addDeleteRule");
+    this.__data.deleteRules.push({ name, fn: rule, hint: undefined });
+  }
+
+  /**
+   * Adds a delete rule that runs after the entity's `DELETE` has been flushed but before the transaction commits.
+   *
+   * Unlike {@link addDeleteRule}, this rule may use `em.find` to query the changed state within the transaction.
+   */
+  addCommitDeleteRule(rule: ValidationRule<T>): void {
+    const name = `addCommitDeleteRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addCommitDeleteRule");
+    this.__data.commitDeleteRules.push({ name, fn: rule, hint: undefined });
+  }
+
   /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
   runHooksBefore(cstr: EntityConstructor<any>): void {
     this.__data.runHooksBefore.push(cstr);
@@ -459,6 +477,10 @@ export class ConfigData<T extends Entity, C> {
   rules: ValidationRuleInternal<T>[] = [];
   /** The "commit rules" for this entity type, i.e. validation rules that run post-flush/pre-commit. */
   commitRules: ValidationRuleInternal<T>[] = [];
+  /** Validation rules that run only when an entity of this type is deleted. */
+  deleteRules: ValidationRuleInternal<T>[] = [];
+  /** Delete rules that run post-flush/pre-commit. */
+  commitDeleteRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
   /** The hooks for this entity type. */

@@ -8,8 +8,6 @@
     "url": "https://github.com/joist-orm/joist-orm.git",
     "directory": "packages/tests/integration"
   },
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
   "scripts": {
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",
@@ -21,6 +19,7 @@
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
+    "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "knex": "3.2.10",
     "mitata": "^1.0.34"
@@ -41,13 +40,19 @@
     "graphql": "^16.14.2",
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
+    "joist-codegen": "workspace:*",
+    "joist-core": "workspace:*",
+    "joist-graphql-codegen": "workspace:*",
+    "joist-knex": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "joist-utils": "workspace:*",
     "kelonio": "^0.12.0",
     "postgres": "^3.4.9",
     "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "superstruct": "^2.0.2",
     "ts-jest": "^29.4.11",
-    "ts-patch": "^3.3.0",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.22.4",
     "typescript": "6.0.3",

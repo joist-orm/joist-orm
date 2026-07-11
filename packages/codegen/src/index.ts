@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import process from "node:process";
 import { Client } from "pg";

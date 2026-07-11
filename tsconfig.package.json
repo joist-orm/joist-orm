@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "sourceMap": true
+  },
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/__testfixtures__/**"]
+}

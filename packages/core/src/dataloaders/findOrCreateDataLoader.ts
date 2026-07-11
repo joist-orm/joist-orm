@@ -5,7 +5,7 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
 import { resurrectIfSoftDeleted } from "../resurrection";
 import { OptsOf } from "../typeMap";
-import { cleanStringValue } from "../utils";
+import { cleanStringValue, fail } from "../utils";
 import { whereFilterHash } from "./findDataLoader";
 
 interface FindOrCreateKey<T extends Entity> {

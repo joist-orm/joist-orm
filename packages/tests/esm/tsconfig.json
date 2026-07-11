@@ -1,30 +1,22 @@
 {
+  "extends": "../../../tsconfig.test.json",
   "compilerOptions": {
     "target": "esnext",
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "strict": true,
-    "types": ["node", "jest"],
     "isolatedModules": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "sourceMap": true,
-    "declaration": true,
     "verbatimModuleSyntax": true,
-    "declarationMap": true,
-    "outDir": "./build",
-    "rootDir": "./",
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
     "paths": {
       "src/*": ["./src/*"]
     }
   },
+  "include": ["./src", "./migrations", "./jest.config.ts", "./test.d.ts"],
   "references": [
-    { "path": "../../codegen" },
-    { "path": "../../graphql-codegen" },
-    { "path": "../../migration-utils" },
+    { "path": "../../core" },
+    { "path": "../../graphql-resolver-utils" },
     { "path": "../../orm" },
-    { "path": "../../utils" },
-    { "path": "../../test-utils" }
+    { "path": "../../test-utils" },
+    { "path": "../../utils" }
   ]
 }

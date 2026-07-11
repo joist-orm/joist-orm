@@ -9,14 +9,30 @@
   },
   "main": "build/index.js",
   "exports": {
-    ".": "./build/index.js",
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
     "./index.js": {
       "types": "./build/index.d.ts",
       "default": "./build/index.js"
     },
-    "./tests": "./build/tests.js"
+    "./tests": {
+      "types": "./build/tests.d.ts",
+      "default": "./build/tests.js"
+    }
   },
   "types": "build/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "index.js": [
+        "build/index.d.ts"
+      ],
+      "tests": [
+        "build/tests.d.ts"
+      ]
+    }
+  },
   "scripts": {
     "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },

@@ -1,27 +1,19 @@
 {
+  "extends": "../../../tsconfig.test.json",
   "compilerOptions": {
-    "target": "es2022",
     "module": "commonjs",
-    "strict": true,
-    "types": ["jest", "node"],
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "./build",
-    "rootDir": "./",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
     "paths": {
       "src/*": ["./src/*"]
     }
   },
+  "include": ["./src", "./migrations"],
   "references": [
-    { "path": "../../codegen" },
-    { "path": "../../graphql-codegen" },
-    { "path": "../../migration-utils" },
+    { "path": "../../core" },
     { "path": "../../orm" },
-    { "path": "../../utils" },
-    { "path": "../../test-utils" }
+    { "path": "../../test-utils" },
+    { "path": "../../utils" }
   ]
 }

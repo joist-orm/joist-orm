@@ -8,22 +8,20 @@
     { "path": "./packages/knex" },
     { "path": "./packages/migration-utils" },
     { "path": "./packages/orm" },
+    { "path": "./packages/test-utils" },
+    { "path": "./packages/utils" },
+    { "path": "./tsconfig.unit-tests.json" },
     { "path": "./packages/tests/bun" },
     { "path": "./packages/tests/bun-sql-pg" },
+    { "path": "./packages/tests/esm" },
     { "path": "./packages/tests/immediate-foreign-keys" },
     { "path": "./packages/tests/integration" },
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },
+    { "path": "./packages/tests/temporal" },
+    { "path": "./packages/tests/untagged-ids" },
     { "path": "./packages/tests/uuid-ids" },
-    { "path": "./packages/tests/vitest" },
-    { "path": "./packages/test-utils" },
-    { "path": "./packages/utils" }
+    { "path": "./packages/tests/vitest" }
   ],
-  "files": [],
-  "compilerOptions": {
-    "plugins": [
-      { "transform": "typescript-transform-paths" },
-      { "transform": "typescript-transform-paths", "afterDeclarations": true }
-    ]
-  }
+  "files": []
 }

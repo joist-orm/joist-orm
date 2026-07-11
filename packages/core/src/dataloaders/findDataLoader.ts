@@ -23,7 +23,7 @@ import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { buildUnnestCte } from "../unnest";
-import { assertNever } from "../utils";
+import { assertNever, fail } from "../utils";
 import { fastWhereFilterHash } from "./fastWhereFilterHash";
 
 export const findOperation = "find";

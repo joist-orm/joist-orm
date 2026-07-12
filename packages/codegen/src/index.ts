@@ -86,8 +86,8 @@ export async function joistCodegen() {
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
 
-  // Install our bundled Agent Skills so coding agents can find them
-  if (config.skills) await installSkills();
+  // Install our bundled Agent Skills so coding agents can find them, unless explicitly disabled
+  if (config.skills !== false) await installSkills();
 
   stripStiPlaceholders(config, entities);
   await writeConfig(config);

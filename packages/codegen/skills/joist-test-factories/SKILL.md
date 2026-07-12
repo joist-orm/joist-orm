@@ -18,7 +18,7 @@ Authoritative references:
 
 ## Non-Negotiable Rules
 
-1. Create ordinary Given state with test factories. Never use the same function
+1. Create initial Given state with test factories. Never use the same function
    or API operation under test to arrange its own preconditions.
 2. Set only fields and relationships that define the boundary case. Let the
    factories supply unrelated required values and dependencies.
@@ -34,27 +34,32 @@ Authoritative references:
 7. Prefer focused tests for one behavior over a single scenario that exercises
    unrelated updates at several graph levels.
 
-## Arrange, Act, Assert
+## Given, When, Then
 
-Follow this shape:
+Structure every test as "Given the state of the world is X, When action Y
+happens, Then the state of the world is Z": the factory-created graph is the
+Given, the code under test is the When, and `toMatchEntity` proves the Then.
+Mark the three phases with `// Given`, `// When`, `// Then` comments:
 
 ```ts
 it.withCtx("updates a book", async (ctx) => {
+  // Given an author with one book
   const author = newAuthor(ctx.em, {
     books: [{ title: "Before" }],
   });
   const [book] = author.books.get;
 
-  // updateBook owns and flushes its production unit of work.
+  // When we update the book's title (updateBook owns and flushes its production unit of work)
   await run(ctx, (ctx) => updateBook(ctx, { id: book.id, title: "After" }));
 
+  // Then the book's title is changed
   expect(author).toMatchEntity({ books: [{ title: "After" }] });
 });
 ```
 
-The factory owns setup defaults. `run` provides production isolation and
+The factory owns the Given defaults. `run` provides production isolation and
 mirrors flushed writes. The callback still owns its production unit of work.
-`toMatchEntity` owns entity-aware assertions.
+`toMatchEntity` owns the Then's entity-aware assertions.
 
 ## Factories Own Given State
 
@@ -380,6 +385,8 @@ reuse decisions instead of replacing factories with manual setup.
 
 ## Review Checklist
 
+- Test reads as Given, When, Then, with the code under test isolated as a single
+  When.
 - Given state uses minimal factory opts and does not invoke the behavior under
   test.
 - Important entities have direct, role-based `const` names.

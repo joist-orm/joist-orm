@@ -13,18 +13,20 @@ import { PropertyT } from "./hasProperty";
  * a `ReactiveField`, but when the value needs to be calculated from SQL because
  * it would be too expensive to calculate in-memory.
  *
- * The `fn` lambda will be called when any data referred to by either the `paramHint` or
- * `dbHint` reactive hints have changed, but only the `paramHint`'s data will be pulled
- * into memory.
+ * Its hint is split in two: the `loadHint` names data that is both reacted-to *and*
+ * loaded into memory (and passed to `fn`), while the `reactiveHint` names data that is
+ * only reacted-to (its changes recompute the value) but is left in the database rather
+ * than pulled into memory. The `fn` lambda re-runs when data referred to by either hint
+ * changes, but only the `loadHint`'s data is populated.
  */
 export function hasAsyncReactiveField<
   T extends Entity,
   const H1 extends ReactiveHint<T>,
   const H2 extends ReactiveHint<T>,
   V,
->(paramHint: H1, dbHint: H2, fn: (entity: Reacted<T, H1>) => Promise<V>): ReactiveField<T, V> {
+>(loadHint: H1, reactiveHint: H2, fn: (entity: Reacted<T, H1>) => Promise<V>): ReactiveField<T, V> {
   return lazyField((entity: T, fieldName) => {
-    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, paramHint, dbHint, fn);
+    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, loadHint, reactiveHint, fn);
   });
 }
 
@@ -32,8 +34,8 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   extends AbstractPropertyImpl<T>
   implements ReactiveField<T, V>
 {
-  readonly #paramHint: H1;
-  readonly #dbHint: H2;
+  readonly #loadHint: H1;
+  readonly #reactiveHint: H2;
   #loadPromise: any;
   #loaded: boolean;
   #useFactoryValue = false;
@@ -41,22 +43,27 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   constructor(
     entity: T,
     public fieldName: keyof T & string,
-    public paramHint: H1,
-    public dbHint: H2,
+    loadHint: H1,
+    reactiveHint: H2,
     private fn: (entity: Reacted<T, H1>) => Promise<V>,
   ) {
     super(entity);
-    this.#paramHint = paramHint;
-    this.#dbHint = dbHint;
+    this.#loadHint = loadHint;
+    this.#reactiveHint = reactiveHint;
     this.#loaded = false;
   }
 
-  /** Our combined param + db reactivity hint, so that we react to changes within both. */
+  /**
+   * Our combined load + reactive-only hint, so that we react to changes within both.
+   *
+   * The `loadHint` half is populated into memory (and passed to `fn`); the `reactiveHint`
+   * half only triggers recalculation, so its data stays in the database.
+   */
   get reactiveHint(): ReactiveHint<any> {
     // We do this in a getter (instead of the constructor) b/c it might be a little expensive,
     // and I'm pretty sure this is only called on boot, when hooking up the reactivity.
-    const hint = deepNormalizeHint(this.#paramHint);
-    mergeNormalizedHints(hint, deepNormalizeHint(this.#dbHint));
+    const hint = deepNormalizeHint(this.#loadHint);
+    mergeNormalizedHints(hint, deepNormalizeHint(this.#reactiveHint));
     return hint;
   }
 
@@ -113,9 +120,9 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   }
 
   get loadHint(): any {
-    // Only convert the paramHint, so we don't pull the dbHint-referenced data into memory
+    // Only convert the loadHint, so we don't pull the reactiveHint-referenced data into memory
     const meta = getMetadata(this.entity);
-    return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.#paramHint));
+    return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.#loadHint));
   }
 
   setFactoryValue(newValue: any): void {

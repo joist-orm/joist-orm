@@ -48,8 +48,7 @@ it.withCtx("updates a book", async (ctx) => {
   // updateBook owns and flushes its production unit of work.
   await run(ctx, (ctx) => updateBook(ctx, { id: book.id, title: "After" }));
 
-  expect(author).toMatchEntity({ books: [book] });
-  expect(book).toMatchEntity({ title: "After" });
+  expect(author).toMatchEntity({ books: [{ title: "After" }] });
 });
 ```
 
@@ -279,11 +278,11 @@ avoid unnecessary flushes.
 
 ## Register toMatchEntity
 
-Examples assume `joist-test-utils` is a development dependency and the matcher
-is registered in the project's test setup:
+Examples assume `toMatchEntity` is imported from the `joist-orm/tests`
+entry point and registered in the project's test setup:
 
 ```ts
-import { toMatchEntity } from "joist-test-utils";
+import { toMatchEntity } from "joist-orm/tests";
 
 expect.extend({ toMatchEntity });
 ```

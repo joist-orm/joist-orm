@@ -124,23 +124,25 @@ For an editable parent-child graph:
 2. Include those IDs in API response types.
 3. Store IDs in form or draft state.
 4. Send retained rows as `{ id, op: "include", ...changes }`.
-5. Keep deleted persisted IDs in a deletion list and send `{ id, op: "delete" }`.
+5. Mark deleted persisted rows in place by switching their `op` to `delete` (or `remove`); keep them in the same array rather than moving their IDs to a separate deletion list.
 6. Send new rows without an ID but with `op: "include"`.
 7. Keep the same discipline recursively for grandchildren.
 
-A robust UI row model looks like:
+A robust UI row model carries `op` on the row itself, so a deleted book flips to `op: "delete"`/`"remove"` in place instead of moving to a separate collection:
 
 ```ts
 interface EditableBook {
   id?: string;
+  op?: "include" | "remove" | "delete";
   title: string;
 }
 
 interface AuthorDraft {
   books: EditableBook[];
-  deletedBookIds: string[];
 }
 ```
+
+Because each row already mirrors `SaveBookInput` (`id`, `op`, scalars), the draft state can go directly onto the wire as the GraphQL input, with no separate deletion list to reconcile back in. Keep the collection incremental (every row has `op`) once any row does.
 
 Do not key editable rows only by array index. Reordering or deleting an earlier row can assign an existing ID to the wrong logical row. Prefer structured row state with stable IDs. If a textarea represents multiple database rows, either maintain line identity explicitly or document why positional identity is safe for that domain.
 
@@ -332,17 +334,7 @@ For a nested update bug, build a persisted graph before invoking the real API bo
 7. Flush and reload.
 8. Assert retained IDs are unchanged, new IDs were created, deleted entities are gone, and no duplicates exist.
 
-Also cover these semantics where relevant:
-
-- Omitted collection leaves membership unchanged.
-- Explicit `[]` clears membership.
-- `[{ op: "incremental" }]` is a no-op.
-- `remove` detaches but does not delete an optional child.
-- `delete` hard-deletes.
-- Mixed missing/present `op` values are rejected.
-- GraphQL or transport-level tests prove nested IDs and operations reach the resolver.
-
-Do not stop at payload snapshots. The original class of failure often appears only during validation or flush.
+Do not re-test `em.upsert`'s own collection semantics (omitted vs `[]` vs `[{ op: "incremental" }]`, `remove` vs `delete`, mixed-`op` rejection) — Joist owns and tests those. Test what is yours: that nested IDs and operations survive the transport boundary and reach the resolver. Do not stop at payload snapshots; the original class of failure often appears only during validation or flush.
 
 ## Review Checklist
 

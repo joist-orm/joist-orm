@@ -33,6 +33,7 @@
     "packages/tests/bun-sql-pg",
     "packages/tests/integration",
     "packages/tests/schema-misc",
+    "packages/tests/slug-ids",
     "packages/tests/esm",
     "packages/tests/immediate-foreign-keys",
     "packages/tests/number-ids",

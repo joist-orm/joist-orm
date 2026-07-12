@@ -1,15 +1,15 @@
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
-  isLoadedCollection,
+  deTagIds,
   getMetadataForField,
+  isLoadedCollection,
   keyToTaggedId,
   kq,
   kqDot,
   kqStar,
   ManyToManyField,
   ParsedFindQuery,
-  unsafeDeTagIds,
 } from "../index";
 import { RecursiveM2mCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";
@@ -30,7 +30,10 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
     const thisColumn = columnNames[0];
     const otherColumn = columnNames[1];
 
-    const seedIds = unsafeDeTagIds(entities.map((e) => e.idTagged));
+    const seedIds = deTagIds(
+      meta,
+      entities.map((e) => e.idTagged),
+    );
 
     // Use a recursive CTE to walk the join table and return all join rows for the seed
     // entities and all transitively-reachable entities. JoinRows.loadRows then calls

@@ -4,6 +4,7 @@ describe("keys", () => {
   describe("isTaggedId", () => {
     it("works on int ids", () => {
       expect(isTaggedId("a:1")).toBe(true);
+      expect(isTaggedId("a1")).toEqual(false);
     });
 
     it("works on uuid ids", () => {

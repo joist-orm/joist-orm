@@ -1212,6 +1212,7 @@ export function getIdType(config: Config) {
   switch (config.idType) {
     case "untagged-string":
     case "tagged-string":
+    case "slug":
     case undefined:
       return "string";
     case "number":

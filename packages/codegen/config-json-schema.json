@@ -60,7 +60,12 @@
             "additionalProperties": {
               "type": "object",
               "properties": {
-                "derived": { "anyOf": [{ "type": "string", "const": "sync" }, { "type": "string", "const": "async" }] },
+                "derived": {
+                  "anyOf": [
+                    { "type": "string", "const": "sync" },
+                    { "type": "string", "const": "async" }
+                  ]
+                },
                 "protected": { "type": "boolean" },
                 "ignore": { "type": "boolean" },
                 "superstruct": { "type": "string" },
@@ -87,7 +92,10 @@
               "properties": {
                 "derived": { "type": "string", "const": "async" },
                 "polymorphic": {
-                  "anyOf": [{ "type": "string", "const": "notNull" }, { "type": "boolean", "const": true }]
+                  "anyOf": [
+                    { "type": "string", "const": "notNull" },
+                    { "type": "boolean", "const": true }
+                  ]
                 },
                 "large": { "type": "boolean" },
                 "orderBy": { "type": "string" },
@@ -118,6 +126,7 @@
     "idType": {
       "anyOf": [
         { "type": "string", "const": "tagged-string" },
+        { "type": "string", "const": "slug" },
         { "type": "string", "const": "untagged-string" },
         { "type": "string", "const": "number" }
       ]
@@ -132,7 +141,10 @@
     "esm": { "type": "boolean" },
     "paginationStyle": {
       "default": "cursor",
-      "anyOf": [{ "type": "string", "const": "cursor" }, { "type": "string", "const": "limit" }]
+      "anyOf": [
+        { "type": "string", "const": "cursor" },
+        { "type": "string", "const": "limit" }
+      ]
     },
     "docs": { "type": "boolean" },
     "outputDocs": { "type": "boolean" },

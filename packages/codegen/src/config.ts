@@ -1,11 +1,11 @@
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import { promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
 import ts from "typescript";
 import { z } from "zod";
 import { getLatestCodemodVersion } from "./codemods";
+import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import { getStiEntities } from "./inheritance";
 import { logger } from "./logger";
 import { fail, sortKeys, trueIfResolved } from "./utils";
@@ -143,7 +143,9 @@ export const config = z
     entities: z.record(z.string(), entityConfig).default({}),
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
-    idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
+    idType: z.optional(
+      z.union([z.literal("tagged-string"), z.literal("slug"), z.literal("untagged-string"), z.literal("number")]),
+    ),
     /** How we should support non-deferred foreign keys. */
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
@@ -305,7 +307,11 @@ export function isLargeCollection(config: Config, entity: Entity, fieldName: str
 }
 
 /** Whether a collection should include (or exclude) soft-deleted entities from `.get`/`.load`. */
-export function softDeletesConfig(config: Config, entity: Entity, fieldName: string): "include" | "exclude" | undefined {
+export function softDeletesConfig(
+  config: Config,
+  entity: Entity,
+  fieldName: string,
+): "include" | "exclude" | undefined {
   return config.entities[entity.name]?.relations?.[fieldName]?.softDeletes;
 }
 

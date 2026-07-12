@@ -56,6 +56,7 @@ import {
   InstanceData,
   isLoadedReference,
   keyToNumber,
+  keyToTaggedId,
   Lens,
   loadLens,
   mergeFindOptions,
@@ -2142,14 +2143,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options?: { overwriteExisting?: boolean },
   ): T[] {
     const maybeBaseMeta = getMetadata(type);
-    const taggedIdPrefix = `${maybeBaseMeta.tagName}:`;
     const overwriteExisting = options?.overwriteExisting === true;
 
     let i = 0;
     const entities = new Array(rows.length);
     for (const row of rows) {
       const id = row["id"];
-      const taggedId = id === undefined || id === null ? fail("No id column was available") : `${taggedIdPrefix}${id}`;
+      const taggedId =
+        id === undefined || id === null ? fail("No id column was available") : keyToTaggedId(maybeBaseMeta, id)!;
       // See if this is already in our UoW
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {

@@ -3,6 +3,7 @@ import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
   addTablePerClassJoinsAndClassTag,
+  deTagIds,
   getField,
   isLoadedCollection,
   isLoadedOneToOneReference,
@@ -12,7 +13,6 @@ import {
   OneToManyField,
   OneToOneField,
   ParsedFindQuery,
-  unsafeDeTagIds,
 } from "../index";
 import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation, groupBy } from "../utils";
@@ -59,7 +59,12 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
             `,
             // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
-            bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
+            bindings: [
+              deTagIds(
+                meta,
+                parents.map((e) => e.idTagged),
+              ),
+            ],
           },
           recursive: true,
         },

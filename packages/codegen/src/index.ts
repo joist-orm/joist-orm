@@ -63,6 +63,7 @@ export async function joistCodegen() {
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);
+  validateSlugIds(config, entities);
 
   // Scan `*.ts` files after we've expanded `Task` -> `TaskOld.ts`
   await scanEntityFiles(config, dbMetadata);
@@ -157,6 +158,21 @@ export function maybeSetExitCode(): void {
       loggerMaxWarningLevelHit >= LOG_LEVELS.error)
   ) {
     process.exitCode = 1;
+  }
+}
+
+/** Validates that delimiterless slug ids have an unambiguous alpha-plus-digits shape. */
+function validateSlugIds(config: Config, entities: EntityDbMetadata[]): void {
+  if (config.idType !== "slug") return;
+  for (const entity of entities) {
+    if (!/^[a-z]+$/i.test(entity.tagName)) {
+      throw new Error(`Slug ids require an alphabetic tag, got '${entity.tagName}' for ${entity.name}`);
+    }
+    if (entity.primaryKey.columnType !== "int" && entity.primaryKey.columnType !== "bigint") {
+      throw new Error(
+        `Slug ids require an int or bigint primary key, got '${entity.primaryKey.columnType}' for ${entity.name}`,
+      );
+    }
   }
 }
 

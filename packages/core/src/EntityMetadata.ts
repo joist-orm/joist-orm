@@ -1,8 +1,8 @@
 import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
 import { getMetadataForType } from "./configure";
+import { Entity, isEntity } from "./Entity";
+import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { EnumMetadata } from "./EnumMetadata";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
@@ -43,8 +43,8 @@ export function getMetadataForField(meta: EntityMetadata, fieldName: string): En
 export interface EntityMetadata<T extends Entity = any> {
   cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
-  /** Whether id field is a tagged string. */
-  idType: "tagged-string" | "untagged-string" | "number";
+  /** How the domain entity's id is represented. */
+  idType: "tagged-string" | "slug" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;

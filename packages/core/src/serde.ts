@@ -1,5 +1,5 @@
 import type { Temporal } from "temporal-polyfill";
-import { Field, PolymorphicField, SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata";
+import { Field, getBaseMeta, getMetadata, PolymorphicField, SerdeField } from "./EntityMetadata";
 import { InsertFixup } from "./drivers/EntityWriter";
 import {
   Entity,
@@ -325,7 +325,10 @@ export class KeySerde implements FieldSerde {
   isArray = false;
   isNullableArray = false;
   columns = [this];
-  private meta: { tagName: string; idDbType: "bigint" | "int" | "uuid" | "text" };
+  private meta: {
+    tagName: string;
+    idDbType: "bigint" | "int" | "uuid" | "text";
+  };
 
   constructor(
     tagName: string,
@@ -333,7 +336,10 @@ export class KeySerde implements FieldSerde {
     public columnName: string,
     public dbType: "bigint" | "int" | "uuid" | "text",
   ) {
-    this.meta = { tagName, idDbType: dbType };
+    this.meta = {
+      tagName,
+      idDbType: dbType,
+    };
   }
 
   setOnEntity(data: any, row: any): void {
@@ -368,11 +374,9 @@ export class KeySerde implements FieldSerde {
 
   mapToDb(value: any) {
     // Sometimes the nilIdValue will pass -1 as already a number, but usually this should be a tagged id
-    return value === null || typeof value === "number"
-      ? value
-      : // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` will pass the
-        // entity directly into mapToDb and not convert it to a tagged id first.
-        keyToNumber(this.meta, maybeResolveReferenceToId(value));
+    if (value === null || typeof value === "number") return value;
+    // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` pass entities directly.
+    return keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 
   mapFromJsonAgg(value: any): any {
@@ -423,7 +427,7 @@ export class PolymorphicKeySerde implements FieldSerde {
         return idAppliesToThisColumn ? keyToNumber(comp.otherMetadata(), id) : undefined;
       },
       mapToDb(value: any): any {
-        return keyToNumber(comp.otherMetadata(), maybeResolveReferenceToId(value));
+        return keyToNumber(comp.otherMetadata(), typeof value === "number" ? value : maybeResolveReferenceToId(value));
       },
       mapFromJsonAgg(value: any): any {
         return value === null ? value : value;

@@ -38,11 +38,11 @@ If this is not set, `npm run joist-codegen` will also look for a `DATABASE_URL` 
 
 Controls the type of the domain model's `id` properties, i.e. `Author.id` or `author1.id`.
 
-Available values: `tagged-string`, `slug`, `untagged-string`, `number`.
+Available values: `tagged-string`, `untagged-string`, `number`.
 
 Joist's default behavior is `tagged-string` which means the type of `Author.id` will be a `string`, and the value will be `"a:1"` where `a` is the "tag" established for all `Author` entities, and `1` is the numeric primary key value of that row.
 
-The `slug` setting keeps the tag's runtime safety but omits the delimiter, producing URL-friendly ids such as `"author123"`. Slug ids require alphabetic tags and non-negative `int` or `bigint` primary keys.
+The delimiter can be customized separately with `tagDelimiter`. For example, `"tagDelimiter": "_"` produces `"a_1"`, while an empty delimiter produces URL-friendly ids such as `"author123"`. Delimiterless ids require alphabetic tags and non-negative `int` or `bigint` primary keys.
 
 If you do not want the `a:` tagged prefix, you can use `untagged-string` or `number`:
 

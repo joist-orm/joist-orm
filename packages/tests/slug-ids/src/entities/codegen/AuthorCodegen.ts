@@ -29,7 +29,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -39,7 +38,6 @@ import {
 import type { Context } from "src/context";
 import {
   type Author,
-  authorMeta,
   type Book,
   type BookId,
   type Comment,
@@ -147,7 +145,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idMaybe(): AuthorId | undefined {
-    return toIdOf(authorMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {

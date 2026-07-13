@@ -114,17 +114,20 @@ const a = await em.load(Author, id);
 
 ## Slug Ids
 
-For URL-friendly tagged ids without the `:` delimiter, set `idType` to `slug`:
+For URL-friendly tagged ids without the `:` delimiter, set `tagDelimiter` to an empty string:
 
 ```json
 {
-  "idType": "slug"
+  "idType": "tagged-string",
+  "tagDelimiter": ""
 }
 ```
 
 An author whose database id is `1` will then have an id of `"a1"`. Tags must contain only letters and primary keys must be non-negative `int` or `bigint` values, making every slug unambiguously parseable as an alphabetic tag followed by digits. For example, `tagFromId("author123")` returns `"author"`.
 
-Slug ids retain the same entity-tag validation as regular tagged ids. Metadata-free utilities such as `isTaggedId(id)`, `tagFromId(id)`, and `unsafeDeTagIds(ids)` recognize both regular and slug tagged ids.
+Slug ids retain the same entity-tag validation as regular tagged ids. Metadata-free utilities such as `isTaggedId(id)`, `tagFromId(id)`, and `unsafeDeTagIds(ids)` use the configured delimiter.
+
+You can also choose a custom delimiter. For example, `"tagDelimiter": "_"` produces ids such as `"a_1"`. Omitting `tagDelimiter` retains the default `:`. A custom delimiter cannot occur in or overlap the end of an entity tag, so every tagged id remains unambiguous.
 
 ## Disabling Tagged Ids
 

@@ -5,10 +5,10 @@ import { type EntityMetadata, getMetadata } from "./EntityMetadata";
 import { type Reference } from "./relations";
 import { assertNever, fail } from "./utils";
 
-let tagDelimiter: ":" | undefined = ":";
+let tagDelimiter: string | undefined = ":";
 
 /** Sets the process-wide tagged-id format during metadata boot. */
-export function setTaggedIdDelimiter(delimiter: ":" | undefined): void {
+export function setTaggedIdDelimiter(delimiter: string | undefined): void {
   tagDelimiter = delimiter;
 }
 
@@ -27,7 +27,6 @@ export function toIdOf<T extends Entity>(meta: EntityMetadata<T>, id: TaggedId |
     case "number":
       return Number(deTagId(meta, id)) as IdOf<T>;
     case "tagged-string":
-    case "slug":
       return id as IdOf<T>;
     case "untagged-string":
       return deTagId(meta, id) as IdOf<T>;
@@ -57,14 +56,15 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
       const id = value.startsWith(meta.tagName) ? value.slice(meta.tagName.length) : value;
       return maybeNumberUnlessUuid(meta, id);
     }
-    const [tag, id] = value.split(tagDelimiter);
-    if (id === undefined) {
+    const delimiterIndex = value.indexOf(tagDelimiter);
+    if (delimiterIndex === -1) {
       return maybeNumberUnlessUuid(meta, value);
     }
+    const tag = value.slice(0, delimiterIndex);
     if (tag !== meta.tagName) {
       throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${value}`);
     }
-    return maybeNumberUnlessUuid(meta, id);
+    return maybeNumberUnlessUuid(meta, value.slice(delimiterIndex + tagDelimiter.length));
   } else {
     throw new Error(`Invalid key ${value}`);
   }
@@ -98,8 +98,6 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
   }
 }
 
-// Either `tag:int` or `tag:uuid`.
-const validId = /[a-z]+:([0-9a-z\-]+)/;
 const validSlugId = /^([a-z]+)(\d+)$/i;
 const uuidIshId = /[0-9a-z\-]+/i;
 
@@ -113,7 +111,7 @@ export function isTaggedId(metaOrId: string | number | HasTagName, id?: string):
     return false;
   } else if (typeof metaOrId === "string") {
     // string overload
-    return tagDelimiter === undefined ? validSlugId.test(metaOrId) : validId.test(metaOrId);
+    return tagDelimiter === undefined ? validSlugId.test(metaOrId) : hasTagDelimiter(metaOrId);
   } else {
     // meta + string overload
     return isTaggedIdForMeta(metaOrId, id!);
@@ -226,7 +224,12 @@ export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly st
 export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
   const deTagged = Array(keys.length);
   for (let i = 0; i < keys.length; i++) {
-    deTagged[i] = tagDelimiter === undefined ? validSlugId.exec(keys[i])?.[2] : keys[i].split(tagDelimiter)[1];
+    if (tagDelimiter === undefined) {
+      deTagged[i] = validSlugId.exec(keys[i])?.[2];
+    } else {
+      const delimiterIndex = keys[i].indexOf(tagDelimiter);
+      deTagged[i] = delimiterIndex === -1 ? undefined : keys[i].slice(delimiterIndex + tagDelimiter.length);
+    }
   }
   return deTagged;
 }
@@ -236,8 +239,10 @@ export function tagFromId(id: string): string {
   if (tagDelimiter === undefined) {
     return validSlugId.exec(id)?.[1] ?? fail(`Unknown tagged id format: "${id}"`);
   }
-  const parts = id.split(tagDelimiter);
-  return parts.length === 2 ? parts[0] : fail(`Unknown tagged id format: "${id}"`);
+  const delimiterIndex = id.indexOf(tagDelimiter);
+  return delimiterIndex > 0 && delimiterIndex + tagDelimiter.length < id.length
+    ? id.slice(0, delimiterIndex)
+    : fail(`Unknown tagged id format: "${id}"`);
 }
 
 /** Returns the metadata needed to format an id. */
@@ -250,7 +255,10 @@ function isTaggedIdForMeta(meta: HasTagName, id: string): boolean {
   if (tagDelimiter === undefined) {
     return validSlugId.exec(id)?.[1] === meta.tagName;
   }
-  const [tag, untaggedId] = id.split(tagDelimiter);
+  const delimiterIndex = id.indexOf(tagDelimiter);
+  if (delimiterIndex === -1) return false;
+  const tag = id.slice(0, delimiterIndex);
+  const untaggedId = id.slice(delimiterIndex + tagDelimiter.length);
   if (meta.tagName !== tag) return false;
   switch (meta.idDbType) {
     case "int":
@@ -263,4 +271,11 @@ function isTaggedIdForMeta(meta: HasTagName, id: string): boolean {
     default:
       return assertNever(meta.idDbType);
   }
+}
+
+/** Returns whether `id` has a non-empty tag and value separated by the configured delimiter. */
+function hasTagDelimiter(id: string): boolean {
+  if (tagDelimiter === undefined) return false;
+  const delimiterIndex = id.indexOf(tagDelimiter);
+  return delimiterIndex > 0 && delimiterIndex + tagDelimiter.length < id.length;
 }

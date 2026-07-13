@@ -31,7 +31,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -39,7 +38,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Author, Book, type Comment, commentMeta, type Entity, EntityManager, newComment } from "../entities";
+import { Author, Book, type Comment, type Entity, EntityManager, newComment } from "../entities";
 
 export type CommentId = Flavor<string, "Comment">;
 
@@ -142,7 +141,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get idMaybe(): CommentId | undefined {
-    return toIdOf(commentMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {

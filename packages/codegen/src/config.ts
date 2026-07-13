@@ -143,9 +143,9 @@ export const config = z
     entities: z.record(z.string(), entityConfig).default({}),
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
-    idType: z.optional(
-      z.union([z.literal("tagged-string"), z.literal("slug"), z.literal("untagged-string"), z.literal("number")]),
-    ),
+    idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
+    /** The separator between entity tags and ids; defaults to `:`, and `""` disables the separator. */
+    tagDelimiter: z.optional(z.string()),
     /** How we should support non-deferred foreign keys. */
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */

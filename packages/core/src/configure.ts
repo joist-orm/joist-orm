@@ -18,6 +18,7 @@ import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./rela
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { isCannotBeUpdatedRule } from "./rules";
+import { maybeGetRuntimeConfig } from "./runtimeConfig";
 import { KeySerde } from "./serde";
 import { defineLazyGetter, fail } from "./utils";
 
@@ -183,21 +184,11 @@ export function maybeGetConstructorFromReference(
 }
 
 function populateConstructorMaps(metas: EntityMetadata[]): void {
-  const usesSlugIds = metas.some((meta) => meta.idType === "slug");
-  if (usesSlugIds && metas.some((meta) => meta.idType !== "slug")) {
-    throw new Error("Slug ids must be enabled for all entities");
-  }
-  setTaggedIdDelimiter(usesSlugIds ? undefined : ":");
+  const runtimeConfig = maybeGetRuntimeConfig();
+  const tagDelimiter = runtimeConfig && Object.hasOwn(runtimeConfig, "tagDelimiter") ? runtimeConfig.tagDelimiter : ":";
+  setTaggedIdDelimiter(tagDelimiter);
 
   for (const meta of metas) {
-    if (meta.idType === "slug") {
-      if (!/^[a-z]+$/i.test(meta.tagName)) {
-        throw new Error(`Slug ids require an alphabetic tag, got '${meta.tagName}' for ${meta.type}`);
-      }
-      if (meta.idDbType !== "int" && meta.idDbType !== "bigint") {
-        throw new Error(`Slug ids require an int or bigint primary key, got '${meta.idDbType}' for ${meta.type}`);
-      }
-    }
     // Add each (root) constructor into our tag -> constructor map for future lookups
     if (!meta.baseType) {
       const existing = tagToConstructorMap.get(meta.tagName);

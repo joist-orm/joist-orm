@@ -5,7 +5,7 @@ import { Book } from "../Book";
 import { Comment } from "../Comment";
 import { authorConfig, bookConfig, commentConfig, newAuthor, newBook, newComment } from "../entities";
 
-setRuntimeConfig({ temporal: false });
+setRuntimeConfig({ temporal: false, tagDelimiter: undefined });
 
 export class EntityManager extends EntityManager1<Context, Entity, unknown> {}
 
@@ -18,7 +18,7 @@ export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
-  idType: "slug",
+  idType: "tagged-string",
   idDbType: "int",
   tagName: "a",
   tableName: "authors",
@@ -46,7 +46,7 @@ export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,
-  idType: "slug",
+  idType: "tagged-string",
   idDbType: "bigint",
   tagName: "book",
   tableName: "books",
@@ -73,7 +73,7 @@ export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
   baseType: undefined,
-  idType: "slug",
+  idType: "tagged-string",
   idDbType: "int",
   tagName: "cm",
   tableName: "comments",

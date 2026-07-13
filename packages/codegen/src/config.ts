@@ -152,6 +152,8 @@ export const config = z
     paginationStyle: z.optional(z.union([z.literal("cursor"), z.literal("limit")])).default("cursor"),
     /** Enables documentation syncing between .md files and JSDocs. */
     docs: z.optional(z.boolean()),
+    /** Installs Joist's bundled Agent Skills into `.claude/skills` and `.agents/skills`; on by default, set `false` to disable. */
+    skills: z.optional(z.boolean()),
     /** Output a metadata-docs.ts file with entity/field documentation available at runtime. */
     outputDocs: z.optional(z.boolean()),
     /** Auto-set by probing the project's `tsconfig.json` file. */

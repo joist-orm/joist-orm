@@ -44,7 +44,7 @@ export interface EntityMetadata<T extends Entity = any> {
   cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
   /** How the domain entity's id is represented. */
-  idType: "tagged-string" | "slug" | "untagged-string" | "number";
+  idType: "tagged-string" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;

@@ -1,18 +1,18 @@
 import { readdir } from "fs/promises";
 import { code, CodegenFile, def, imp } from "ts-poet";
+import { generateMetadataDocsFile, syncDocs } from "./docs";
+import { findAllEntityScopes } from "./findEntityScopes";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
 import { generateEntityFile } from "./generateEntityFile";
 import { generateEntityTestFile } from "./generateEntityTestFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
-import { findAllEntityScopes } from "./findEntityScopes";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
 import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
-import { generateMetadataDocsFile, syncDocs } from "./docs";
 
 export type DPrintOptions = Record<string, unknown>;
 
@@ -89,12 +89,17 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
   const txnType = config.transactionType ? imp(`t:${config.transactionType}`) : "unknown";
+  const maybeTagDelimiter =
+    config.tagDelimiter === undefined
+      ? code``
+      : code`tagDelimiter: ${config.tagDelimiter === "" ? "undefined" : JSON.stringify(config.tagDelimiter)},`;
 
   const metadataFile: CodegenFile = {
     name: "./codegen/metadata.ts",
     contents: code`
       ${setRuntimeConfig}({
         temporal: ${config.temporal ? { timeZone: typeof config.temporal === "boolean" ? "UTC" : config.temporal.timeZone } : "false"},
+        ${maybeTagDelimiter}
       });
       
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity, ${txnType}> {}

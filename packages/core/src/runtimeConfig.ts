@@ -6,10 +6,17 @@ export function getRuntimeConfig(): RuntimeConfig {
   return runtimeConfig ?? fail("setRuntimeConfig in metadata.ts has not been invoked yet");
 }
 
+/** Returns the runtime config if generated metadata has initialized it. */
+export function maybeGetRuntimeConfig(): RuntimeConfig | undefined {
+  return runtimeConfig;
+}
+
 /**
  * Holds any `joist-config.json` values that we want to access at runtime.
  */
 export type RuntimeConfig = {
+  /** The process-wide tagged-id separator; explicit `undefined` means no separator, while omission defaults to `:`. */
+  tagDelimiter?: string | undefined;
   temporal:
     | false
     | {

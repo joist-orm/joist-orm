@@ -9,6 +9,11 @@ describe("config", () => {
     expect(config.parse({}).codemodVersion).toEqual(0);
   });
 
+  it("accepts custom and delimiterless tagged ids", () => {
+    expect(config.parse({ tagDelimiter: "_" }).tagDelimiter).toEqual("_");
+    expect(config.parse({ tagDelimiter: "" }).tagDelimiter).toEqual("");
+  });
+
   it("loads and rewrites legacy configs without the deprecated version key", async () => {
     const originalCwd = process.cwd();
     const dir = await mkdtemp(path.join(tmpdir(), "joist-config-"));

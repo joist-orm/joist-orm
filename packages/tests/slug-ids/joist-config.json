@@ -8,5 +8,6 @@
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "cm" }
   },
   "entitiesDirectory": "./src/entities",
-  "idType": "slug"
+  "idType": "tagged-string",
+  "tagDelimiter": ""
 }

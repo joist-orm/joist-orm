@@ -47,12 +47,12 @@ describe("slug ids", () => {
     expect(tagIds(meta, [1, "2", "a3"])).toEqual(["a1", "a2", "a3"]);
     expect(deTagId(meta, "a1")).toEqual("1");
     expect(unsafeDeTagIds(["a1", "author23"])).toEqual(["1", "23"]);
-    // This fails because this test suite is globally configured to use slug ids.
+    // This fails because this test suite is globally configured to use delimiterless ids.
     expect(unsafeDeTagIds(["a:1"])).toEqual([undefined]);
     expect(isTaggedId(meta, "a1")).toEqual(true);
     expect(isTaggedId(meta, "1")).toEqual(false);
     expect(isTaggedId("a1")).toEqual(true);
-    // This fails because this test suite is globally configured to use slug ids.
+    // This fails because this test suite is globally configured to use delimiterless ids.
     expect(isTaggedId("a:1")).toEqual(false);
     expect(tagFromId("a1")).toEqual("a");
     expect(tagFromId("foo123")).toEqual("foo");

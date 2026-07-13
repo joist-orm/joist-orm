@@ -1,4 +1,4 @@
-import { isTaggedId } from "joist-orm";
+import { isTaggedId, keyToNumber, setTaggedIdDelimiter, tagFromId, tagId, unsafeDeTagIds } from "joist-orm";
 
 describe("keys", () => {
   describe("isTaggedId", () => {
@@ -25,5 +25,19 @@ describe("keys", () => {
       const meta: any = { idType: "uuid" };
       expect(isTaggedId(meta, "a:20000000-0000-0000-0000-00000000000!")).toBe(false);
     });
+  });
+
+  it("supports a custom tag delimiter", () => {
+    const meta: any = { tagName: "author", idDbType: "int" };
+    setTaggedIdDelimiter("_");
+    try {
+      expect(tagId(meta, 1)).toEqual("author_1");
+      expect(keyToNumber(meta, "author_1")).toEqual(1);
+      expect(isTaggedId("author_1")).toEqual(true);
+      expect(tagFromId("author_1")).toEqual("author");
+      expect(unsafeDeTagIds(["author_1"])).toEqual(["1"]);
+    } finally {
+      setTaggedIdDelimiter(":");
+    }
   });
 });

@@ -12,8 +12,8 @@ import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, wri
 import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
-import { installSkills } from "./installSkills";
 import { applyInheritanceUpdates } from "./inheritance";
+import { installSkills } from "./installSkills";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
 import { scanEntityFiles } from "./scanEntityFiles";
@@ -64,7 +64,7 @@ export async function joistCodegen() {
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);
-  validateSlugIds(config, entities);
+  validateTagDelimiter(config, entities);
 
   // Scan `*.ts` files after we've expanded `Task` -> `TaskOld.ts`
   await scanEntityFiles(config, dbMetadata);
@@ -165,16 +165,23 @@ export function maybeSetExitCode(): void {
   }
 }
 
-/** Validates that delimiterless slug ids have an unambiguous alpha-plus-digits shape. */
-function validateSlugIds(config: Config, entities: EntityDbMetadata[]): void {
-  if (config.idType !== "slug") return;
+/** Validates that tags can be parsed unambiguously with the configured delimiter. */
+function validateTagDelimiter(config: Config, entities: EntityDbMetadata[]): void {
+  const tagDelimiter = config.tagDelimiter ?? ":";
   for (const entity of entities) {
-    if (!/^[a-z]+$/i.test(entity.tagName)) {
-      throw new Error(`Slug ids require an alphabetic tag, got '${entity.tagName}' for ${entity.name}`);
-    }
-    if (entity.primaryKey.columnType !== "int" && entity.primaryKey.columnType !== "bigint") {
+    if (tagDelimiter !== "" && `${entity.tagName}${tagDelimiter}`.indexOf(tagDelimiter) !== entity.tagName.length) {
       throw new Error(
-        `Slug ids require an int or bigint primary key, got '${entity.primaryKey.columnType}' for ${entity.name}`,
+        `Tagged id delimiter '${tagDelimiter}' cannot occur in or overlap tag '${entity.tagName}' for ${entity.name}`,
+      );
+    } else if (tagDelimiter === "" && !/^[a-z]+$/i.test(entity.tagName)) {
+      throw new Error(`Delimiterless ids require an alphabetic tag, got '${entity.tagName}' for ${entity.name}`);
+    } else if (
+      tagDelimiter === "" &&
+      entity.primaryKey.columnType !== "int" &&
+      entity.primaryKey.columnType !== "bigint"
+    ) {
+      throw new Error(
+        `Delimiterless ids require an int or bigint primary key, got '${entity.primaryKey.columnType}' for ${entity.name}`,
       );
     }
   }

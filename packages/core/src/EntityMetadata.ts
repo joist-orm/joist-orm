@@ -76,7 +76,7 @@ export interface EntityMetadata<T extends Entity = any> {
   reactiveRules?: ReactiveRule[];
   /** The lazy list of reactive *commit* rules (post-flush/pre-commit) for this metadata and its subtypes. */
   reactiveCommitRules?: ReactiveRule[];
-  /** Lazily-cached: whether flushing an entity of this type could trigger any `addCommitRule` work. */
+  /** Lazily-cached: whether flushing this type could trigger commit or commit-delete rule work. */
   hasCommitRules?: boolean;
   orderBy: string | undefined;
   /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */

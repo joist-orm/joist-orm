@@ -131,6 +131,35 @@ Like `addRule`, commit rules can be either:
 - **Simple** — `config.addCommitRule(fn)`, run on every insert/update of the entity, or
 - **Reactive** — `config.addCommitRule(hint, fn)`, run whenever any field in the [reactive hint](#reactive-hints) changes (walking back to the owning entity), with the lambda passed the same `Reacted<Entity, Hint>` view as reactive validation rules.
 
+## Delete Rules
+
+Use `config.addDeleteRule` for validation that should run only when an entity is being deleted:
+
+```typescript
+config.addDeleteRule((author) => {
+  if (author.isProtected) {
+    return "Protected authors cannot be deleted";
+  }
+});
+```
+
+Delete rules return the same validation results as regular rules, but do not run for inserts or updates. They run before Joist issues the `DELETE`, and a failure prevents the entire flush from being written.
+
+Like `addRule`, `addDeleteRule` cannot call `em.find` or the other `em.findX` methods because the database still contains the pre-flush state. For deletion rules that need to query the changed transaction state, use `config.addCommitDeleteRule`:
+
+```typescript
+config.addCommitDeleteRule(async (author) => {
+  if (author.isAdmin) {
+    const remainingAdmins = await author.em.find(Author, { isAdmin: true });
+    if (remainingAdmins.length === 0) {
+      return "The last admin cannot be deleted";
+    }
+  }
+});
+```
+
+Commit delete rules run after the `DELETE` and any other pending `INSERT`s and `UPDATE`s have been flushed to the open transaction, but before it commits. Consequently, `em.find` sees the latest transaction state: the deleted row is absent, and other changes from the same flush are visible. If the rule fails, Joist rolls back the entire transaction.
+
 ## Built-in Rules
 
 ### Required Fields

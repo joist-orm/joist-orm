@@ -253,8 +253,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
-  // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
-  #findRestricted: boolean = false;
+  // Set while pre-flush validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
+  #findRestricted: "addRule" | "addDeleteRule" | false = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
@@ -490,12 +490,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return result;
   }
 
-  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addCommitRule`. */
+  /** Fails fast if `em.${method}` is called from a pre-flush validation rule. */
   #assertFindAllowed(method: string): void {
     if (this.#findRestricted) {
+      const commitRule = this.#findRestricted === "addDeleteRule" ? "addCommitDeleteRule" : "addCommitRule";
       throw new Error(
-        `em.${method} cannot be called from a validation rule (added via config.addRule), because rules run ` +
-          `before the flush and would query stale, pre-flush data. Use config.addCommitRule instead, which runs ` +
+        `em.${method} cannot be called from a validation rule (added via config.${this.#findRestricted}), because rules run ` +
+          `before the flush and would query stale, pre-flush data. Use config.${commitRule} instead, which runs ` +
           `after the INSERT/UPDATE/DELETEs are flushed (within the same transaction) and so sees the changed state.`,
       );
     }
@@ -1779,7 +1780,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             // Regular rules run pre-flush, so `em.find*` would query stale data; block it and steer
             // users to `config.addCommitRule` (which runs post-flush). Only rules are restricted —
             // `afterValidation` hooks & plugins below are left free to query.
-            this.#findRestricted = true;
+            this.#findRestricted = "addRule";
             try {
               // Run simple rules first b/c it includes not-null/required rules, so that then when we run
               // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
@@ -1790,6 +1791,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // that the user should see.
               if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
               await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+              this.#findRestricted = "addDeleteRule";
+              await validateDeleteRules(entityTodos);
             } finally {
               this.#findRestricted = false;
             }
@@ -1817,7 +1820,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
           this.#isValidating = true;
           await validateSimpleRules(entityTodos, (config) => config.commitRules);
-          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, (meta) => meta.reactiveCommitRules!);
+          await validateReactiveRules(
+            this,
+            this.#rm.logger,
+            entityTodos,
+            joinRowTodos,
+            (meta) => meta.reactiveCommitRules!,
+          );
+          await validateDeleteRules(entityTodos, (config) => config.commitDeleteRules);
         } finally {
           this.#isValidating = false;
         }
@@ -2940,6 +2950,23 @@ async function validateSimpleRules(
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
+  });
+  const errors = failIfAnyRejected(await Promise.allSettled(p)).flat();
+  if (errors.length > 0) {
+    throw new ValidationErrors(errors);
+  }
+}
+
+/** Runs delete-specific rules for the deleted entities in `todos`. */
+async function validateDeleteRules(
+  todos: Record<string, Todo>,
+  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.deleteRules,
+): Promise<void> {
+  const p = Object.values(todos).flatMap(({ deletes }) => {
+    return deletes.flatMap((entity) => {
+      const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => getRules(m.config.__data));
+      return rules.flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
+    });
   });
   const errors = failIfAnyRejected(await Promise.allSettled(p)).flat();
   if (errors.length > 0) {

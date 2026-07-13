@@ -8,6 +8,18 @@ export class AuthorSchedule extends AuthorScheduleCodegen {
     commitRuleFoundSelf: false,
     /** Opt-in to have the regular rule attempt an (illegal) `em.find`, to exercise the guard. */
     tryFindInRegularRule: false,
+    /** How many times this entity's delete rule has run. */
+    deleteRuleRuns: 0,
+    /** Opt-in to have the delete rule attempt an (illegal) `em.find`. */
+    tryFindInDeleteRule: false,
+    /** Opt-in to reject deletion from the pre-flush delete rule. */
+    preventDelete: false,
+    /** The rows that the commit delete rule's `em.find` saw. */
+    commitDeleteRuleFindOverviews: [] as (string | undefined)[],
+    /** Whether the commit delete rule's `em.find` returned the deleted entity. */
+    commitDeleteRuleFoundSelf: false,
+    /** Opt-in to run and reject from the commit delete rule. */
+    preventDeleteAtCommit: false,
   };
 }
 
@@ -30,5 +42,26 @@ config.addCommitRule("author", async (as) => {
   as.transientFields.commitRuleFoundSelf = found.includes(as.fullNonReactiveAccess);
   if (found.length > 2) {
     return "An author cannot have more than 2 schedules";
+  }
+});
+
+// A regular delete rule that cannot call `em.find*` because it runs pre-flush.
+config.addDeleteRule(async (as) => {
+  as.transientFields.deleteRuleRuns++;
+  if (as.transientFields.tryFindInDeleteRule) {
+    await as.em.find(AuthorSchedule, {});
+  }
+  if (as.transientFields.preventDelete) {
+    return "This schedule cannot be deleted";
+  }
+});
+
+// A commit delete rule that runs post-flush/pre-commit, so its `em.find` sees the changed state.
+config.addCommitDeleteRule(async (as) => {
+  if (as.transientFields.preventDeleteAtCommit) {
+    const found = await as.em.find(AuthorSchedule, {});
+    as.transientFields.commitDeleteRuleFindOverviews = found.map((schedule) => schedule.overview).sort();
+    as.transientFields.commitDeleteRuleFoundSelf = found.includes(as);
+    return "This schedule cannot be deleted at commit";
   }
 });

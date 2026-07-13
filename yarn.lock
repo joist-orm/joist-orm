@@ -10863,6 +10863,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist-tests-slug-ids@workspace:packages/tests/slug-ids":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-slug-ids@workspace:packages/tests/slug-ids"
+  dependencies:
+    "@swc/core": "npm:^1.15.43"
+    "@swc/jest": "npm:^0.2.39"
+    "@types/jest": "npm:^30.0.0"
+    "@types/node": "npm:^26.0.1"
+    env-cmd: "npm:^11.0.0"
+    jest: "npm:30.4.2"
+    jest-junit: "npm:^17.0.0"
+    joist-codegen: "workspace:*"
+    joist-core: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    joist-utils: "workspace:*"
+    prettier: "npm:^3.8.4"
+    prettier-plugin-organize-imports: "npm:^4.3.0"
+    superstruct: "npm:^2.0.2"
+    tsconfig-paths: "npm:^4.2.0"
+    tsx: "npm:^4.22.4"
+    typescript: "npm:6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "joist-tests-temporal@workspace:packages/tests/temporal":
   version: 0.0.0-use.local
   resolution: "joist-tests-temporal@workspace:packages/tests/temporal"

@@ -1,18 +1,21 @@
 import { BaseEntity } from "./BaseEntity";
-import { Entity, IdType, isEntity } from "./Entity";
-import { EntityConstructor, IdOf, TaggedId } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { Reference } from "./relations";
+import { type Entity, type IdType, isEntity } from "./Entity";
+import { type EntityConstructor, type IdOf, type TaggedId } from "./EntityManager";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata";
+import { type Reference } from "./relations";
 import { assertNever, fail } from "./utils";
 
-const tagDelimiter = ":";
+let tagDelimiter: ":" | undefined = ":";
+
+/** Sets the process-wide tagged-id format during metadata boot. */
+export function setTaggedIdDelimiter(delimiter: ":" | undefined): void {
+  tagDelimiter = delimiter;
+}
 
 // I'm not entirely sure this is still necessary, but use a small subset of EntityMetadata so
 // that this file doesn't have to import the type and potentially create import cycles.
 type HasTagName = {
   tagName: string;
-  /** The type of the `id` field on the domain entity. */
-  // idType: "tagged-string" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
 };
@@ -24,6 +27,7 @@ export function toIdOf<T extends Entity>(meta: EntityMetadata<T>, id: TaggedId |
     case "number":
       return Number(deTagId(meta, id)) as IdOf<T>;
     case "tagged-string":
+    case "slug":
       return id as IdOf<T>;
     case "untagged-string":
       return deTagId(meta, id) as IdOf<T>;
@@ -49,6 +53,10 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   } else if (typeof value === "number") {
     return value;
   } else if (typeof value === "string") {
+    if (tagDelimiter === undefined) {
+      const id = value.startsWith(meta.tagName) ? value.slice(meta.tagName.length) : value;
+      return maybeNumberUnlessUuid(meta, id);
+    }
     const [tag, id] = value.split(tagDelimiter);
     if (id === undefined) {
       return maybeNumberUnlessUuid(meta, value);
@@ -62,14 +70,14 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   }
 }
 
-// If we're using UUIDs, just lie to the type system and pretend they're numbers.
+// UUIDs, text, and bigints are strings at the database boundary, so lie to the type system and pretend they're numbers.
 function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
   switch (meta.idDbType) {
+    case "bigint":
     case "uuid":
     case "text":
       return key as any;
     case "int":
-    case "bigint":
       return Number(key);
     default:
       assertNever(meta.idDbType);
@@ -78,43 +86,37 @@ function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
 
 /** Converts `dbValue` (big int, int, uuid) to a tagged string, unless its undefined. */
 export function keyToTaggedId(meta: HasTagName, dbValue: string | number): TaggedId | undefined {
-  return dbValue === undefined || dbValue === null ? undefined : `${meta.tagName}:${dbValue}`;
+  if (dbValue === undefined || dbValue === null) return undefined;
+  return `${meta.tagName}${tagDelimiter ?? ""}${dbValue}`;
 }
 
-/** Fails if any keys are tagged; used by internal functions b/c we still allow most direct API input to be untagged. */
+/** Fails if any keys are untagged; internal batch-loader keys must always be tagged. */
 export function assertIdsAreTagged(keys: readonly string[]): void {
   for (const key of keys) {
-    if (key.indexOf(tagDelimiter) === -1) throw new Error(`Key ${key} is missing a tag`);
+    const isTagged = tagDelimiter === undefined ? validSlugId.test(key) : key.indexOf(tagDelimiter) !== -1;
+    if (!isTagged) throw new Error(`Key ${key} is missing a tag`);
   }
 }
 
 // Either `tag:int` or `tag:uuid`.
 const validId = /[a-z]+:([0-9a-z\-]+)/;
-// Not super strict to allow uuid-ish ides
+const validSlugId = /^([a-z]+)(\d+)$/i;
 const uuidIshId = /[0-9a-z\-]+/i;
 
 /** Returns whether `id` is tagged and a probably-correct value. */
 export function isTaggedId(id: string | number): boolean;
 /** Returns whether `id` is tagged and the tag matches `meta`'s tag. */
 export function isTaggedId(meta: EntityMetadata, id: string): boolean;
-export function isTaggedId(metaOrId: string | number | EntityMetadata, id?: string): boolean {
+export function isTaggedId(metaOrId: string | number | HasTagName, id?: string): boolean {
   if (typeof metaOrId === "number") {
+    // number overload
     return false;
   } else if (typeof metaOrId === "string") {
-    return validId.test(metaOrId);
+    // string overload
+    return tagDelimiter === undefined ? validSlugId.test(metaOrId) : validId.test(metaOrId);
   } else {
-    const [tag, _id] = id!.split(tagDelimiter);
-    if (metaOrId.tagName !== tag) return false;
-    // With meta available, we can do more strict number or uuid checking
-    if (metaOrId.idDbType === "int" || metaOrId.idDbType === "bigint") {
-      return !Number.isNaN(Number(_id));
-    } else if (metaOrId.idDbType === "uuid") {
-      return uuidIshId.test(_id);
-    } else if (metaOrId.idDbType === "text") {
-      return true; // We should ask the IdAssigner what it thinks?
-    } else {
-      return assertNever(metaOrId.idDbType);
-    }
+    // meta + string overload
+    return isTaggedIdForMeta(metaOrId, id!);
   }
 }
 
@@ -129,14 +131,24 @@ export function toTaggedId(meta: HasTagName, id: IdType): TaggedId;
 export function toTaggedId(meta: HasTagName, id: IdType | undefined): TaggedId | undefined;
 export function toTaggedId(meta: HasTagName, id: IdType | undefined): TaggedId | undefined {
   if (typeof id === "number") {
-    return `${meta.tagName}${tagDelimiter}${id}`;
+    return `${meta.tagName}${tagDelimiter ?? ""}${id}`;
   } else if (typeof id === "string") {
     // This seems odd, but is covered by a unit test, so I guess we need it?
     if (id === "") return undefined;
-    const i = id.indexOf(tagDelimiter);
-    if (i === -1) return `${meta.tagName}${tagDelimiter}${id}`;
-    const tag = id.slice(0, i);
-    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${id}`);
+    if (tagDelimiter === undefined) {
+      const tag = validSlugId.exec(id)?.[1];
+      if (tag && tag !== meta.tagName) {
+        throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${id}`);
+      }
+      return tag ? id : `${meta.tagName}${id}`;
+    } else {
+      const i = id.indexOf(tagDelimiter);
+      if (i === -1) return `${meta.tagName}${tagDelimiter}${id}`;
+      const tag = id.slice(0, i);
+      if (tag !== meta.tagName) {
+        throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${id}`);
+      }
+    }
   }
   return id;
 }
@@ -158,12 +170,20 @@ export function tagId(
   metaOrCstr: HasTagName | EntityConstructor<any>,
   id: string | number | null | undefined,
 ): string | undefined {
-  const tag = tagName(metaOrCstr);
+  const meta = metadata(metaOrCstr);
+  const tag = meta.tagName;
   if (typeof id === "number") {
-    return `${tag}${tagDelimiter}${id}`;
+    return `${tag}${tagDelimiter ?? ""}${id}`;
   }
   if (id === null || id === undefined) {
     return undefined;
+  }
+  if (tagDelimiter === undefined) {
+    const existingTag = validSlugId.exec(id)?.[1];
+    if (existingTag && existingTag !== tag) {
+      throw new Error(`Invalid tagged id, expected tag ${tag}, got ${id}`);
+    }
+    return existingTag ? id : `${tag}${id}`;
   }
   // Avoid using includes/split, for a faster indexOf + length + startsWith
   const delimiterIndex = id.indexOf(tagDelimiter);
@@ -206,21 +226,41 @@ export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly st
 export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
   const deTagged = Array(keys.length);
   for (let i = 0; i < keys.length; i++) {
-    const maybeTagged = keys[i].split(tagDelimiter);
-    deTagged[i] = maybeTagged.length === 0 ? maybeTagged[0] : maybeTagged[1];
+    deTagged[i] = tagDelimiter === undefined ? validSlugId.exec(keys[i])?.[2] : keys[i].split(tagDelimiter)[1];
   }
   return deTagged;
 }
 
 /** Given a tagged id, returns its tag. */
 export function tagFromId(id: string): string {
-  const parts = id.split(tagDelimiter);
-  if (parts.length !== 2) {
-    fail(`Unknown tagged id format: "${id}"`);
+  if (tagDelimiter === undefined) {
+    return validSlugId.exec(id)?.[1] ?? fail(`Unknown tagged id format: "${id}"`);
   }
-  return parts[0];
+  const parts = id.split(tagDelimiter);
+  return parts.length === 2 ? parts[0] : fail(`Unknown tagged id format: "${id}"`);
 }
 
-function tagName(metaOrCstr: HasTagName | EntityConstructor<any>): string {
-  return typeof metaOrCstr === "function" ? getMetadata(metaOrCstr).tagName : metaOrCstr.tagName;
+/** Returns the metadata needed to format an id. */
+function metadata(metaOrCstr: HasTagName | EntityConstructor<any>): HasTagName {
+  return typeof metaOrCstr === "function" ? getMetadata(metaOrCstr) : metaOrCstr;
+}
+
+/** Returns whether `id` has the tag and database id shape required by `meta`. */
+function isTaggedIdForMeta(meta: HasTagName, id: string): boolean {
+  if (tagDelimiter === undefined) {
+    return validSlugId.exec(id)?.[1] === meta.tagName;
+  }
+  const [tag, untaggedId] = id.split(tagDelimiter);
+  if (meta.tagName !== tag) return false;
+  switch (meta.idDbType) {
+    case "int":
+    case "bigint":
+      return !Number.isNaN(Number(untaggedId));
+    case "uuid":
+      return uuidIshId.test(untaggedId);
+    case "text":
+      return true;
+    default:
+      return assertNever(meta.idDbType);
+  }
 }

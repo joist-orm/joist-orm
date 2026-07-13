@@ -1,14 +1,7 @@
 import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import {
-  addTablePerClassJoinsAndClassTag,
-  getField,
-  kq,
-  ManyToOneField,
-  ParsedFindQuery,
-  unsafeDeTagIds,
-} from "../index";
+import { addTablePerClassJoinsAndClassTag, deTagIds, getField, kq, ManyToOneField, ParsedFindQuery } from "../index";
 import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";
 import { BatchLoader } from "./BatchLoader";
@@ -55,7 +48,7 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
               UNION
               SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
             `,
-            bindings: [unsafeDeTagIds(immediateParentIds)],
+            bindings: [deTagIds(meta, immediateParentIds)],
           },
           recursive: true,
         },

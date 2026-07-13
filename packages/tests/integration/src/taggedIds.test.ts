@@ -1,4 +1,4 @@
-import { deTagId, getMetadata, tagId, tagIds } from "joist-orm";
+import { deTagId, getMetadata, tagId, tagIds, unsafeDeTagIds } from "joist-orm";
 import { Author, newAuthor } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
@@ -39,5 +39,8 @@ describe("taggedIds", () => {
   it("can detag ids", async () => {
     expect(deTagId(getMetadata(Author), "a:1")).toEqual("1");
     expect(deTagId(getMetadata(Author), undefined)).toBeUndefined();
+    expect(unsafeDeTagIds(["a:1"])).toEqual(["1"]);
+    // This fails because this test suite is globally configured to use colon-delimited ids.
+    expect(unsafeDeTagIds(["a1"])).toEqual([undefined]);
   });
 });

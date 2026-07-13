@@ -18,6 +18,7 @@
     { "path": "./packages/tests/integration" },
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },
+    { "path": "./packages/tests/slug-ids" },
     { "path": "./packages/tests/temporal" },
     { "path": "./packages/tests/untagged-ids" },
     { "path": "./packages/tests/uuid-ids" },

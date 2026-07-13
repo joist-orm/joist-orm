@@ -1,0 +1,16 @@
+{
+  "extends": "../../../tsconfig.test.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
+    "paths": {
+      "src/*": ["./src/*"]
+    }
+  },
+  "include": ["./src", "./migrations"],
+  "references": [
+    { "path": "../../core" },
+    { "path": "../../orm" },
+    { "path": "../../test-utils" },
+    { "path": "../../utils" }
+  ]
+}

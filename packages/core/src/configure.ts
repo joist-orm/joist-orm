@@ -12,7 +12,7 @@ import {
 import { setAfterMetadataLocked, setBooted, type Reactable } from "./config";
 import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
-import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
@@ -151,6 +151,7 @@ function fireAfterMetadatas(metas: EntityMetadata[]): void {
 
 export function resetConstructorMap(): void {
   tagToConstructorMap.clear();
+  setTaggedIdDelimiter(":");
 }
 
 export function getConstructorFromTag(tag: string): MaybeAbstractEntityConstructor<any> {
@@ -158,8 +159,7 @@ export function getConstructorFromTag(tag: string): MaybeAbstractEntityConstruct
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
-  const tag = tagFromId(id);
-  return getConstructorFromTag(tag);
+  return getConstructorFromTag(tagFromId(id));
 }
 
 export function getMetadataForTable(tableName: string): EntityMetadata {
@@ -183,7 +183,21 @@ export function maybeGetConstructorFromReference(
 }
 
 function populateConstructorMaps(metas: EntityMetadata[]): void {
+  const usesSlugIds = metas.some((meta) => meta.idType === "slug");
+  if (usesSlugIds && metas.some((meta) => meta.idType !== "slug")) {
+    throw new Error("Slug ids must be enabled for all entities");
+  }
+  setTaggedIdDelimiter(usesSlugIds ? undefined : ":");
+
   for (const meta of metas) {
+    if (meta.idType === "slug") {
+      if (!/^[a-z]+$/i.test(meta.tagName)) {
+        throw new Error(`Slug ids require an alphabetic tag, got '${meta.tagName}' for ${meta.type}`);
+      }
+      if (meta.idDbType !== "int" && meta.idDbType !== "bigint") {
+        throw new Error(`Slug ids require an int or bigint primary key, got '${meta.idDbType}' for ${meta.type}`);
+      }
+    }
     // Add each (root) constructor into our tag -> constructor map for future lookups
     if (!meta.baseType) {
       const existing = tagToConstructorMap.get(meta.tagName);

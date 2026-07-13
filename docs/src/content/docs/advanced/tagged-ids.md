@@ -94,8 +94,8 @@ That said, if you have an existing `number`-based API that you can't change, Joi
 When writing raw SQL queries, you can get the numeric value using `deTagId`
 
 ```typescript
-  const query = someKnexQuery();
-  query.whereIn("books.id", deTagId(getMetadata(Book), bookId));
+const query = someKnexQuery();
+query.whereIn("books.id", deTagId(getMetadata(Book), bookId));
 ```
 
 Note that `deTagId` accepts the `Book` entity as its 1st parameter because it still applies the tagged id runtime check, i.e. ensure that `bookId` starts with `b:...`.
@@ -112,6 +112,20 @@ const id = "1";
 const a = await em.load(Author, id);
 ```
 
+## Slug Ids
+
+For URL-friendly tagged ids without the `:` delimiter, set `idType` to `slug`:
+
+```json
+{
+  "idType": "slug"
+}
+```
+
+An author whose database id is `1` will then have an id of `"a1"`. Tags must contain only letters and primary keys must be non-negative `int` or `bigint` values, making every slug unambiguously parseable as an alphabetic tag followed by digits. For example, `tagFromId("author123")` returns `"author"`.
+
+Slug ids retain the same entity-tag validation as regular tagged ids. Metadata-free utilities such as `isTaggedId(id)`, `tagFromId(id)`, and `unsafeDeTagIds(ids)` recognize both regular and slug tagged ids.
+
 ## Disabling Tagged Ids
 
 If you're migrating an existing system to Joist, or just don't want to use tagged ids (although you should try them and see!), you can disable them in the `joist-config.json` file by setting the `idType`:
@@ -125,5 +139,3 @@ If you're migrating an existing system to Joist, or just don't want to use tagge
 This will change the return value of `Author.id` from `"a:1"` to just `"1"`.
 
 Note the value is still a string; we've not added support for returning numbers yet, see [#368](https://github.com/joist-orm/joist-orm/issues/368).
-
-

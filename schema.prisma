@@ -1,0 +1,295 @@
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://joist:local@localhost:5435/joist?schema=public"
+}
+
+model advance_status {
+  id            Int             @id @default(autoincrement())
+  code          String          @unique(map: "advance_status_unique_enum_code_constraint")
+  name          String
+  book_advances book_advances[]
+}
+
+model author_stats {
+  id               Int      @id @default(autoincrement())
+  smallint         Int      @db.SmallInt
+  integer          Int
+  bigint           BigInt
+  decimal          Decimal  @db.Decimal
+  real             Float    @db.Real
+  smallserial      Int      @default(autoincrement()) @db.SmallInt
+  serial           Int      @default(autoincrement())
+  bigserial        BigInt   @default(autoincrement())
+  double_precision Float
+  created_at       DateTime @db.Timestamptz(6)
+  updated_at       DateTime @db.Timestamptz(6)
+}
+
+model authors {
+  id                                                                             Int               @id @default(autoincrement())
+  first_name                                                                     String            @db.VarChar(255)
+  last_name                                                                      String?           @db.VarChar(255)
+  initials                                                                       String            @db.VarChar(255)
+  number_of_books                                                                Int
+  book_comments                                                                  String?
+  is_popular                                                                     Boolean?
+  age                                                                            Int?
+  graduated                                                                      DateTime?         @db.Date
+  favorite_colors                                                                Int[]             @default([])
+  favorite_shape                                                                 favorite_shape?
+  was_ever_popular                                                               Boolean?
+  ignore_used_to_be_useful                                                       Boolean?          @default(true)
+  ignore_used_to_be_useful_required_with_default                                 Boolean           @default(true)
+  ignore_enum_fk_id                                                              Int?
+  ignore_enum_fk_id_required_with_default                                        Int               @default(1)
+  publisher_id                                                                   Int?
+  mentor_id                                                                      Int?
+  address                                                                        Json?
+  created_at                                                                     DateTime          @db.Timestamptz(6)
+  updated_at                                                                     DateTime          @db.Timestamptz(6)
+  current_draft_book_id                                                          Int?              @unique
+  books_authors_current_draft_book_idTobooks                                     books?            @relation("authors_current_draft_book_idTobooks", fields: [current_draft_book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publisher_size_authors_ignore_enum_fk_idTopublisher_size                       publisher_size?   @relation("authors_ignore_enum_fk_idTopublisher_size", fields: [ignore_enum_fk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publisher_size_authors_ignore_enum_fk_id_required_with_defaultTopublisher_size publisher_size    @relation("authors_ignore_enum_fk_id_required_with_defaultTopublisher_size", fields: [ignore_enum_fk_id_required_with_default], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  authors                                                                        authors?          @relation("authorsToauthors", fields: [mentor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publishers                                                                     publishers?       @relation(fields: [publisher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_authors                                                                  authors[]         @relation("authorsToauthors")
+  authors_to_tags                                                                authors_to_tags[]
+  books_authorsTobooks_author_id                                                 books[]           @relation("authorsTobooks_author_id")
+  comments                                                                       comments[]
+  images                                                                         images?
+
+  @@index([current_draft_book_id])
+  @@index([ignore_enum_fk_id])
+  @@index([ignore_enum_fk_id_required_with_default])
+  @@index([mentor_id])
+  @@index([publisher_id])
+}
+
+model authors_to_tags {
+  id         Int      @id @default(autoincrement())
+  author_id  Int
+  tag_id     Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  authors    authors  @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([author_id, tag_id], map: "authors_to_tags_author_id_tag_id_unique_index")
+}
+
+model book_advances {
+  id             Int            @id @default(autoincrement())
+  status_id      Int
+  publisher_id   Int
+  book_id        Int
+  created_at     DateTime       @db.Timestamptz(6)
+  updated_at     DateTime       @db.Timestamptz(6)
+  books          books          @relation(fields: [book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publishers     publishers     @relation(fields: [publisher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  advance_status advance_status @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([book_id])
+  @@index([publisher_id])
+  @@index([status_id])
+}
+
+model book_reviews {
+  id         Int       @id @default(autoincrement())
+  rating     Int
+  book_id    Int
+  is_public  Boolean
+  created_at DateTime  @db.Timestamptz(6)
+  updated_at DateTime  @db.Timestamptz(6)
+  books      books     @relation(fields: [book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  comments   comments?
+
+  @@index([book_id])
+}
+
+model books {
+  id                                              Int             @id @default(autoincrement())
+  title                                           String          @db.VarChar(255)
+  author_id                                       Int
+  order                                           Int             @default(1)
+  created_at                                      DateTime        @db.Timestamptz(6)
+  updated_at                                      DateTime        @db.Timestamptz(6)
+  authors_authorsTobooks_author_id                authors         @relation("authorsTobooks_author_id", fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  authors_authors_current_draft_book_idTobooks    authors?        @relation("authors_current_draft_book_idTobooks")
+  book_advances                                   book_advances[]
+  book_reviews                                    book_reviews[]
+  books_to_tags                                   books_to_tags[]
+  comments                                        comments[]
+  critics_booksTocritics_ignore_favourite_book_id critics[]       @relation("booksTocritics_ignore_favourite_book_id")
+  critics_booksTocritics_ignore_worst_book_id     critics?        @relation("booksTocritics_ignore_worst_book_id")
+  images                                          images?
+
+  @@index([author_id])
+}
+
+model books_to_tags {
+  id         Int      @id @default(autoincrement())
+  book_id    Int
+  tag_id     Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  books      books    @relation(fields: [book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([book_id, tag_id], map: "books_to_tags_book_id_tag_id_unique_index")
+}
+
+model color {
+  id   Int    @id @default(autoincrement())
+  code String @unique(map: "color_unique_enum_code_constraint")
+  name String
+}
+
+model comments {
+  id                    Int           @id @default(autoincrement())
+  parent_book_id        Int?
+  parent_book_review_id Int?          @unique
+  parent_publisher_id   Int?
+  parent_author_id      Int?
+  text                  String?
+  created_at            DateTime      @db.Timestamptz(6)
+  updated_at            DateTime      @db.Timestamptz(6)
+  authors               authors?      @relation(fields: [parent_author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  books                 books?        @relation(fields: [parent_book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  book_reviews          book_reviews? @relation(fields: [parent_book_review_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publishers            publishers?   @relation(fields: [parent_publisher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([parent_author_id])
+  @@index([parent_book_id])
+  @@index([parent_book_review_id])
+  @@index([parent_publisher_id])
+}
+
+model critic_columns {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  critic_id  Int      @unique
+  created_at DateTime @db.Timestamptz(6)
+  updated_at DateTime @db.Timestamptz(6)
+  critics    critics  @relation(fields: [critic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([critic_id])
+}
+
+model critics {
+  id                                            Int               @id @default(autoincrement())
+  name                                          String            @db.VarChar(255)
+  ignore_favourite_book_id                      Int?
+  ignore_worst_book_id                          Int?              @unique
+  created_at                                    DateTime          @db.Timestamptz(6)
+  updated_at                                    DateTime          @db.Timestamptz(6)
+  books_booksTocritics_ignore_favourite_book_id books?            @relation("booksTocritics_ignore_favourite_book_id", fields: [ignore_favourite_book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  books_booksTocritics_ignore_worst_book_id     books?            @relation("booksTocritics_ignore_worst_book_id", fields: [ignore_worst_book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  critic_columns                                critic_columns?
+  critics_to_tags                               critics_to_tags[]
+
+  @@index([ignore_favourite_book_id])
+  @@index([ignore_worst_book_id])
+}
+
+model critics_to_tags {
+  id         Int      @id @default(autoincrement())
+  critic_id  Int
+  tag_id     Int
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  critics    critics  @relation(fields: [critic_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([critic_id, tag_id], map: "critics_to_tags_critic_id_tag_id_unique_index")
+}
+
+model image_type {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique(map: "image_type_unique_enum_code_constraint")
+  name       String
+  sort_order Int      @default(1000000)
+  visible    Boolean  @default(true)
+  nickname   String   @default("")
+  images     images[]
+}
+
+model images {
+  id           Int         @id @default(autoincrement())
+  type_id      Int
+  file_name    String      @db.VarChar(255)
+  book_id      Int?        @unique
+  author_id    Int?        @unique
+  publisher_id Int?
+  created_at   DateTime    @db.Timestamptz(6)
+  updated_at   DateTime    @db.Timestamptz(6)
+  authors      authors?    @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  books        books?      @relation(fields: [book_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publishers   publishers? @relation(fields: [publisher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  image_type   image_type  @relation(fields: [type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([author_id])
+  @@index([book_id])
+  @@index([publisher_id])
+  @@index([type_id])
+}
+
+model migrations {
+  id     Int      @id @default(autoincrement())
+  name   String   @db.VarChar(255)
+  run_on DateTime @db.Timestamp(6)
+}
+
+model publisher_size {
+  id                                                                      Int          @id @default(autoincrement())
+  code                                                                    String       @unique(map: "publisher_size_unique_enum_code_constraint")
+  name                                                                    String
+  authors_authors_ignore_enum_fk_idTopublisher_size                       authors[]    @relation("authors_ignore_enum_fk_idTopublisher_size")
+  authors_authors_ignore_enum_fk_id_required_with_defaultTopublisher_size authors[]    @relation("authors_ignore_enum_fk_id_required_with_defaultTopublisher_size")
+  publishers                                                              publishers[]
+}
+
+model publisher_type {
+  id         Int          @id @default(autoincrement())
+  code       String       @unique(map: "publisher_type_unique_enum_code_constraint")
+  name       String
+  publishers publishers[]
+}
+
+model publishers {
+  id             Int             @id @default(autoincrement())
+  name           String          @db.VarChar(255)
+  size_id        Int?
+  type_id        Int             @default(2)
+  latitude       Decimal?        @db.Decimal(9, 6)
+  longitude      Decimal?        @db.Decimal(9, 6)
+  huge_number    Decimal?        @db.Decimal(17, 0)
+  tag_id         Int?
+  created_at     DateTime        @db.Timestamptz(6)
+  updated_at     DateTime        @db.Timestamptz(6)
+  publisher_size publisher_size? @relation(fields: [size_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tags           tags?           @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publisher_type publisher_type  @relation(fields: [type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  authors        authors[]
+  book_advances  book_advances[]
+  comments       comments[]
+  images         images[]
+
+  @@index([size_id])
+  @@index([tag_id])
+  @@index([type_id])
+}
+
+model tags {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  created_at      DateTime          @db.Timestamptz(6)
+  updated_at      DateTime          @db.Timestamptz(6)
+  authors_to_tags authors_to_tags[]
+  books_to_tags   books_to_tags[]
+  critics_to_tags critics_to_tags[]
+  publishers      publishers[]
+}
+
+enum favorite_shape {
+  circle
+  square
+  triangle
+}

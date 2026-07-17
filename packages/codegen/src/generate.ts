@@ -1,6 +1,6 @@
 import { readdir } from "fs/promises";
 import { code, CodegenFile, def, imp } from "ts-poet";
-import { generateMetadataDocsFile, syncDocs } from "./docs";
+import { generateMetadataDocsFile, loadEntityDocs, syncDocs } from "./docs";
 import { findAllEntityScopes } from "./findEntityScopes";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
@@ -38,6 +38,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     await syncDocs(config.entitiesDirectory, entityNames);
   }
 
+  // Load the .md docs once (post-sync) to inject into codegen JSDocs and the runtime metadata-docs.ts
+  const entityDocs =
+    config.docs || config.outputDocs ? await loadEntityDocs(config.entitiesDirectory, entityNames) : {};
+
   const scopeMembersByEntity = await findAllEntityScopes(
     config,
     entities.map((meta) => meta.entity),
@@ -50,7 +54,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       return [
         {
           name: `./codegen/${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, dbMeta, meta, scopeMembersByEntity[entityName] ?? []),
+          contents: generateEntityCodegenFile(
+            config,
+            dbMeta,
+            meta,
+            scopeMembersByEntity[entityName] ?? [],
+            config.docs ? entityDocs[entityName] : undefined,
+          ),
           overwrite: true,
         },
         ...(hasEntityFile
@@ -149,7 +159,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   ).flat();
 
   // Generate metadata-docs.ts if enabled
-  const docsFile = config.outputDocs ? await generateMetadataDocsFile(config, dbMeta) : undefined;
+  const docsFile = config.outputDocs ? generateMetadataDocsFile(dbMeta, entityDocs) : undefined;
 
   return [
     ...entityFiles,

@@ -14,6 +14,14 @@ Authors can have mentors (other authors) forming a recursive tree.
 
 ## Fields
 
+### firstName
+
+The author's first name.
+
+### publisher
+
+The publisher this author writes for.
+
 ### numberOfBooks
 
 Example of a derived async property that can be calculated via a populate hint.

@@ -4,6 +4,8 @@ export const docs = {
     comment:
       "The Author entity represents a writer who can publish books.\n\nAuthors can have mentors (other authors) forming a recursive tree.",
     fields: {
+      firstName: "The author's first name.",
+      publisher: "The publisher this author writes for.",
       numberOfBooks: "Example of a derived async property that can be calculated via a populate hint.",
       mentorNames: "Example of a ReactiveField that uses a recursive parent relation.",
       menteeNames: "Example of a ReactiveField that uses a recursive child relation.",

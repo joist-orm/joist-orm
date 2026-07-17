@@ -1,9 +1,23 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 import { DocsCache, getMtime } from "./cache";
-import { getMarkdownFilePath, maybeReadMarkdownFile, updateMarkdownDoc } from "./markdown";
-import { applyEdits, buildJSDocEdit, parseEntityJSDocs } from "./parsing";
+import { getMarkdownFilePath, maybeReadMarkdownFile, type ParsedDoc, updateMarkdownDoc } from "./markdown";
+import { applyEdits, buildJSDocEdit, generatedTag, parseEntityJSDocs } from "./parsing";
 export { generateMetadataDocsFile } from "./generate-metadata-docs";
+export { type ParsedDoc } from "./markdown";
+export { buildJSDocBlock, generatedTag } from "./parsing";
+
+/** Loads each entity's parsed `.md` doc, i.e. for injecting into codegen JSDocs & runtime metadata. */
+export async function loadEntityDocs(entitiesDir: string, entityNames: string[]): Promise<Record<string, ParsedDoc>> {
+  const result: Record<string, ParsedDoc> = {};
+  await Promise.all(
+    entityNames.map(async (entityName) => {
+      const doc = await maybeReadMarkdownFile(getMarkdownFilePath(entitiesDir, entityName));
+      if (doc) result[entityName] = doc;
+    }),
+  );
+  return result;
+}
 
 /**
  * Run the full docs sync pipeline with mtime-based caching:
@@ -53,7 +67,7 @@ async function syncMarkdownToJsdoc(entityName: string, tsPath: string, mdPath: s
   const source = await fs.readFile(tsPath, "utf-8");
   const { classNode, members } = parseEntityJSDocs(source);
 
-  const tag = `@generated ${entityName}.md`;
+  const tag = generatedTag(entityName);
   const edits = [];
   if (doc.overview && classNode) {
     edits.push(buildJSDocEdit(classNode, `${doc.overview}\n${tag}`));

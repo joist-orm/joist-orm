@@ -107,11 +107,16 @@ export function applyEdits(source: string, edits: SourceEdit[]): string {
 }
 
 /** Build a JSDoc block comment string from plain text. */
-function buildJSDocBlock(text: string, indent: number): string {
+export function buildJSDocBlock(text: string, indent: number): string {
   const pad = " ".repeat(indent);
   const lines = text.split("\n");
   if (lines.length === 1) return `/** ${lines[0]} */`;
   return `/**\n` + lines.map((l) => (l ? `${pad} * ${l}` : `${pad} *`)).join("\n") + `\n${pad} */`;
+}
+
+/** The `@generated Entity.md` marker, i.e. so readers know a JSDoc is sourced from (and edited in) the `.md`. */
+export function generatedTag(entityName: string): string {
+  return `@generated ${entityName}.md`;
 }
 
 /** Extract text from a JSDoc-style leading block comment (i.e. one starting with `*`). */

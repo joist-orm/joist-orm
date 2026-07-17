@@ -457,7 +457,16 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  /**
+   * Example of a closure table.
+   * @generated Author.md
+   */
   abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>; // author_to_mentees_closure mentor_id mentee_id
+
+  /**
+   * Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership.
+   * @generated Author.md
+   */
   abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
 
   readonly mentees: Collection<Author, Author> = hasMany();
@@ -469,6 +478,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly tasks: Collection<Author, TaskNew> = hasMany();
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
+  /**
+   * The publisher this author writes for.
+   * @generated Author.md
+   */
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne();
   readonly mentorsRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveParents("mentor", "menteesRecursive");
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
@@ -493,6 +506,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "id");
   }
 
+  /**
+   * The author's first name.
+   * @generated Author.md
+   */
   get firstName(): string {
     return getField(this, "firstName");
   }
@@ -516,13 +533,25 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set ssn(ssn: string | undefined) {
     setField(this, "ssn", ssn);
   }
-
+  /**
+   * Implements the business logic for a (synchronous) persisted derived value.
+   * @generated Author.md
+   */
   abstract get initials(): string;
-
+  /**
+   * Example of a derived async property that can be calculated via a populate hint.
+   * @generated Author.md
+   */
   abstract readonly numberOfBooks: ReactiveField<Author, number>;
-
+  /**
+   * Example of a derived async property that can be calculated via a populate hint through a polymorphic reference.
+   * @generated Author.md
+   */
   abstract readonly bookComments: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Implements a public API for controlling access to a protected field (`wasEverPopular`).
+   * @generated Author.md
+   */
   get isPopular(): boolean | undefined {
     return getField(this, "isPopular");
   }
@@ -572,9 +601,15 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set isFunny(isFunny: boolean) {
     setField(this, "isFunny", isFunny);
   }
-
+  /**
+   * Example of a ReactiveField that uses a recursive parent relation.
+   * @generated Author.md
+   */
   abstract readonly mentorNames: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Example of a ReactiveField that uses a recursive child relation.
+   * @generated Author.md
+   */
   abstract readonly menteeNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
@@ -634,7 +669,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
   abstract readonly search: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Example of a ReactiveField that watches through an o2o relation.
+   * @generated Author.md
+   */
   abstract readonly imageFileName: ReactiveField<Author, string | undefined>;
 
   get certificate(): Uint8Array | undefined {
@@ -652,7 +690,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
-
+  /**
+   * Example of a derived async enum.
+   * @generated Author.md
+   */
   abstract readonly rangeOfBooks: ReactiveField<Author, BookRange | undefined>;
 
   get isFew(): boolean {

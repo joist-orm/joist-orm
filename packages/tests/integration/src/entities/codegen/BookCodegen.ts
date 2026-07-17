@@ -312,7 +312,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   set authorsNickNames(authorsNickNames: string | undefined) {
     setField(this, "authorsNickNames", authorsNickNames);
   }
-
+  /**
+   * For testing accessing `book.author.get` when it's undefined.
+   * @generated Book.md
+   */
   abstract readonly search: ReactiveField<Book, string | undefined>;
 
   get deletedAt(): Date | undefined {

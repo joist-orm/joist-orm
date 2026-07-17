@@ -1,24 +1,18 @@
 import { code, CodegenFile } from "ts-poet";
-import { Config } from "../config";
 import { DbMetadata } from "../EntityDbMetadata";
-import { maybeReadMarkdownFile } from "./markdown";
+import { type ParsedDoc } from "./markdown";
 
 /** Creates the `metadata-docs.ts` runtime artifact to access docs. */
-export async function generateMetadataDocsFile(config: Config, dbMeta: DbMetadata): Promise<CodegenFile> {
-  const { entities } = dbMeta;
-
-  const entityEntries = await Promise.all(
-    entities.map(async (meta) => {
-      const entityName = meta.entity.name;
-      const mdPath = `${config.entitiesDirectory}/${entityName}.md`;
-      const doc = await maybeReadMarkdownFile(mdPath);
-      const comment = escapeString(doc?.overview ?? "");
-      const fieldEntries = Object.entries(doc?.fields ?? {})
-        .map(([name, text]) => `${name}: "${escapeString(text)}"`)
-        .join(", ");
-      return `${entityName}: { comment: "${comment}", fields: { ${fieldEntries} }, operations: undefined }`;
-    }),
-  );
+export function generateMetadataDocsFile(dbMeta: DbMetadata, docsByEntity: Record<string, ParsedDoc>): CodegenFile {
+  const entityEntries = dbMeta.entities.map((meta) => {
+    const entityName = meta.entity.name;
+    const doc = docsByEntity[entityName];
+    const comment = escapeString(doc?.overview ?? "");
+    const fieldEntries = Object.entries(doc?.fields ?? {})
+      .map(([name, text]) => `${name}: "${escapeString(text)}"`)
+      .join(", ");
+    return `${entityName}: { comment: "${comment}", fields: { ${fieldEntries} }, operations: undefined }`;
+  });
 
   const body = entityEntries.map((e) => `  ${e},`).join("\n");
 

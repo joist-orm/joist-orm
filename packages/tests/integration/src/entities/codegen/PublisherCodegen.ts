@@ -297,6 +297,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   declare readonly __type: { 0: "Publisher" };
 
+  /**
+   * Example of a ReactiveReference in an entity with subtypes.
+   * @generated Publisher.md
+   */
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
   readonly authors: Collection<Publisher, Author> = hasMany();
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany();
@@ -355,7 +359,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set hugeNumber(hugeNumber: number | undefined) {
     setField(this, "hugeNumber", hugeNumber);
   }
-
+  /**
+   * Example of a reactive query.
+   * @generated Publisher.md
+   */
   abstract readonly numberOfBookReviews: ReactiveField<Publisher, number>;
 
   get deletedAt(): Date | undefined {
@@ -365,11 +372,20 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
-
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique).
+   * @generated Publisher.md
+   */
   abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
-
+  /**
+   * Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   abstract readonly bookAdvanceTitlesSnapshot: ReactiveField<Publisher, string | undefined>;
-
+  /**
+   * Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   abstract readonly numberOfBookAdvancesSnapshot: ReactiveField<Publisher, string | undefined>;
 
   get baseSyncDefault(): string {
@@ -395,7 +411,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
-
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) .
+   * @generated Publisher.md
+   */
   abstract readonly favoriteAuthorName: ReactiveField<Publisher, string | undefined>;
 
   get rating(): number | undefined {

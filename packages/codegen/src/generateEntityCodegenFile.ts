@@ -13,6 +13,7 @@ import {
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
 import { type Config } from "./config";
+import { buildJSDocBlock, generatedTag, type ParsedDoc } from "./docs";
 import { type ScopeMember } from "./findEntityScopes";
 import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";
@@ -98,7 +99,7 @@ export interface ColumnMetaData {
 // A local type just for tracking abstract vs. concrete relations
 type Relation =
   // I.e. `abstract ReactiveReference` that the user must implement
-  | { kind: "abstract"; line: Code; comment?: string }
+  | { kind: "abstract"; fieldName: string; line: Code; comment?: string }
   // I.e. a `get author(): ManyToOne<...>`
   | { kind: "concrete"; fieldName: string; decl: Code; init: Code; comment?: string }
   // I.e. a `get author(): { super.author as ... }`
@@ -110,18 +111,22 @@ export function generateEntityCodegenFile(
   dbMeta: DbMetadata,
   meta: EntityDbMetadata,
   scopeMembers: ScopeMember[] = [],
+  docs?: ParsedDoc,
 ): Code {
   const { entitiesByName: metasByName } = dbMeta;
   const { entity, tagName } = meta;
   const entityName = entity.name;
 
+  // Per-field `.md` docs to inject as JSDocs on the codegen'd getters/relations (empty if docs are off)
+  const fieldDocs = docs?.fields ?? {};
+
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
 
-  const primitives = createPrimitives(meta, entity); // Add the primitives
-  primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
-  primitives.push(...createArrayEnums(meta)); // Add integer[] enums
-  primitives.push(...createPgEnums(meta)); // Add native enums
+  const primitives = createPrimitives(meta, entity, fieldDocs); // Add the primitives
+  primitives.push(...createRegularEnums(meta, entity, fieldDocs)); // Add ManyToOne enums
+  primitives.push(...createArrayEnums(meta, fieldDocs)); // Add integer[] enums
+  primitives.push(...createPgEnums(meta, fieldDocs)); // Add native enums
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
@@ -278,17 +283,17 @@ export function generateEntityCodegenFile(
       ${relations
         .filter((r) => r.kind === "abstract")
         .map((r) => {
-          return code`${r.line}${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}${r.line}${maybeComment(r.comment)}`;
         })}
       ${relations
         .filter((r) => r.kind === "concrete")
         .map((r) => {
-          return code`readonly ${r.fieldName}: ${r.decl} = ${r.init};${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}readonly ${r.fieldName}: ${r.decl} = ${r.init};${maybeComment(r.comment)}`;
         })}
       ${relations
         .filter((r) => r.kind === "super")
         .map((r) => {
-          return code`declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
         })}
 
       get id(): ${entity.idName} {
@@ -758,7 +763,7 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums];
 }
 
-function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
+function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -833,12 +838,12 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
       `;
     }
 
-    return code`${getter} ${setter}`;
+    return code`${fieldDocBlock(fieldDocs, fieldName, entity.name)}${getter} ${setter}`;
   });
   return primitives;
 }
 
-function createRegularEnums(meta: EntityDbMetadata, entity: Entity) {
+function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => !e.isArray)
     .flatMap((e) => {
@@ -890,11 +895,11 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity) {
           }
         `,
       );
-      return [getter, setter, ...accessors];
+      return [code`${fieldDocBlock(fieldDocs, fieldName, entity.name)}${getter}`, setter, ...accessors];
     });
 }
 
-function createArrayEnums(meta: EntityDbMetadata) {
+function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => e.isArray)
     .flatMap((e) => {
@@ -926,11 +931,11 @@ function createArrayEnums(meta: EntityDbMetadata) {
           }
         `,
       );
-      return [getter, setter, ...accessors];
+      return [code`${fieldDocBlock(fieldDocs, fieldName, meta.entity.name)}${getter}`, setter, ...accessors];
     });
 }
 
-function createPgEnums(meta: EntityDbMetadata) {
+function createPgEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.pgEnums.flatMap((e) => {
     const { fieldName, enumType, enumValues, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -958,7 +963,7 @@ function createPgEnums(meta: EntityDbMetadata) {
           }
         `,
     );
-    return [getter, setter, ...accessors];
+    return [code`${fieldDocBlock(fieldDocs, fieldName, meta.entity.name)}${getter}`, setter, ...accessors];
   });
 }
 
@@ -969,7 +974,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const maybeOptional = notNull ? "never" : "undefined";
     if (m2o.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;`;
-      return { kind: "abstract", line } as const;
+      return { kind: "abstract", fieldName, line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
     const init = code`${hasOne}()`;
@@ -1095,7 +1100,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const comment = `// ${m2m.joinTableName} ${m2m.columnName} ${m2m.otherColumnName}`;
     if (m2m.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
-      return { kind: "abstract", line, comment } as const;
+      return { kind: "abstract", fieldName, line, comment } as const;
     } else if (m2m.derived === "otherSide") {
       const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
       const init = code`${hasReactiveManyToManyOtherSide}()`;
@@ -1206,6 +1211,24 @@ function nullOrNever(notNull: boolean): string {
 /** Prefixes the comment with a newline, so it gets its own line. */
 function maybeComment(comment: string | undefined): string {
   return comment ? ` ${comment}\n` : "";
+}
+
+/**
+ * Renders a field's `.md` doc (plus its `@generated` tag) as a bare JSDoc block, or `""` if undocumented.
+ *
+ * Reuses the same {@link buildJSDocBlock} formatter the `.md` sync uses for hand-written `Entity.ts`
+ * members. Used directly before a getter template (which supplies its own leading newline), so the
+ * JSDoc lands immediately above the getter with no intervening blank line.
+ */
+function fieldDocBlock(fieldDocs: Record<string, string>, fieldName: string, entityName: string): string {
+  const doc = fieldDocs[fieldName];
+  return doc ? buildJSDocBlock(`${doc}\n${generatedTag(entityName)}`, 0) : "";
+}
+
+/** Like {@link fieldDocBlock} but wrapped in newlines, i.e. for inline `readonly x = ...` relation decls. */
+function relationDocBlock(fieldDocs: Record<string, string>, fieldName: string, entityName: string): string {
+  const block = fieldDocBlock(fieldDocs, fieldName, entityName);
+  return block ? `\n${block}\n` : "";
 }
 
 export function getIdType(config: Config) {

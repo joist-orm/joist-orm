@@ -140,6 +140,10 @@ export abstract class EmployeeCodegen extends BaseEntity<EntityManager, string> 
 
   declare readonly __type: { 0: "Employee" };
 
+  /**
+   * Tracks self and all recursive managers for the closure-table blog scenario.
+   * @generated Employee.md
+   */
   abstract readonly managersClosure: ReactiveManyToMany<Employee, Employee>; // employee_to_managers_closure employee_id manager_id
 
   readonly reports: Collection<Employee, Employee> = hasMany();

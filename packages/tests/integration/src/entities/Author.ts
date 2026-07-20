@@ -314,6 +314,14 @@ export class Author extends AuthorCodegen {
   });
 
   /**
+   * Example of a Property that recursively loads the same property from its mentor.
+   * @generated Author.md
+   */
+  readonly nameWithMentor: Property<Author, string> = hasProperty({ mentor: "nameWithMentor" }, (a) => {
+    return a.mentor.get ? `${a.mentor.get.nameWithMentor.get}${a.firstName}` : a.firstName;
+  });
+
+  /**
    * Example of a derived async enum.
    * @generated Author.md
    */

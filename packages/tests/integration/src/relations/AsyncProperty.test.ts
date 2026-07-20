@@ -1,7 +1,26 @@
 import { Author, SmallPublisher } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 describe("AsyncProperty", () => {
+  it("can load recursive properties", async () => {
+    await insertAuthor({ first_name: "m1" });
+    await insertAuthor({ first_name: "a1", mentor_id: 1 });
+    const em = newEntityManager();
+    const [mentor, author] = await em.loadAll(Author, ["a:1", "a:2"]);
+    const names = await Promise.all([mentor.nameWithMentor.load(), author.nameWithMentor.load()]);
+    expect(names).toEqual(["m1", "m1a1"]);
+  });
+
+  it("can load recursive properties with populate", async () => {
+    await insertAuthor({ first_name: "m1" });
+    await insertAuthor({ first_name: "a1", mentor_id: 1 });
+    const em = newEntityManager();
+    const [mentor, author] = await em.loadAll(Author, ["a:1", "a:2"], "nameWithMentor");
+    const names = [mentor.nameWithMentor.get, author.nameWithMentor.get];
+    expect(names).toEqual(["m1", "m1a1"]);
+  });
+
   it("throws when loading a new entity", async () => {
     const em = newEntityManager();
     const p = em.create(SmallPublisher, { name: "p1", city: "c1" });

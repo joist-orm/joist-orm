@@ -95,6 +95,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncPropertyImpl } from "./relations/AsyncProperty";
+import { LazyFieldImpl, lazyColumnLoadOperation } from "./relations/LazyField";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
@@ -215,7 +216,8 @@ export type FindOperation =
   | typeof populateOperation
   | typeof recursiveChildrenOperation
   | typeof recursiveM2mOperation
-  | typeof recursiveParentsOperation;
+  | typeof recursiveParentsOperation
+  | typeof lazyColumnLoadOperation;
 
 /**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
@@ -1939,9 +1941,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         for (const e of allFlushedEntities) {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
-          // Reset AsyncQueryProperties since DB state may have changed
+          // Reset AsyncQueryProperties & LazyFields since DB state may have changed
           for (const rel of Object.values(getInstanceData(e).relations)) {
-            if (rel instanceof AsyncPropertyImpl) rel.resetAfterFlush();
+            if (rel instanceof AsyncPropertyImpl || rel instanceof LazyFieldImpl) rel.resetAfterFlush();
           }
         }
         // Update the joinRows refs to reflect the new state

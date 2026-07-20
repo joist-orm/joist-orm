@@ -2,7 +2,7 @@ import { getInstanceData } from "../BaseEntity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
-import { ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../QueryParser";
+import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, lazyExcludedSelects } from "../QueryParser";
 import { keyToNumber, tagId } from "../keys";
 import { LoadHint } from "../loadHints";
 import { abbreviation } from "../utils";
@@ -26,7 +26,7 @@ export function loadBatchLoader(
     const keys = loads.map((l) => keyToNumber(meta, l.taggedId));
     const alias = abbreviation(meta.tableName);
     const query = {
-      selects: [`"${alias}".*`],
+      selects: meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       condition: {
         kind: "exp",

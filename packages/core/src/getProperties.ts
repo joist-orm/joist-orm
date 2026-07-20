@@ -1,6 +1,6 @@
 import { BaseEntity } from "./BaseEntity";
 import { EntityMetadata } from "./EntityMetadata";
-import { LazyField } from "./newEntity";
+import { LazyRelation } from "./newEntity";
 import { fail, partition } from "./utils";
 
 /**
@@ -50,7 +50,10 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
 
   // We can look directly at the `instance` to find all relations (`has...` calls), and any other
   // instance-level fields (of which only the special `transientFields` is expected/allowed).
-  const [relationFields, otherFields] = partition(Object.entries(instance), ([, value]) => value instanceof LazyField);
+  const [relationFields, otherFields] = partition(
+    Object.entries(instance),
+    ([, value]) => value instanceof LazyRelation,
+  );
 
   // Enforce transientFields usage
   const invalidFields = otherFields.filter(([fieldName]) => fieldName !== "transientFields");
@@ -87,7 +90,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     Object.fromEntries(
       properties.map(([fieldName, value]) => [
         fieldName,
-        value instanceof LazyField ? value.create(instance, fieldName) : value,
+        value instanceof LazyRelation ? value.create(instance, fieldName) : value,
       ]),
     ),
   );
@@ -110,11 +113,11 @@ const afterGetPropertiesInstancePrototypeProxy = new Proxy(
 );
 
 /**
- * Returns the `LazyField`s (...and transientField) for `meta`.
+ * Returns the `LazyRelation`s (...and transientField) for `meta`.
  *
  * Should only be used by `newEntity` while moving relations to the prototype.
  */
-export function getLazyFields(meta: EntityMetadata): [string, LazyField<any> | object][] {
+export function getLazyFields(meta: EntityMetadata): [string, LazyRelation<any> | object][] {
   getProperties(meta); // We populate the lazyFields during getProperties
   const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
   return lazyFields[key];

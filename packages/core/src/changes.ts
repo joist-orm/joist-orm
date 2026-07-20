@@ -15,6 +15,7 @@ import {
 } from "./index";
 import { JoinColumnValue, JoinRows } from "./JoinRows";
 import { EnumCollectionImpl } from "./relations/EnumCollection";
+import { notLoadedValue } from "./relations/LazyField";
 import { FieldsOf, OptsOf } from "./typeMap";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
@@ -46,7 +47,10 @@ abstract class BaseFieldStatusImpl<T> {
   get originalValue(): T | undefined {
     const { originalData, data } = getInstanceData(this.entity);
     // If `p` is in originalData, always respect that, even if it's undefined
-    return this.fieldName in originalData ? originalData[this.fieldName] : getField(this.entity, this.fieldName as any);
+    const value =
+      this.fieldName in originalData ? originalData[this.fieldName] : getField(this.entity, this.fieldName as any);
+    // An unloaded lazy column's original value is unknown
+    return value === notLoadedValue ? undefined : value;
   }
 
   get hasChanged(): boolean {

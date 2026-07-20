@@ -689,6 +689,9 @@ function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, f
     return testDate;
   } else if (field.type === "boolean") {
     return false;
+  } else if (field.type === "Object") {
+    // A required jsonb column, i.e. so factories can satisfy a required (possibly `lazy`) column.
+    return {};
   } else if (Temporal) {
     if (field.type === Temporal.PlainDate) {
       return testPlainDate;

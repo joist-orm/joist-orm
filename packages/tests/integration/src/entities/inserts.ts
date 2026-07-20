@@ -250,6 +250,15 @@ export function insertPublisherGroup(row: { id?: number; name: string; number_of
   });
 }
 
+export function insertParentGroup(row: {
+  id?: number;
+  name?: string | null;
+  bulk_data?: object | null;
+  required_data?: object;
+}) {
+  return testDriver.insert("parent_groups", { required_data: {}, ...row });
+}
+
 export async function insertSmallPublisherGroup(row: { id: number; name: string; number_of_book_reviews?: number }) {
   const { id, ...base } = row;
   await testDriver.insert("publisher_groups", {

@@ -11,6 +11,7 @@ import {
   isFieldIgnored,
   isGetterField,
   isLargeCollection,
+  isLazyField,
   isProtected,
   isReactiveField,
   isReactiveManyToMany,
@@ -148,6 +149,7 @@ export type PrimitiveField = Field & {
   customSerde: Import | undefined;
   isArray: boolean;
   hasConfigDefault: boolean;
+  lazy?: boolean;
 };
 
 export type EnumField = Field & {
@@ -544,6 +546,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     customSerde: customSerde ? serdeType(customSerde) : undefined,
     isArray: array,
     hasConfigDefault, // can be set to true by scanEntityFiles
+    lazy: isLazyField(config, entity, fieldName),
   };
 }
 

@@ -35,7 +35,7 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
   let transientFieldsValue: any = {};
   for (const [fieldName, value] of getLazyFields(getMetadata(cstr))) {
-    if (value instanceof LazyField) {
+    if (value instanceof LazyRelation) {
       Object.defineProperty(cstr.prototype, fieldName, {
         get(this: any) {
           return (this.__data.relations[fieldName] ??= value.create(this, fieldName));
@@ -67,11 +67,11 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
  * We need TypeScript to still see `books = hasMany(...)` as being typed as `Many<Book>`,
  * so this method's return type is `R` i.e. the `Many<Book>` relation type.
  *
- * But at runtime we actually want this to be a `LazyField` that can be rewritten
+ * But at runtime we actually want this to be a `LazyRelation` that can be rewritten
  * into a getter, and only invoked when the relation is actually accessed.
  */
 export function lazyField<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
-  return new LazyField(fn) as R;
+  return new LazyRelation(fn) as R;
 }
 
 /**
@@ -94,7 +94,7 @@ export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetad
 }
 
 /** Wraps `has...` relation constructors in an easily-identifiable container. */
-export class LazyField<T extends Entity> {
+export class LazyRelation<T extends Entity> {
   #fn: (entity: T, fieldName: string) => any;
   constructor(fn: (entity: T, fieldName: string) => any) {
     this.#fn = fn;

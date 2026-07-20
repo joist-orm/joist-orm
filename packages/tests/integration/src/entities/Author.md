@@ -102,6 +102,10 @@ All reviews across all of this author's books.
 
 Example of a ReactiveField that watches through an o2o relation.
 
+### nameWithMentor
+
+Example of a Property that recursively loads the same property from its mentor.
+
 ## Notes
 
 Some additional notes the user might add here, with a code block:

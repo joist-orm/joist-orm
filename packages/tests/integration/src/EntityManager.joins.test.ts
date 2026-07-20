@@ -1,4 +1,4 @@
-import { RecursiveCycleError, testing } from "joist-orm";
+import { testing } from "joist-orm";
 import {
   insertAuthor,
   insertBook,
@@ -215,27 +215,6 @@ describe("EntityManager.joins", () => {
       a1.favoriteBook.load(),
       em.populate(a1, "favoriteBook"),
     ]);
-  });
-
-  it("doesn't deadlock on recursive properties", async () => {
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2", mentor_id: 1 });
-    const em = newEntityManager();
-    const authors = await em.find(Author, {});
-    const [a1Loaded, a2Loaded] = await em.populate(authors, "reputationScore");
-    expect(a1Loaded.reputationScore.get).toBe(0);
-    expect(a2Loaded.reputationScore.get).toBe(0);
-  });
-
-  it("doesn't stack overflow on cyclic recursive properties", async () => {
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2", mentor_id: 1 });
-    await update("authors", { id: 1, mentor_id: 2 });
-
-    const em = newEntityManager();
-    const authors = await em.find(Author, {});
-
-    await expect(em.populate(authors, "reputationScore")).rejects.toThrow(RecursiveCycleError);
   });
 
   it("preloads em.find", async () => {

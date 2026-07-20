@@ -27,6 +27,7 @@ export const docs = {
       hasBooks: "Example of an async boolean that can be navigated via a lens.",
       reviews: "All reviews across all of this author's books.",
       imageFileName: "Example of a ReactiveField that watches through an o2o relation.",
+      nameWithMentor: "Example of a Property that recursively loads the same property from its mentor.",
     },
     operations: undefined,
   },

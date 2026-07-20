@@ -1,4 +1,4 @@
-import { setDefaultEntityLimit } from "joist-orm";
+import { RecursiveCycleError, setDefaultEntityLimit } from "joist-orm";
 import { promiseHooks } from "node:v8";
 import { insertAuthor, insertBook, insertPublisher, update } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
@@ -244,5 +244,24 @@ describe("EntityManager.populate", () => {
     const p = await em.load(SmallPublisher, "p:1");
     // Then it does not blow up
     await em.populate(p, "spotlightAuthor");
+  });
+
+  it("doesn't deadlock on recursive properties", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, {});
+    const [a1Loaded, a2Loaded] = await em.populate(authors, "reputationScore");
+    expect(a1Loaded.reputationScore.get).toBe(0);
+    expect(a2Loaded.reputationScore.get).toBe(0);
+  });
+
+  it("doesn't stack overflow on cyclic recursive properties", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1 });
+    await update("authors", { id: 1, mentor_id: 2 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, {});
+    await expect(em.populate(authors, "reputationScore")).rejects.toThrow(RecursiveCycleError);
   });
 });

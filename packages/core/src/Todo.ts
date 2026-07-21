@@ -9,13 +9,20 @@ import { groupBy } from "./utils";
 export class Todo {
   /** Groups `todos` by their base/subtype, currently only inserts. */
   static groupInsertsByTypeAndSubType(todos: Record<string, Todo>): Map<EntityMetadata, Entity[]> {
-    return new Map(
-      Object.values(todos).flatMap((todo) => {
-        return todo.metadata.inheritanceType
-          ? [...groupBy(todo.inserts, (e) => getMetadata(e)).entries()]
-          : ([[todo.metadata, todo.inserts]] as const);
-      }),
-    );
+    const map = new Map<EntityMetadata, Entity[]>();
+    for (const todoKey in todos) {
+      const todo = todos[todoKey];
+      // Skip update/delete-only todos so hook loops don't allocate entries for empty insert lists
+      if (todo.inserts.length === 0) continue;
+      if (todo.metadata.inheritanceType) {
+        for (const [meta, inserts] of groupBy(todo.inserts, (e) => getMetadata(e))) {
+          map.set(meta, inserts);
+        }
+      } else {
+        map.set(todo.metadata, todo.inserts);
+      }
+    }
+    return map;
   }
 
   inserts: Entity[] = [];
@@ -31,7 +38,7 @@ export class Todo {
 /**
  * Scans `entities` for new/updated entities and groups them by type (by base type if applicable).
  */
-export function createTodos(entities: readonly Entity[]): Record<string, Todo> {
+export function createTodos(entities: Iterable<Entity>): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
     const op = getInstanceData(entity).pendingOperation;

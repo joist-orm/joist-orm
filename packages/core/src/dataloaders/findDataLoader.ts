@@ -378,17 +378,6 @@ function findSelectedAliases(expression: string): string[] {
   return [...aliases];
 }
 
-/** Replaces all values with `*` so we can see the generic structure of the query. */
-function stripValues(query: ParsedFindQuery): void {
-  visitConditions(query, {
-    visitCond(c: ColumnCondition) {
-      if ("value" in c.cond) {
-        c.cond.value = "*";
-      }
-    },
-  });
-}
-
 /** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */
 function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, boolean] {
   switch (cond.kind) {
@@ -494,13 +483,22 @@ function argsEqual(a: any, b: any): boolean {
 }
 
 export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {
-  // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
-  const clone = structuredClone(query);
-  stripValues(clone);
-  if (meta.stiDiscriminatorValue) {
-    // Include the meta b/c STI queries for different subtypes will look identical
-    (clone as any).meta = meta.type;
-  }
-  // We could use `whereFilterHash` too if it's faster?
-  return JSON.stringify(clone);
+  // Temporarily swap condition values for `*` so we can see the generic structure of the query,
+  // then restore them; this avoids deep-cloning the entire parsed query on every em.find call.
+  // Track values per condition object b/c parseFindQuery does not deep copy complex conditions,
+  // i.e. `a.firstName.eq(...)`, so the same condition instance could appear twice.
+  const saved = new Map<any, any>();
+  visitConditions(query, {
+    visitCond(c: ColumnCondition) {
+      const { cond } = c;
+      if ("value" in cond && !saved.has(cond)) {
+        saved.set(cond, cond.value);
+        cond.value = "*";
+      }
+    },
+  });
+  const structure = JSON.stringify(query);
+  for (const [cond, value] of saved) cond.value = value;
+  // Include the meta b/c STI queries for different subtypes will look identical
+  return meta.stiDiscriminatorValue ? `${structure}|${meta.type}` : structure;
 }

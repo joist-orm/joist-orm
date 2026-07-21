@@ -164,7 +164,7 @@ function addLazyUpdates(ops: Ops, meta: EntityMetadata, entities: Entity[]): voi
   for (const fieldName of meta.lazyFieldNames!) {
     const field = meta.fields[fieldName];
     if (!hasSerde(field)) continue;
-    const changed = entities.filter((e) => getInstanceData(e).changedFields.includes(fieldName));
+    const changed = entities.filter((e) => fieldName in getInstanceData(e).changedData);
     if (changed.length === 0) continue;
     const columns: BindingColumn[] = [idColumn, ...field.serde.columns];
     const columnValues = collectBindings(changed, meta.tableName, columns, undefined);
@@ -177,7 +177,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    for (const fieldName of getInstanceData(entity).changedFields) changedFields.add(fieldName);
+    for (const fieldName in getInstanceData(entity).changedData) changedFields.add(fieldName);
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.
@@ -295,7 +295,8 @@ function collectBindings(
     const column = columns[columnIndex];
     const columnValues: any[] = new Array(entityCount);
     for (let entityIndex = 0; entityIndex < entityCount; entityIndex++) {
-      columnValues[entityIndex] = column.dbValue(entityData[entityIndex], entities[entityIndex], tableName, fixups) ?? null;
+      columnValues[entityIndex] =
+        column.dbValue(entityData[entityIndex], entities[entityIndex], tableName, fixups) ?? null;
     }
     bindings[columnIndex] = columnValues;
   }

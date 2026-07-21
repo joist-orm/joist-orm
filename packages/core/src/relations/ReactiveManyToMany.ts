@@ -65,7 +65,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   ) {
     super(entity);
     this.#field = field;
-    getInstanceData(entity).relations[this.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[this.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {

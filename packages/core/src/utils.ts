@@ -67,6 +67,12 @@ export function tryResolve<T>(fn: () => T): Promise<T> {
   }
 }
 
+/** Returns whether `obj` has at least one key, without allocating a keys array. */
+export function hasAnyKey(obj: Record<any, any> | undefined): boolean {
+  for (const _ in obj) return true;
+  return false;
+}
+
 export function fail(message?: string): never {
   throw new Error(message || "Failed");
 }

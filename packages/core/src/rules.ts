@@ -117,6 +117,25 @@ export function newRequiredRule<T extends Entity>(
 }
 
 /**
+ * Like `newRequiredRule`, but for `lazy` columns (i.e. codegen only wires this up for `lazy` fields).
+ *
+ * On an already-persisted entity that hasn't loaded the column, we skip the check rather than force-load
+ * (or falsely fail) a value that was required when the row was last saved. It still fires on create and
+ * when the field is explicitly loaded-then-unset.
+ */
+export function newRequiredLazyFieldRule<T extends Entity>(
+  key: keyof FieldsOf<T> & string,
+  opts: ValidationRuleOpts<T> = {},
+): ValidationRule<T> {
+  return ruleWithOpts(opts, (entity) => {
+    if (!entity.isNewEntity && !(entity as any)[key].isLoaded) return;
+    if (getField(entity, key) === undefined) {
+      return { field: key, code: ValidationCode.required, message: `${key} is required` };
+    }
+  });
+}
+
+/**
  * Creates a validation rule that a field cannot be updated; it can only be set on creation.
  *
  * If the optional `unless` function returns true, then the update is allowed.

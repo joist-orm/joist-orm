@@ -643,6 +643,8 @@ export const parentGroupMeta: EntityMetadata<ParentGroup> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("parentGroup", "id", "id", "int"), immutable: true },
     "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "bulkData": { kind: "primitive", fieldName: "bulkData", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new JsonSerde("bulkData", "bulk_data"), immutable: false, lazy: true },
+    "requiredData": { kind: "primitive", fieldName: "requiredData", fieldIdName: undefined, derived: false, required: true, protected: false, type: "Object", serde: new JsonSerde("requiredData", "required_data"), immutable: false, lazy: true },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "childGroups": { kind: "o2m", fieldName: "childGroups", fieldIdName: "childGroupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },

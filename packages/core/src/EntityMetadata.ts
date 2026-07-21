@@ -78,6 +78,10 @@ export interface EntityMetadata<T extends Entity = any> {
   reactiveCommitRules?: ReactiveRule[];
   /** Lazily-cached: whether flushing an entity of this type could trigger any `addCommitRule` work. */
   hasCommitRules?: boolean;
+  /** The lazily-cached set of own `lazy` primitive field names, i.e. columns excluded from the default SELECT. */
+  lazyFieldNames?: ReadonlySet<string>;
+  /** Lazily-cached: whether this entity has any `lazy` columns, i.e. so the default SELECT lists columns explicitly. */
+  hasLazyColumns?: boolean;
   orderBy: string | undefined;
   /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */
   uniqueBy?: string[][];
@@ -135,6 +139,8 @@ export type PrimitiveField = {
   citext?: boolean;
   default?: "schema" | "config";
   sanitize?: boolean;
+  /** When true, this column is excluded from the entity's default SELECT and lazy-loaded via a `LazyField`. */
+  lazy?: boolean;
 };
 
 export type EnumField = {

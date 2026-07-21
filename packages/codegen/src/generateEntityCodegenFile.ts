@@ -37,6 +37,7 @@ import {
   IdOf,
   JsonPayload,
   LargeCollection,
+  LazyField,
   Lens,
   LoadHint,
   Loaded,
@@ -67,6 +68,7 @@ import {
   hasEnumCollection,
   hasLargeMany,
   hasLargeManyToMany,
+  hasLazyField,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -81,6 +83,7 @@ import {
   loadLens,
   mustBeSubType,
   newChangesProxy,
+  newRequiredLazyFieldRule,
   newRequiredRule,
   newScopeFn,
   setField,
@@ -434,7 +437,10 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
     .map((p) => {
       const { fieldName } = p;
       const isReactive = "derived" in p && p.derived === "async";
-      if (isReactive) {
+      if ("lazy" in p && p.lazy) {
+        // Lazy columns use a rule that won't force-load (or falsely fail) an unloaded value on a persisted entity
+        return code`${configName}.addRule(${newRequiredLazyFieldRule}("${fieldName}"));`;
+      } else if (isReactive) {
         return code`${configName}.addRule("${fieldName}", ${newRequiredRule}("${fieldName}"));`;
       } else {
         return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
@@ -767,6 +773,9 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Rec
   const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
+
+    // `lazy` columns are emitted as `LazyField` relations by `createLazyFields`, not as getters/setters
+    if (p.lazy) return code``;
 
     let getter: Code;
     if (p.derived === "async") {
@@ -1164,6 +1173,17 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
+  // Add `lazy` primitives, which are exposed as `LazyField`s instead of getters/setters
+  const lazy: Relation[] = meta.primitives
+    .filter((p) => p.lazy)
+    .map((p) => {
+      const { fieldName, fieldType, notNull } = p;
+      const maybeOptional = notNull ? "" : " | undefined";
+      const decl = code`${LazyField}<${entity.type}, ${fieldType}${maybeOptional}>`;
+      const init = code`${hasLazyField}()`;
+      return { kind: "concrete", fieldName, decl, init };
+    });
+
   return [
     o2m,
     o2mBase,
@@ -1180,6 +1200,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     m2mEnumBase,
     lm2m,
     polymorphic,
+    lazy,
   ].flat();
 }
 

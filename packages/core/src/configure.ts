@@ -73,6 +73,16 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
       if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
       return (field as EnumField).serde.columns[0].columnName;
     });
+    defineLazyGetter(meta, "lazyFieldNames", function buildLazyFieldNames() {
+      return new Set(
+        Object.values(meta.fields)
+          .filter((f) => f.kind === "primitive" && f.lazy)
+          .map((f) => f.fieldName),
+      );
+    });
+    defineLazyGetter(meta, "hasLazyColumns", function buildHasLazyColumns() {
+      return meta.lazyFieldNames!.size > 0;
+    });
   }
 }
 

@@ -133,9 +133,9 @@ function calcLateralJoins<I extends EntityOrId>(
       // Do the recursion up-front, so we can work it into our own join/hydrator
       const subJoins = calcLateralJoins(assigner, root, subTree, otherAlias, otherMeta, `${pathPrefix}${pathKey}_`);
 
-      // Get all fields with serdes and flatten out the columns
+      // Get all fields with serdes and flatten out the columns, skipping `lazy` columns (fetched on-demand)
       const columns = Object.values(otherMeta.allFields)
-        .filter((f) => f.serde)
+        .filter((f) => f.serde && !(f.kind === "primitive" && f.lazy))
         .flatMap((f) => f.serde!.columns);
       const selects = [
         ...columns.map((c) => kqDot(otherAlias, c.columnName)),

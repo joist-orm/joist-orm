@@ -12,14 +12,17 @@ import {
   type Flavor,
   getField,
   type GraphQLFilterOf,
+  hasLazyField,
   hasMany,
   isLoaded,
   type JsonPayload,
+  type LazyField,
   type Lens,
   type Loaded,
   type LoadHint,
   loadLens,
   newChangesProxy,
+  newRequiredLazyFieldRule,
   newRequiredRule,
   newScopeFn,
   type OptsOf,
@@ -54,6 +57,8 @@ export type ParentGroupId = Flavor<string, "ParentGroup">;
 export interface ParentGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  bulkData: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
+  requiredData: { kind: "primitive"; type: Object; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   childGroups: { kind: "o2m"; type: ChildGroup };
@@ -62,6 +67,8 @@ export interface ParentGroupFields {
 
 export interface ParentGroupOpts {
   name?: string | null;
+  bulkData?: Object | null;
+  requiredData: Object;
   childGroups?: ChildGroup[];
   parentItems?: ParentItem[];
 }
@@ -74,6 +81,8 @@ export interface ParentGroupIdsOpts {
 export interface ParentGroupFilter {
   id?: ValueFilter<ParentGroupId, never> | null;
   name?: ValueFilter<string, null>;
+  bulkData?: ValueFilter<Object, null>;
+  requiredData?: ValueFilter<Object, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
@@ -83,6 +92,8 @@ export interface ParentGroupFilter {
 export interface ParentGroupGraphQLFilter {
   id?: ValueGraphQLFilter<ParentGroupId>;
   name?: ValueGraphQLFilter<string>;
+  bulkData?: ValueGraphQLFilter<Object>;
+  requiredData?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
@@ -92,6 +103,8 @@ export interface ParentGroupGraphQLFilter {
 export interface ParentGroupOrder {
   id?: OrderBy;
   name?: OrderBy;
+  bulkData?: OrderBy;
+  requiredData?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -108,6 +121,7 @@ export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
 
 export const parentGroupScope = newScopeFn<ParentGroup, ParentGroupScope>("ParentGroup");
 
+parentGroupConfig.addRule(newRequiredLazyFieldRule("requiredData"));
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -135,6 +149,8 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   readonly childGroups: Collection<ParentGroup, ChildGroup> = hasMany();
   readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany();
+  readonly bulkData: LazyField<ParentGroup, Object | undefined> = hasLazyField();
+  readonly requiredData: LazyField<ParentGroup, Object> = hasLazyField();
 
   get id(): ParentGroupId {
     return this.idMaybe || failNoIdYet("ParentGroup");

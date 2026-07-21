@@ -81,7 +81,10 @@
       "relations": { "spotlightAuthor": { "notNull": true } },
       "tag": "p"
     },
-    "ParentGroup": { "tag": "parentGroup" },
+    "ParentGroup": {
+      "fields": { "bulkData": { "lazy": true }, "requiredData": { "lazy": true } },
+      "tag": "parentGroup"
+    },
     "ParentItem": { "tag": "pi" },
     "Publisher": {
       "abstract": true,

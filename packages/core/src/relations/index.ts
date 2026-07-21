@@ -19,6 +19,7 @@ export {
   isAsyncProperty,
   isLoadedAsyncProperty,
 } from "./AsyncProperty";
+export { LazyField, LazyFieldImpl, hasLazyField, isLazyField, isLoadedLazyField } from "./LazyField";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";

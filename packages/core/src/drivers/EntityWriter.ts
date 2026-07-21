@@ -135,17 +135,40 @@ function addUpdates(ops: Ops, todo: Todo): void {
         for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
           const op = newUpdateOp(meta, group);
           if (op) ops.updates.push(op);
+          addLazyUpdates(ops, meta, group);
         }
       } else if (meta.inheritanceType === "sti") {
         const op = newUpdateOp(meta, todo.updates);
         if (op) ops.updates.push(op);
+        addLazyUpdates(ops, meta, todo.updates);
       } else {
         throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
       const op = newUpdateOp(meta, todo.updates);
       if (op) ops.updates.push(op);
+      addLazyUpdates(ops, meta, todo.updates);
     }
+  }
+}
+
+/**
+ * Writes changed `lazy` columns via a targeted `UPDATE table SET lazy_col = ... WHERE id in (...)`.
+ *
+ * Lazy columns are excluded from the main batch UPDATE (which spans the batch's union of changed fields),
+ * so that entities in the batch that never loaded a lazy column keep their existing db value instead of
+ * being overwritten with null. Here we write each lazy column only for the entities that actually changed it.
+ */
+function addLazyUpdates(ops: Ops, meta: EntityMetadata, entities: Entity[]): void {
+  const idColumn = meta.fields["id"].serde!.columns[0];
+  for (const fieldName of meta.lazyFieldNames!) {
+    const field = meta.fields[fieldName];
+    if (!hasSerde(field)) continue;
+    const changed = entities.filter((e) => getInstanceData(e).changedFields.includes(fieldName));
+    if (changed.length === 0) continue;
+    const columns: BindingColumn[] = [idColumn, ...field.serde.columns];
+    const columnValues = collectBindings(changed, meta.tableName, columns, undefined);
+    ops.updates.push({ tableName: meta.tableName, columns, columnValues, updatedAt: undefined });
   }
 }
 
@@ -169,12 +192,15 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   const updatedAt = meta.timestampFields?.updatedAt;
   changedFields.add("id");
   if (updatedAt) changedFields.add(updatedAt);
+  // `lazy` columns are deliberately excluded from the batch UPDATE and written by `addLazyUpdates`; an
+  // entity that never loaded a lazy column isn't in `row`, so forcing `getField` here would clobber it to null.
+  const lazyFieldNames = meta.lazyFieldNames!;
   for (const entity of entities) {
     const { data } = getInstanceData(entity);
     for (const key of changedFields) {
       // Check isChangeableField because we might be updating the base `publishers` table
       // and `originalData` might have fields from a subclass `large_publishers` table.
-      if (!(key in data) && isChangeableField(entity, key)) {
+      if (!(key in data) && isChangeableField(entity, key) && !lazyFieldNames.has(key)) {
         getField(entity, key);
       }
     }
@@ -191,6 +217,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
       : Object.values(meta.fields)
   )
     .filter((f) => changedFields.has(f.fieldName))
+    .filter((f) => !lazyFieldNames.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
 

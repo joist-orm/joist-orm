@@ -132,6 +132,99 @@ The getter will still be public.
 }
 ```
 
+## Lazy Fields
+
+Sometimes a table has a large column—a big `jsonb` blob, or a large `text` document—that you only occasionally need, and that would be wasteful to fetch on every `em.load` / `em.find`.
+
+You can mark such a column as `lazy` in `joist-config.json`:
+
+```json
+{
+  "entities": {
+    "Author": {
+      "fields": {
+        "bulkData": { "lazy": true }
+      }
+    }
+  }
+}
+```
+
+Instead of a plain getter/setter, Joist generates the column as a relation-like `LazyField`, and **excludes it from the entity's default `SELECT`**:
+
+```ts
+// This code is auto-generated
+class AuthorCodegen {
+  readonly bulkData: LazyField<Author, Object | undefined> = hasLazyField();
+}
+```
+
+So loading an `Author` no longer fetches `bulk_data`:
+
+```ts
+// SELECT id, first_name, ... FROM authors WHERE id = ANY($1)  -- note: no bulk_data
+const author = await em.load(Author, "a:1");
+```
+
+### Loading the value
+
+Like other relations, a `LazyField` is not `.get`-able until it's been loaded. You can load it on demand with `.load()`:
+
+```ts
+// SELECT id, bulk_data FROM authors WHERE id = ANY($1)
+const data = await author.bulkData.load();
+```
+
+`.load()` batches across entities, so loading the same lazy field for a page of authors is a single query.
+
+Or you can populate it up front, and then access it synchronously via `.get`:
+
+```ts
+const author = await em.load(Author, "a:1", "bulkData");
+// Now available synchronously
+console.log(author.bulkData.get);
+```
+
+Accessing `.get` before the field is loaded throws, the same as an unloaded [`AsyncProperty`](/modeling/relations).
+
+### Reading & writing
+
+New entities keep their value in memory, so there's nothing to lazy-load:
+
+```ts
+const author = em.create(Author, { firstName: "a1", bulkData: { ... } });
+// Readable immediately, without a `.load()`
+author.bulkData.get;
+```
+
+You can set the value with `.set()` (or via `em.create` / `set` opts), and it is persisted on the next `em.flush`:
+
+```ts
+author.bulkData.set({ ... });
+await em.flush();
+```
+
+Lazy columns are also excluded from the batched `UPDATE` that Joist issues for changed entities, and are instead written by a targeted `UPDATE` for only the entities that actually changed them. This means updating some _other_ field on an entity whose lazy column was never loaded will not accidentally overwrite it.
+
+### Required lazy fields
+
+A `lazy` column can be `not null`, in which case it is required on `em.create`, just like any other required field:
+
+```ts
+// Not valid — bulkData is required
+em.create(Author, { firstName: "a1" });
+// Valid
+em.create(Author, { firstName: "a1", bulkData: { ... } });
+```
+
+The required validation is lazy-aware: it will not force-load (or falsely fail) the column when you flush an unrelated change to an entity that never loaded it.
+
+:::note
+
+You can `.set()` a lazy field without loading it first—including `.set(undefined)` to unset it—i.e. a "blind overwrite" that avoids fetching a large blob just to replace it. Because the current database value is unknown, Joist always treats a set on an unloaded field as a change, and `changes.bulkData.originalValue` will be `undefined`.
+
+:::
+
 ## Field Defaults
 
 ### Schema Defaults

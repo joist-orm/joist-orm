@@ -28,6 +28,8 @@ const fieldConfig = z
     notNull: z.optional(z.boolean()),
     // Allow overriding scanEntities default detection for fields with defaults added by helpers
     hasDefault: z.optional(z.boolean()),
+    // Exclude a (large jsonb/text) column from the default SELECT and expose it as a lazy-loaded LazyField
+    lazy: z.optional(z.boolean()),
   })
   .strict();
 
@@ -286,6 +288,11 @@ export function isReactiveManyToMany(config: Config, entity: Entity, fieldName: 
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
+}
+
+/** Whether a column should be excluded from the default SELECT and exposed as a lazy-loaded `LazyField`. */
+export function isLazyField(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.fields?.[fieldName]?.lazy === true;
 }
 
 export function serdeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {

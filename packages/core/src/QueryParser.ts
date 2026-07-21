@@ -702,7 +702,11 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = getAlias(meta.tableName);
-  selects.push(`${kq(alias)}.*`);
+  if (meta.hasLazyColumns) {
+    selects.push(...lazyExcludedSelects(meta, alias));
+  } else {
+    selects.push(`${kq(alias)}.*`);
+  }
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
 
   // If they passed extra `conditions: ...`, parse that
@@ -1186,6 +1190,22 @@ export function addTablePerClassJoinsAndClassTag(
       selects.push(`CASE ${cases.join(" ")} ELSE '_' END as __class`);
     }
   }
+}
+
+/**
+ * Builds the primary table's SELECT columns explicitly, i.e. excluding any `lazy` columns.
+ *
+ * Only used when `meta.hasLazyColumns` is true; otherwise callers keep their plain `alias.*`, so
+ * that entities without lazy columns emit byte-identical SQL to before this feature existed.
+ */
+export function lazyExcludedSelects(meta: EntityMetadata, alias: string): string[] {
+  const selects: string[] = [];
+  for (const field of Object.values(meta.fields)) {
+    if (!field.serde) continue;
+    if (field.kind === "primitive" && field.lazy) continue;
+    for (const column of field.serde.columns) selects.push(kqDot(alias, column.columnName));
+  }
+  return selects;
 }
 
 export function maybeAddNotSoftDeleted(

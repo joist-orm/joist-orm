@@ -143,6 +143,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
         serde: ${serde},
         immutable: false,
+        ${p.lazy ? code`lazy: true,` : ""}
         ${extras}
         ${maybeDefault(p)}
         ${maybeSanitize(config, p)}

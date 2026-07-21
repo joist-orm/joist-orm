@@ -299,14 +299,14 @@ Commit: `vskstonzrotq` / `8f821e20d5a0` (`perf: Optimize entity hydration regist
 
 Artifact files: `p01-before-correct.txt`, `p01-after-correct.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `author_fresh_register` | 100000 | 53.919 | 44.809 | 16.9% | Confirmed |
-| `author_fresh_register_scalar_reads` | 100000 | 118.519 | 110.296 | 6.9% | Confirmed |
-| `author_existing_no_overwrite` | 100000 | 81.627 | 58.681 | 28.1% | Confirmed |
-| `author_existing_overwrite_cold_data` | 100000 | 98.738 | 69.156 | 30.0% | Confirmed |
-| `author_existing_overwrite_warm_data` | 100000 | 211.438 | 168.765 | 20.2% | Confirmed |
-| `task_sti_fresh_register` | 100000 | 64.434 | 54.031 | 16.1% | Confirmed |
+| Scenario                              |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Result    |
+| ------------------------------------- | -----: | ---------------: | --------------: | ------: | --------- |
+| `author_fresh_register`               | 100000 |           53.919 |          44.809 |   16.9% | Confirmed |
+| `author_fresh_register_scalar_reads`  | 100000 |          118.519 |         110.296 |    6.9% | Confirmed |
+| `author_existing_no_overwrite`        | 100000 |           81.627 |          58.681 |   28.1% | Confirmed |
+| `author_existing_overwrite_cold_data` | 100000 |           98.738 |          69.156 |   30.0% | Confirmed |
+| `author_existing_overwrite_warm_data` | 100000 |          211.438 |         168.765 |   20.2% | Confirmed |
+| `task_sti_fresh_register`             | 100000 |           64.434 |          54.031 |   16.1% | Confirmed |
 
 ### Phase 2: Identity-Map LoadAll Paths
 
@@ -314,12 +314,12 @@ Commit: `tullpyrwolpo` / `98f0b33b3f14` (`perf: Optimize identity-map loadAll pa
 
 Artifact files: `p02-before.txt`, `p02-after.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `load_all_hits_untagged` | 100000 | 23.766 | 18.754 | 21.1% | Confirmed |
-| `load_all_hits_tagged` | 100000 | 25.899 | 17.065 | 34.1% | Confirmed |
-| `load_all_if_exists_hits_untagged` | 100000 | 22.134 | 19.713 | 10.9% | Confirmed |
-| `load_all_if_exists_hits_tagged` | 100000 | 26.167 | 18.126 | 30.7% | Confirmed |
+| Scenario                           |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Result    |
+| ---------------------------------- | -----: | ---------------: | --------------: | ------: | --------- |
+| `load_all_hits_untagged`           | 100000 |           23.766 |          18.754 |   21.1% | Confirmed |
+| `load_all_hits_tagged`             | 100000 |           25.899 |          17.065 |   34.1% | Confirmed |
+| `load_all_if_exists_hits_untagged` | 100000 |           22.134 |          19.713 |   10.9% | Confirmed |
+| `load_all_if_exists_hits_tagged`   | 100000 |           26.167 |          18.126 |   30.7% | Confirmed |
 
 ### Phase 3: Sparse Flush Scanning
 
@@ -327,16 +327,16 @@ Commit: `zuyzpvqppmsl` / `36d6a73bc10f` (`perf: Optimize sparse flush scanning`)
 
 Artifact files: `p03-before.txt`, `p03-after.txt`
 
-| Scenario | Size | Dirty | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `flush_dirty_0_validation` | 100000 | 0 | 4.154 | 0.101 | 97.6% | Confirmed |
-| `flush_dirty_0_skip_validation` | 100000 | 0 | 3.658 | 0.069 | 98.1% | Confirmed |
-| `flush_dirty_1_validation` | 100000 | 1 | 7.139 | 0.946 | 86.7% | Confirmed |
-| `flush_dirty_1_skip_validation` | 100000 | 1 | 6.657 | 0.738 | 88.9% | Confirmed |
-| `flush_dirty_100_validation` | 100000 | 100 | 11.195 | 6.392 | 42.9% | Confirmed |
-| `flush_dirty_100_skip_validation` | 100000 | 100 | 9.450 | 4.773 | 49.5% | Confirmed |
-| `flush_dirty_10000_validation` | 100000 | 10000 | 576.799 | 576.927 | -0.0% | Neutral |
-| `flush_dirty_10000_skip_validation` | 100000 | 10000 | 404.339 | 371.057 | 8.2% | Confirmed |
+| Scenario                            |   Size | Dirty | Before Mean (ms) | After Mean (ms) | Speedup | Result    |
+| ----------------------------------- | -----: | ----: | ---------------: | --------------: | ------: | --------- |
+| `flush_dirty_0_validation`          | 100000 |     0 |            4.154 |           0.101 |   97.6% | Confirmed |
+| `flush_dirty_0_skip_validation`     | 100000 |     0 |            3.658 |           0.069 |   98.1% | Confirmed |
+| `flush_dirty_1_validation`          | 100000 |     1 |            7.139 |           0.946 |   86.7% | Confirmed |
+| `flush_dirty_1_skip_validation`     | 100000 |     1 |            6.657 |           0.738 |   88.9% | Confirmed |
+| `flush_dirty_100_validation`        | 100000 |   100 |           11.195 |           6.392 |   42.9% | Confirmed |
+| `flush_dirty_100_skip_validation`   | 100000 |   100 |            9.450 |           4.773 |   49.5% | Confirmed |
+| `flush_dirty_10000_validation`      | 100000 | 10000 |          576.799 |         576.927 |   -0.0% | Neutral   |
+| `flush_dirty_10000_skip_validation` | 100000 | 10000 |          404.339 |         371.057 |    8.2% | Confirmed |
 
 ### Phase 4: Todo Creation And Grouping
 
@@ -346,13 +346,13 @@ Artifact files: `p04-before.txt`, `p04-after.txt`
 
 This commit only added the benchmark, so no production speedup was expected. The before/after changes are benchmark noise.
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `todo_author_inserts` | 100000 | 6.780 | 6.888 | -1.6% | Noise |
-| `todo_group_author_inserts` | 100000 | 6.750 | 6.675 | 1.1% | Noise |
-| `todo_mixed_author_ops` | 100000 | 7.505 | 7.589 | -1.1% | Noise |
-| `todo_sti_task_inserts` | 100000 | 7.113 | 7.176 | -0.9% | Noise |
-| `todo_group_sti_task_inserts` | 100000 | 11.250 | 10.961 | 2.6% | Noise |
+| Scenario                      |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| ----------------------------- | -----: | ---------------: | --------------: | ------: | ------ |
+| `todo_author_inserts`         | 100000 |            6.780 |           6.888 |   -1.6% | Noise  |
+| `todo_group_author_inserts`   | 100000 |            6.750 |           6.675 |    1.1% | Noise  |
+| `todo_mixed_author_ops`       | 100000 |            7.505 |           7.589 |   -1.1% | Noise  |
+| `todo_sti_task_inserts`       | 100000 |            7.113 |           7.176 |   -0.9% | Noise  |
+| `todo_group_sti_task_inserts` | 100000 |           11.250 |          10.961 |    2.6% | Noise  |
 
 ### Phase 5: SQL Operation Generation And Binding Collection
 
@@ -360,17 +360,17 @@ Commit: `pkmnqklpyquk` / `5850dae96fc1` (`perf: Optimize entity writer binding c
 
 Artifact files: `p05-before.txt`, `p05-after.txt`
 
-| Scenario | Size | Columns | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `writer_insert_ops` | 100000 | 5 | 11.089 | 5.874 | 47.0% | Confirmed |
-| `writer_update_same_field_ops` | 100000 | 5 | 9.170 | 7.359 | 19.8% | Confirmed, noisy |
-| `writer_update_distinct_fields_ops` | 100000 | 5 | 13.527 | 13.932 | -3.0% | Noisy regression |
-| `writer_insert_ops` | 100000 | 20 | 73.651 | 52.948 | 28.1% | Confirmed |
-| `writer_update_same_field_ops` | 100000 | 20 | 13.281 | 11.483 | 13.5% | Confirmed |
-| `writer_update_distinct_fields_ops` | 100000 | 20 | 101.203 | 67.222 | 33.6% | Confirmed |
-| `writer_insert_ops` | 100000 | 50 | 281.948 | 149.503 | 47.0% | Confirmed |
-| `writer_update_same_field_ops` | 100000 | 50 | 21.341 | 12.894 | 39.6% | Confirmed |
-| `writer_update_distinct_fields_ops` | 100000 | 50 | 267.971 | 187.025 | 30.2% | Confirmed |
+| Scenario                            |   Size | Columns | Before Mean (ms) | After Mean (ms) | Speedup | Result           |
+| ----------------------------------- | -----: | ------: | ---------------: | --------------: | ------: | ---------------- |
+| `writer_insert_ops`                 | 100000 |       5 |           11.089 |           5.874 |   47.0% | Confirmed        |
+| `writer_update_same_field_ops`      | 100000 |       5 |            9.170 |           7.359 |   19.8% | Confirmed, noisy |
+| `writer_update_distinct_fields_ops` | 100000 |       5 |           13.527 |          13.932 |   -3.0% | Noisy regression |
+| `writer_insert_ops`                 | 100000 |      20 |           73.651 |          52.948 |   28.1% | Confirmed        |
+| `writer_update_same_field_ops`      | 100000 |      20 |           13.281 |          11.483 |   13.5% | Confirmed        |
+| `writer_update_distinct_fields_ops` | 100000 |      20 |          101.203 |          67.222 |   33.6% | Confirmed        |
+| `writer_insert_ops`                 | 100000 |      50 |          281.948 |         149.503 |   47.0% | Confirmed        |
+| `writer_update_same_field_ops`      | 100000 |      50 |           21.341 |          12.894 |   39.6% | Confirmed        |
+| `writer_update_distinct_fields_ops` | 100000 |      50 |          267.971 |         187.025 |   30.2% | Confirmed        |
 
 ### Phase 6: Field Mutation Cost
 
@@ -378,14 +378,14 @@ Commit: `wrmuzrknwkvu` / `1977fdc32d8e` (`perf: Optimize field mutation equality
 
 Artifact files: `p06-before.txt`, `p06-after.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `field_primitive_noop_set` | 100000 | 16.005 | 16.067 | -0.4% | Neutral |
-| `field_primitive_actual_change` | 100000 | 160.966 | 150.857 | 6.3% | Confirmed |
-| `field_primitive_revert_change` | 100000 | 125.869 | 120.949 | 3.9% | Confirmed |
-| `field_primitive_indexed_change` | 100000 | 344.070 | 352.150 | -2.3% | Noisy regression |
-| `field_m2o_entity_change` | 100000 | 379.953 | 372.604 | 1.9% | Small gain |
-| `field_m2o_id_change` | 100000 | 380.774 | 372.330 | 2.2% | Small gain |
+| Scenario                         |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Result           |
+| -------------------------------- | -----: | ---------------: | --------------: | ------: | ---------------- |
+| `field_primitive_noop_set`       | 100000 |           16.005 |          16.067 |   -0.4% | Neutral          |
+| `field_primitive_actual_change`  | 100000 |          160.966 |         150.857 |    6.3% | Confirmed        |
+| `field_primitive_revert_change`  | 100000 |          125.869 |         120.949 |    3.9% | Confirmed        |
+| `field_primitive_indexed_change` | 100000 |          344.070 |         352.150 |   -2.3% | Noisy regression |
+| `field_m2o_entity_change`        | 100000 |          379.953 |         372.604 |    1.9% | Small gain       |
+| `field_m2o_id_change`            | 100000 |          380.774 |         372.330 |    2.2% | Small gain       |
 
 ### Phase 7: In-Memory Find Indexing
 
@@ -393,13 +393,13 @@ Commit: `wtzslymorkqt` / `1fdce8d358a3` (`perf: Lazily build find indexes`)
 
 Artifact files: `p07-before.txt`, `p07-after.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Before Retained MB | After Retained MB | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `find_index_single_field_first_build` | 100000 | 1517.409 | 23.668 | 98.4% | 713.615 | 17.999 | Confirmed |
-| `find_index_single_field_steady_state` | 100000 | 0.215 | 0.152 | 29.3% | -0.022 | 0.001 | Confirmed |
-| `find_index_two_field_steady_state` | 100000 | 0.329 | 0.178 | 45.9% | -0.023 | -0.000 | Confirmed |
-| `find_index_missing_value_steady_state` | 100000 | 0.180 | 0.090 | 50.0% | -0.023 | -0.000 | Confirmed |
-| `find_index_relation_value_steady_state` | 100000 | 23.182 | 11.393 | 50.9% | -0.024 | -0.023 | Confirmed |
+| Scenario                                 |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Before Retained MB | After Retained MB | Result    |
+| ---------------------------------------- | -----: | ---------------: | --------------: | ------: | -----------------: | ----------------: | --------- |
+| `find_index_single_field_first_build`    | 100000 |         1517.409 |          23.668 |   98.4% |            713.615 |            17.999 | Confirmed |
+| `find_index_single_field_steady_state`   | 100000 |            0.215 |           0.152 |   29.3% |             -0.022 |             0.001 | Confirmed |
+| `find_index_two_field_steady_state`      | 100000 |            0.329 |           0.178 |   45.9% |             -0.023 |            -0.000 | Confirmed |
+| `find_index_missing_value_steady_state`  | 100000 |            0.180 |           0.090 |   50.0% |             -0.023 |            -0.000 | Confirmed |
+| `find_index_relation_value_steady_state` | 100000 |           23.182 |          11.393 |   50.9% |             -0.024 |            -0.023 | Confirmed |
 
 ### Phase 8: Find Query Preparation And Batching
 
@@ -407,11 +407,11 @@ Commit: `zzxyrovsvytp` / `575bb7e859b6` (`perf: Optimize find filter cache keys`
 
 Artifact files: `p08-before.txt`, `p08-after.txt`
 
-| Scenario | Batched Queries | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `find_query_prep_one_field` | 1000 | 27.335 | 12.026 | 56.0% | Confirmed |
-| `find_query_prep_two_fields` | 1000 | 29.819 | 14.029 | 52.9% | Confirmed |
-| `find_query_prep_with_hint` | 1000 | 26.891 | 11.412 | 57.6% | Confirmed |
+| Scenario                     | Batched Queries | Before Mean (ms) | After Mean (ms) | Speedup | Result    |
+| ---------------------------- | --------------: | ---------------: | --------------: | ------: | --------- |
+| `find_query_prep_one_field`  |            1000 |           27.335 |          12.026 |   56.0% | Confirmed |
+| `find_query_prep_two_fields` |            1000 |           29.819 |          14.029 |   52.9% | Confirmed |
+| `find_query_prep_with_hint`  |            1000 |           26.891 |          11.412 |   57.6% | Confirmed |
 
 ### Phase 9: Populate Breadth-First Loading
 
@@ -419,12 +419,12 @@ Commit: `znquoxpznkmk` / `c1247f20b70b` (`perf: Optimize already-loaded populate
 
 Artifact files: `p09-before.txt`, `p09-after.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Query Count Before | Query Count After | Result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `populate_books` | 10000 | 107.559 | 111.892 | -4.0% | 1.000 | 1.000 | DB variance / non-target path |
-| `populate_books_reviews` | 10000 | 331.788 | 352.467 | -6.2% | 1.000 | 1.000 | DB variance / non-target path |
-| `populate_books_already_loaded` | 10000 | 10.570 | 8.210 | 22.3% | 0.000 | 0.000 | Confirmed |
-| `populate_books_reviews_already_loaded` | 10000 | 24.526 | 16.538 | 32.6% | 0.000 | 0.000 | Confirmed |
+| Scenario                                |  Size | Before Mean (ms) | After Mean (ms) | Speedup | Query Count Before | Query Count After | Result                        |
+| --------------------------------------- | ----: | ---------------: | --------------: | ------: | -----------------: | ----------------: | ----------------------------- |
+| `populate_books`                        | 10000 |          107.559 |         111.892 |   -4.0% |              1.000 |             1.000 | DB variance / non-target path |
+| `populate_books_reviews`                | 10000 |          331.788 |         352.467 |   -6.2% |              1.000 |             1.000 | DB variance / non-target path |
+| `populate_books_already_loaded`         | 10000 |           10.570 |           8.210 |   22.3% |              0.000 |             0.000 | Confirmed                     |
+| `populate_books_reviews_already_loaded` | 10000 |           24.526 |          16.538 |   32.6% |              0.000 |             0.000 | Confirmed                     |
 
 ### Phase 10: Reactive Recalculation Queueing
 
@@ -432,15 +432,15 @@ Commit: `yzyrpprzszll` / `f322f6bca433` (`perf: Optimize reactive queue lookups`
 
 Artifact files: `p10-before.txt`, `p10-after.txt`
 
-| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `reactive_queue_no_reactables` | 100000 | 55.525 | 31.457 | 43.3% | Confirmed |
-| `reactive_queue_one_reaction` | 100000 | 77.470 | 48.119 | 37.9% | Confirmed |
-| `reactive_queue_multiple_downstream` | 100000 | 108.912 | 84.319 | 22.6% | Confirmed |
-| `reactive_queue_created_all_downstream` | 100000 | 1254.864 | 1243.532 | 0.9% | Small gain |
-| `reactive_queue_deleted_all_downstream` | 100000 | 1254.253 | 1216.862 | 3.0% | Small gain |
-| `reactive_recalc_one_reaction` | 100000 | 396.627 | 388.042 | 2.2% | Small gain |
-| `reactive_recalc_multiple_downstream` | 100000 | 826.557 | 782.872 | 5.3% | Confirmed |
+| Scenario                                |   Size | Before Mean (ms) | After Mean (ms) | Speedup | Result     |
+| --------------------------------------- | -----: | ---------------: | --------------: | ------: | ---------- |
+| `reactive_queue_no_reactables`          | 100000 |           55.525 |          31.457 |   43.3% | Confirmed  |
+| `reactive_queue_one_reaction`           | 100000 |           77.470 |          48.119 |   37.9% | Confirmed  |
+| `reactive_queue_multiple_downstream`    | 100000 |          108.912 |          84.319 |   22.6% | Confirmed  |
+| `reactive_queue_created_all_downstream` | 100000 |         1254.864 |        1243.532 |    0.9% | Small gain |
+| `reactive_queue_deleted_all_downstream` | 100000 |         1254.253 |        1216.862 |    3.0% | Small gain |
+| `reactive_recalc_one_reaction`          | 100000 |          396.627 |         388.042 |    2.2% | Small gain |
+| `reactive_recalc_multiple_downstream`   | 100000 |          826.557 |         782.872 |    5.3% | Confirmed  |
 
 ## Appendix B: Additional Optimizations
 
@@ -450,18 +450,18 @@ After the per-commit verification pass, each phase was reviewed again with targe
 
 Low-risk follow-ups were kept when they produced a plausible benchmark improvement in the targeted scenario without changing query counts or public behavior. One additional `loadAll` direct-map lookup experiment was measured and then dropped because the 100k `loadAll` benchmark was neutral to slightly slower than the phase-2 post-commit baseline.
 
-| Phase | Change | Benchmark | Baseline Mean (ms) | Follow-Up Mean (ms) | Delta | Result |
-| --- | --- | --- | ---: | ---: | ---: | --- |
-| 7 | Avoid union-set allocation in `FieldIndex.get` when one relation-value candidate set already contains the other. | `find_index_relation_value_steady_state` | 11.626 | 9.577 | 17.6% faster | Kept |
-| 7 | Same change, non-target scenarios. | `find_index_single_field_first_build` | 24.262 | 25.198 | 3.9% slower | Noise / non-target |
-| 7 | Same change, non-target scenarios. | `find_index_two_field_steady_state` | 0.190 | 0.326 | 71.6% slower | Sub-ms noise, high RSD |
-| 9 | Cache each direct relation loader/promise once per field in `populateBatchLoader`'s direct-loader path. | `populate_books_reviews` (`PLUGINS=`) | 239.033 | 214.255 | 10.4% faster | Kept; queries unchanged at 2 |
-| 9 | Same change, deep direct-loader path. | `populate_deep_books_reviews_comments` (`PLUGINS=`) | 752.405 | 720.954 | 4.2% faster | Kept; queries unchanged at 4 |
-| 9 | Same change, simple direct-loader path. | `populate_books` (`PLUGINS=`) | 95.423 | 96.277 | 0.9% slower | Noise / simple path, queries unchanged |
-| 9 | Same change, default-plugin fresh breadth path. | `populate_books_reviews` | 251.194 | 267.197 | 6.4% slower | Noise / preloader-dominated path, queries unchanged |
-| 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_one_reaction` | 388.042 | 380.867 | 1.8% faster | Kept |
-| 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_multiple_downstream` | 782.872 | 722.132 | 7.8% faster | Kept |
-| 10 | Same change, queue-only/non-target scenario. | `reactive_queue_created_all_downstream` | 1243.532 | 1359.566 | 9.3% slower | Noise / non-target, RSD 11.2% |
+| Phase | Change                                                                                                           | Benchmark                                           | Baseline Mean (ms) | Follow-Up Mean (ms) |        Delta | Result                                              |
+| ----- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -----------------: | ------------------: | -----------: | --------------------------------------------------- |
+| 7     | Avoid union-set allocation in `FieldIndex.get` when one relation-value candidate set already contains the other. | `find_index_relation_value_steady_state`            |             11.626 |               9.577 | 17.6% faster | Kept                                                |
+| 7     | Same change, non-target scenarios.                                                                               | `find_index_single_field_first_build`               |             24.262 |              25.198 |  3.9% slower | Noise / non-target                                  |
+| 7     | Same change, non-target scenarios.                                                                               | `find_index_two_field_steady_state`                 |              0.190 |               0.326 | 71.6% slower | Sub-ms noise, high RSD                              |
+| 9     | Cache each direct relation loader/promise once per field in `populateBatchLoader`'s direct-loader path.          | `populate_books_reviews` (`PLUGINS=`)               |            239.033 |             214.255 | 10.4% faster | Kept; queries unchanged at 2                        |
+| 9     | Same change, deep direct-loader path.                                                                            | `populate_deep_books_reviews_comments` (`PLUGINS=`) |            752.405 |             720.954 |  4.2% faster | Kept; queries unchanged at 4                        |
+| 9     | Same change, simple direct-loader path.                                                                          | `populate_books` (`PLUGINS=`)                       |             95.423 |              96.277 |  0.9% slower | Noise / simple path, queries unchanged              |
+| 9     | Same change, default-plugin fresh breadth path.                                                                  | `populate_books_reviews`                            |            251.194 |             267.197 |  6.4% slower | Noise / preloader-dominated path, queries unchanged |
+| 10    | Skip `followReverseHint` for empty reverse paths during reactive recalculation.                                  | `reactive_recalc_one_reaction`                      |            388.042 |             380.867 |  1.8% faster | Kept                                                |
+| 10    | Skip `followReverseHint` for empty reverse paths during reactive recalculation.                                  | `reactive_recalc_multiple_downstream`               |            782.872 |             722.132 |  7.8% faster | Kept                                                |
+| 10    | Same change, queue-only/non-target scenario.                                                                     | `reactive_queue_created_all_downstream`             |           1243.532 |            1359.566 |  9.3% slower | Noise / non-target, RSD 11.2%                       |
 
 ### Measured But Not Kept
 
@@ -479,33 +479,33 @@ PLUGINS= BENCH_SIZES=5000 BENCH_ITERATIONS=5 BENCH_WARMUPS=1 NODE_OPTIONS=--expo
 PLUGINS= BENCH_SIZES=1000 BENCH_ITERATIONS=5 BENCH_WARMUPS=1 BENCH_REPEAT=100 NODE_OPTIONS=--expose-gc yarn env-cmd tsx benchmark-populate-deep.ts
 ```
 
-| Scenario | Size | Baseline Mean (ms) | Optimized Mean (ms) | Delta | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `populate_deep_books_reviews_comments` | 2000 | 137.301 | 136.005 | 0.9% faster | Noise / neutral |
-| `populate_deep_books_reviews_comments_already_loaded` | 2000 | 9.444 | 9.649 | 2.2% slower | Noise / neutral |
-| `populate_deep_books_reviews_comments` | 5000 | 342.865 | 350.964 | 2.4% slower | Not kept |
-| `populate_deep_books_reviews_comments_already_loaded` | 5000 | 22.228 | 22.304 | 0.3% slower | Neutral |
-| `populate_deep_books_reviews_comments` | 1000 | 74.497 | 69.264 | 7.0% faster | Noisy / non-target |
-| `populate_deep_books_reviews_comments_already_loaded` | 1000 | 4.662 | 5.678 | 21.8% slower | Not kept |
-| `populate_deep_books_reviews_comments_already_loaded_repeat` | 1000 | 73.383 | 73.106 | 0.4% faster | Neutral |
-| `populate_deep_books_reviews_comments` | 5000 | 402.881 | 346.606 | 14.0% faster | Not kept; queries 1 -> 4 |
-| `populate_books` | 5000 | 57.740 | 46.367 | 19.7% faster | Not kept; query count unchanged but tied to bypass experiment |
-| `populate_books_reviews` | 5000 | 132.351 | 111.710 | 15.6% faster | Not kept; queries 1 -> 2 |
+| Scenario                                                     | Size | Baseline Mean (ms) | Optimized Mean (ms) |        Delta | Result                                                        |
+| ------------------------------------------------------------ | ---: | -----------------: | ------------------: | -----------: | ------------------------------------------------------------- |
+| `populate_deep_books_reviews_comments`                       | 2000 |            137.301 |             136.005 |  0.9% faster | Noise / neutral                                               |
+| `populate_deep_books_reviews_comments_already_loaded`        | 2000 |              9.444 |               9.649 |  2.2% slower | Noise / neutral                                               |
+| `populate_deep_books_reviews_comments`                       | 5000 |            342.865 |             350.964 |  2.4% slower | Not kept                                                      |
+| `populate_deep_books_reviews_comments_already_loaded`        | 5000 |             22.228 |              22.304 |  0.3% slower | Neutral                                                       |
+| `populate_deep_books_reviews_comments`                       | 1000 |             74.497 |              69.264 |  7.0% faster | Noisy / non-target                                            |
+| `populate_deep_books_reviews_comments_already_loaded`        | 1000 |              4.662 |               5.678 | 21.8% slower | Not kept                                                      |
+| `populate_deep_books_reviews_comments_already_loaded_repeat` | 1000 |             73.383 |              73.106 |  0.4% faster | Neutral                                                       |
+| `populate_deep_books_reviews_comments`                       | 5000 |            402.881 |             346.606 | 14.0% faster | Not kept; queries 1 -> 4                                      |
+| `populate_books`                                             | 5000 |             57.740 |              46.367 | 19.7% faster | Not kept; query count unchanged but tied to bypass experiment |
+| `populate_books_reviews`                                     | 5000 |            132.351 |             111.710 | 15.6% faster | Not kept; queries 1 -> 2                                      |
 
 ### Phase-by-Phase Findings
 
-| Phase | Hotspot Evidence | Larger Opportunity | Risk / Next Benchmark |
-| --- | --- | --- | --- |
-| 1. Hydration and registration | CPU samples still showed `findExistingInstance`, `hydrate`, `#doRegister`, `baseEntityCstr`, `getField`, and overwrite `changes` proxy creation. | Replace overwrite refresh's public `changes.fieldsWithoutRelations` path with direct internal `InstanceData.originalData` access; add a no-index fast path around registration indexing; consider non-inheritance metadata fast paths. | Medium for overwrite semantics; rerun all hydration scenarios, especially warm overwrite. |
-| 2. Identity-map `loadAll` | Direct `#entitiesById.get` did not outperform the existing post-commit code in the 100k all-hit benchmark. | The bigger remaining win is avoiding full normalized-id/result rebuild allocations in all-hit and `loadAllIfExists` miss paths. | Medium because duplicate ids, not-found ordering, STI checks, and partial misses must stay exact; add mixed hit/miss benchmarks before changing. |
-| 3. Sparse flush scanning | Clean-map scanning is already sub-ms; dirty 10k flush is dominated by per-dirty work such as validation, hooks, reactive recalculation, and dirty-field allocation. | Add sync-fast paths for validation/hook dispatch, avoid `changes` proxy allocation in reactive validation, and reduce `Object.keys(originalData)` churn by tracking dirty fields internally. | Medium; rerun dirty 100 and dirty 10000 validation/skip scenarios plus validation/hook integration tests. |
-| 4. Todo creation and grouping | Todo creation itself is small, but STI grouping and repeated metadata/pending-operation lookup remain visible in loop-only profiles. | Add no-inheritance fast paths in `groupInsertsByTypeAndSubType`, avoid generic `groupBy` allocation for STI grouping, and consider accepting `Iterable<Entity>` to avoid materializing pending sets before `createTodos`. | Medium; rerun todo grouping benchmarks and sparse flush benchmarks. |
-| 5. EntityWriter operation generation | Wide distinct-field updates remain much slower than same-field updates because the update op unions changed fields across all rows. | Group updates by changed-field signature so each SQL op only binds columns that rows actually changed; cache column lists by metadata/signature. | Medium-high; more SQL statements can hurt small batches and oplock/touched/updatedAt behavior needs coverage. Rerun 20/50-column distinct and same-field update scenarios. |
-| 6. Field mutation cost | M2O mutation is still roughly twice primitive mutation; indexed primitive changes allocate heavily for high-cardinality buckets. | Add an internal non-percolating reverse add path for m2o->o2m echo updates, cache indexed-field checks, and consider singleton buckets inside `FieldIndex`. | Medium due relation consistency and index representation; rerun m2o id/entity and indexed primitive benchmarks. |
-| 7. In-memory find indexing | Relation-value steady state was allocation-heavy because persisted relation lookups can merge id-keyed and instance-keyed sets. | The kept superset fast path reduces the common duplicate-set case. A larger version would canonicalize persisted relation index keys to tagged ids and return final filtered arrays in one pass. | Medium; rerun relation-value steady state and add relation first-build coverage. |
-| 8. Find query preparation | Profiles pointed at `structuredClone` / structural batch-key generation after the `fastWhereFilterHash` commit. | Replace `getBatchKeyFromGenericStructure`'s clone/mutate/stringify path with a non-mutating structural serializer or shape key, then consider deduplicating parse/prepare per same-shape batch. | Medium to high because incorrect batch keys can merge incompatible SQL; rerun 1k one-field/two-field/with-hint scenarios and plugin cases. |
-| 9. Populate breadth-first loading | Fresh DB-backed populate with JSON aggregate preloading was slower than direct breadth loading for simple o2m/o2m shapes in reduced runs; already-loaded paths are improved. | Add a cost/shape heuristic to bypass JSON preloading for simple existing-entity breadth populates, or batch hydrate JSON aggregate children instead of calling `hydrate` per child. | Medium to high; rerun default and `PLUGINS=` populate benchmarks at 5k/10k and nested fanout variants. |
-| 10. Reactive recalculation | Empty reverse paths were still paying `followReverseHint`; created/deleted queueing remains allocation-heavy. | The kept empty-path fast path targets recalculation. Larger wins are create/delete-specific reactable lists, reactable-major bulk queueing, avoiding string action keys for non-`runOnce` dedupe, and sync-fast paths around `Promise.allSettled`. | Medium; rerun reactive recalc and create/delete queue scenarios plus delete-reactivity tests. |
+| Phase                                | Hotspot Evidence                                                                                                                                                             | Larger Opportunity                                                                                                                                                                                                                                 | Risk / Next Benchmark                                                                                                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Hydration and registration        | CPU samples still showed `findExistingInstance`, `hydrate`, `#doRegister`, `baseEntityCstr`, `getField`, and overwrite `changes` proxy creation.                             | Replace overwrite refresh's public `changes.fieldsWithoutRelations` path with direct internal `InstanceData.originalData` access; add a no-index fast path around registration indexing; consider non-inheritance metadata fast paths.             | Medium for overwrite semantics; rerun all hydration scenarios, especially warm overwrite.                                                                                  |
+| 2. Identity-map `loadAll`            | Direct `#entitiesById.get` did not outperform the existing post-commit code in the 100k all-hit benchmark.                                                                   | The bigger remaining win is avoiding full normalized-id/result rebuild allocations in all-hit and `loadAllIfExists` miss paths.                                                                                                                    | Medium because duplicate ids, not-found ordering, STI checks, and partial misses must stay exact; add mixed hit/miss benchmarks before changing.                           |
+| 3. Sparse flush scanning             | Clean-map scanning is already sub-ms; dirty 10k flush is dominated by per-dirty work such as validation, hooks, reactive recalculation, and dirty-field allocation.          | Add sync-fast paths for validation/hook dispatch, avoid `changes` proxy allocation in reactive validation, and reduce `Object.keys(originalData)` churn by tracking dirty fields internally.                                                       | Medium; rerun dirty 100 and dirty 10000 validation/skip scenarios plus validation/hook integration tests.                                                                  |
+| 4. Todo creation and grouping        | Todo creation itself is small, but STI grouping and repeated metadata/pending-operation lookup remain visible in loop-only profiles.                                         | Add no-inheritance fast paths in `groupInsertsByTypeAndSubType`, avoid generic `groupBy` allocation for STI grouping, and consider accepting `Iterable<Entity>` to avoid materializing pending sets before `createTodos`.                          | Medium; rerun todo grouping benchmarks and sparse flush benchmarks.                                                                                                        |
+| 5. EntityWriter operation generation | Wide distinct-field updates remain much slower than same-field updates because the update op unions changed fields across all rows.                                          | Group updates by changed-field signature so each SQL op only binds columns that rows actually changed; cache column lists by metadata/signature.                                                                                                   | Medium-high; more SQL statements can hurt small batches and oplock/touched/updatedAt behavior needs coverage. Rerun 20/50-column distinct and same-field update scenarios. |
+| 6. Field mutation cost               | M2O mutation is still roughly twice primitive mutation; indexed primitive changes allocate heavily for high-cardinality buckets.                                             | Add an internal non-percolating reverse add path for m2o->o2m echo updates, cache indexed-field checks, and consider singleton buckets inside `FieldIndex`.                                                                                        | Medium due relation consistency and index representation; rerun m2o id/entity and indexed primitive benchmarks.                                                            |
+| 7. In-memory find indexing           | Relation-value steady state was allocation-heavy because persisted relation lookups can merge id-keyed and instance-keyed sets.                                              | The kept superset fast path reduces the common duplicate-set case. A larger version would canonicalize persisted relation index keys to tagged ids and return final filtered arrays in one pass.                                                   | Medium; rerun relation-value steady state and add relation first-build coverage.                                                                                           |
+| 8. Find query preparation            | Profiles pointed at `structuredClone` / structural batch-key generation after the `fastWhereFilterHash` commit.                                                              | Replace `getBatchKeyFromGenericStructure`'s clone/mutate/stringify path with a non-mutating structural serializer or shape key, then consider deduplicating parse/prepare per same-shape batch.                                                    | Medium to high because incorrect batch keys can merge incompatible SQL; rerun 1k one-field/two-field/with-hint scenarios and plugin cases.                                 |
+| 9. Populate breadth-first loading    | Fresh DB-backed populate with JSON aggregate preloading was slower than direct breadth loading for simple o2m/o2m shapes in reduced runs; already-loaded paths are improved. | Add a cost/shape heuristic to bypass JSON preloading for simple existing-entity breadth populates, or batch hydrate JSON aggregate children instead of calling `hydrate` per child.                                                                | Medium to high; rerun default and `PLUGINS=` populate benchmarks at 5k/10k and nested fanout variants.                                                                     |
+| 10. Reactive recalculation           | Empty reverse paths were still paying `followReverseHint`; created/deleted queueing remains allocation-heavy.                                                                | The kept empty-path fast path targets recalculation. Larger wins are create/delete-specific reactable lists, reactable-major bulk queueing, avoiding string action keys for non-`runOnce` dedupe, and sync-fast paths around `Promise.allSettled`. | Medium; rerun reactive recalc and create/delete queue scenarios plus delete-reactivity tests.                                                                              |
 
 ### Verification Notes
 
@@ -586,28 +586,28 @@ Read-path cuts:
 
 ### Results (baseline vs full pass, `BENCH_SIZES=100000`)
 
-| Benchmark | Scenario | Before (ms) | After (ms) | Delta | Notes |
-| --- | --- | ---: | ---: | ---: | --- |
-| hydration | `author_fresh_register` | 67.6 | 53.9 | +20.3% | retained 42.0 -> 27.4 MB (-35%) |
-| hydration | `author_fresh_register_scalar_reads` | 134.2 | 112.8 | +15.9% | retained 47.3 -> 30.6 MB |
-| hydration | `author_existing_no_overwrite` | 89.9 | 83.4 | +7.2% | |
-| hydration | `author_existing_overwrite_warm_data` | 203.2 | 170.0 | +16.3% | |
-| hydration | `task_sti_fresh_register` | 74.1 | 61.6 | +16.8% | retained 42.7 -> 28.1 MB |
-| loadall | `load_all_hits_tagged` | 13.7 | 12.3 | +10.4% | untagged +7.7% |
-| loadall | `load_all_if_exists_hits_untagged` | 21.5 | 19.5 | +9.5% | tagged +8.7% |
-| flush | `flush_dirty_100_validation` | 5.48 | 5.05 | +7.8% | skip_validation +7.8% |
-| flush | `flush_dirty_10000_validation` | 404.3 | 387.1 | +4.2% | skip_validation +2.6% |
-| field-mutation | `field_primitive_actual_change` | 116.7 | 88.5 | +24.1% | |
-| field-mutation | `field_primitive_indexed_change` | 203.4 | 166.9 | +17.9% | |
-| field-mutation | `field_m2o_entity_change` | 321.7 | 255.7 | +20.5% | id variant +21.4% |
-| reactive | `reactive_queue_created_all_downstream` | 1059.7 | 587.2 | +44.6% | |
-| reactive | `reactive_queue_deleted_all_downstream` | 1048.5 | 595.8 | +43.2% | |
-| reactive | `reactive_recalc_one_reaction` | 369.2 | 353.7 | +4.2% | multiple_downstream +1.6% |
-| find-indexing | `find_index_relation_value_steady_state` | 11.7 | 8.8 | +25.0% | first_build +7.7% |
-| find-query-prep | `find_query_prep_one_field` (1000) | 16.7 | 11.2 | +33.0% | all sizes +13-33% |
-| populate (direct) | `populate_books_reviews` | 214.1 | 204.2 | +4.7% | queries unchanged |
-| populate (preload) | `populate_books_reviews_already_loaded` | 17.0 | 13.5 | +20.7% | queries unchanged |
-| todo | all scenarios | - | - | ~0% | neutral, within noise |
+| Benchmark          | Scenario                                 | Before (ms) | After (ms) |  Delta | Notes                           |
+| ------------------ | ---------------------------------------- | ----------: | ---------: | -----: | ------------------------------- |
+| hydration          | `author_fresh_register`                  |        67.6 |       53.9 | +20.3% | retained 42.0 -> 27.4 MB (-35%) |
+| hydration          | `author_fresh_register_scalar_reads`     |       134.2 |      112.8 | +15.9% | retained 47.3 -> 30.6 MB        |
+| hydration          | `author_existing_no_overwrite`           |        89.9 |       83.4 |  +7.2% |                                 |
+| hydration          | `author_existing_overwrite_warm_data`    |       203.2 |      170.0 | +16.3% |                                 |
+| hydration          | `task_sti_fresh_register`                |        74.1 |       61.6 | +16.8% | retained 42.7 -> 28.1 MB        |
+| loadall            | `load_all_hits_tagged`                   |        13.7 |       12.3 | +10.4% | untagged +7.7%                  |
+| loadall            | `load_all_if_exists_hits_untagged`       |        21.5 |       19.5 |  +9.5% | tagged +8.7%                    |
+| flush              | `flush_dirty_100_validation`             |        5.48 |       5.05 |  +7.8% | skip_validation +7.8%           |
+| flush              | `flush_dirty_10000_validation`           |       404.3 |      387.1 |  +4.2% | skip_validation +2.6%           |
+| field-mutation     | `field_primitive_actual_change`          |       116.7 |       88.5 | +24.1% |                                 |
+| field-mutation     | `field_primitive_indexed_change`         |       203.4 |      166.9 | +17.9% |                                 |
+| field-mutation     | `field_m2o_entity_change`                |       321.7 |      255.7 | +20.5% | id variant +21.4%               |
+| reactive           | `reactive_queue_created_all_downstream`  |      1059.7 |      587.2 | +44.6% |                                 |
+| reactive           | `reactive_queue_deleted_all_downstream`  |      1048.5 |      595.8 | +43.2% |                                 |
+| reactive           | `reactive_recalc_one_reaction`           |       369.2 |      353.7 |  +4.2% | multiple_downstream +1.6%       |
+| find-indexing      | `find_index_relation_value_steady_state` |        11.7 |        8.8 | +25.0% | first_build +7.7%               |
+| find-query-prep    | `find_query_prep_one_field` (1000)       |        16.7 |       11.2 | +33.0% | all sizes +13-33%               |
+| populate (direct)  | `populate_books_reviews`                 |       214.1 |      204.2 |  +4.7% | queries unchanged               |
+| populate (preload) | `populate_books_reviews_already_loaded`  |        17.0 |       13.5 | +20.7% | queries unchanged               |
+| todo               | all scenarios                            |           - |          - |    ~0% | neutral, within noise           |
 
 Known trade-off: `reactive_queue_no_reactables` (mutate a reactable-less field on 100k clean
 entities) reads ~40% slower in isolation because the lazy `originalData` bag is now allocated in
@@ -622,11 +622,11 @@ The new `benchmark-em-million.ts` hydrates 1M Author rows into a single EntityMa
 wall/cpu time, GC pause counts/totals (via a `PerformanceObserver`), and retained bytes/entity
 after a forced GC. With the pass applied (Node `--max-old-space-size=8192`):
 
-| Scenario | Size | Mean (ms) | GC pauses (ms) | Retained (MB) | Retained B/entity |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `million_hydrate` | 1,000,000 | 832 | 189 | 285.5 | 299 |
-| `million_hydrate_scalar_reads` | 1,000,000 | 987 | 189 | 285.5 | 299 |
-| `million_hydrate_mutate` | 1,000,000 | 2,630 | 255 | 568.3 | 596 |
+| Scenario                       |      Size | Mean (ms) | GC pauses (ms) | Retained (MB) | Retained B/entity |
+| ------------------------------ | --------: | --------: | -------------: | ------------: | ----------------: |
+| `million_hydrate`              | 1,000,000 |       832 |            189 |         285.5 |               299 |
+| `million_hydrate_scalar_reads` | 1,000,000 |       987 |            189 |         285.5 |               299 |
+| `million_hydrate_mutate`       | 1,000,000 |     2,630 |            255 |         568.3 |               596 |
 
 I.e. hydrating 1M entities into one EntityManager runs at ~1.2M entities/sec with under 200ms of
 total GC pauses, and the identity map holds them in ~285 MB.
@@ -636,9 +636,41 @@ Per the hydration benchmark's 3-run averages, per-entity retained cost dropped f
 (excluding the driver rows themselves).
 
 Harness note: measuring retained heap inside the async timing loop double-counts nothing but can
-*under*-count to ~0, because dead-but-uncleared V8 frame registers pin the previous iteration's
+_under_-count to ~0, because dead-but-uncleared V8 frame registers pin the previous iteration's
 result across `await`s; `benchmark-em-million.ts` measures retained heap in a dedicated
 synchronous function so any such pin is constant on both sides of the delta.
+
+### Follow-up: entity-keyed reactive action maps
+
+A follow-up change replaced `ReactionsManager`'s per-action string keys
+(`${entity.toTaggedString()}_${r.name}`) with maps whose outer key is the target field name and
+whose inner values are entity-keyed: recalc dedupe and `runOnce` bookkeeping are now
+`Map<fieldName, Set<Entity>>`, retried type-error actions are
+`Map<fieldName, Map<Entity, ReactiveAction>>`, and `ReactiveAction` lost its `key` field. Field
+names go on the outside because there are few of them and many entities, so each distinct field
+name allocates a single `Set` and each action costs only a pointer entry. This removes a
+`toTaggedString()` call (metadata lookup + id `getField` + `keyToNumber` + string build) plus a
+string allocation per action per recalc loop. Dedupe still keys on `r.name` rather than `r`
+itself, since two `Reactable`s reverse-indexed from different source paths can target the same
+derived field and must dedupe together; entity-object identity is also _more_ stable than the
+old strings, which changed spelling mid-flush once a new entity's id was assigned.
+
+Same-conditions A/B (old vs new built from the same tree, 2 runs each, `BENCH_SIZES=100000`; the
+machine was under ~2.5 load, which inflates the GC-bound created/deleted scenarios on both sides
+equally — hence these numbers differ from the quiet-machine table above):
+
+| Scenario                                                                  | Old (ms) | New (ms) |                             Delta |
+| ------------------------------------------------------------------------- | -------: | -------: | --------------------------------: |
+| `reactive_recalc_multiple_downstream`                                     |    727.7 |    554.7 | +23.8% (heap delta 223 -> 181 MB) |
+| `reactive_recalc_one_reaction`                                            |    372.1 |    327.6 |                            +12.0% |
+| `reactive_queue_created_all_downstream`                                   |    915.7 |    697.2 |                            +23.9% |
+| `reactive_queue_deleted_all_downstream`                                   |    866.4 |    688.0 |                            +20.6% |
+| `reactive_queue_one_reaction` / `_no_reactables` / `_multiple_downstream` |        - |        - |     neutral (+2-5%, within noise) |
+
+Against the quiet-machine baseline runs, `reactive_recalc_multiple_downstream` went 676 -> 549ms
+(+19%) and `reactive_recalc_one_reaction` 354 -> 328ms (+7%). Reactive integration tests
+(EntityManager.reactions/reactiveRules, ReactiveField, AsyncReactiveField, ReactionLogging,
+including the `runOnce` coverage) and the full stock suite pass.
 
 ### Verification
 

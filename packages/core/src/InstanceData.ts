@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
+import { hasAnyKey } from "./utils";
 
 /** The `#orm` metadata field we track on each instance. */
 export class InstanceData {
@@ -10,18 +11,35 @@ export class InstanceData {
   readonly em: EntityManager;
   /** A pointer to our entity type's metadata. */
   readonly metadata: EntityMetadata;
-  /** A bag for our lazy-initialized relations. */
-  relations: Record<any, any> = {};
+  /** A bag for our lazy-initialized relations, allocated on first relation access. */
+  relations: Record<any, any> | undefined = undefined;
   /** The database-value of columns, as-is returned from the driver. */
   row!: Record<string, any>;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
-  /** A bag to keep the original values, lazily populated as fields are mutated. */
-  originalData: Record<any, any> = {};
-  /** Reference values that were set through during this unit of work and may need reverse-walking. */
-  readonly referenceHistory: Record<string, any[]> = {};
+  /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */
+  #originalData: Record<any, any> | undefined = undefined;
+  /** Reference values that were set during this unit of work, allocated on first m2o/poly change. */
+  #referenceHistory: Record<string, any[]> | undefined = undefined;
   /** A bag to keep the flushed-to-database values, only for AsyncReactiveField reactivity. */
   flushedData: Record<any, any> | undefined;
+  /** Packs the new/deleted `Operation`s + isTouched into one slot; see the accessors below. */
+  #flags: number = 0;
+  /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
+  createId: string | undefined;
+  /** The zero-based order this entity was registered with its EntityManager. */
+  entityIndex: number = -1;
+
+  /** Whether our entity is new or not. */
+  get #new(): Operation | undefined {
+    const value = this.#flags & 0b11;
+    return value === 0 ? undefined : value;
+  }
+
+  set #new(op: Operation | undefined) {
+    this.#flags = (this.#flags & ~0b11) | (op ?? 0);
+  }
+
   /**
    * Whether our entity has been deleted or not.
    *
@@ -29,15 +47,23 @@ export class InstanceData {
    * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to AsyncReactiveField calcs
    * - `deleted` means we've been flushed and `em.flush` has completed
    */
-  #deleted?: Operation;
-  /** Whether our entity is new or not. */
-  #new?: Operation;
-  /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
-  createId: string | undefined;
-  /** The zero-based order this entity was registered with its EntityManager. */
-  entityIndex: number = -1;
+  get #deleted(): Operation | undefined {
+    const value = (this.#flags >> 2) & 0b11;
+    return value === 0 ? undefined : value;
+  }
+
+  set #deleted(op: Operation | undefined) {
+    this.#flags = (this.#flags & ~0b1100) | ((op ?? 0) << 2);
+  }
+
   /** Whether our entity should flush regardless of any other changes. */
-  isTouched: boolean = false;
+  get isTouched(): boolean {
+    return (this.#flags & 0b10000) !== 0;
+  }
+
+  set isTouched(value: boolean) {
+    this.#flags = value ? this.#flags | 0b10000 : this.#flags & ~0b10000;
+  }
 
   /** Creates the `#orm` field. */
   constructor(em: EntityManager, entity: Entity, metadata: EntityMetadata, isNew: boolean) {
@@ -65,8 +91,8 @@ export class InstanceData {
   }
 
   resetAfterFlushed() {
-    this.originalData = {};
-    for (const fieldName of Object.keys(this.referenceHistory)) delete this.referenceHistory[fieldName];
+    this.#originalData = undefined;
+    this.#referenceHistory = undefined;
     this.flushedData = undefined;
     this.isTouched = false;
     if (this.#new === Operation.Pending || this.#new === Operation.Flushed) {
@@ -88,9 +114,14 @@ export class InstanceData {
     return this.#deleted !== undefined;
   }
 
+  /** The original values of mutated fields; a shared empty object until the entity is actually mutated. */
+  get originalData(): Record<any, any> {
+    return this.#originalData ?? emptyObject;
+  }
+
   /** Our public-facing `isDirtyEntity`. */
   get isDirtyEntity(): boolean {
-    return Object.keys(this.originalData).length > 0;
+    return hasAnyKey(this.#originalData);
   }
 
   /** This is our internal "is pending flush", which is aware of RQF micro-flush loops. */
@@ -109,14 +140,19 @@ export class InstanceData {
       // Per ^, if `#new === flushed`, we fall through to check if micro-flush UPDATEs are required
       return "insert";
     } else if (this.flushedData) {
-      return Object.keys(this.flushedData).length > 0 ? "update" : "none";
+      return hasAnyKey(this.flushedData) ? "update" : "none";
     } else {
-      return this.isTouched || Object.keys(this.originalData).length > 0 ? "update" : "none";
+      return this.isTouched || hasAnyKey(this.#originalData) ? "update" : "none";
     }
   }
 
   get changedFields(): string[] {
-    return this.flushedData ? Object.keys(this.flushedData) : Object.keys(this.originalData);
+    return Object.keys(this.changedData);
+  }
+
+  /** The changed-fields bag (flushedData during RQF loops, else originalData) without allocating a keys array. */
+  get changedData(): Record<any, any> {
+    return this.flushedData ?? this.#originalData ?? emptyObject;
   }
 
   /** Called when an `em.load` tries to find the entity and it's just gone from the db. */
@@ -166,13 +202,13 @@ export class InstanceData {
 
   /** Marks a field as dirty with its pre-mutation value. */
   markFieldDirty(fieldName: string, value: any): void {
-    this.originalData[fieldName] = value;
+    (this.#originalData ??= {})[fieldName] = value;
     this.markMaybePending();
   }
 
   /** Marks a reverted field as clean again. */
   markFieldClean(fieldName: string): void {
-    delete this.originalData[fieldName];
+    if (this.#originalData) delete this.#originalData[fieldName];
     this.markMaybePending();
   }
 
@@ -189,13 +225,13 @@ export class InstanceData {
   /** Remembers a reference value that may need to be reverse-walked later. */
   rememberReferenceValue(fieldName: string, value: any): void {
     if (value === undefined) return;
-    const values = (this.referenceHistory[fieldName] ??= []);
+    const values = ((this.#referenceHistory ??= {})[fieldName] ??= []);
     if (!values.includes(value)) values.push(value);
   }
 
   /** Returns reference values that may need to be reverse-walked later. */
   getReferenceHistory(fieldName: string): readonly any[] {
-    return this.referenceHistory[fieldName] ?? [];
+    return this.#referenceHistory?.[fieldName] ?? emptyArray;
   }
 
   get isDeletedAndFlushed(): boolean {
@@ -226,3 +262,9 @@ enum Operation {
   Flushed = 2,
   Complete = 3,
 }
+
+/** A shared frozen bag for un-mutated entities; strict mode makes accidental writes throw. */
+const emptyObject: Record<any, any> = Object.freeze({});
+
+/** A shared frozen array for fields with no remembered reference values. */
+const emptyArray: readonly any[] = Object.freeze([]);

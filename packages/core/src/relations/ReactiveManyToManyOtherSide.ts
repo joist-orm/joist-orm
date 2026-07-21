@@ -51,7 +51,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   constructor(entity: T, field: ManyToManyField) {
     super(entity);
     this.#field = field;
-    getInstanceData(entity).relations[field.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {

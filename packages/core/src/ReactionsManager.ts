@@ -59,7 +59,6 @@ export class ReactionsManager {
       //   its `.load()` called again so that it's `setField` marks `initials` as
       //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
       this.getPending(r).todo.add(entity);
-      this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
       this.#needsRecalc[r.kind] = true;
       this.logger.logQueued(entity, fieldName, r);
     }
@@ -94,7 +93,6 @@ export class ReactionsManager {
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     for (const r of this.getReactables(entity)) {
       this.getPending(r).todo.add(entity);
-      this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
       this.#needsRecalc[r.kind] = true;
       this.logger.logQueuedAll(entity, reason, r);
     }
@@ -296,6 +294,9 @@ export class ReactionsManager {
     if (!pending) {
       pending = { todo: new Set(), done: new Set() };
       this.pendingReactables.set(r, pending);
+      // The dirty field name is constant per reactable, so mark it once on the first
+      // queue instead of paying the `getMetadata` + map lookup on every queued entity.
+      this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
     }
     return pending;
   }
@@ -316,14 +317,18 @@ export class ReactionsManager {
     return getEmInternalApi(this.em).isMerging(entity) ? meta.reactablesIncludingReadOnly! : meta.reactables!;
   }
 
-  private getReactablesByField(entity: Entity, fieldName: string): Reactable[] {
+  private getReactablesByField(entity: Entity, fieldName: string): readonly Reactable[] {
     const meta = getMetadata(entity);
     const byField = getEmInternalApi(this.em).isMerging(entity)
       ? meta.reactablesIncludingReadOnlyByField!
       : meta.reactablesByField!;
-    return byField.get(fieldName) ?? [];
+    // Most fields have no reactables, so return a shared empty array instead of allocating one per set
+    return byField.get(fieldName) ?? noReactables;
   }
 }
+
+/** A shared frozen array for fields with no downstream reactables. */
+const noReactables: readonly Reactable[] = Object.freeze([]);
 
 /** Returns a stable dedupe key for retry/runOnce reaction bookkeeping. */
 function makeActionKey(entity: Entity, r: Reactable): string {

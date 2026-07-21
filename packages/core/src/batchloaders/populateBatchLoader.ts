@@ -99,6 +99,8 @@ export function populateBatchLoader(
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
+        // Hoist the poly-key parsing out of the per-entity loop; most keys are not poly
+        const isPoly = isPolyHint(key);
         let oneToManyLoader: ReturnType<typeof oneToManyBatchLoader> | undefined;
         let oneToManyPromise: Promise<void> | undefined;
         let manyToManyLoader: ReturnType<typeof manyToManyBatchLoader> | undefined;
@@ -108,12 +110,12 @@ export function populateBatchLoader(
         let manyToOneLoader: ReturnType<typeof loadBatchLoader> | undefined;
         let manyToOnePromise: Promise<void> | undefined;
         for (const entity of tree.entities) {
-          const relation = getRelationFromMaybePolyKey(entity, key);
+          const relation = isPoly ? getRelationFromMaybePolyKey(entity, key) : (entity as any)[key];
           // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
           // but currently doesn't blow up (somehow), and is depended on by internal tests.
           if (!relation || typeof relation.load !== "function") {
             // We don't want to throw on poly hints, because they're not actually loaded on the entity
-            if (isPolyHint(key)) continue;
+            if (isPoly) continue;
             throw new Error(`Invalid load hint '${key}' on ${entity}`);
           }
 

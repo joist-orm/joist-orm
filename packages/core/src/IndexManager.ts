@@ -78,9 +78,11 @@ export class IndexManager {
 
   /**
    * Finds entities matching the given where clause using indexes.
-   * Returns null if the type is not indexed (fallback to linear search).
+   *
+   * Returns the raw candidate set (possibly a live internal index set, so do not mutate it);
+   * the caller applies its own subtype/deleted filtering while building the final array.
    */
-  findMatching<T extends Entity>(meta: EntityMetadata<T>, entities: T[], where: any): T[] {
+  findMatching<T extends Entity>(meta: EntityMetadata<T>, entities: T[], where: any): ReadonlySet<T> {
     const { tagName } = meta;
     if (!this.#indexes.has(tagName)) {
       throw new Error(`${meta.type} is not indexed`);
@@ -102,7 +104,7 @@ export class IndexManager {
     if (candidates === undefined) {
       throw new Error(`Expected where clause with at least one condition`);
     }
-    return [...candidates] as T[];
+    return candidates as unknown as ReadonlySet<T>;
   }
 
   // `entities` should all be of the exact same subtype

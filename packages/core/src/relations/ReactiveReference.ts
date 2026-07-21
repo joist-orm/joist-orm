@@ -134,7 +134,7 @@ export class ReactiveReferenceImpl<
     }
     // If the property transformer is not enabled, then the RR will not be in the relations map because they are
     // defined in the implementation file and not the codegen file.  So we should insert ourselves regardless.
-    getInstanceData(entity).relations[field.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {

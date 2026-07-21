@@ -83,6 +83,11 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
     defineLazyGetter(meta, "hasLazyColumns", function buildHasLazyColumns() {
       return meta.lazyFieldNames!.size > 0;
     });
+    defineLazyGetter(meta, "syncDerivedFields", function buildSyncDerivedFields() {
+      return Object.values(meta.allFields)
+        .filter((f) => (f.kind === "primitive" || f.kind === "enum") && f.derived === "sync")
+        .map((f) => f.fieldName);
+    });
   }
 }
 
@@ -277,6 +282,12 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
         }
       });
     }
+  }
+  // Now that base/sub links are complete, cache the hot-path meta arrays that
+  // `getBaseAndSelfMetas`/`getBaseSelfAndSubMetas` would otherwise re-allocate per call.
+  for (const m of metas) {
+    m.baseSelfMetas = [...m.baseTypes, m];
+    m.baseSelfAndSubMetas = [...m.baseTypes, m, ...m.subTypes];
   }
 }
 

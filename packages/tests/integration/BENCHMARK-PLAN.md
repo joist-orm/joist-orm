@@ -513,3 +513,141 @@ PLUGINS= BENCH_SIZES=1000 BENCH_ITERATIONS=5 BENCH_WARMUPS=1 BENCH_REPEAT=100 NO
 - Follow-up benchmark commands used the same integration harness shape as Appendix A, with `BENCH_SIZES=100000` and Node `v25.9.0`.
 - After resetting and migrating the integration DB, `PLUGINS= yarn jest --runInBand -- src/IndexManager.test.ts src/relations/ReactiveField.test.ts src/ReactionLogging.test.ts` passed.
 - The retained follow-ups intentionally avoid changing SQL shape, public API behavior, or reactive scheduling semantics.
+
+## Appendix C: Heap-Allocation / GC-Pressure Pass (2026-07-21)
+
+This pass targeted transient allocations and per-entity retained memory, with the twin goals of
+overall throughput (+10-20%) and making ~1M-entity EntityManagers viable. All numbers are from
+Node `v26.3.1` with `--expose-gc`; fresh baselines were captured first (the Appendix A/B numbers
+were from Node `v25.9.0` and are not comparable). Each comparison below is baseline vs the full
+pass (3 runs per side unless noted), via direct `node --import tsx` invocations.
+
+### Motivating evidence
+
+CPU profiles of the baseline benchmarks showed GC itself was the dominant or co-dominant cost:
+38.8% of `benchmark-flush-entity-scanning`, 24.3% of `benchmark-field-mutation`, 19.2% of
+`benchmark-hydration-registration`, and 15.7% of `benchmark-reactive-recalc` total time was
+`(garbage collector)`. The top non-GC frames were `queueAllDownstreamFields` (43.8% self in the
+reactive benchmark), `queueDownstreamReactables` (28.7% self in field-mutation), and
+`structuredClone` (2.6-9.7% across flush/reactive), which drove the change list below.
+
+Note: `--heap-prof` was tried first and is not usable for this work — V8's sampling heap profile
+only reports objects still live at process exit, so transient garbage never appears in it.
+
+### Changes kept
+
+Per-entity retained memory (the 1M-entity goal):
+
+1. `InstanceData` no longer eagerly allocates its three bags: `relations`, `originalData`, and
+   `referenceHistory` are now `undefined` until first relation access / first mutation / first
+   m2o change, with shared frozen empties behind the public `originalData`/`getReferenceHistory`
+   reads. Clean read-only entities allocate zero bags.
+2. `InstanceData`'s `#new`/`#deleted` operations and `isTouched` are packed into one `#flags`
+   bitfield (private accessors), dropping two slots per entity.
+3. `hydrate` seeds `data.id` with the same tagged-id string used as the identity-map key, so the
+   id serde never runs and the second `"a:1"` string is never allocated; the overwrite/refresh
+   path skips the immutable `id` key and, for existing entities, reads changed fields from
+   `originalData` directly instead of allocating a `changes` proxy per row.
+
+Transient-allocation cuts on the write path:
+
+4. `ReactionsManager.getReactablesByField` returns a shared frozen empty array (was: fresh `[]`
+   per `setField` on any field with no reactables), and the constant-per-reactable
+   `getDirtyFields(getMetadata(r.cstr)).add(r.name)` moved from per-queued-entity into
+   `getPending`'s create-once branch.
+5. `getBaseAndSelfMetas`/`getBaseSelfAndSubMetas` return arrays cached on the metadata by
+   `configureMetadata` (after base/sub linking), instead of `[...baseTypes, meta, ...subTypes]`
+   per call.
+6. Hook dispatch: `runHookOnTodos` skips todos whose base/self/sub hierarchy has no functions for
+   the hook (`metaHasHook`), and `runHook` builds one flat promise list imperatively with no
+   per-entity flatMap arrays, skipping `Promise.allSettled` entirely when nothing runs.
+7. `validateReactiveRules` probes `field in originalData` per rule field instead of allocating a
+   `changes` proxy + keys array per updated entity per rule, and skips the todo's entity spread
+   for rule-less types; `validateSimpleRules` is imperative with the same early-exit;
+   `recalcSynchronousDerivedFields` uses a `meta.syncDerivedFields` list cached in `configure.ts`
+   instead of rebuilding a map every hook loop; `entitiesFromTodos` drops its array spreads.
+8. `Todo.groupInsertsByTypeAndSubType` skips update/delete-only todos and builds its map without
+   flatMap tuples; `createTodos` accepts `Iterable<Entity>` so the flush loop passes its
+   `pendingHooks`/`alreadyRanHooks` sets without `[...set]` copies.
+9. `EntityWriter` iterates a new non-allocating `InstanceData.changedData` bag (`for..in`)
+   instead of materializing `changedFields` arrays per update entity; `newEntity` skips the
+   `structuredClone` for the common empty `transientFields`.
+
+Read-path cuts:
+
+10. `loadAll`/`loadAllIfExists` drop the N-length tagged-ids copy; misses remember their id +
+    position, so the all-hit path allocates exactly one pre-sized result array.
+11. `IndexManager.findMatching` returns the raw candidate set and `filterEntities` builds the
+    final array in one pass (was: `[...candidates]` then a second `.filter` array).
+12. `findDataLoader.getBatchKeyFromGenericStructure` no longer `structuredClone`s the parsed
+    query per `em.find`; it strips condition values in place (tracking shared condition objects),
+    stringifies, and restores.
+13. `populateBatchLoader` hoists the per-key `isPolyHint` check out of the per-entity loop.
+
+### Results (baseline vs full pass, `BENCH_SIZES=100000`)
+
+| Benchmark | Scenario | Before (ms) | After (ms) | Delta | Notes |
+| --- | --- | ---: | ---: | ---: | --- |
+| hydration | `author_fresh_register` | 67.6 | 53.9 | +20.3% | retained 42.0 -> 27.4 MB (-35%) |
+| hydration | `author_fresh_register_scalar_reads` | 134.2 | 112.8 | +15.9% | retained 47.3 -> 30.6 MB |
+| hydration | `author_existing_no_overwrite` | 89.9 | 83.4 | +7.2% | |
+| hydration | `author_existing_overwrite_warm_data` | 203.2 | 170.0 | +16.3% | |
+| hydration | `task_sti_fresh_register` | 74.1 | 61.6 | +16.8% | retained 42.7 -> 28.1 MB |
+| loadall | `load_all_hits_tagged` | 13.7 | 12.3 | +10.4% | untagged +7.7% |
+| loadall | `load_all_if_exists_hits_untagged` | 21.5 | 19.5 | +9.5% | tagged +8.7% |
+| flush | `flush_dirty_100_validation` | 5.48 | 5.05 | +7.8% | skip_validation +7.8% |
+| flush | `flush_dirty_10000_validation` | 404.3 | 387.1 | +4.2% | skip_validation +2.6% |
+| field-mutation | `field_primitive_actual_change` | 116.7 | 88.5 | +24.1% | |
+| field-mutation | `field_primitive_indexed_change` | 203.4 | 166.9 | +17.9% | |
+| field-mutation | `field_m2o_entity_change` | 321.7 | 255.7 | +20.5% | id variant +21.4% |
+| reactive | `reactive_queue_created_all_downstream` | 1059.7 | 587.2 | +44.6% | |
+| reactive | `reactive_queue_deleted_all_downstream` | 1048.5 | 595.8 | +43.2% | |
+| reactive | `reactive_recalc_one_reaction` | 369.2 | 353.7 | +4.2% | multiple_downstream +1.6% |
+| find-indexing | `find_index_relation_value_steady_state` | 11.7 | 8.8 | +25.0% | first_build +7.7% |
+| find-query-prep | `find_query_prep_one_field` (1000) | 16.7 | 11.2 | +33.0% | all sizes +13-33% |
+| populate (direct) | `populate_books_reviews` | 214.1 | 204.2 | +4.7% | queries unchanged |
+| populate (preload) | `populate_books_reviews_already_loaded` | 17.0 | 13.5 | +20.7% | queries unchanged |
+| todo | all scenarios | - | - | ~0% | neutral, within noise |
+
+Known trade-off: `reactive_queue_no_reactables` (mutate a reactable-less field on 100k clean
+entities) reads ~40% slower in isolation because the lazy `originalData` bag is now allocated in
+the measured mutation loop instead of during (unmeasured) hydration setup. End-to-end the work
+went down: hydration of the same 100k entities got ~14ms faster while the first-mutation pass got
+~8ms slower, and read-only entities never pay the allocation at all. The sub-millisecond
+`find_index_*_steady_state` scenarios showed -12-18% readings at RSD 20-30%, i.e. noise.
+
+### 1M-entity scale (`benchmark-em-million.ts`, new)
+
+The new `benchmark-em-million.ts` hydrates 1M Author rows into a single EntityManager and reports
+wall/cpu time, GC pause counts/totals (via a `PerformanceObserver`), and retained bytes/entity
+after a forced GC. With the pass applied (Node `--max-old-space-size=8192`):
+
+| Scenario | Size | Mean (ms) | GC pauses (ms) | Retained (MB) | Retained B/entity |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `million_hydrate` | 1,000,000 | 832 | 189 | 285.5 | 299 |
+| `million_hydrate_scalar_reads` | 1,000,000 | 987 | 189 | 285.5 | 299 |
+| `million_hydrate_mutate` | 1,000,000 | 2,630 | 255 | 568.3 | 596 |
+
+I.e. hydrating 1M entities into one EntityManager runs at ~1.2M entities/sec with under 200ms of
+total GC pauses, and the identity map holds them in ~285 MB.
+
+Per the hydration benchmark's 3-run averages, per-entity retained cost dropped from ~440 B to
+~290 B (-35%), i.e. a 1M-entity identity map went from ~440 MB to ~290 MB of entity-side heap
+(excluding the driver rows themselves).
+
+Harness note: measuring retained heap inside the async timing loop double-counts nothing but can
+*under*-count to ~0, because dead-but-uncleared V8 frame registers pin the previous iteration's
+result across `await`s; `benchmark-em-million.ts` measures retained heap in a dedicated
+synchronous function so any such pin is constant on both sides of the delta.
+
+### Verification
+
+- `yarn build` (tsc) clean; `packages/core` unit tests pass.
+- Full integration suite passes under both plugins configs: `PLUGINS=` and
+  `PLUGINS=join-preloading`, each 161 suites / 1902 tests passed (7 suites skipped).
+- Populate/find benchmark query counts are unchanged in every scenario.
+- `benchmark-entity-writer.ts` was also repaired in this pass: the synthetic metadata predated
+  the lazy-fields feature (`meta.lazyFieldNames` undefined crashed all update scenarios), and its
+  fake `InstanceData` now shadows the new `originalData`/`changedData`/`changedFields`/`isTouched`
+  prototype accessors, since `Object.create(InstanceData.prototype)` instances have no private
+  fields.

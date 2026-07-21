@@ -65,7 +65,9 @@ let heldResult: ScenarioResult | undefined;
 async function main(): Promise<void> {
   const sizes = readSizes();
   console.log(`node=${process.version} exposeGc=${typeof global.gc === "function"}`);
-  console.log("scenario,size,columns,iterations,mean_ms,p50_ms,p90_ms,p99_ms,min_ms,max_ms,rsd,cpu_mean_ms,heap_delta_mb");
+  console.log(
+    "scenario,size,columns,iterations,mean_ms,p50_ms,p90_ms,p99_ms,min_ms,max_ms,rsd,cpu_mean_ms,heap_delta_mb",
+  );
 
   for (const size of sizes) {
     const config = configForSize(size);
@@ -218,6 +220,7 @@ function makeMetadata(columnCount: number): SyntheticEntityMetadata {
     baseTypes: [],
     fields,
     inheritanceType: undefined,
+    lazyFieldNames: new Set<string>(),
     nonDeferredFkOrder: 0,
     subTypes: [],
     tableName: "synthetic_entities",
@@ -283,10 +286,13 @@ function changedFieldsFor(
 function makeEntity(meta: EntityMetadata, data: Record<string, number>, changedFields: string[]): Entity {
   const instanceData = Object.create(InstanceData.prototype) as SyntheticData;
   instanceData.data = data;
-  instanceData.originalData = {};
-  instanceData.isTouched = false;
-  for (const fieldName of changedFields) instanceData.originalData[fieldName] = data[fieldName] - 1;
+  const originalData: Record<string, number> = {};
+  for (const fieldName of changedFields) originalData[fieldName] = data[fieldName] - 1;
+  // Shadow the prototype getters, since this fake instance skips the constructor (and its private fields)
+  Object.defineProperty(instanceData, "originalData", { value: originalData });
+  Object.defineProperty(instanceData, "changedData", { value: originalData });
   Object.defineProperty(instanceData, "changedFields", { get: readChangedFields });
+  Object.defineProperty(instanceData, "isTouched", { value: false });
   Object.defineProperty(instanceData, "metadata", { value: meta });
 
   const entity = {} as SyntheticEntity;
@@ -370,7 +376,8 @@ function fmt(value: number): string {
 
 /** Keeps benchmark results observable across samples. */
 function consume(result: ScenarioResult): void {
-  blackhole += result.checksum + getInstanceData(result.context.todo.inserts[0] ?? result.context.todo.updates[0]).data.id;
+  blackhole +=
+    result.checksum + getInstanceData(result.context.todo.inserts[0] ?? result.context.todo.updates[0]).data.id;
 }
 
 /** Forces GC when the benchmark was launched with node --expose-gc. */

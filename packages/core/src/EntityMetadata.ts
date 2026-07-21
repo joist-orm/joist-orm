@@ -80,6 +80,8 @@ export interface EntityMetadata<T extends Entity = any> {
   hasCommitRules?: boolean;
   /** The lazily-cached set of own `lazy` primitive field names, i.e. columns excluded from the default SELECT. */
   lazyFieldNames?: ReadonlySet<string>;
+  /** The lazily-cached list of sync-derived (`hasReactiveField`-less) field names, recalced during flush. */
+  syncDerivedFields?: string[];
   /** Lazily-cached: whether this entity has any `lazy` columns, i.e. so the default SELECT lists columns explicitly. */
   hasLazyColumns?: boolean;
   orderBy: string | undefined;
@@ -92,6 +94,10 @@ export interface EntityMetadata<T extends Entity = any> {
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
   subTypes: EntityMetadata[];
+  /** Cached `[...baseTypes, this]` set up by `configureMetadata`, so hot paths avoid re-allocating it. */
+  baseSelfMetas?: EntityMetadata[];
+  /** Cached `[...baseTypes, this, ...subTypes]` set up by `configureMetadata`, so hot paths avoid re-allocating it. */
+  baseSelfAndSubMetas?: EntityMetadata[];
   /** The lazy lookup of subtypes by type name, i.e. `Animal.metadata.subTypesByType.get("Dog")`. */
   subTypesByType?: ReadonlyMap<string, EntityMetadata>;
   /** The lazy lookup of STI subtypes by discriminator value, i.e. `Task.metadata.subTypesByStiValue.get(1)`. */
@@ -303,11 +309,13 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
 export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[];
 export function getBaseAndSelfMetas(entity: Entity): EntityMetadata[];
 export function getBaseAndSelfMetas(param: Entity | EntityMetadata): EntityMetadata[] {
-  return isEntity(param) ? getBaseSelfAndSubMetas(getMetadata(param)) : [...param.baseTypes, param];
+  return isEntity(param)
+    ? getBaseSelfAndSubMetas(getMetadata(param))
+    : (param.baseSelfMetas ?? [...param.baseTypes, param]);
 }
 
 export function getBaseSelfAndSubMetas(meta: EntityMetadata): EntityMetadata[] {
-  return [...meta.baseTypes, meta, ...meta.subTypes];
+  return meta.baseSelfAndSubMetas ?? [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
 export function getSubMetas(meta: EntityMetadata): EntityMetadata[] {

@@ -6,7 +6,7 @@ import { globalLogger, noopReactionLogger, ReactionLogger } from "./logging/Reac
 import { followReverseHint } from "./reactiveHints";
 import { runInTrustedContext } from "./trusted";
 
-export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
+export type ReactiveAction = { r: Reactable; entity: Entity };
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
  * their downstream derived fields.
@@ -17,7 +17,8 @@ export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
 export class ReactionsManager {
   /** Stores all source `Reactables`s that have been marked for later traversal. */
   private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
-  private actionsPendingTypeErrors: Map<string, ReactiveAction> = new Map();
+  /** Failed actions to retry post-hooks, deduped by target field name -> entity (rare error path). */
+  private actionsPendingTypeErrors: Map<string, Map<Entity, ReactiveAction>> = new Map();
   /**
    * A map of entity tagName -> fields that have been marked as dirty.
    *
@@ -28,7 +29,15 @@ export class ReactionsManager {
    * Instead, we just track the dirty fields by type-of-entity, which is enough for `isPendingRecalc`.
    */
   private dirtyFields: Map<string, Set<string>> = new Map();
-  private processedActions: Set<string> = new Set();
+  /**
+   * Tracks which entities have already run a `runOnce` reactable, keyed by the target field
+   * name -> entities. We key on `r.name` (not `r` itself) b/c two `Reactable`s reverse-indexed
+   * from different source paths can target the same derived field, and must dedupe together.
+   * Keying the outer map by field name (of which there are few) instead of by entity (of which
+   * there are many) means we allocate just one `Set` per distinct field name, rather than a
+   * `Set` per entity or the old per-action `${entity.toTaggedString()}_${r.name}` key strings.
+   */
+  private processedActions: Map<string, Set<Entity>> = new Map();
   #needsRecalc = { populate: false, query: false, reaction: false };
   // Accessible for EntityManager.runValidation to reuse
   logger: ReactionLogger = globalLogger ?? noopReactionLogger;
@@ -141,7 +150,10 @@ export class ReactionsManager {
         this.#needsRecalc.query = false;
       }
 
-      const actionsMap: Map<string, ReactiveAction> = new Map();
+      // Dedupe actions by (target field name, entity); see the `processedActions` docs for why
+      // we key on `r.name` instead of `r` or the old per-action key strings
+      const seen: Map<string, Set<Entity>> = new Map();
+      const actions: ReactiveAction[] = [];
 
       await Promise.all(
         [...this.pendingReactables.entries()].map(async ([r, pending]) => {
@@ -157,19 +169,20 @@ export class ReactionsManager {
           const entities = r.path.length === 0 ? todo : await followReverseHint(r.name, todo, r.path);
           const actionableEntities = entities.filter((entity) => !entity.isDeletedEntity && entity instanceof r.cstr);
           this.logger.logWalked(todo, r, actionableEntities, "recalc");
-          actionableEntities.forEach((entity) => {
-            const key = makeActionKey(entity, r);
+          let seenEntities = seen.get(r.name);
+          if (!seenEntities) seen.set(r.name, (seenEntities = new Set()));
+          const processed = r.runOnce ? this.processedActions.get(r.name) : undefined;
+          for (const entity of actionableEntities) {
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop
-            if (actionsMap.has(key)) return;
+            if (seenEntities.has(entity)) continue;
             // If this reactable has already run and shouldn't run again, then skip it
-            if (r.runOnce && this.processedActions.has(key)) return;
-            actionsMap.set(key, { key, r, entity });
-          });
+            if (processed && processed.has(entity)) continue;
+            seenEntities.add(entity);
+            actions.push({ r, entity });
+          }
         }),
       );
-
-      const actions = [...actionsMap.values()];
       this.logger.logLoadingStart(this.em, actions);
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
@@ -178,17 +191,16 @@ export class ReactionsManager {
       const endTime = this.logger.now();
       this.logger.logLoadingEnd(this.em, endTime - startTime);
 
-      const actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
+      // This loop's actions are already unique by (name, entity), so a plain array dedupes fine
+      const actionsPendingAssignedIds: ReactiveAction[] = [];
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError) {
-            const action = actions[i];
-            actionsPendingAssignedIds.set(action.key, action);
+            actionsPendingAssignedIds.push(actions[i]);
           } else if (result.reason instanceof TypeError) {
-            const action = actions[i];
-            this.actionsPendingTypeErrors.set(action.key, action);
+            this.addPendingTypeError(actions[i]);
           } else {
             failures.push(result.reason);
           }
@@ -197,19 +209,19 @@ export class ReactionsManager {
 
       // If we have any actions that need to be re-run because they failed due to a missing id, then we assign ids and
       // re-run them.
-      if (actionsPendingAssignedIds.size > 0) {
+      if (actionsPendingAssignedIds.length > 0) {
         await this.em.assignNewIds();
-        const actions = [...actionsPendingAssignedIds.values()];
-        this.logger.logLoadingStart(this.em, actions);
+        this.logger.logLoadingStart(this.em, actionsPendingAssignedIds);
         const startTime = this.logger.now();
-        const results = await runInTrustedContext(() => Promise.allSettled(actions.map((a) => this.#doAction(a))));
+        const results = await runInTrustedContext(() =>
+          Promise.allSettled(actionsPendingAssignedIds.map((a) => this.#doAction(a))),
+        );
         const endTime = this.logger.now();
         this.logger.logLoadingEnd(this.em, endTime - startTime);
         results.forEach((result, i) => {
           if (result.status === "rejected") {
             if (result.reason instanceof TypeError) {
-              const action = actions[i];
-              this.actionsPendingTypeErrors.set(action.key, action);
+              this.addPendingTypeError(actionsPendingAssignedIds[i]);
             } else {
               failures.push(result.reason);
             }
@@ -219,9 +231,13 @@ export class ReactionsManager {
 
       if (failures.length > 0) throw failures[0];
       // Record any successful actions that should only run once so we don't run them again
-      actions.forEach((action) => {
-        if (action.r.runOnce) this.processedActions.add(action.key);
-      });
+      for (const action of actions) {
+        if (action.r.runOnce) {
+          let set = this.processedActions.get(action.r.name);
+          if (!set) this.processedActions.set(action.r.name, (set = new Set()));
+          set.add(action.entity);
+        }
+      }
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.
@@ -232,7 +248,10 @@ export class ReactionsManager {
   }
 
   async recalcPendingTypeErrors() {
-    const actions = [...this.actionsPendingTypeErrors.values()];
+    const actions: ReactiveAction[] = [];
+    for (const byEntity of this.actionsPendingTypeErrors.values()) {
+      for (const action of byEntity.values()) actions.push(action);
+    }
     this.actionsPendingTypeErrors.clear();
 
     const startTime = this.logger.now();
@@ -285,6 +304,13 @@ export class ReactionsManager {
     return r.kind === "reaction" ? r.fn(entity, this.em.ctx) : (entity as any)[r.name].load();
   }
 
+  /** Remembers a TypeError'd action to retry post-hooks, deduped by (target field name, entity). */
+  private addPendingTypeError(action: ReactiveAction): void {
+    let byEntity = this.actionsPendingTypeErrors.get(action.r.name);
+    if (!byEntity) this.actionsPendingTypeErrors.set(action.r.name, (byEntity = new Map()));
+    byEntity.set(action.entity, action);
+  }
+
   needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
     return kind === "reactables" ? this.#needsRecalc.populate || this.#needsRecalc.reaction : this.#needsRecalc.query;
   }
@@ -329,8 +355,3 @@ export class ReactionsManager {
 
 /** A shared frozen array for fields with no downstream reactables. */
 const noReactables: readonly Reactable[] = Object.freeze([]);
-
-/** Returns a stable dedupe key for retry/runOnce reaction bookkeeping. */
-function makeActionKey(entity: Entity, r: Reactable): string {
-  return `${entity.toTaggedString()}_${r.name}`;
-}

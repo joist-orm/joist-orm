@@ -260,13 +260,13 @@ __metadata:
   linkType: hard
 
 "@astrojs/rss@npm:^4.0.17":
-  version: 4.0.18
-  resolution: "@astrojs/rss@npm:4.0.18"
+  version: 4.0.19
+  resolution: "@astrojs/rss@npm:4.0.19"
   dependencies:
     fast-xml-parser: "npm:^5.5.7"
     piccolore: "npm:^0.1.3"
     zod: "npm:^4.3.6"
-  checksum: 10/6de3dede4165763e9ed6f3d4eaaceac6038c4e1425149a0507d2126d08cf23070cdcba5083eadc1322f663aea396cb21a35734ba526896b48eec5e6daae506fc
+  checksum: 10/e4a95ba424c4f929fc2b958b6933649bd1cdaf21068bffd5a76459405537808b690736fbf7478e205d7758dc6186ee1203fe07277b0859cd7b0c1f2e808bf3f5
   languageName: node
   linkType: hard
 

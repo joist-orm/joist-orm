@@ -154,6 +154,22 @@ describe("WireRowData", () => {
       expect(() => rowData.get(1, "x")).toThrow("compacted away");
     });
 
+    it("skips compaction when dropped rows are under the 20% byte threshold", () => {
+      const rowData = new WireRowData();
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
+      // 10 equal rows, 1 dropped = 10% of payload bytes: not worth re-copying the other 9
+      for (let i = 0; i < 10; i++) appendTextRow(rowData, `row${i}`);
+      for (let i = 0; i < 10; i++) {
+        if (i !== 5) rowData.retain?.(i);
+      }
+      const before = rowData.payloadBytes;
+      rowData.finalize();
+      expect(rowData.payloadBytes).toBe(before);
+      // The unretained row keeps its bytes and simply remains readable-but-unused
+      expect(rowData.get(5, "x")).toBe("row5");
+      expect(rowData.get(9, "x")).toBe("row9");
+    });
+
     it("validates row indexes and malformed payloads", () => {
       const rowData = new WireRowData();
       rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);

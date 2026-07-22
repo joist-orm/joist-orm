@@ -104,6 +104,11 @@ export class PluginManager implements Required<PluginMethods> {
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
   constructor(public readonly em: EntityManager) {}
 
+  /** Returns whether any registered plugin implements `method`, i.e. so callers can skip building its args. */
+  hasHook(method: keyof PluginMethods): boolean {
+    return this.#pluginsByCallback[method] !== undefined;
+  }
+
   /**
    * Registers a plugin with this EntityManager.
    *

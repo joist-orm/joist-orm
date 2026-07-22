@@ -17,6 +17,7 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
+import { PojoRowData } from "../RowData";
 import { OpColumn } from "../drivers/EntityWriter";
 import { equal, equalArrays } from "../fields";
 import { kqDot } from "../keywords";
@@ -76,9 +77,11 @@ export function findDataLoader<T extends Entity>(
           // Maybe add preload joins
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
-          const entities = em.hydrate(type, rows);
-          preloadHydrator?.(rows, entities);
+          const rowData = em.driver.lazyRows
+            ? await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit)
+            : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit));
+          const entities = em.hydrateFromRowData(type, rowData);
+          preloadHydrator?.(rowData, entities);
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -127,21 +130,22 @@ export function findDataLoader<T extends Entity>(
           }
         }
 
-        const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
+        const rowData = em.driver.lazyRows
+          ? await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit)
+          : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit));
 
-        const entities = em.hydrate(type, rows);
-        preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+        const entities = em.hydrateFromRowData(type, rowData);
+        preloadJoins?.forEach((j) => j.hydrator(rowData, entities));
 
         // Make an empty array for each batched query, per the dataloader contract
         const results = entries.map(() => [] as T[]);
         // Then put each row into the tagged query it matched
-        rows.forEach((row, i) => {
+        for (let i = 0; i < entities.length; i++) {
           const entity = entities[i];
           if (!entity.isDeletedEntity) {
-            for (const tag of row._tags) results[tag].push(entity);
+            for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
           }
-          delete row._tags;
-        });
+        }
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.

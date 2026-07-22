@@ -15,6 +15,7 @@ import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
+import { PojoRowData } from "../RowData";
 import { toArray } from "../utils";
 import { BatchLoader } from "./BatchLoader";
 import { loadBatchLoader } from "./loadBatchLoader";
@@ -87,7 +88,7 @@ export function populateBatchLoader(
             const rows = await em["executeFind"](meta, populateOperation, query, {});
             const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));
             const entitiesInOrder = rows.map((row) => entitiesById.get(row["id"]));
-            hydrator(rows, entitiesInOrder);
+            hydrator(new PojoRowData(rows), entitiesInOrder);
           }
         }
       }

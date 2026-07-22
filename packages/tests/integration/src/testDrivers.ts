@@ -38,7 +38,12 @@ export class PostgresTestDriver implements TestDriver {
     this.pool = new pg.Pool(newPgConnectionConfig());
     this.knex = createKnex(this.pool).on("query", (e: any) => recordQuery(e.sql));
     const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
-    this.driver = new PostgresDriver(this.pool, { preloadPlugin, onQuery: (sql) => recordQuery(sql) });
+    this.driver = new PostgresDriver(this.pool, {
+      preloadPlugin,
+      onQuery: (sql) => recordQuery(sql),
+      // Allows running the test suite against lazy/columnar RowData results, i.e. `JOIST_ROW_DATA=1 yarn test`
+      lazyRows: process.env.JOIST_ROW_DATA === "1",
+    });
   }
 
   async beforeEach() {

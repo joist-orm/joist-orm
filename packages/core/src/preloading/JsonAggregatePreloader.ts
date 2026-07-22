@@ -50,12 +50,12 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     }
 
     return (rows, entities) => {
-      rows.forEach((row, i) => {
+      for (let i = 0; i < entities.length; i++) {
         const parent = entities[i];
         for (const { relationAlias, hydrator } of joins) {
-          hydrator(parent, parent, row[relationAlias] ?? []);
+          hydrator(parent, parent, rows.get(i, relationAlias) ?? []);
         }
-      });
+      }
     };
   }
 
@@ -73,10 +73,10 @@ export class JsonAggregatePreloader implements PreloadPlugin {
         selects: [{ value: kqDot(join.alias, "_"), as: join.relationAlias }],
         join: join.join,
         hydrator: (rows, entities) => {
-          rows.forEach((row, i) => {
+          for (let i = 0; i < entities.length; i++) {
             const parent = entities[i];
-            join.hydrator(parent, parent, row[join.relationAlias] ?? []);
-          });
+            join.hydrator(parent, parent, rows.get(i, join.relationAlias) ?? []);
+          }
         },
       };
     });

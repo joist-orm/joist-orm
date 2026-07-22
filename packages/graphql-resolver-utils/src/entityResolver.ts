@@ -9,6 +9,7 @@ import {
   IdOf,
   isCollection,
   isLoadedCollection,
+  isLoadedLazyField,
   isLoadedProperty,
   isLoadedReadOnlyCollection,
   isLoadedReference,
@@ -89,6 +90,16 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .map((ormField) => {
       if ("derived" in ormField && ormField.derived === "async") {
         return [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName].get];
+      } else if ("lazy" in ormField && ormField.lazy) {
+        // `lazy` columns are excluded from the default SELECT and exposed as `LazyField`s, so put the
+        // value on the wire by loading it on demand (or reading `.get` if already loaded/populated).
+        return [
+          ormField.fieldName,
+          (entity: T) => {
+            const lazyField = (entity as any)[ormField.fieldName];
+            return isLoadedLazyField(lazyField) ? lazyField.get : lazyField.load();
+          },
+        ];
       } else {
         // Currently, we only support primitives, i.e. strings/numbers/etc. and not collections.
         return [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName]];

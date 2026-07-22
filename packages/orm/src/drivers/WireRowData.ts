@@ -15,6 +15,9 @@ const CHUNK_SIZE = 64 * 1024;
 /** The `#rowLen` sentinel for rows dropped by `finalize` compaction. */
 const DROPPED = 0xffffffff;
 
+/** Only compact when dropped rows hold more than this fraction of the payload bytes. */
+const COMPACT_THRESHOLD = 0.2;
+
 /**
  * A lazy wire-row {@link RowData} over raw Postgres `DataRow` payload bytes.
  *
@@ -156,25 +159,32 @@ export class WireRowData implements RowData {
   }
 
   /**
-   * Trims unused capacity, and compacts down to only `retain`-ed rows when some rows were not
-   * retained (i.e. duplicate rows whose entities were already loaded). Called once after
+   * Trims unused capacity, and compacts down to only `retain`-ed rows when enough rows were not
+   * retained (i.e. duplicate rows whose entities were already loaded) to be worth the copy.
+   *
+   * Compaction re-copies every retained byte, so it only pays off when it buys back a meaningful
+   * fraction of the payload: we compact when the dropped rows hold more than 20% of the payload
+   * bytes, and otherwise just trim, accepting the (bounded) leftover bytes. Called once after
    * hydration + sidecar reads (`_tags`, preload aggregates) are complete; retained entities keep
-   * their original `rowIndex`.
+   * their original `rowIndex`, and un-compacted unretained rows simply remain readable-but-unused.
    */
   finalize(): void {
     const retained = this.#retained ?? [];
     this.#retained = undefined;
     if (retained.length < this.#rowCount) {
-      this.#compact(retained);
-    } else {
-      this.#trim();
+      let retainedBytes = 0;
+      for (const i of retained) retainedBytes += this.#rowLen[i];
+      const droppedBytes = this.#payloadBytes - retainedBytes;
+      if (droppedBytes > this.#payloadBytes * COMPACT_THRESHOLD) {
+        this.#compact(retained, retainedBytes);
+        return;
+      }
     }
+    this.#trim();
   }
 
   /** Rebuilds chunks with only the retained rows; dropped rows read as errors afterwards. */
-  #compact(retained: readonly number[]): void {
-    let bytes = 0;
-    for (const i of retained) bytes += this.#rowLen[i];
+  #compact(retained: readonly number[], bytes: number): void {
     const chunks: Buffer[] = bytes > 0 ? [Buffer.allocUnsafe(bytes)] : [];
     const rowChunk = new Uint32Array(this.#rowCount);
     const rowStart = new Uint32Array(this.#rowCount);

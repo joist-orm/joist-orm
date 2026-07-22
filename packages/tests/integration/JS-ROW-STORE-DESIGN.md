@@ -429,8 +429,9 @@ contract).
   field counts, and cell lengths. Zero-row results allocate nothing; a one-row result retains
   <128 bytes plus its row.
 - **Retention (High 4)**: hydration `retain`s rows whose entities were kept; `finalize` adopts
-  (trim) when everything was retained and otherwise compacts down to only retained rows, so
-  duplicates/slack no longer pin query history. Sidecar _columns_ (`_tags`, preload aggregates)
+  (trim) when everything was retained, and compacts down to only retained rows when the dropped
+  rows hold >20% of the payload bytes (below that, the compaction copy costs more than the
+  bounded leftover bytes it would save), so duplicate-heavy results no longer pin query history. Sidecar _columns_ (`_tags`, preload aggregates)
   still live inside retained rows' payloads — stripping cells requires rewriting row payloads
   and remains a follow-up.
 - **Extension compat (High 5)**: `FieldSerde.setOnEntity(data, row)` is restored as the public

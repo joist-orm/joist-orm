@@ -11,7 +11,7 @@ import {
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { RowData } from "./RowData";
+import { PojoRowData, RowData } from "./RowData";
 import { getRuntimeConfig } from "./runtimeConfig";
 import { requireTemporal } from "./temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers";
@@ -33,13 +33,21 @@ export interface FieldSerde {
   columns: Column[];
 
   /**
-   * Reads the field's column(s) from the entity's `(rowData, rowIndex)` row and sets the
-   * domain value(s) into the `__orm.data`.
+   * Reads the field's column(s) from one materialized POJO `row` and sets the domain value(s)
+   * into the `__orm.data`.
+   *
+   * This is the classic contract, kept for custom serdes written before `RowData`; Joist's
+   * built-in serdes also implement `setOnEntityFromRowData`, which reads directly from a lazy
+   * `RowData` result without materializing the whole row. Callers prefer the fast path when a
+   * serde provides it (see `applySetOnEntity`).
    *
    * Originally used in `EntityManager.hydrate` to set db values into the entity, although
    * now we invoke it lazily in `getField` to avoid copying data until it's actually needed.
    */
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void;
+  setOnEntity(data: any, row: any): void;
+
+  /** Optional fast path that reads directly from the entity's `(rowData, rowIndex)` result. */
+  setOnEntityFromRowData?(data: any, rowData: RowData, rowIndex: number): void;
 }
 
 /**
@@ -115,7 +123,11 @@ export class CustomSerdeAdapter implements FieldSerde {
     this.isNullableArray = isNullableArray;
   }
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] =
       value !== undefined
@@ -171,7 +183,11 @@ export class PrimitiveSerde implements FieldSerde {
     public isNullableArray = false, // only set for nullable arrays
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
   }
 
@@ -258,7 +274,11 @@ export class BigIntSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] = value ? BigInt(value) : value;
   }
@@ -300,7 +320,11 @@ export class DecimalToNumberSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] = value !== undefined ? Number(value) : value;
   }
@@ -344,7 +368,11 @@ export class KeySerde implements FieldSerde {
     };
   }
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = keyToTaggedId(this.meta, rowData.get(rowIndex, this.columnName));
   }
 
@@ -392,7 +420,11 @@ export class PolymorphicKeySerde implements FieldSerde {
     private fieldName: string,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     for (const column of this.columns) {
       const value = rowData.get(rowIndex, column.columnName);
       if (value) data[this.fieldName] ??= keyToTaggedId(column.otherMetadata(), value);
@@ -461,7 +493,11 @@ export class EnumFieldSerde implements FieldSerde {
     private enumObject: any,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.enumObject.findById(rowData.get(rowIndex, this.columnName))?.code;
   }
 
@@ -494,7 +530,11 @@ export class EnumArrayFieldSerde implements FieldSerde {
     private enumObject: any,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] =
       rowData.get(rowIndex, this.columnName)?.map((id: any) => this.enumObject.findById(id).code) || [];
   }
@@ -520,6 +560,15 @@ function maybeNullToUndefined(value: any): any {
   return value === null ? undefined : value;
 }
 
+/** Invokes a serde's RowData fast path when available, else its legacy one-row contract. */
+export function applySetOnEntity(serde: FieldSerde, data: any, rowData: RowData, rowIndex: number): void {
+  if (serde.setOnEntityFromRowData !== undefined) {
+    serde.setOnEntityFromRowData(data, rowData, rowIndex);
+  } else {
+    serde.setOnEntity(data, rowData.toRow(rowIndex));
+  }
+}
+
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
 export class SuperstructSerde implements FieldSerde {
   dbType = "jsonb";
@@ -537,7 +586,11 @@ export class SuperstructSerde implements FieldSerde {
     private superstruct: any,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     if (value) {
       this.assert(value, this.superstruct);
@@ -576,7 +629,11 @@ export class JsonSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
   }
 
@@ -614,7 +671,11 @@ export class ZodSerde implements FieldSerde {
     private zodSchema: any,
   ) {}
 
-  setOnEntity(data: any, rowData: RowData, rowIndex: number): void {
+  setOnEntity(data: any, row: any): void {
+    this.setOnEntityFromRowData(data, new PojoRowData([row]), 0);
+  }
+
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     if (value) {
       data[this.fieldName] = this.zodSchema.parse(value);

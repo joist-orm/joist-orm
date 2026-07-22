@@ -3,7 +3,6 @@ import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, lazyExcludedSelects } from "../QueryParser";
-import { PojoRowData } from "../RowData";
 import { keyToNumber, tagId } from "../keys";
 import { LoadHint } from "../loadHints";
 import { abbreviation } from "../utils";
@@ -44,7 +43,7 @@ export function loadBatchLoader(
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
     const rows = await em["executeFind"](meta, loadOperation, query, {});
     const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
-    preloadHydrator && preloadHydrator(new PojoRowData(rows), entities);
+    preloadHydrator && preloadHydrator(rows, entities);
     // If we're missing any requested rows, mark any requested-but-not-found entities as deleted
     if (rows.length !== loads.length) {
       const foundIds = new Set(rows.map((r: any) => tagId(meta, r.id)));

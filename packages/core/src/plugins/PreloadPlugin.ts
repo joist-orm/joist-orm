@@ -63,13 +63,17 @@ export interface PreloadPlugin {
 }
 
 /**
- * Given the query's `rows` (as a `RowData`), and the already-hydrated `entities` for each row,
- * reads the preload-specific columns out of the result set, and pushes them into the EM preload
- * cache, hydrating the child entities in the process, but not marking any relations as loaded.
+ * Given the query's rows — classic POJO rows, or a `RowData` result in lazy-rows mode — and the
+ * already-hydrated `entities` for each row, reads the preload-specific columns out of the result
+ * set, and pushes them into the EM preload cache, hydrating the child entities in the process,
+ * but not marking any relations as loaded.
  *
- * The order of the `RowData` rows and `entities` must match.
+ * Classic loaders keep passing plain row arrays (the pre-RowData contract), so existing plugin
+ * implementations that only handle arrays continue to work everywhere except lazy-rows mode.
+ *
+ * The order of the rows and `entities` must match.
  */
-export type PreloadHydrator = (rows: RowData, entities: any[]) => void;
+export type PreloadHydrator = (rows: any[] | RowData, entities: any[]) => void;
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
 export type JoinResult = {

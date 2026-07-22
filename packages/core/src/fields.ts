@@ -25,7 +25,12 @@ export function getField(entity: Entity, fieldName: string): any {
   } else {
     if (!entity.isNewEntity) {
       const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
-      serde.setOnEntity(data, instanceData.rowData, instanceData.rowIndex);
+      if (serde.setOnEntityFromRowData !== undefined) {
+        serde.setOnEntityFromRowData(data, instanceData.rowData, instanceData.rowIndex);
+      } else {
+        // Legacy custom serdes get one materialized POJO row (see FieldSerde.setOnEntity)
+        serde.setOnEntity(data, instanceData.rowData.toRow(instanceData.rowIndex));
+      }
     }
     return data[fieldName];
   }

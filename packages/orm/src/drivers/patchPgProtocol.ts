@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 /**
  * Patches pg-protocol's `Parser.prototype.handlePacket` at runtime to defer per-cell string
@@ -74,7 +74,10 @@ const DATA_ROW_CODE = 68;
 /** Resolves pg's own pg-protocol Parser class and swaps in the lazy DataRow handling. */
 function tryPatch(): boolean {
   try {
-    const Parser = resolvePgParser();
+    const { Parser, version } = resolvePgProtocol();
+    // Only patch the protocol major we've verified `handlePacket`'s shape against (1.10-1.15);
+    // anything else fails closed (the driver then uses classic rows) until explicitly vetted
+    if (!/^1\./.test(version)) return false;
     const original = Parser.prototype.handlePacket;
     if (typeof original !== "function") return false;
     Parser.prototype.handlePacket = function (offset: number, code: number, length: number, bytes: Buffer) {
@@ -91,13 +94,15 @@ function tryPatch(): boolean {
   }
 }
 
-/** Loads the Parser class from the pg-protocol instance that `pg` itself resolves to. */
-function resolvePgParser(): any {
+/** Loads the Parser class + version from the pg-protocol instance that `pg` itself resolves to. */
+function resolvePgProtocol(): { Parser: any; version: string } {
   // Resolve pg-protocol relative to pg, so that we patch the copy pg's Connections actually
   // use, even if the dependency tree has multiple pg-protocol installs
   const pgPath = require.resolve("pg");
   const parserPath = require.resolve("pg-protocol/dist/parser.js", { paths: [dirname(pgPath)] });
-  return require(parserPath).Parser;
+  // An absolute-path require bypasses the package's exports map, so this is always readable
+  const { version } = require(join(dirname(parserPath), "..", "package.json"));
+  return { Parser: require(parserPath).Parser, version };
 }
 
 /** Round-trips a synthetic two-cell DataRow (utf8 + NULL) through a fresh patched Parser. */

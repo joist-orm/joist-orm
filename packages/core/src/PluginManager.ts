@@ -42,13 +42,16 @@ interface PluginMethods {
     },
   ): void;
   /**
-   * Called after a find operation has been executed with the raw database rows.
+   * Called after a find operation has been executed to observe the raw database rows.
+   *
+   * The rows are observation-only. Mutating the array or row objects is unsupported and is not
+   * guaranteed to affect entity hydration.
    *
    * @param meta Metadata for the entity type that was queried
    * @param operation The type of find operation that was performed
-   * @param rows The raw database rows returned from the query
+   * @param rows A read-only view of the raw database rows returned from the query
    */
-  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
+  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: readonly Readonly<Record<string, unknown>>[]): void;
 
   beforeValidate?(entities: readonly Entity[]): Promise<void> | void;
 
@@ -181,7 +184,7 @@ export class PluginManager implements Required<PluginMethods> {
       keepAliases?: string[];
     },
   ): void {}
-  afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+  afterFind(meta: EntityMetadata, operation: FindOperation, rows: readonly Readonly<Record<string, unknown>>[]) {}
   beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}

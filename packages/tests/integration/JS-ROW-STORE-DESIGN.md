@@ -223,9 +223,9 @@ PojoStore-adapted rows in phase 1), and the sidecar-column dataloaders. Plus, ne
 the vendored `pg-protocol` parser (~200-400 LOC fork of one file) and the `RowStoreQuery`
 Submittable (~150 LOC), both in `joist-orm` (the driver package), not `joist-core`.
 
-`pluginManager.afterFind(meta, operation, rows)` receives a lazy adapter view (or the QueryStore
-handle) — the one observable API change; audit of in-repo plugins shows only the preloader uses
-it.
+`pluginManager.afterFind(meta, operation, rows)` remains an observation-only hook over POJO rows.
+The lazy path materializes a read-only snapshot only when a hook is registered; plugins must not
+mutate it, and changes are not guaranteed to affect hydration.
 
 ## 10. Expected performance and memory
 
@@ -252,7 +252,7 @@ limits, with GC pauses driven only by the entity objects.
 | Vendored `pg-protocol` drift                             | The wire protocol is frozen in practice; pin + protocol-level tests; the fork is one parser file. |
 | pg-types parity bugs                                     | Reuse `pg-types` itself per cell; dual-mode test runs (store vs POJO) diff `data` values.         |
 | Scan-on-access regressions for read-everything workloads | Bounded (~1.5× decode); C1 offsets or C3 bulk mode behind the same store interface.               |
-| `afterFind` plugin contract                              | Lazy adapter view; document.                                                                      |
+| `afterFind` plugin cost                                  | Materialize a read-only POJO snapshot only when a hook is registered.                             |
 | Debuggability (rows not inspectable)                     | `store.toRow(ordinal)` debug helper; heap snapshots get _smaller_ and truthful.                   |
 | Refresh-heavy EMs leak stale bytes in arenas             | Bytes only, off-heap, EM-scoped; compaction if ever measured to matter.                           |
 | Chunk-spanning DataRows / TOASTed large cells            | Handled at framing time (parser already reassembles); arena append is size-agnostic.              |
@@ -293,8 +293,8 @@ Implemented as designed, in two stages:
    `pg/lib/query` subclass that appends payloads to the arena (the pg-cursor Submittable seam),
    so stock `pg` keeps connections/auth/TLS/pools. Enabled per-driver via
    `PostgresDriverOpts.lazyRows`; the test suite runs it via `JOIST_ROW_DATA=1`. The
-   `afterFind` plugin hook materializes POJO rows via `store.toRows()` only when a plugin
-   actually registered it.
+   observation-only `afterFind` plugin hook materializes POJO rows via `store.toRows()` only when
+   a plugin actually registered it.
 
 One deliberate deviation from §5: the implementation uses **query-scoped results** (each find's
 arena is owned by its result; entities hold `(rowData, rowIndex)` on their `InstanceData`) rather

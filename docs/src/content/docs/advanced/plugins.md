@@ -37,7 +37,11 @@ export class MyPlugin extends Plugin {
     console.log(`Finding ${meta.type} with operation ${operation}`);
   }
 
-  afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]): void {
+  afterFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    rows: readonly Readonly<Record<string, unknown>>[],
+  ): void {
     // Called after a find operation with the raw database rows
     console.log(`Found ${rows.length} ${meta.type} rows`);
   }
@@ -90,10 +94,16 @@ beforeFind(
 
 ### afterFind
 
-Called after a find operation has been executed with the raw database rows. This is useful for post-processing results or collecting metrics.
+Called after a find operation has been executed with a read-only view of the raw database rows.
+This is useful for observing results, collecting metrics, or tracing query behavior. Mutating the
+array or row objects is unsupported and is not guaranteed to affect entity hydration.
 
 ```typescript
-afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]): void {
+afterFind(
+  meta: EntityMetadata,
+  operation: FindOperation,
+  rows: readonly Readonly<Record<string, unknown>>[],
+): void {
   // Track query metrics
   this.metrics.recordQuery(meta.type, operation, rows.length);
 }

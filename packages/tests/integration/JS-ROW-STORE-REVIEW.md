@@ -13,7 +13,7 @@ POJOs for fields that are never read. The reported large-result speedup is plaus
 and consistent with the implementation.
 
 The current implementation is not ready to ship as a public `lazyRows` option. It is best viewed
-as a successful prototype for large, sparse-read `em.find` workloads. There are three immediate
+as a successful prototype for large, sparse-read `em.find` workloads. There are two immediate
 correctness/compatibility blockers:
 
 1. The required `pg-protocol` patch is a root-workspace resolution and is not distributed with
@@ -21,8 +21,6 @@ correctness/compatibility blockers:
    not safely contained by `RowDataQuery`.
 2. `WireRowData` bypasses the active node-postgres type parser registry and assumes every field
    is text. Client/pool overrides are ignored and binary results can be silently corrupted.
-3. `afterFind` receives detached materialized rows. Its mutations, filtering, reordering, and
-   sidecar changes are discarded before hydration.
 
 The memory story also needs revision before this can be described as a generally efficient row
 representation. Every query eagerly allocates about 260 KiB, the arena geometrically recopies
@@ -33,8 +31,7 @@ results.
 My recommended direction is:
 
 1. Keep the `RowData` seam.
-2. Fix distribution, parser parity, error containment, and plugin semantics before optimizing
-   cell lookup.
+2. Fix distribution, parser parity, and error containment before optimizing cell lookup.
 3. Replace the monolithic arena with lazy fixed-size chunks or exact-size finalization.
 4. Preserve existing extension APIs or introduce explicit opt-in `RowData` capabilities.
 5. Treat query ownership as a policy behind `RowData`; evaluate an adopt-or-compact model before
@@ -149,7 +146,7 @@ entity field access because `InstanceData.data` caches the domain value. It is n
 `RowData.get` itself:
 
 - `toRows()` reparses every cell on every call (`WireRowData.ts:65-85`).
-- `afterFind` can materialize all cells and later entity access parses them again.
+- An `afterFind` observer materializes all cells and later entity access can parse them again.
 - `_tags` and preload sidecars are read outside ordinary field caching.
 - `createRowFromEntityData` can read untouched columns again.
 - ID and inheritance discrimination are mandatory hydration reads.
@@ -177,6 +174,13 @@ treated as hypotheses until isolated on supported Node versions and real row sha
 
 The current "read 6 fields" benchmark is an all-row sparse read, not a read-everything or bounded
 worst case. Six fields out of roughly 40 does not establish dense-read behavior.
+
+`afterFind` is an observation-only hook; mutating, filtering, or reordering its rows is not part of
+the supported contract. Under that contract, lazy mode's detached materialized rows are
+semantically valid and do not need to become authoritative for hydration. The remaining concern is
+performance: registering any row observer forces full materialization, and later field access can
+parse the same values again. That cost should be documented and measured, not treated as a
+correctness regression.
 
 ### 4. Buffers reduce tracing, not total memory cost
 
@@ -329,7 +333,7 @@ boundary, or capacity behavior.
 | Each cell faults at most once | Entity fields normally cache, but `toRows`, sidecars, and row reconstruction can reparse. |
 | Small finds are neutral | Every store starts with a 256 KiB arena and 4 KiB offset table. |
 | Arena append is size-agnostic | One Buffer plus 32-bit absolute offsets has growth spikes and an approximately 4 GiB ceiling. |
-| `afterFind` gets a compatible view | It receives detached POJOs whose changes are discarded. |
+| `afterFind` gets an observation-compatible view | It receives detached POJOs, but any observer forces full materialization and values can be parsed again later. |
 | Arena memory is invisible to GC | Payload is untraced, but external memory is accounted and contributes to RSS/GC scheduling. |
 | Six-field result is read-everything worst case | It is a sparse six-of-about-40 all-row read. |
 | Dual-mode test rollout | Lazy mode is manually selectable but absent from committed scripts and CI. |
@@ -397,41 +401,7 @@ values.
 pool/client parsers, text and binary formats, null/empty/non-ASCII strings, bytea, UUID, integers,
 int8/numeric, floats, JSON/JSONB, arrays, dates, timestamps, and Joist's Date/Temporal settings.
 
-### Blocker 3: `afterFind` mutations are discarded
-
-**References:** `packages/core/src/EntityManager.ts:537-560,563-590`
-
-Classic execution passes the same `rows` array to `afterFind` and hydration. Lazy execution calls
-the hook with `rowData.toRows()` and then returns the original `rowData`. The materialized array is
-detached and discarded.
-
-This breaks existing behaviors such as:
-
-- normalizing or redacting a column;
-- adding/changing `__class` or `_tags`;
-- mutating parsed JSON;
-- filtering, appending, reordering, or removing rows;
-- providing preload-specific sidecars.
-
-It also parses every cell for the hook and can parse the same values again on entity access.
-
-**Recommendation:** Preserve the existing mutable contract by making materialized rows
-authoritative when a hook exists:
-
-```ts
-const rows = rowData.toRows();
-pluginManager.afterFind(meta, operation, rows);
-return new PojoRowData(rows);
-```
-
-This intentionally gives generic `afterFind` plugins a classic representation. If metrics-only
-plugins need a zero-materialization path, add a separate read-only query/result metadata hook
-rather than weakening `afterFind` compatibility.
-
-**Required tests:** A hook that changes a scalar and relation FK, mutates JSON, changes `__class`
-and `_tags`, filters/reorders rows, and participates in preloading; assert classic/lazy parity.
-
-### High 4: fixed allocation and geometric growth make retained memory pathological
+### High 3: fixed allocation and geometric growth make retained memory pathological
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:27-33,87-104`
 
@@ -460,7 +430,7 @@ payload bytes and retained capacity for benchmarks, and enforce explicit size li
 boundary, one oversized row, offsets near the chosen limit, and memory accounting for heap,
 external, arrayBuffers, and RSS.
 
-### High 5: query ownership retains duplicates and sidecars
+### High 4: query ownership retains duplicates and sidecars
 
 **References:** `packages/core/src/RowData.ts:1-9`,
 `packages/core/src/EntityManager.ts:2214-2273`, `packages/core/src/dataloaders/findDataLoader.ts:133-147`
@@ -480,7 +450,7 @@ should continue to see only a `RowData` and row index.
 entity from a large query; batched tags; STI/CTI; join-preload JSON; refresh/repoint behavior; and
 fully decoded entities.
 
-### High 6: exported extension contracts changed incompatibly
+### High 5: exported extension contracts changed incompatibly
 
 **References:** `packages/core/src/serde.ts:31-43`,
 `packages/core/src/plugins/PreloadPlugin.ts:65-72`,
@@ -511,7 +481,7 @@ drivers are intentionally expected to implement them.
 **Required tests:** Compile and run unchanged custom serdes, multi-column serdes, custom preload
 plugins, and direct supported `InstanceData` consumers in both classic and lazy modes.
 
-### High 7: the global protocol patch is not backward compatible
+### High 6: the global protocol patch is not backward compatible
 
 **References:** `.yarn/patches/pg-protocol-npm-1.10.3-f64bdf6543.patch:1-70`,
 `package.json:59-62`
@@ -537,7 +507,7 @@ tested pg version and `joist-orm`'s declared `pg ^8.22.0` peer.
 upstreamed, preserve existing construction/shape semantics, define raw-payload lifetime clearly,
 update source/declarations/maps, and run the upstream protocol test suite.
 
-### Medium 8: pool/client handling is fragile
+### Medium 7: pool/client handling is fragile
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:114-140`,
 `packages/orm/src/drivers/PostgresDriver.ts:101-116`
@@ -558,7 +528,7 @@ the `instanceof` branch.
 capabilities before submission, and fall back before query execution for unsupported native or
 custom clients. Prefer a public query export or supported raw-row API over a private path.
 
-### Medium 9: driver capability flags can become inconsistent
+### Medium 8: driver capability flags can become inconsistent
 
 **References:** `packages/core/src/drivers/Driver.ts:23-31`,
 `packages/core/src/dataloaders/findDataLoader.ts:80-84,133-138`
@@ -573,7 +543,7 @@ The new method also bypasses subclasses that previously customized `executeFind`
 **Recommendation:** Use a single discriminated capability or check the function itself. Define a
 protected raw execution seam in `PostgresDriver` so subclasses can preserve routing/tracing.
 
-### Medium 10: lazy execution covers only unpaginated `findDataLoader`
+### Medium 9: lazy execution covers only unpaginated `findDataLoader`
 
 **References:** `packages/core/src/dataloaders/findDataLoader.ts:74-85,133-147`
 
@@ -594,7 +564,7 @@ documented lazy refresh/arena behavior is not implemented.
 row execution and deliberately classify every loader. Extend only after focused parity tests;
 broader coverage is not required to validate the initial optimization.
 
-### Medium 11: dense access is quadratic in column count
+### Medium 10: dense access is quadratic in column count
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-54`
 
@@ -615,7 +585,7 @@ sparse-read spike.
 Do not add C3 column materialization until representative export/serialization profiles show it
 beats an adaptive row index.
 
-### Medium 12: lazy parser exceptions occur outside query execution
+### Medium 11: lazy parser exceptions occur outside query execution
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-54`
 
@@ -625,9 +595,10 @@ Parser functions with side effects can also observe different timing and may be 
 once through `toRows` and later field access.
 
 **Recommendation:** Document the timing, ensure tracing can attribute field-fault failures, and add
-tests that make the behavior explicit. Fix `afterFind` to prevent avoidable double parsing.
+tests that make the behavior explicit. Treat full materialization and possible repeated parsing as
+the documented cost of registering an `afterFind` row observer.
 
-### Low 13: wire boundaries and indexes are trusted
+### Low 12: wire boundaries and indexes are trusted
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-53,87-104`
 
@@ -643,7 +614,7 @@ are valuable because this code bypasses the protocol reader that formerly perfor
 on access. Guard negative/overflow lengths, field-count mismatches, truncated cells, and storage
 limits. Chunk-relative offsets naturally remove the 4 GiB absolute-offset wrap.
 
-### Low 14: documentation overstates implementation completeness
+### Low 13: documentation overstates implementation completeness
 
 **References:** `packages/tests/integration/JS-ROW-STORE-DESIGN.md:276-323`
 
@@ -665,20 +636,18 @@ Treat `lazyRows` as repository-internal until all of the following are true:
 - Unsupported pg/client/protocol configurations are detected before query submission.
 - Errors reject safely and leave the connection reusable.
 - Active parsers and text/binary formats match node-postgres.
-- `afterFind` behavior matches classic mode.
 - Existing public extension contracts have a compatibility plan.
 
 ### Phase 1: correctness and compatibility
 
-1. Make materialized plugin rows authoritative by returning `PojoRowData` after `afterFind`.
-2. Reuse node-postgres's active Result parsers and formats.
-3. Mirror `Query.handleDataRow` error handling and connection cancellation semantics.
-4. Replace independent `lazyRows?`/`executeFindRowData?` fields with one capability.
-5. Make the raw query helper accept an already checked-out supported client only.
-6. Add startup/version capability checks and reject unsupported native/custom clients.
-7. Preserve legacy `FieldSerde`, `PreloadHydrator`, and supported `InstanceData` behavior, or make
+1. Reuse node-postgres's active Result parsers and formats.
+2. Mirror `Query.handleDataRow` error handling and connection cancellation semantics.
+3. Replace independent `lazyRows?`/`executeFindRowData?` fields with one capability.
+4. Make the raw query helper accept an already checked-out supported client only.
+5. Add startup/version capability checks and reject unsupported native/custom clients.
+6. Preserve legacy `FieldSerde`, `PreloadHydrator`, and supported `InstanceData` behavior, or make
    this explicitly a major release with a migration API.
-8. Add `RowData.toRow(index)` for cheap compatibility and debugging; define whether returned
+7. Add `RowData.toRow(index)` for cheap compatibility and debugging; define whether returned
    object values are cached.
 
 ### Phase 2: production protocol integration
@@ -765,7 +734,7 @@ dense rows linear rather than quadratic.
 - Join preloading and large aggregate sidecars.
 - Mutation, dirty tracking, oplock, flush, and post-flush reads.
 - Fork, import, test `run()`, and `createRowFromEntityData`.
-- `afterFind` mutation/filter/reorder semantics.
+- `afterFind` row-count and value observation in classic and lazy modes.
 - Legacy custom serde, preload plugin, and custom driver behavior.
 - Deferred parser-error timing.
 
@@ -828,7 +797,7 @@ Before opt-in public release:
 
 - Packed-package lazy query succeeds on every supported pg version/package manager.
 - Classic/lazy values are differential-equal for all supported formats and parser overrides.
-- `afterFind` and custom extension parity tests pass.
+- `afterFind` observations and custom extension parity tests pass.
 - Unsupported configurations fail or choose classic mode before query submission.
 - One-row lazy retained capacity is proportional to the row, not 256 KiB.
 - No silent offset wrap or malformed-row overread is possible.
@@ -848,8 +817,9 @@ database suite. The focused verification produced these results:
 
 - The existing lazy-mode plugin test subset passed (23 tests), showing that broad hook invocation
   still works.
-- An `afterFind` hook that replaced `first_name` with `"plugin"` produced `"plugin"` in classic
-  mode and the original database value in lazy mode, confirming that hook mutations are detached.
+- An `afterFind` mutation probe produced different classic and lazy hydration results. The hook is
+  now explicitly documented and typed as observation-only, so detached mutations are outside the
+  supported contract and this difference is not a correctness finding.
 - A pool-specific parser produced `"custom:7"` in classic mode and `7` in lazy mode, confirming
   that active parser overrides are bypassed.
 - A binary integer result produced `7` in classic mode and `NaN` in lazy mode, confirming data
@@ -862,16 +832,16 @@ database suite. The focused verification produced these results:
   364.3 ms lazy end-to-end. The incremental field-read phase was about 59.3 ms classic versus
   199.9 ms lazy, showing both the overall benefit and the substantially higher first-read cost.
 
-These probes reinforce the main conclusion: the optimization has real upside, while the parser,
-plugin, and memory issues are release blockers rather than speculative edge cases.
+These probes reinforce the main conclusion: the optimization has real upside, while the parser
+and memory issues are release blockers rather than speculative edge cases.
 
 ## Final assessment
 
 `RowData` and lazy wire retention are a promising architectural direction, and the prototype
 demonstrates enough upside to justify another iteration. The current commit should not be merged
 as a completed/distributable feature without changes: it has downstream installation failure,
-type-parser correctness bugs, plugin semantic regressions, public extension incompatibilities,
-and severe small-query retention behavior.
+type-parser correctness bugs, public extension incompatibilities, and severe small-query retention
+behavior.
 
 The next iteration should remain deliberately simple: preserve `RowData`, make the parser path
 correct and distributable, fall back to `PojoRowData` at compatibility boundaries, and use

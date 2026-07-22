@@ -582,7 +582,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (shouldCheck && rowData.rowCount >= this.entityLimit) {
       throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
     }
-    // The afterFind hook contract is POJO rows, so only materialize them if a plugin actually wants them
+    // The afterFind hook observes POJO rows, so only materialize them if a plugin actually wants them.
     if (pluginManager.hasHook("afterFind")) {
       pluginManager.afterFind(meta, operation, rowData.toRows());
     }

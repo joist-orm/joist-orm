@@ -24,7 +24,7 @@ export interface RowData {
   readonly rowCount: number;
   /** Returns the driver-level column value for a row, i.e. `rowData.get(0, "first_name")`. */
   get(rowIndex: number, columnName: string): any;
-  /** Materializes classic POJO rows, i.e. for the `afterFind` plugin contract or debugging. */
+  /** Materializes classic POJO rows, i.e. for `afterFind` observation or debugging. */
   toRows(): any[];
 }
 

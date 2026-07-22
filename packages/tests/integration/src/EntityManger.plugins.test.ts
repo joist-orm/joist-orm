@@ -177,14 +177,18 @@ describe("EntityManger.plugins", () => {
       }
     }
 
-    it.withCtx("is called with the meta, operation and returned rows on find", async (ctx) => {
+    it.withCtx("can observe the meta, operation, and returned rows on find", async (ctx) => {
       await insertAuthor({ first_name: "a1" });
       const { em } = ctx;
       const plugin = new AfterFindPlugin();
       em.addPlugin(plugin);
       expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});
-      expect(plugin.calls).toEqual([[getMetadata(Author), "find", [expect.objectContaining({})]]]);
+      expect(plugin.calls).toHaveLength(1);
+      const [meta, operation, rows] = plugin.calls[0];
+      expect(meta).toBe(getMetadata(Author));
+      expect(operation).toBe("find");
+      expect(rows).toMatchObject([{ first_name: "a1" }]);
     });
   });
 

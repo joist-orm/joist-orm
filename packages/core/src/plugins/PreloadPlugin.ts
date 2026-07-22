@@ -3,6 +3,7 @@ import { EntityMetadata } from "../EntityMetadata";
 import { EntityOrId, HintNode } from "../HintTree";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { LateralJoinTable, ParsedFindQuery } from "../QueryParser";
+import { RowData } from "../RowData";
 
 /**
  * This is a plugin API dedicated to preloading data for subtrees of entities.
@@ -62,13 +63,13 @@ export interface PreloadPlugin {
 }
 
 /**
- * Given a list of `rows`, and the already-hydrated `entities` for each row, reads the preload-specific
- * columns out of the `rows` result set, and pushes them into the EM preload cache, hydrating
- * the child entities in the process, but not marking any relations as loaded.
+ * Given the query's `rows` (as a `RowData`), and the already-hydrated `entities` for each row,
+ * reads the preload-specific columns out of the result set, and pushes them into the EM preload
+ * cache, hydrating the child entities in the process, but not marking any relations as loaded.
  *
- * The order of `rows` and `entities` must match.
+ * The order of the `RowData` rows and `entities` must match.
  */
-export type PreloadHydrator = (rows: any[], entities: any[]) => void;
+export type PreloadHydrator = (rows: RowData, entities: any[]) => void;
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
 export type JoinResult = {

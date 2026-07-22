@@ -100,6 +100,7 @@ import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { lazyColumnLoadOperation, LazyFieldImpl } from "./relations/LazyField";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
+import { PojoRowData, RowData } from "./RowData";
 import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -557,6 +558,35 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     pluginManager.afterFind(meta, operation, rows);
     return rows;
+  }
+
+  /** The `lazyRows` variant of `executePreparedFind`, returning a `RowData` instead of POJO rows. */
+  private async executePreparedFindRowData(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    findSettings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+    checkLimit: boolean | undefined,
+  ): Promise<RowData> {
+    const { pluginManager } = getEmInternalApi(this);
+    const rowData = await this.driver.executeFindRowData!(this, parsed, findSettings);
+    // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
+    const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);
+    if (shouldCheck && rowData.rowCount >= this.entityLimit) {
+      throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
+    }
+    // The afterFind hook contract is POJO rows, so only materialize them if a plugin actually wants them
+    if (pluginManager.hasHook("afterFind")) {
+      pluginManager.afterFind(meta, operation, rowData.toRows());
+    }
+    return rowData;
   }
 
   /**
@@ -2166,24 +2196,37 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     rows: readonly any[],
     options?: { overwriteExisting?: boolean },
   ): T[] {
+    return this.hydrateFromRowData(type, new PojoRowData(rows), options);
+  }
+
+  /**
+   * Like {@link hydrate}, but reads rows from a {@link RowData}, i.e. a driver-produced
+   * lazy/columnar query result, instead of an array of POJO rows.
+   */
+  public hydrateFromRowData<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rowData: RowData,
+    options?: { overwriteExisting?: boolean },
+  ): T[] {
     const maybeBaseMeta = getMetadata(type);
     const overwriteExisting = options?.overwriteExisting === true;
 
-    let i = 0;
-    const entities = new Array(rows.length);
-    for (const row of rows) {
-      const id = row["id"];
+    const count = rowData.rowCount;
+    const entities = new Array(count);
+    for (let i = 0; i < count; i++) {
+      const id = rowData.get(i, "id");
       const taggedId =
         id === undefined || id === null ? fail("No id column was available") : keyToTaggedId(maybeBaseMeta, id)!;
       // See if this is already in our UoW
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
-        const meta = findConcreteMeta(maybeBaseMeta, row);
+        const meta = findConcreteMeta(maybeBaseMeta, rowData, i);
         // Pass id as a hint that we're in hydrate mode
         entity = newEntity(this, asConcreteCstr(meta.cstr), false) as T;
         const instanceData = getInstanceData(entity);
-        instanceData.row = row;
+        instanceData.rowData = rowData;
+        instanceData.rowIndex = i;
         // Seed the id to share the identity-map key string and skip the id serde on first read
         instanceData.data["id"] = taggedId;
         this.#doRegister(entity as any, taggedId, meta, true);
@@ -2192,7 +2235,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
         // First swap out the old row with the new row
         const instanceData = getInstanceData(entity);
-        instanceData.row = row;
+        instanceData.rowData = rowData;
+        instanceData.rowIndex = i;
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
         const { data } = instanceData;
@@ -2208,13 +2252,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, row);
+              serde.setOnEntity(data, rowData, i);
             }
           } else {
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, row);
+              serde.setOnEntity(data, rowData, i);
               // Make the field look not-dirty
               if (changedFields.includes(fieldName)) {
                 instanceData.markFieldClean(fieldName);
@@ -2223,7 +2267,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
         }
       }
-      entities[i++] = entity;
+      entities[i] = entity;
     }
 
     return entities;
@@ -3286,21 +3330,27 @@ function getNow(): Date {
 }
 
 /** Given a `row` from the db, resolves the CTI/STI subtype, if applicable. */
-function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetadata {
-  // Common case of no CTI or STI inheritance
-  if (!row.__class && maybeBaseMeta.inheritanceType !== "sti") {
+function findConcreteMeta(maybeBaseMeta: EntityMetadata, rowData: RowData, rowIndex: number): EntityMetadata {
+  // Common case of no CTI or STI inheritance; only probe __class for CTI metas so that
+  // lazy/columnar stores don't pay a missing-column lookup per row for regular entities
+  if (maybeBaseMeta.inheritanceType === undefined) {
     return maybeBaseMeta;
   }
-  if (row.__class) {
-    if (row.__class === "_" && maybeBaseMeta.ctiAbstract) {
-      throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, row.id)} must be instantiated via a subtype`);
+  const __class = rowData.get(rowIndex, "__class");
+  if (!__class && maybeBaseMeta.inheritanceType !== "sti") {
+    return maybeBaseMeta;
+  }
+  if (__class) {
+    if (__class === "_" && maybeBaseMeta.ctiAbstract) {
+      const id = rowData.get(rowIndex, "id");
+      throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, id)} must be instantiated via a subtype`);
     }
     // Look for the CTI __class from the driver telling us which subtype to instantiate
-    return maybeBaseMeta.subTypesByType!.get(row.__class) ?? maybeBaseMeta;
+    return maybeBaseMeta.subTypesByType!.get(__class) ?? maybeBaseMeta;
   } else if (maybeBaseMeta.inheritanceType === "sti") {
     // Look for the STI discriminator value
     const baseMeta = getBaseMeta(maybeBaseMeta);
-    const value = row[baseMeta.stiDiscriminatorColumnName!];
+    const value = rowData.get(rowIndex, baseMeta.stiDiscriminatorColumnName!);
     return baseMeta.subTypesByStiValue!.get(value) ?? baseMeta;
   } else {
     throw new Error("Unknown inheritance type");
@@ -3401,7 +3451,7 @@ const fieldMap: Record<string, [Field, Column][]> = {};
 // Generates what a row from the db would look like for a given entity
 export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: boolean } = {}) {
   const { preferOriginalData = true } = opts;
-  const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
+  const { rowData, rowIndex, data, originalData } = (e as any).__data as InstanceData;
   const __class = e.constructor.name;
   const { metadata: meta } = (e as any).__data as InstanceData;
   if (!fieldMap[__class]) {
@@ -3427,8 +3477,8 @@ export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: 
           // reflect what would come from the db if we queried it right now, so use originalData when present
           column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data)
         : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-          // be safe to pull the raw data out of `row`
-          oldRow[column.columnName];
+          // be safe to pull the raw data out of the as-loaded RowData
+          rowData.get(rowIndex, column.columnName);
     row[column.columnName] = value ?? null;
   }
   return row;

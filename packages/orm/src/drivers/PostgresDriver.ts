@@ -22,6 +22,7 @@ import {
   ParsedFindQuery,
   partition,
   PreloadPlugin,
+  RowData,
   RuntimeConfig,
   SequenceIdAssigner,
   Todo,
@@ -30,6 +31,8 @@ import {
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
+import { ensureLazyDataRows } from "./patchPgProtocol";
+import { executeRowDataQuery } from "./WireRowData";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -37,6 +40,11 @@ export interface PostgresDriverOpts {
   preloadPlugin?: PreloadPlugin;
   /** Called after each query is executed, useful for testing/debugging. */
   onQuery?: (sql: string) => void;
+  /**
+   * Keeps entity find results as raw wire bytes and decodes each row/column cell lazily on
+   * field access, instead of eagerly materializing POJO rows; see JS-ROW-STORE-DESIGN.md.
+   */
+  lazyRows?: boolean;
 }
 
 /**
@@ -64,6 +72,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
   readonly #onQuery: OnQuery;
+  readonly lazyRows: boolean;
 
   constructor(
     readonly pool: pg.Pool,
@@ -77,6 +86,12 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       });
     this.#preloadPlugin = opts?.preloadPlugin;
     this.#onQuery = opts?.onQuery;
+    // Lazy rows require pg-protocol to emit lazy DataRows, which we patch in at runtime; if the
+    // patch cannot be applied/verified (i.e. future pg-protocol internals changed), stay classic
+    this.lazyRows = (opts?.lazyRows ?? false) && ensureLazyDataRows();
+    if (opts?.lazyRows && !this.lazyRows) {
+      console.warn("joist-orm: lazyRows was requested, but patching pg-protocol failed; using classic rows.");
+    }
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -87,6 +102,17 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   ): Promise<any[]> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
     return this.executeQuery(em, sql, bindings);
+  }
+
+  async executeFindRowData(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<RowData> {
+    const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
+    const pgSql = toPgParams(sql);
+    this.#onQuery?.(pgSql);
+    return executeRowDataQuery(this.getMaybeInTxnClient(em), pgSql, bindings);
   }
 
   async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {

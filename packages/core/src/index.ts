@@ -46,6 +46,7 @@ export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
 export * from "./QueryParser.collectionJoins";
 export { visitConditions } from "./QueryVisitor";
+export * from "./RowData";
 export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";

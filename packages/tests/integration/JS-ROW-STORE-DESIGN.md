@@ -453,3 +453,23 @@ contract).
 Still open (deliberately deferred): packed-package npm/pnpm/yarn install fixtures, sidecar
 column stripping, per-meta consolidation evaluation, C1/C3 adaptive cell indexes, and
 loader-by-loader lazy coverage beyond unpaginated finds.
+
+### Small-result threshold investigation (2026-07-22)
+
+We considered switching small results (1-10 rows) to eagerly-materialized `PojoRowData` on the
+theory that lazy `WireRowData` overhead might not pay off at small sizes. Measured
+(`benchmark-rowdata-small.ts`: end-to-end `em.find` at 1-1000 rows in both modes, plus a
+no-network microbenchmark of the two representations over 40-column rows):
+
+- End-to-end, small finds (n <= 10) are statistically identical in both modes (~500-600µs,
+  round-trip dominated); lazy pulls ahead from n >= 25 and is 2.2x at n=1000.
+- In isolation, for the typical sparse access pattern (~6 of 40 columns read), the lazy result
+  wins at **every** size including n=1 (4.3µs vs 7.6µs) — materialization decodes every column,
+  lazy faults only what is read.
+- The winner flips on column _coverage_, not row count: reading all 40 columns favors
+  materialized rows ~1.6x at any size — but access patterns are unknowable up-front, and at
+  small n the dense penalty (~2µs/row) is invisible under the query round-trip.
+
+Conclusion: **no row-count threshold exists**, so none was added; the decision (and where a
+threshold would go if this ever changes) is documented on `WireRowData` and
+`RowDataQuery.rowData`.

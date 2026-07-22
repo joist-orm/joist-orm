@@ -45,6 +45,16 @@ const COMPACT_THRESHOLD = 0.2;
  * After hydration, `finalize` trims unused capacity and, when some rows were not retained (i.e.
  * their entities were already in the identity map), compacts the payload down to only the
  * retained rows, so retained memory tracks live entities rather than query history.
+ *
+ * Small results deliberately stay lazy — there is NO row-count threshold below which we
+ * materialize to a `PojoRowData` instead. Measured (benchmark-rowdata-small.ts, 40-col rows):
+ * for the typical sparse access pattern (~6 of 40 columns read), keeping the lazy result wins at
+ * every size including a single row (n=1: 4.3µs vs 7.6µs; n=1000: 0.76ms vs 3.0ms), because
+ * materialization eagerly decodes every column while lazy faults only what is read. The winner
+ * flips on column *coverage*, not row count: reading all 40 columns favors materialized rows
+ * ~1.6x at any size — but that access pattern is unknowable up-front, and at small n the dense
+ * penalty (~2µs/row) is invisible under the ~500µs query round-trip. End-to-end, small finds
+ * (n <= 10) measured statistically identical in both modes.
  */
 export class WireRowData implements RowData {
   #chunks: Buffer[] = [];
@@ -334,7 +344,13 @@ class RowDataQuery extends PgQuery {
     super(config, undefined, callback);
   }
 
-  /** The query's result rows, i.e. once our callback has fired. */
+  /**
+   * The query's result rows, i.e. once our callback has fired.
+   *
+   * If a small-result materialization threshold ever seems attractive, this is where it would
+   * go — but see the "Small results deliberately stay lazy" note on {@link WireRowData}: lazy
+   * won the measured comparison at every row count for sparse access, so no threshold exists.
+   */
   get rowData(): RowData {
     return this.#fallbackRows ? new PojoRowData(this.#fallbackRows) : this.#wire;
   }

@@ -18,6 +18,16 @@ export class InstanceData {
   rowData: RowData = emptyRowData;
   /** Our row's index within `rowData`; see {@link RowData}. */
   rowIndex: number = 0;
+
+  /**
+   * A compat view of the as-loaded database row as a POJO.
+   *
+   * @deprecated Prefer `rowData`/`rowIndex`; this materializes the row on every access (it was
+   * previously the raw driver row object).
+   */
+  get row(): Record<string, any> {
+    return this.rowData.toRow(this.rowIndex);
+  }
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
   /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */

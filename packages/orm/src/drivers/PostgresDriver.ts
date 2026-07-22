@@ -21,6 +21,7 @@ import {
   OpColumn,
   ParsedFindQuery,
   partition,
+  PojoRowData,
   PreloadPlugin,
   RowData,
   RuntimeConfig,
@@ -32,7 +33,7 @@ import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 import { ensureLazyDataRows } from "./patchPgProtocol";
-import { executeRowDataQuery } from "./WireRowData";
+import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -41,8 +42,14 @@ export interface PostgresDriverOpts {
   /** Called after each query is executed, useful for testing/debugging. */
   onQuery?: (sql: string) => void;
   /**
-   * Keeps entity find results as raw wire bytes and decodes each row/column cell lazily on
-   * field access, instead of eagerly materializing POJO rows; see JS-ROW-STORE-DESIGN.md.
+   * Experimental: keeps entity find results as raw wire bytes and decodes each row/column cell
+   * lazily on field access, instead of eagerly materializing POJO rows.
+   *
+   * Currently applies only to unpaginated `em.find` queries against the pure-JS pg client
+   * (other loaders — `em.load`, pagination, relation loads, lazy columns — stay classic), and
+   * silently uses classic rows whenever the runtime pg-protocol integration is unavailable.
+   * Note deferred decoding also defers custom-parser errors from `await em.find` to first field
+   * access. See JS-ROW-STORE-DESIGN.md.
    */
   lazyRows?: boolean;
 }
@@ -112,7 +119,20 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
     const pgSql = toPgParams(sql);
     this.#onQuery?.(pgSql);
-    return executeRowDataQuery(this.getMaybeInTxnClient(em), pgSql, bindings);
+    // Centralize client checkout here (pg-pool rejects Submittables in pool.query), and decide
+    // classic-vs-lazy *before* submitting anything, i.e. unsupported clients like pg-native fall
+    // back to classic rows rather than failing mid-query
+    const txnClient = em.txn as pg.PoolClient | undefined;
+    const client = txnClient ?? (await this.pool.connect());
+    try {
+      if (!isRowDataCapableClient(client)) {
+        warnUnsupportedClientOnce();
+        return new PojoRowData((await (client as pg.PoolClient).query(pgSql, bindings as any[])).rows);
+      }
+      return await executeRowDataQuery(client, pgSql, bindings);
+    } finally {
+      if (!txnClient) client.release();
+    }
   }
 
   async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
@@ -389,4 +409,13 @@ const questionMarks = /(?<!@)\?/g;
 function toPgParams(sql: string): string {
   let i = 0;
   return sql.replace(questionMarks, () => `$${++i}`);
+}
+
+let warnedUnsupportedClient = false;
+
+/** Warns once when lazyRows degrades to classic rows for an unsupported client, i.e. pg-native. */
+function warnUnsupportedClientOnce(): void {
+  if (warnedUnsupportedClient) return;
+  warnedUnsupportedClient = true;
+  console.warn("joist-orm: lazyRows is enabled, but this client does not support it; using classic rows.");
 }

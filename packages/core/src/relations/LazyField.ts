@@ -9,6 +9,7 @@ import { kqDot } from "../keywords";
 import { lazyField } from "../newEntity";
 import { ParsedFindQuery } from "../QueryParser";
 import { PojoRowData } from "../RowData";
+import { applySetOnEntity } from "../serde";
 import { abbreviation } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { LoadedProperty, Property, PropertyT } from "./hasProperty";
@@ -144,10 +145,10 @@ function lazyColumnBatchLoader(em: EntityManager, meta: EntityMetadata, fieldNam
       orderBys: [],
     };
     const rows = await em["executeFind"](meta, lazyColumnLoadOperation, query, {});
-    const store = new PojoRowData(rows);
+    const rowData = new PojoRowData(rows);
     for (let i = 0; i < rows.length; i++) {
       const entity = em.findExistingInstance(tagId(meta, rows[i].id));
-      if (entity) field.serde.setOnEntity(getInstanceData(entity).data, store, i);
+      if (entity) applySetOnEntity(field.serde, getInstanceData(entity).data, rowData, i);
     }
   });
 }

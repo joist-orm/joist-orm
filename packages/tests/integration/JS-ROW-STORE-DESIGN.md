@@ -1,7 +1,14 @@
 # JS Columnar Row Store — Option C Design Doc
 
-Status: **implemented** (2026-07-22) behind `PostgresDriverOpts.lazyRows` /
-`JOIST_ROW_DATA=1`; see "Implementation results" at the bottom for measured outcomes.
+Status: **experimental prototype** (2026-07-22) behind `PostgresDriverOpts.lazyRows` /
+`JOIST_ROW_DATA=1`; see "Implementation results" and "Review response" at the bottom for
+measured outcomes and the post-review revisions. Terminology note: the implementation is a
+**lazy wire-row (row-major deferred-decode) representation** — it retains PostgreSQL's row-major
+`DataRow` payloads and defers cell decoding; it is not columnar/structure-of-arrays storage
+(reserve that term for a future C3-style layout). Memory note: row bytes live in Buffer backing
+stores, which V8 does not trace/compact but _does_ account as external memory contributing to
+RSS and GC scheduling — the win is "less traced object graph and less per-cell churn," not free
+memory.
 Naming note: the implementation shipped as `RowData` / `PojoRowData` / `WireRowData` — a
 query's individual, read-only result — rather than this doc's earlier "RowStore" naming, which
 over-suggested a long-lived, writable container. The design-body prose below keeps the original
@@ -401,3 +408,47 @@ Classic queries through the patched parser are unaffected (the memoized `fields`
 identically, same-tick, as pg's `Result.parseRow` requires — note 1.15's `mergeBuffer` can reuse
 the parse buffer across chunks, so same-tick consumption is already the implicit upstream
 contract).
+
+## Review response (2026-07-22)
+
+`JS-ROW-STORE-REVIEW.md` reviewed the initial prototype; this pass implemented its feedback
+(progress annotations are inline in that doc). Summary of what changed:
+
+- **Parser parity (review Blocker 2)**: `WireRowData` now reuses node-postgres's own
+  `Result._parsers` (so pool/client/query `TypeOverrides` are honored) and each field's
+  text/binary format; binary cells reach binary parsers as exact bytes (classic pg's
+  `Buffer.from(utf8String)` round-trip corrupts bytes >= 0x80, so lazy mode is byte-exact where
+  classic can be lossy — a documented, deliberate divergence). Differential type-zoo, custom
+  pool-parser, and binary tests live in `src/WireRowData.test.ts`.
+- **Error containment (Blocker 1)**: the query subclass mirrors pg's `_canceledDueToError`
+  handling, so append/parse errors reject the query promise and leave the connection reusable;
+  unsupported clients (i.e. pg-native) are detected _before_ submission and use classic rows.
+- **Memory representation (review High 3 + Low 12)**: the 256 KiB monolithic arena is gone —
+  payloads live in lazily-allocated 64 KiB chunks (oversized rows get exact-size dedicated
+  chunks, no geometric recopying), `finalize` trims slack, and cell reads validate row bounds,
+  field counts, and cell lengths. Zero-row results allocate nothing; a one-row result retains
+  <128 bytes plus its row.
+- **Retention (High 4)**: hydration `retain`s rows whose entities were kept; `finalize` adopts
+  (trim) when everything was retained and otherwise compacts down to only retained rows, so
+  duplicates/slack no longer pin query history. Sidecar _columns_ (`_tags`, preload aggregates)
+  still live inside retained rows' payloads — stripping cells requires rewriting row payloads
+  and remains a follow-up.
+- **Extension compat (High 5)**: `FieldSerde.setOnEntity(data, row)` is restored as the public
+  contract (built-ins additionally implement the `setOnEntityFromRowData` fast path);
+  `PreloadHydrator` receives plain row arrays everywhere except lazy mode; `InstanceData.row`
+  is back as a deprecated materializing getter; `RowData.toRow(i)` supports cheap one-row
+  compat/debugging.
+- **Scope + claims (Medium 9/11, Low 13)**: `lazyRows` docs now say unpaginated `em.find` only
+  (other loaders stay classic), and deferred custom-parser error timing is documented + tested.
+- **Verification (review §9)**: `yarn test` now runs all four modes (classic/lazy ×
+  stock/join-preloading), which CI invokes; the focused `WireRowData` suite covers protocol,
+  formats, boundaries, compaction, and error containment.
+- **Measured bounds (review §3/§8)**: the benchmark now reports `external`/RSS deltas and a
+  held-alive retained scenario, plus a _dense_ all-columns read: at 100k×40, `em.find` is
+  399 -> 160 ms, retained memory is 102.6 MB traced -> 33.3 MB traced + 29.1 MB external, and the
+  dense read-everything case is 728 ms classic vs 1,199 ms lazy — the real, measured worst-case
+  bound of the C2 prefix-scan tradeoff (adaptive row offsets are the profiled follow-up).
+
+Still open (deliberately deferred): packed-package npm/pnpm/yarn install fixtures, sidecar
+column stripping, per-meta consolidation evaluation, C1/C3 adaptive cell indexes, and
+loader-by-loader lazy coverage beyond unpaginated finds.

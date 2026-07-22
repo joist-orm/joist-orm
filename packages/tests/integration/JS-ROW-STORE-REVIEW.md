@@ -1,5 +1,7 @@
 # JS Lazy Wire Row Store Review
 
+> **Progress (2026-07-22):** This review has been worked through incrementally; each finding below carries a progress annotation like this one. Net state: all blockers and highs addressed (with noted follow-ups), mediums addressed or explicitly deferred per the review's own sequencing, benchmark/CI gaps closed. See also JS-ROW-STORE-DESIGN.md "Review response" for a summary.
+
 Review target: jj commit `3abd881f` (`feat: Lazy parse values off the wire.`), compared with
 parent `326aa724`, and the current `JS-ROW-STORE-DESIGN.md` (including its distribution
 proposal).
@@ -288,6 +290,8 @@ If runtime integration is retained temporarily, it must:
 
 ### 8. The benchmark does not establish the retained-memory claims
 
+> **Progress (2026-07-22):** Revised `benchmark-pg-parse-split.ts`: reports `heapUsed`/`external`/RSS deltas with a mode label; adds a held-alive `em_find_retained` scenario (measured first, since stale async-frame registers can pin a prior result and cancel the delta — the same V8 gotcha documented in benchmark-em-million.ts) and a dense all-columns scenario; the seed count is integer-guarded and cleanup is `finally`-protected. Measured: retained 102.6 MB traced (classic) vs 33.3 MB traced + 29.1 MB external (lazy) at 100k×40. Remaining dimensions (0/1/10-row sweeps, column locality, overlap/refresh histories) are listed as follow-ups.
+
 `benchmark-pg-parse-split.ts` records only `heapUsed` (`lines 68-80`), although the main new
 allocation is external. More importantly, each measured function returns only a number. By the
 post-function GC, its EntityManager, entities, and row store can already be unreachable. The
@@ -310,6 +314,8 @@ not protected by `finally`. Those are secondary issues, but easy to fix while re
 
 ### 9. Claimed verification is not regression-protected
 
+> **Progress (2026-07-22):** Fixed: `yarn test` (which CI invokes via `workspaces foreach run test`) now runs all four modes — `test-stock`, `test-preloading`, `test-lazy`, `test-lazy-preloading` — and the focused `src/WireRowData.test.ts` suite isolates parser/format/boundary/capacity/error behavior (11 tests).
+
 The design states that all 1,906 integration tests pass in four modes. That is useful manual
 evidence, but the repository scripts run only stock and join-preloading classic modes
 (`packages/tests/integration/package.json:13-15`). CI invokes those scripts without
@@ -321,22 +327,22 @@ boundary, or capacity behavior.
 
 ## Design claims versus implementation
 
-| Design/document claim | Current implementation |
-| --- | --- |
-| JS columnar/SoA row store | Row-major PostgreSQL `DataRow` bytes with row offsets. |
-| No per-row message objects | The patched parser still creates one `DataRowMessage` per row. |
-| Per-meta consolidated retained store | Entities retain query-scoped `WireRowData` objects. |
-| Sidecars die after hydration | Sidecars remain in the retained query arena. |
-| Exact retention of live entity bytes | Duplicate rows, sidecars, slack, and unrelated rows can remain pinned. |
-| Rows copied once | Rows are copied into the arena and prior bytes are recopied on each arena growth. |
-| Exact pg-types parity | Active pool/client/query parsers and binary formats are bypassed. |
-| Each cell faults at most once | Entity fields normally cache, but `toRows`, sidecars, and row reconstruction can reparse. |
-| Small finds are neutral | Every store starts with a 256 KiB arena and 4 KiB offset table. |
-| Arena append is size-agnostic | One Buffer plus 32-bit absolute offsets has growth spikes and an approximately 4 GiB ceiling. |
+| Design/document claim                           | Current implementation                                                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| JS columnar/SoA row store                       | Row-major PostgreSQL `DataRow` bytes with row offsets.                                                         |
+| No per-row message objects                      | The patched parser still creates one `DataRowMessage` per row.                                                 |
+| Per-meta consolidated retained store            | Entities retain query-scoped `WireRowData` objects.                                                            |
+| Sidecars die after hydration                    | Sidecars remain in the retained query arena.                                                                   |
+| Exact retention of live entity bytes            | Duplicate rows, sidecars, slack, and unrelated rows can remain pinned.                                         |
+| Rows copied once                                | Rows are copied into the arena and prior bytes are recopied on each arena growth.                              |
+| Exact pg-types parity                           | Active pool/client/query parsers and binary formats are bypassed.                                              |
+| Each cell faults at most once                   | Entity fields normally cache, but `toRows`, sidecars, and row reconstruction can reparse.                      |
+| Small finds are neutral                         | Every store starts with a 256 KiB arena and 4 KiB offset table.                                                |
+| Arena append is size-agnostic                   | One Buffer plus 32-bit absolute offsets has growth spikes and an approximately 4 GiB ceiling.                  |
 | `afterFind` gets an observation-compatible view | It receives detached POJOs, but any observer forces full materialization and values can be parsed again later. |
-| Arena memory is invisible to GC | Payload is untraced, but external memory is accounted and contributes to RSS/GC scheduling. |
-| Six-field result is read-everything worst case | It is a sparse six-of-about-40 all-row read. |
-| Dual-mode test rollout | Lazy mode is manually selectable but absent from committed scripts and CI. |
+| Arena memory is invisible to GC                 | Payload is untraced, but external memory is accounted and contributes to RSS/GC scheduling.                    |
+| Six-field result is read-everything worst case  | It is a sparse six-of-about-40 all-row read.                                                                   |
+| Dual-mode test rollout                          | Lazy mode is manually selectable but absent from committed scripts and CI.                                     |
 
 ## B. Code review
 
@@ -344,6 +350,8 @@ Findings are ordered by severity. The first six should be addressed before expos
 downstream users.
 
 ### Blocker 1: published lazy mode lacks its required parser implementation
+
+> **Progress (2026-07-22):** The install-time yarn patch was replaced by a runtime `Parser.prototype.handlePacket` patch (`packages/orm/src/drivers/patchPgProtocol.ts`) that ships inside joist-orm: version-gated to pg-protocol 1.x, self-verified by a synthetic-DataRow probe at driver construction, failing closed to classic rows. `RowDataQuery` now mirrors pg's `_canceledDueToError` containment, so row-handler errors reject the promise and leave the connection reusable (tested in `src/WireRowData.test.ts`). Unsupported clients (pg-native, wrappers without `.connection`) are detected before submission and use classic rows. Remaining: packed-package npm/pnpm/yarn install fixtures are still TODO.
 
 **References:** `package.json:59-62`, `packages/orm/package.json:81-99`,
 `packages/orm/src/drivers/WireRowData.ts:157-160`
@@ -370,12 +378,14 @@ and connection reuse after all failures.
 
 ### Blocker 2: parser selection and binary handling do not match node-postgres
 
+> **Progress (2026-07-22):** Fixed. `RowDataQuery.handleRowDescription` now hands `WireRowData` the parsers that `Result.addFields` just resolved (honoring pool/client/query `TypeOverrides`) plus each field's format; binary cells reach binary parsers as exact byte slices. Note one deliberate divergence: classic pg round-trips binary cells through a UTF-8 string (lossy >= 0x80); lazy mode is byte-exact, i.e. strictly more correct, and this is documented on `WireRowData`. Differential tests: type zoo (int/int8/numeric/float/bool/text/empty/utf8/null/jsonb/arrays/date/tstz/bytea/uuid), pool-level custom parser (the review's `custom:7` repro now passes), and binary int4.
+
 **References:** `packages/orm/src/drivers/WireRowData.ts:9-10,39-62,152-155`
 
 `setRowDescription` always calls:
 
 ```ts
-pg.types.getTypeParser(field.dataTypeID, "text")
+pg.types.getTypeParser(field.dataTypeID, "text");
 ```
 
 Normal node-postgres resolves parsers from the active client/query `TypeOverrides` and uses each
@@ -402,6 +412,8 @@ pool/client parsers, text and binary formats, null/empty/non-ASCII strings, byte
 int8/numeric, floats, JSON/JSONB, arrays, dates, timestamps, and Joist's Date/Temporal settings.
 
 ### High 3: fixed allocation and geometric growth make retained memory pathological
+
+> **Progress (2026-07-22):** Fixed. Payloads now live in lazily-allocated fixed-size 64 KiB chunks (nothing allocated until the first row); oversized rows get dedicated exact-size chunks; there is no geometric recopying; `finalize` trims the partial chunk + index tables; `payloadBytes`/`retainedBytes` are exposed for benchmarks. Offsets are chunk-relative (no 4 GiB wrap). Tests cover 0/1-row retention (a one-row result retains <128 bytes + tables), chunk boundaries, and an oversized row.
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:27-33,87-104`
 
@@ -432,6 +444,8 @@ external, arrayBuffers, and RSS.
 
 ### High 4: query ownership retains duplicates and sidecars
 
+> **Progress (2026-07-22):** Implemented the adopt-or-compact policy behind `RowData`: hydration `retain`s rows whose entities were kept (new or overwrite-refreshed), and `findDataLoader` calls `finalize()` after hydration + `_tags`/preload reads — all-retained results are adopted (slack trimmed), otherwise the payload is compacted to only retained rows (duplicates dropped; dropped rows error on access; retained entities keep their `rowIndex`). Sidecar _columns_ still occupy bytes inside retained rows' payloads — cell-stripping requires rewriting payloads and is a noted follow-up; per-meta consolidation remains unevaluated per this review's own recommendation.
+
 **References:** `packages/core/src/RowData.ts:1-9`,
 `packages/core/src/EntityManager.ts:2214-2273`, `packages/core/src/dataloaders/findDataLoader.ts:133-147`
 
@@ -451,6 +465,8 @@ entity from a large query; batched tags; STI/CTI; join-preload JSON; refresh/rep
 fully decoded entities.
 
 ### High 5: exported extension contracts changed incompatibly
+
+> **Progress (2026-07-22):** Fixed. `FieldSerde.setOnEntity(data, row)` is restored as the public contract; built-ins implement the optional `setOnEntityFromRowData` fast path and callers prefer it when present (legacy serdes receive `RowData.toRow(i)`, which was added for exactly this). `PreloadHydrator` again receives plain row arrays from every classic loader (type widened to `any[] | RowData`; only lazy-mode finds pass a `RowData`). `InstanceData.row` is restored as a deprecated getter that materializes via `toRow`. `hydrateFromRowData` is documented as an internal API.
 
 **References:** `packages/core/src/serde.ts:31-43`,
 `packages/core/src/plugins/PreloadPlugin.ts:65-72`,
@@ -483,6 +499,8 @@ plugins, and direct supported `InstanceData` consumers in both classic and lazy 
 
 ### High 6: the global protocol patch is not backward compatible
 
+> **Progress (2026-07-22):** The yarn patch and its root wildcard resolutions were removed entirely (the workspace now installs stock pg-protocol 1.15.0, and the pg-version-mismatch masking is gone). The remaining integration is the opt-in runtime patch described under Blocker 1; upstreaming is queued via PG-PROTOCOL-UPSTREAM-PROMPT.md, which preserves construction/shape semantics and defines the payload lifetime as same-tick.
+
 **References:** `.yarn/patches/pg-protocol-npm-1.10.3-f64bdf6543.patch:1-70`,
 `package.json:59-62`
 
@@ -509,6 +527,8 @@ update source/declarations/maps, and run the upstream protocol test suite.
 
 ### Medium 7: pool/client handling is fragile
 
+> **Progress (2026-07-22):** Fixed. Client checkout/release is centralized in `PostgresDriver.executeFindRowData` (explicit `em.txn` vs `pool.connect()` + `finally` release); the `instanceof pg.Pool` branch is gone and the low-level helper accepts an already-checked-out client only. `isRowDataCapableClient` rejects pg-native/custom clients _before_ submission, falling back to classic rows with a one-time warning. The `pg/lib/query` subclassing remains (it is the pg-cursor seam) pending the upstream API.
+
 **References:** `packages/orm/src/drivers/WireRowData.ts:114-140`,
 `packages/orm/src/drivers/PostgresDriver.ts:101-116`
 
@@ -530,6 +550,8 @@ custom clients. Prefer a public query export or supported raw-row API over a pri
 
 ### Medium 8: driver capability flags can become inconsistent
 
+> **Progress (2026-07-22):** Fixed at the call sites: `findDataLoader` requires both `lazyRows === true` and `typeof executeFindRowData === "function"`; the EM helper fails descriptively instead of a non-null assertion. Subclasses that customize `executeFind` for tracing/routing should also override `executeFindRowData` (documented on the option).
+
 **References:** `packages/core/src/drivers/Driver.ts:23-31`,
 `packages/core/src/dataloaders/findDataLoader.ts:80-84,133-138`
 
@@ -544,6 +566,8 @@ The new method also bypasses subclasses that previously customized `executeFind`
 protected raw execution seam in `PostgresDriver` so subclasses can preserve routing/tracing.
 
 ### Medium 9: lazy execution covers only unpaginated `findDataLoader`
+
+> **Progress (2026-07-22):** Docs narrowed rather than coverage broadened, per this review's own recommendation: the `lazyRows` jsdoc now states it applies only to unpaginated `em.find` queries on the pure-JS pg client, with all other loaders classic. Loader-by-loader classification is the deliberate follow-up (Phase 4).
 
 **References:** `packages/core/src/dataloaders/findDataLoader.ts:74-85,133-147`
 
@@ -566,6 +590,8 @@ broader coverage is not required to validate the initial optimization.
 
 ### Medium 10: dense access is quadratic in column count
 
+> **Progress (2026-07-22):** Deferred by design, per the review ("not a launch blocker... after correctness and memory changes, profile"). The dense bound is now _measured_ instead of estimated: reading every serde'd column of every row at 100k×40 is 728 ms classic vs 1,199 ms lazy (`em_find_dense_reads` in benchmark-pg-parse-split.ts). Adaptive row-offset caching is the profiled next step if dense workloads matter.
+
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-54`
 
 Each `get` starts scanning at the beginning of the row. Reading all `C` columns performs `O(C^2)`
@@ -587,6 +613,8 @@ beats an adaptive row index.
 
 ### Medium 11: lazy parser exceptions occur outside query execution
 
+> **Progress (2026-07-22):** Documented on `WireRowData` and the `lazyRows` option, and made explicit by a test: a throwing custom parser rejects `await query` in classic mode but throws on first field access in lazy mode. `toRow`/`toRows` re-invoking parsers is documented as uncached.
+
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-54`
 
 Because the parser function is retained and invoked by `get`, non-ID parse failures can occur long
@@ -599,6 +627,8 @@ tests that make the behavior explicit. Treat full materialization and possible r
 the documented cost of registering an `afterFind` row observer.
 
 ### Low 12: wire boundaries and indexes are trusted
+
+> **Progress (2026-07-22):** Implemented: `get` validates row index bounds, per-row payload bounds (row lengths are stored), field-count vs ordinal mismatches, negative/overflowing cell lengths, and truncated payloads; `appendRow` validates the payload envelope. Chunk-relative offsets remove the 4 GiB absolute wrap. Covered by the malformed-payload tests.
 
 **References:** `packages/orm/src/drivers/WireRowData.ts:39-53,87-104`
 
@@ -615,6 +645,8 @@ on access. Guard negative/overflow lengths, field-count mismatches, truncated ce
 limits. Chunk-relative offsets naturally remove the 4 GiB absolute-offset wrap.
 
 ### Low 13: documentation overstates implementation completeness
+
+> **Progress (2026-07-22):** Revised. JS-ROW-STORE-DESIGN.md is now marked experimental, renames the approach to a "lazy wire-row (row-major deferred-decode) representation," corrects the GC/memory model wording (untraced but externally-accounted), separates measured payload from retained capacity, and records the loader scope + the measured dense-read bound in a "Review response" section.
 
 **References:** `packages/tests/integration/JS-ROW-STORE-DESIGN.md:276-323`
 
@@ -752,11 +784,11 @@ dense rows linear rather than quadratic.
 At minimum, run:
 
 | Row mode | Preloading mode |
-| --- | --- |
-| Classic | Stock |
-| Classic | Join preloading |
-| Lazy | Stock |
-| Lazy | Join preloading |
+| -------- | --------------- |
+| Classic  | Stock           |
+| Classic  | Join preloading |
+| Lazy     | Stock           |
+| Lazy     | Join preloading |
 
 Focused protocol tests and the packed-package smoke test should be separate from the DB-backed
 integration matrix so failures identify the broken layer.

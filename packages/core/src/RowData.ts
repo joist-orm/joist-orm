@@ -24,8 +24,17 @@ export interface RowData {
   readonly rowCount: number;
   /** Returns the driver-level column value for a row, i.e. `rowData.get(0, "first_name")`. */
   get(rowIndex: number, columnName: string): any;
+  /** Materializes one row as a classic POJO, i.e. for legacy serdes or debugging. */
+  toRow(rowIndex: number): any;
   /** Materializes classic POJO rows, i.e. for `afterFind` observation or debugging. */
   toRows(): any[];
+  /** Optionally marks `rowIndex` as retained by a hydrated entity; see `finalize`. */
+  retain?(rowIndex: number): void;
+  /**
+   * Optionally trims/compacts the result after hydration + sidecar reads are complete, i.e. so
+   * lazy results only retain bytes for rows whose entities were actually kept.
+   */
+  finalize?(): void;
 }
 
 /** Wraps classic materialized POJO rows, i.e. from node-pg results or hand-built test rows. */
@@ -40,6 +49,10 @@ export class PojoRowData implements RowData {
     return this.rows[rowIndex][columnName];
   }
 
+  toRow(rowIndex: number): any {
+    return this.rows[rowIndex];
+  }
+
   toRows(): any[] {
     return this.rows as any[];
   }
@@ -50,6 +63,10 @@ export const emptyRowData: RowData = {
   rowCount: 0,
   get() {
     return undefined;
+  },
+  toRow() {
+    // Matches the pre-RowData behavior of new entities having an empty `row` bag
+    return {};
   },
   toRows() {
     return [];

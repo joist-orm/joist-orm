@@ -101,6 +101,7 @@ import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { lazyColumnLoadOperation, LazyFieldImpl } from "./relations/LazyField";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { PojoRowData, RowData } from "./RowData";
+import { applySetOnEntity } from "./serde";
 import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -576,7 +577,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     checkLimit: boolean | undefined,
   ): Promise<RowData> {
     const { pluginManager } = getEmInternalApi(this);
-    const rowData = await this.driver.executeFindRowData!(this, parsed, findSettings);
+    const executeFindRowData =
+      this.driver.executeFindRowData ?? fail("Driver has lazyRows enabled but no executeFindRowData");
+    const rowData = await executeFindRowData.call(this.driver, this, parsed, findSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
     const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);
     if (shouldCheck && rowData.rowCount >= this.entityLimit) {
@@ -2201,7 +2204,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /**
    * Like {@link hydrate}, but reads rows from a {@link RowData}, i.e. a driver-produced
-   * lazy/columnar query result, instead of an array of POJO rows.
+   * lazy query result, instead of an array of POJO rows.
+   *
+   * This is an internal API used by Joist's own find loaders; rows whose entities are kept
+   * (newly created or overwrite-refreshed) are `retain`-ed on the `RowData` so the loader can
+   * later `finalize` (trim/compact) the result.
    */
   public hydrateFromRowData<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
@@ -2227,6 +2234,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const instanceData = getInstanceData(entity);
         instanceData.rowData = rowData;
         instanceData.rowIndex = i;
+        rowData.retain?.(i);
         // Seed the id to share the identity-map key string and skip the id serde on first read
         instanceData.data["id"] = taggedId;
         this.#doRegister(entity as any, taggedId, meta, true);
@@ -2237,6 +2245,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const instanceData = getInstanceData(entity);
         instanceData.rowData = rowData;
         instanceData.rowIndex = i;
+        rowData.retain?.(i);
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
         const { data } = instanceData;
@@ -2252,13 +2261,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, rowData, i);
+              applySetOnEntity(serde, data, rowData, i);
             }
           } else {
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, rowData, i);
+              applySetOnEntity(serde, data, rowData, i);
               // Make the field look not-dirty
               if (changedFields.includes(fieldName)) {
                 instanceData.markFieldClean(fieldName);

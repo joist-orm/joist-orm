@@ -6,7 +6,6 @@ import { buildHintTree } from "../HintTree";
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { PojoRowData } from "../RowData";
 import { buildUnnestCte } from "../unnest";
 import {
   collectAndReplaceArgs,
@@ -67,7 +66,7 @@ export function findPaginatedDataLoader<T extends Entity>(
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
           const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, false);
           const entities = em.hydrate(type, rows);
-          preloadHydrator?.(new PojoRowData(rows), entities);
+          preloadHydrator?.(rows, entities);
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -104,7 +103,7 @@ export function findPaginatedDataLoader<T extends Entity>(
           false,
         );
         const entities = em.hydrate(type, rows);
-        preloadHydrator?.(new PojoRowData(rows), entities);
+        preloadHydrator?.(rows, entities);
 
         const results = entries.map(() => [] as T[]);
         for (let i = 0; i < rows.length; i++) {

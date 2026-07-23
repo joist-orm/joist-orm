@@ -45,8 +45,10 @@ export interface PostgresDriverOpts {
    * Experimental: keeps entity find results as raw wire bytes and decodes each row/column cell
    * lazily on field access, instead of eagerly materializing POJO rows.
    *
-   * Currently applies only to unpaginated `em.find` queries against the pure-JS pg client
-   * (other loaders — `em.load`, pagination, relation loads, lazy columns — stay classic), and
+   * Applies to unpaginated `em.find`, `em.load`, and o2m/o2o/recursive relation loads against
+   * the pure-JS pg client. Other loaders deliberately stay classic: paginated finds (small
+   * pages, measured neutral), m2m join-table rows (narrow + fully read, where materialized rows
+   * measured faster, and `JoinRows` owns/mutates them), lazy columns, and id/count loaders. It
    * uses classic rows when the choice is knowable up-front (patching pg-protocol failed, or the
    * client is unsupported, i.e. pg-native — both warn once). If a connection turns out
    * mid-query to use an unpatched pg-protocol copy (a duplicate `pg` install), the query fails

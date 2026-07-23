@@ -17,7 +17,7 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
-import { PojoRowData } from "../RowData";
+import { PojoRowData, type RowData } from "../RowData";
 import { OpColumn } from "../drivers/EntityWriter";
 import { equal, equalArrays } from "../fields";
 import { kqDot } from "../keywords";
@@ -77,11 +77,13 @@ export function findDataLoader<T extends Entity>(
           // Maybe add preload joins
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rowData = em.driver.lazyRows
+          const rowData: RowData = em.driver.lazyRows
             ? await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit)
             : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit));
           const entities = em.hydrateFromRowData(type, rowData);
           preloadHydrator?.(rowData, entities);
+          // All sidecar reads (preload aggregates) are done, so trim/compact the result
+          rowData.finalize?.();
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -130,7 +132,7 @@ export function findDataLoader<T extends Entity>(
           }
         }
 
-        const rowData = em.driver.lazyRows
+        const rowData: RowData = em.driver.lazyRows
           ? await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit)
           : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit));
 
@@ -146,6 +148,8 @@ export function findDataLoader<T extends Entity>(
             for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
           }
         }
+        // All sidecar reads (`_tags`, preload aggregates) are done, so trim/compact the result
+        rowData.finalize?.();
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.

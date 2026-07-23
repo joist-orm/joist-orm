@@ -47,7 +47,10 @@ export interface PostgresDriverOpts {
    *
    * Currently applies only to unpaginated `em.find` queries against the pure-JS pg client
    * (other loaders — `em.load`, pagination, relation loads, lazy columns — stay classic), and
-   * silently uses classic rows whenever the runtime pg-protocol integration is unavailable.
+   * uses classic rows when the choice is knowable up-front (patching pg-protocol failed, or the
+   * client is unsupported, i.e. pg-native — both warn once). If a connection turns out
+   * mid-query to use an unpatched pg-protocol copy (a duplicate `pg` install), the query fails
+   * with a descriptive error — a misconfiguration CI builds/smoketests will catch immediately.
    * Note deferred decoding also defers custom-parser errors from `await em.find` to first field
    * access. See JS-ROW-STORE-DESIGN.md.
    */

@@ -1,4 +1,4 @@
-import { PojoRowData, RowData } from "joist-core";
+import { RowData } from "joist-core";
 import pg from "pg";
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
@@ -309,8 +309,9 @@ export class WireRowData implements RowData {
  * chunks (via the lazy DataRow message from `patchPgProtocol`) and never materializes per-cell
  * strings or per-row objects. If the client's connection turns out to use an unpatched
  * pg-protocol copy (i.e. the app's pool was built from a different `pg` install than the one
- * joist-orm patched), the same query degrades in-flight to classic decoded rows wrapped in a
- * `PojoRowData` — the query is never re-executed.
+ * joist-orm patched), the query fails with a descriptive error — a misconfiguration any CI
+ * build/smoketest will surface immediately, so we fail loudly rather than silently degrade.
+ * The rows already streamed are discarded; the connection itself stays usable.
  */
 export function executeRowDataQuery(client: pg.PoolClient, sql: string, bindings: readonly any[]): Promise<RowData> {
   return new Promise((resolve, reject) => {
@@ -337,8 +338,6 @@ export function isRowDataCapableClient(client: unknown): client is pg.PoolClient
 /** A pg Query that diverts DataRows into a {@link WireRowData} instead of a `Result`. */
 class RowDataQuery extends PgQuery {
   #wire = new WireRowData();
-  #fallbackRows: any[] | undefined = undefined;
-  #fields: Array<{ name: string }> = [];
 
   constructor(config: { text: string; values: any[] }, callback: (err: unknown) => void) {
     super(config, undefined, callback);
@@ -352,14 +351,13 @@ class RowDataQuery extends PgQuery {
    * won the measured comparison at every row count for sparse access, so no threshold exists.
    */
   get rowData(): RowData {
-    return this.#fallbackRows ? new PojoRowData(this.#fallbackRows) : this.#wire;
+    return this.#wire;
   }
 
   handleRowDescription(msg: any): void {
     if (this._canceledDueToError) return;
     try {
       super.handleRowDescription(msg);
-      this.#fields = msg.fields;
       // Reuse the parsers Result.addFields just resolved (they honor pool/client TypeOverrides)
       this.#wire.setRowDescription(msg.fields, this._result?._parsers);
     } catch (err) {
@@ -372,38 +370,22 @@ class RowDataQuery extends PgQuery {
   handleDataRow(msg: any): void {
     if (this._canceledDueToError) return;
     try {
-      if (msg.bytes !== undefined) {
-        // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
-        // 1.15+ reports length lazily as -1, in which case our lazy message carries the real one
-        this.#wire.appendRow(msg.bytes, msg.offset, msg.length - 4);
-      } else {
+      if (msg.bytes === undefined) {
         // This connection's pg-protocol copy is unpatched (i.e. the pool came from a different
-        // `pg` install), so consume the classic decoded fields of this same query — no retry
-        warnUnpatchedOnce();
-        const row: Record<string, any> = {};
-        const { fields } = msg;
-        for (let i = 0; i < this.#fields.length; i++) {
-          const value = fields[i];
-          row[this.#fields[i].name] = value === null ? null : this._result._parsers[i](value);
-        }
-        (this.#fallbackRows ??= []).push(row);
+        // `pg` install than the one joist-orm patched), so lazyRows cannot work — fail loudly
+        // rather than silently degrade; any CI build/smoketest will surface this immediately
+        throw new Error(
+          "joist-orm: lazyRows is enabled, but this connection's pg-protocol emits classic" +
+            " DataRows (likely a duplicate pg install); fix the install or disable lazyRows.",
+        );
       }
+      // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
+      // 1.15+ reports length lazily as -1, in which case our lazy message carries the real one
+      this.#wire.appendRow(msg.bytes, msg.offset, msg.length - 4);
     } catch (err) {
       this._canceledDueToError = err;
     }
   }
-}
-
-let warnedUnpatched = false;
-
-/** Warns once if lazy rows silently degrade because the app's pg uses an unpatched pg-protocol. */
-function warnUnpatchedOnce(): void {
-  if (warnedUnpatched) return;
-  warnedUnpatched = true;
-  console.warn(
-    "joist-orm: lazyRows is enabled, but this connection's pg-protocol emits classic DataRows" +
-      " (likely a duplicate pg install); falling back to materialized rows.",
-  );
 }
 
 /** Grows a Uint32Array to `size`, copying existing entries. */

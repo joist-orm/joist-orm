@@ -101,7 +101,6 @@ import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { lazyColumnLoadOperation, LazyFieldImpl } from "./relations/LazyField";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { PojoRowData, RowData } from "./RowData";
-import { applySetOnEntity } from "./serde";
 import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -2261,13 +2260,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              applySetOnEntity(serde, data, rowData, i);
+              serde.setOnEntityFromRowData(data, rowData, i);
             }
           } else {
             for (const fieldName of dataKeys) {
               if (fieldName === "id") continue;
               const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              applySetOnEntity(serde, data, rowData, i);
+              serde.setOnEntityFromRowData(data, rowData, i);
               // Make the field look not-dirty
               if (changedFields.includes(fieldName)) {
                 instanceData.markFieldClean(fieldName);

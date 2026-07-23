@@ -202,6 +202,18 @@ describe("WireRowData", () => {
       }
     });
 
+    it("rejects loudly when the connection's pg-protocol emits classic DataRows", async () => {
+      // Simulate a connection whose pg-protocol is unpatched (i.e. a duplicate pg install) by
+      // driving the query lifecycle with a classic decoded DataRow message (no `bytes`)
+      let query: any;
+      const fakeClient = { query: (q: any) => (query = q) };
+      const promise = executeRowDataQuery(fakeClient as any, "select 1 as one", []);
+      query.handleRowDescription({ fields: [{ name: "one", dataTypeID: 23, format: "text" }] });
+      query.handleDataRow({ fields: ["1"] });
+      query.handleReadyForQuery();
+      await expect(promise).rejects.toThrow("emits classic DataRows");
+    });
+
     it("defers custom-parser errors to first access, not query await", async () => {
       const throwingPool = new pg.Pool({
         connectionString,

@@ -383,8 +383,14 @@ if accepted, joist requires `pg-protocol >= x.y` and deletes both the patch and 
 
 Ship Option 1 (runtime patch + probe + automatic classic-rows fallback), open the Option 3 PR
 in parallel, and keep Option 2 in the back pocket if runtime patching proves unacceptable in
-some environment. Under all three, `lazyRows` stays opt-in and failure modes degrade to today's
-classic behavior.
+some environment. Under all three, `lazyRows` stays opt-in, and failure modes knowable up-front
+(patch failed to apply/verify, unsupported client like pg-native) degrade to today's classic
+behavior with a one-time warning. One case deliberately fails loudly instead (2026-07-22): if a
+connection turns out *mid-query* to use an unpatched pg-protocol copy (a duplicate `pg`
+install), the query rejects with a descriptive error rather than silently consuming classic
+rows — that misconfiguration is deterministic, so any CI build/smoketest catches it, and the
+in-flight `#fallbackRows` degradation path it replaced was complexity protecting against a
+scenario tests always surface.
 
 ### Option 1 implementation notes (2026-07-22)
 

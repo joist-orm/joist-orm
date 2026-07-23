@@ -18,6 +18,7 @@ import {
   OneToManyCollection,
   OneToOneReferenceImpl,
   Plugin,
+  PojoRowData,
   PolymorphicKeySerde,
   PolymorphicReferenceImpl,
   ReactiveManyToManyImpl,
@@ -94,7 +95,7 @@ export class RunPlugin extends Plugin {
               // the 2nd and 3rd arguments are only used if the 4th argument is defined, so it's OK to pass undefined here
               value = column.rowValue(newData);
             }
-            serde.setOnEntity(oldData, column ? { [column.columnName]: value } : {});
+            serde.setOnEntityFromRowData(oldData, new PojoRowData([column ? { [column.columnName]: value } : {}]), 0);
           });
       });
       todo.deletes.forEach((newEntity) => {

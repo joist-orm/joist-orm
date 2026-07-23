@@ -434,11 +434,14 @@ contract).
   bounded leftover bytes it would save), so duplicate-heavy results no longer pin query history. Sidecar _columns_ (`_tags`, preload aggregates)
   still live inside retained rows' payloads — stripping cells requires rewriting row payloads
   and remains a follow-up.
-- **Extension compat (High 5)**: `FieldSerde.setOnEntity(data, row)` is restored as the public
-  contract (built-ins additionally implement the `setOnEntityFromRowData` fast path);
-  `PreloadHydrator` receives plain row arrays everywhere except lazy mode; `InstanceData.row`
-  is back as a deprecated materializing getter; `RowData.toRow(i)` supports cheap one-row
-  compat/debugging.
+- **Extension compat (High 5)**: initially `FieldSerde.setOnEntity(data, row)` was restored as
+  the public contract with `setOnEntityFromRowData` as an optional fast path, but we later
+  (2026-07-22) accepted the breaking change: `setOnEntityFromRowData(data, rowData, rowIndex)`
+  is now the sole, required contract and the legacy method + `applySetOnEntity` dispatch helper
+  are deleted (custom serdes fail loudly at compile time; a one-row `PojoRowData` recreates the
+  old shape where needed, e.g. `RunPlugin`). `PreloadHydrator` receives plain row arrays
+  everywhere except lazy mode; `InstanceData.row` is back as a deprecated materializing getter;
+  `RowData.toRow(i)` supports cheap one-row compat/debugging.
 - **Scope + claims (Medium 9/11, Low 13)**: `lazyRows` docs now say unpaginated `em.find` only
   (other loaders stay classic), and deferred custom-parser error timing is documented + tested.
 - **Verification (review §9)**: `yarn test` now runs all four modes (classic/lazy ×

@@ -467,6 +467,8 @@ fully decoded entities.
 ### High 5: exported extension contracts changed incompatibly
 
 > **Progress (2026-07-22):** Fixed. `FieldSerde.setOnEntity(data, row)` is restored as the public contract; built-ins implement the optional `setOnEntityFromRowData` fast path and callers prefer it when present (legacy serdes receive `RowData.toRow(i)`, which was added for exactly this). `PreloadHydrator` again receives plain row arrays from every classic loader (type widened to `any[] | RowData`; only lazy-mode finds pass a `RowData`). `InstanceData.row` is restored as a deprecated getter that materializes via `toRow`. `hydrateFromRowData` is documented as an internal API.
+>
+> **Update (2026-07-22, later):** We decided to accept the serde breaking change after all: `setOnEntityFromRowData(data, rowData, rowIndex)` is now the sole, *required* `FieldSerde` method; the legacy `setOnEntity` and the `applySetOnEntity` dispatch helper are deleted. Crucially this avoids the "silently assignable" hazard called out below — old custom serdes now fail to compile (missing `setOnEntityFromRowData`) instead of receiving a `RowData` where they expected a row object. One-row shims use `new PojoRowData([row])` (e.g. `RunPlugin`). The `PreloadHydrator` and `InstanceData.row` compat above is unchanged.
 
 **References:** `packages/core/src/serde.ts:31-43`,
 `packages/core/src/plugins/PreloadPlugin.ts:65-72`,

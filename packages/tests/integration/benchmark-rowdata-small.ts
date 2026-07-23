@@ -52,6 +52,12 @@ async function main(): Promise<void> {
         }
         return checksum > 0 ? authors.length : 0;
       });
+      // em.loadAll routes through loadBatchLoader, which also honors lazyRows
+      const ids = Array.from({ length: n }, (_, i) => `a:${i + 1}`);
+      await measure("load", `em_loadAll`, n, iterations, async () => {
+        const em = newEntityManager();
+        return (await em.loadAll(Author, ids)).length;
+      });
     }
 
     microBenchmark();

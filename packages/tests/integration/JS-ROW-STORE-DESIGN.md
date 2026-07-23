@@ -474,6 +474,19 @@ could we keep the wire bytes themselves instead? Probed against the live socket
   `RowData.toRow(i)` supports cheap one-row compat/debugging.
 - **Scope + claims (Medium 9/11, Low 13)**: `lazyRows` docs now say unpaginated `em.find` only
   (other loaders stay classic), and deferred custom-parser error timing is documented + tested.
+  *Update (2026-07-22, later)*: coverage broadened to the loaders where lazy wins —
+  `loadBatchLoader` (em.load), o2m/o2o, and both recursive batch loaders now route through an
+  `EntityManager.executeFindRowData` helper (lazy when the driver supports it, else
+  `PojoRowData`-wrapped classic rows) + `hydrateFromRowData` + `finalize`. Deliberately still
+  classic: paginated finds (small pages, measured neutral), m2m join-table loads (narrow rows
+  read densely — where materialized measured ~1.6x faster — and owned/mutated long-term by
+  `JoinRows`), lazy columns, and id/count loaders (dense narrow reads). This pass also fixed
+  that `finalize` was never being invoked from the production find path (only tests called it,
+  so trim/compact was dormant); an entity-level lifecycle test now pins compaction through the
+  real em.load-then-em.find flow. Measured (`benchmark-rowdata-small.ts` `em_loadAll`, classic
+  vs lazy mean µs): n=10 232 -> 125, n=25 464 -> 188, n=100 869 -> 568, n=1000 4,786 -> 1,899
+  (~1.5-2.5x) — by-id loads spend proportionally more of their round-trip in row decode than
+  `em.find` does, so the lazy win shows up at smaller n.
 - **Verification (review §9)**: `yarn test` now runs all four modes (classic/lazy ×
   stock/join-preloading), which CI invokes; the focused `WireRowData` suite covers protocol,
   formats, boundaries, compaction, and error containment.
@@ -485,7 +498,8 @@ could we keep the wire bytes themselves instead? Probed against the live socket
 
 Still open (deliberately deferred): packed-package npm/pnpm/yarn install fixtures, sidecar
 column stripping, per-meta consolidation evaluation, C1/C3 adaptive cell indexes, and
-loader-by-loader lazy coverage beyond unpaginated finds.
+paginated-find lazy coverage (the entity-hydrating batch loaders were converted 2026-07-22;
+m2m/lazy-column/id/count loaders stay classic by design, see the Scope update above).
 
 ### Small-result threshold investigation (2026-07-22)
 

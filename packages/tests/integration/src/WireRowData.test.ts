@@ -1,5 +1,9 @@
+import { getInstanceData } from "joist-orm";
 import { ensureLazyDataRows, executeRowDataQuery, WireRowData } from "joist-orm/pg";
 import pg from "pg";
+import { Author } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist";
 
@@ -247,6 +251,42 @@ describe("WireRowData", () => {
     expect(lazy.toRow(0)).toEqual(classic[0]);
     expect(lazy.toRow(0)).toEqual(lazy.toRow(0));
     expect(lazy.toRows()).toEqual(classic);
+  });
+
+  describe("entity loader lifecycle", () => {
+    // These go through the real em.load/em.find loaders, so they only apply in lazy mode
+    const itLazy = process.env.JOIST_ROW_DATA === "1" ? it : it.skip;
+
+    itLazy("compacts unretained duplicate rows after em.find", async () => {
+      for (let i = 1; i <= 20; i++) await insertAuthor({ first_name: `a${i}` });
+      const em = newEntityManager();
+      // Pre-load half the authors, so the later find sees their rows as already-loaded duplicates
+      const preloaded = await em.loadAll(
+        Author,
+        Array.from({ length: 10 }, (_, i) => `a:${i + 1}`),
+      );
+      expect(getInstanceData(preloaded[0]).rowData).toBeInstanceOf(WireRowData);
+      const authors = await em.find(Author, {});
+      expect(authors).toHaveLength(20);
+      // The 10 fresh entities share the find's result; the pre-loaded 10 keep their em.load result
+      const fresh = authors.filter((a) => Number(a.id.split(":")[1]) > 10);
+      const wire = getInstanceData(fresh[0]).rowData as WireRowData;
+      expect(wire).toBeInstanceOf(WireRowData);
+      expect(wire).not.toBe(getInstanceData(preloaded[0]).rowData);
+      expect(wire.rowCount).toBe(20);
+      // With 10 of 20 rows unretained (>20% of payload bytes), finalize compacted the duplicates
+      // away: dropped rows now error, while retained rows still lazily fault fields
+      const freshIndexes = new Set(fresh.map((a) => getInstanceData(a).rowIndex));
+      const dropped = Array.from({ length: 20 }, (_, i) => i).filter((i) => !freshIndexes.has(i));
+      expect(dropped).toHaveLength(10);
+      expect(() => wire.get(dropped[0], "first_name")).toThrow("compacted away");
+      expect(fresh.map((a) => a.firstName).sort()).toEqual(
+        Array.from({ length: 10 }, (_, i) => `a${i + 11}`).sort(),
+      );
+      expect(preloaded.map((a) => a.firstName).sort()).toEqual(
+        Array.from({ length: 10 }, (_, i) => `a${i + 1}`).sort(),
+      );
+    });
   });
 });
 

@@ -570,6 +570,8 @@ protected raw execution seam in `PostgresDriver` so subclasses can preserve rout
 ### Medium 9: lazy execution covers only unpaginated `findDataLoader`
 
 > **Progress (2026-07-22):** Docs narrowed rather than coverage broadened, per this review's own recommendation: the `lazyRows` jsdoc now states it applies only to unpaginated `em.find` queries on the pure-JS pg client, with all other loaders classic. Loader-by-loader classification is the deliberate follow-up (Phase 4).
+>
+> **Update (2026-07-22, later):** The loader-by-loader pass landed. Converted (entity-hydrating, sparse-access): `loadBatchLoader`, `oneToManyBatchLoader`, `oneToOneBatchLoader`, `recursiveChildrenBatchLoader`, `recursiveParentsBatchLoader` — all via a new `EntityManager.executeFindRowData` helper that centralizes the lazy-vs-classic branch, plus `hydrateFromRowData` + `finalize`. Deliberately classic (dense narrow reads and/or mutable row ownership): m2m join-table loads (`JoinRows` owns/mutates rows long-term), enum m2ms, lazy columns, id/count loaders, and paginated finds (small pages measured neutral). This pass also caught that `finalize` was never called from the production find path — retention marking ran but trim/compact was dormant; `findDataLoader` now finalizes both paths and an entity-level test pins compaction end-to-end.
 
 **References:** `packages/core/src/dataloaders/findDataLoader.ts:74-85,133-147`
 

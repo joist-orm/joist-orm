@@ -534,6 +534,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit);
   }
 
+  /**
+   * Like {@link executeFind}, but returns a {@link RowData}, i.e. lazy wire rows when the
+   * driver has `lazyRows` enabled, else classic POJO rows wrapped in a `PojoRowData`.
+   */
+  private async executeFindRowData(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    settings: {
+      limit?: number;
+      offset?: number;
+      checkLimit?: boolean;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+  ): Promise<RowData> {
+    const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
+    return this.driver.lazyRows
+      ? this.executePreparedFindRowData(meta, operation, parsed, findSettings, checkLimit)
+      : new PojoRowData(await this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit));
+  }
+
   /** Executes a query that has already had find hooks and optimizations applied. */
   private async executePreparedFind(
     meta: EntityMetadata,

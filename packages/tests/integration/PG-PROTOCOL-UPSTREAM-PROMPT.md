@@ -68,6 +68,37 @@ Why this is safe:
 - Cells decode with the same UTF-8 semantics as `BufferReader.string`; include a test with
   multi-byte UTF-8, an empty string cell (`len === 0`), and a NULL cell (`len === -1`).
 
+## Desirable option: retainable DataRow views (zero-copy for consumers)
+
+The lazy getter above still leaves messages valid only within the parse tick, because
+`Parser.mergeBuffer` recycles its scratch buffer: when a frame straddles two socket chunks, the
+parser copies the *entire* incoming chunk into a doubling scratch buffer and later compacts it
+in place, overwriting the regions earlier messages point into. Measured against a live socket
+(node v26, 57 MB / 200k-row result, ~64 KiB reads): only 2 of 928 chunks happened to start
+exactly on a frame boundary, so a streaming result spends ~100% of its life in the recycled
+scratch — any consumer wanting cell bytes past the tick must copy them out, a second userspace
+memcpy on top of `mergeBuffer`'s own full-chunk copy.
+
+The socket `'data'` buffers themselves are exact-sized, standalone GC-owned allocations
+(928/928 in the same probe) that node never recycles, so a stronger design is possible and
+desirable — in this PR if it stays small, otherwise as a follow-up:
+
+- Always adopt the incoming chunk by reference (the `bufferLength === 0` path already does).
+- When a frame straddles chunks, reassemble *only that frame* (~one per chunk) into a small
+  side buffer, emit it, then continue parsing the rest of the new chunk in place — never copy
+  whole chunks into scratch, never compact in place over emitted regions.
+- Result: every fully-contained message references stable GC-owned memory, so the lazy
+  `bytes`/`offset` views become retainable indefinitely (the "same tick only" footgun
+  disappears), and zero-materialization consumers get true zero-copy row retention. Document
+  the granularity: retaining one view pins its ~64 KiB chunk.
+
+Scope notes if you attempt it: this reworks the exact buffer management the 2025 rewrite
+touched for a memory-leak fix, so run the parser micro-benchmark before/after (the win for pg
+itself is dropping `mergeBuffer`'s full-chunk copy; the win for lazy consumers is dropping
+their copy-out), and add explicit straddle tests: header split across chunks, body split across
+chunks, several frames per chunk, and a frame spanning 3+ chunks. If it grows beyond a
+reviewable diff, land the lazy getter first and raise retainable views in the PR discussion.
+
 ## How to reproduce / benchmark
 
 1. Unit-level: `packages/pg-protocol` has an inbound parser test suite
@@ -95,6 +126,9 @@ Why this is safe:
   `Parser.prototype.handlePacket` at runtime and would replace that with a
   `pg-protocol >= <released version>` requirement once this lands; its measured end-to-end win
   is 2.2-2.55× on 100k-1M row reads.
+- Whether or not the retainable-views option ships in this PR, mention it in the description as
+  the natural next step (it removes both the `mergeBuffer` full-chunk copy and lazy consumers'
+  copy-out, and retires the "valid only this tick" caveat).
 
 Please write the implementation against the current `master` source (note: the compiled 1.15.x
 output shows the per-message parsers became module-level functions in the 2025 rewrite — work

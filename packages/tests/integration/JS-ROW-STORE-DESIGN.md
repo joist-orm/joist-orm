@@ -415,6 +415,30 @@ identically, same-tick, as pg's `Result.parseRow` requires — note 1.15's `merg
 the parse buffer across chunks, so same-tick consumption is already the implicit upstream
 contract).
 
+### Zero-copy wire-byte retention (investigated 2026-07-22, not pursued)
+
+`appendRow` still memcpys each DataRow payload out of the parser's buffer into our chunks —
+could we keep the wire bytes themselves instead? Probed against the live socket
+(`probe-socket-chunks.ts` in this package, 57 MB / 200k-row result, node v26):
+
+- The socket `'data'` Buffers *are* ownable: 928/928 chunks were exact-sized, standalone
+  GC-owned backing stores (~64 KiB), never recycled by node. The kernel→user copy is the only
+  fundamental one; nothing below pg-protocol prevents retaining chunk slices indefinitely.
+- But pg-protocol adopts a chunk zero-copy only when no partial frame is pending, and a 64 KiB
+  chunk boundary essentially always lands mid-frame: only 2/928 chunks started clean. In
+  steady-state streaming the parser lives ~100% in its recycled scratch buffer (move-to-front
+  compaction clobbers previously emitted regions), so the one-tick contract is real and the
+  `appendRow` copy is genuinely necessary today.
+- A zero-copy parser exists in principle: always adopt the incoming chunk, reassemble *only*
+  the straddling frame (~one per chunk) into a side buffer, parse the rest in place, and let
+  consumers retain `(chunk, offset, len)` refs — retention pins ~64 KiB chunks, the same
+  granularity as our arena, so retain/compact heuristics carry over. But that means owning
+  `parse`/`mergeBuffer` — exactly the code 1.15 rewrote for the buffer-leak fix, far more
+  version-fragile than the `handlePacket` wrap — to save two memcpys (~5-10 ms per 100k×40
+  find, single-digit % — the lazy win came from skipping per-cell materialization, ~100× more
+  expensive per byte than memcpy). Verdict: not worth a deeper runtime patch; the right vehicle
+  is the upstream PR (Option 3), where "retainable DataRow views" would be a natural extension.
+
 ## Review response (2026-07-22)
 
 `JS-ROW-STORE-REVIEW.md` reviewed the initial prototype; this pass implemented its feedback

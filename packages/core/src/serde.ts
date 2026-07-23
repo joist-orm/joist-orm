@@ -1,6 +1,6 @@
 import type { Temporal } from "temporal-polyfill";
-import { Field, getBaseMeta, getMetadata, PolymorphicField, SerdeField } from "./EntityMetadata";
 import { InsertFixup } from "./drivers/EntityWriter";
+import { Field, getBaseMeta, getMetadata, PolymorphicField, SerdeField } from "./EntityMetadata";
 import {
   Entity,
   EntityMetadata,
@@ -11,6 +11,7 @@ import {
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
+import { RowData } from "./RowData";
 import { getRuntimeConfig } from "./runtimeConfig";
 import { requireTemporal } from "./temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers";
@@ -32,12 +33,16 @@ export interface FieldSerde {
   columns: Column[];
 
   /**
-   * Accepts the database `row` and sets the field's value(s) into the `__orm.data`.
+   * Reads the field's column(s) from the entity's `(rowData, rowIndex)` query result and sets
+   * the domain value(s) into the `__orm.data`.
+   *
+   * Reading via `rowData.get(rowIndex, columnName)` (instead of a materialized POJO row) lets
+   * lazy results like `WireRowData` decode only the cells that are actually accessed.
    *
    * Originally used in `EntityManager.hydrate` to set db values into the entity, although
    * now we invoke it lazily in `getField` to avoid copying data until it's actually needed.
    */
-  setOnEntity(data: any, row: any): void;
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void;
 }
 
 /**
@@ -69,8 +74,8 @@ export interface Column {
    * For converting `json_agg`-preloaded JSON values into *ResultSet* type.
    *
    * I.e. our `#orm.row` hash always wants the db-side value, as-is coming from the database driver.
-   * During `getField`, we always expect the ResultSet value, b/c we lazy call `setOnEntity` to go
-   * from db-value to domain-value.
+   * During `getField`, we always expect the ResultSet value, b/c we lazy call
+   * `setOnEntityFromRowData` to go from db-value to domain-value.
    *
    * So `mapFromJsonAgg` is for preloading that needs to go from json-value *only to db-value*.
    *
@@ -113,8 +118,8 @@ export class CustomSerdeAdapter implements FieldSerde {
     this.isNullableArray = isNullableArray;
   }
 
-  setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] =
       value !== undefined
         ? this.isArray
@@ -169,8 +174,8 @@ export class PrimitiveSerde implements FieldSerde {
     public isNullableArray = false, // only set for nullable arrays
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -256,8 +261,8 @@ export class BigIntSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] = value ? BigInt(value) : value;
   }
 
@@ -298,8 +303,8 @@ export class DecimalToNumberSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     data[this.fieldName] = value !== undefined ? Number(value) : value;
   }
 
@@ -342,8 +347,8 @@ export class KeySerde implements FieldSerde {
     };
   }
 
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToTaggedId(this.meta, row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    data[this.fieldName] = keyToTaggedId(this.meta, rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined) {
@@ -390,12 +395,11 @@ export class PolymorphicKeySerde implements FieldSerde {
     private fieldName: string,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    this.columns
-      .filter((column) => !!row[column.columnName])
-      .forEach((column) => {
-        data[this.fieldName] ??= keyToTaggedId(column.otherMetadata(), row[column.columnName]);
-      });
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    for (const column of this.columns) {
+      const value = rowData.get(rowIndex, column.columnName);
+      if (value) data[this.fieldName] ??= keyToTaggedId(column.otherMetadata(), value);
+    }
   }
 
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
@@ -460,8 +464,8 @@ export class EnumFieldSerde implements FieldSerde {
     private enumObject: any,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    data[this.fieldName] = this.enumObject.findById(rowData.get(rowIndex, this.columnName))?.code;
   }
 
   dbValue(data: any) {
@@ -493,8 +497,9 @@ export class EnumArrayFieldSerde implements FieldSerde {
     private enumObject: any,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    data[this.fieldName] =
+      rowData.get(rowIndex, this.columnName)?.map((id: any) => this.enumObject.findById(id).code) || [];
   }
 
   dbValue(data: any) {
@@ -535,8 +540,8 @@ export class SuperstructSerde implements FieldSerde {
     private superstruct: any,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     if (value) {
       this.assert(value, this.superstruct);
     }
@@ -574,8 +579,8 @@ export class JsonSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -612,8 +617,8 @@ export class ZodSerde implements FieldSerde {
     private zodSchema: any,
   ) {}
 
-  setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
+    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
     if (value) {
       data[this.fieldName] = this.zodSchema.parse(value);
     } else {

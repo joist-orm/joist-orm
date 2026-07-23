@@ -41,12 +41,13 @@ export function loadBatchLoader(
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rows = await em["executeFind"](meta, loadOperation, query, {});
-    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
-    preloadHydrator && preloadHydrator(rows, entities);
+    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
+    const entities = em.hydrateFromRowData(meta.cstr, rowData, { overwriteExisting });
+    preloadHydrator && preloadHydrator(rowData, entities);
     // If we're missing any requested rows, mark any requested-but-not-found entities as deleted
-    if (rows.length !== loads.length) {
-      const foundIds = new Set(rows.map((r: any) => tagId(meta, r.id)));
+    if (rowData.rowCount !== loads.length) {
+      const foundIds = new Set<string>();
+      for (let i = 0; i < rowData.rowCount; i++) foundIds.add(tagId(meta, rowData.get(i, "id")));
       for (const load of loads) {
         if (!foundIds.has(load.taggedId)) {
           const existingEntity = em.findExistingInstance(load.taggedId);
@@ -56,5 +57,7 @@ export function loadBatchLoader(
         }
       }
     }
+    // All sidecar reads (preload aggregates, the found-ids check) are done, so trim/compact the result
+    rowData.finalize?.();
   });
 }

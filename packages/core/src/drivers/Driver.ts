@@ -1,5 +1,6 @@
 import { EntityManager } from "../EntityManager";
 import { ParsedFindQuery } from "../QueryParser";
+import { RowData } from "../RowData";
 import { JoinRowTodo, Todo } from "../Todo";
 import { PreloadPlugin } from "../plugins/PreloadPlugin";
 
@@ -18,6 +19,16 @@ export interface Driver<TX = unknown> {
 
   /** Executes a raw SQL query with bindings. */
   executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
+
+  /** Whether `executeFindRowData` is available + enabled, i.e. entity finds should use lazy `RowData` results. */
+  readonly lazyRows?: boolean;
+
+  /** Like `executeFind`, but returns a lazy {@link RowData} instead of materialized POJO rows. */
+  executeFindRowData?(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<RowData>;
 
   transaction<T>(em: EntityManager, fn: (txn: TX) => Promise<T>): Promise<T>;
 

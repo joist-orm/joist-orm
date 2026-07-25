@@ -1,9 +1,6 @@
 {
   "extends": "../../../tsconfig.test.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
     "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
     "paths": {
       "src/*": ["./src/*"]

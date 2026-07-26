@@ -89,16 +89,41 @@ describe("WireRowData", () => {
       }
     });
 
-    it("decodes binary-format cells byte-exactly", () => {
-      // Unit-level: a binary int4 cell (00 00 00 07) must reach the binary parser as bytes;
-      // note classic pg round-trips through utf8 (lossy >= 0x80), so we assert on the raw bytes
+    it("decodes binary-format cells via the wire-bytes fast path", () => {
+      // Unit-level: an int4 cell with a default parser decodes readInt32BE, no strings involved
       const rowData = new WireRowData();
-      rowData.setRowDescription(
-        [{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }],
-        [(value: Buffer) => value.readInt32BE(0)],
-      );
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }]);
       rowData.appendRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
       expect(rowData.get(0, "x")).toBe(7);
+    });
+
+    it("decodes binary values that classic pg's binary mode corrupts", async () => {
+      // Cells with bytes >= 0x80 are destroyed by classic pg's utf8 round-trip (result.js
+      // Buffer.from(string)); our binary path reads the exact wire bytes, so these must all
+      // match the classic *text*-format values
+      const sql = `
+        select
+          200::int4 as high_byte,
+          (-1)::int4 as neg,
+          (-32768)::int2 as neg2,
+          9007199254740993::int8 as big,
+          0.1::float4 as f4,
+          -1.5::float8 as f8,
+          'NaN'::numeric as nan,
+          12.340::numeric as trailing_scale,
+          0.0001::numeric as small_scale,
+          '2020-01-02T03:04:05.678Z'::timestamptz as tstz,
+          '2020-06-15T00:00:00Z'::timestamptz as tstz_whole,
+          '2020-01-02T03:04:05.678901Z'::timestamptz as tstz_micros,
+          '1969-06-01T12:30:45.5Z'::timestamptz as tstz_pre_epoch,
+          '1955-11-05'::date as date_pre_epoch,
+          '0080-02-29'::date as date_two_digit_year,
+          array[-1, null, 200]::int4[] as neg_array,
+          to_tsvector('english', 'The Brand New Worlds') as tsv,
+          tstzrange('2020-01-02T03:04:05Z', '2020-01-03T00:00:00Z', '[)') as tsrange
+      `;
+      const [classic, lazy] = await classicAndLazy(sql);
+      expect(lazy.toRow(0)).toEqual(classic[0]);
     });
   });
 

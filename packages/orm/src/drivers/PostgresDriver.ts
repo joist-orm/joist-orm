@@ -32,6 +32,13 @@ import {
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
+import {
+  binaryTimestamptzToDate,
+  dateCellAsPgText,
+  registerBinaryFastPath,
+  timestampCellAsPgText,
+  timestamptzCellAsPgText,
+} from "./binaryParsers";
 import { ensureLazyDataRows } from "./patchPgProtocol";
 import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData";
 
@@ -48,7 +55,13 @@ export interface PostgresDriverOpts {
    * Applies to unpaginated `em.find`, `em.load`, and o2m/o2o/recursive relation loads against
    * the pure-JS pg client. Other loaders deliberately stay classic: paginated finds (small
    * pages, measured neutral), m2m join-table rows (narrow + fully read, where materialized rows
-   * measured faster, and `JoinRows` owns/mutates them), lazy columns, and id/count loaders. It
+   * measured faster, and `JoinRows` owns/mutates them), lazy columns, and id/count loaders.
+   *
+   * Lazy queries also request *binary* result format (prototype), decoding int/bool/float/text
+   * cells — and, via the fast paths `setupLatestPgTypes` registers, date/timestamptz cells —
+   * wire-bytes -> value with no intermediate strings; numeric/exotic cells render to pg's
+   * canonical text and reuse the active text parsers for parity. `JOIST_LAZY_BINARY=0`
+   * reverts lazy queries to text-format results. It
    * uses classic rows when the choice is knowable up-front (patching pg-protocol failed, or the
    * client is unsupported, i.e. pg-native — both warn once). If a connection turns out
    * mid-query to use an unpatched pg-protocol copy (a duplicate `pg` install), the query fails
@@ -395,13 +408,20 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
     pg.types.setTypeParser(DATE, noop);
     pg.types.setTypeParser(TIMESTAMP, noop);
     pg.types.setTypeParser(TIMESTAMPTZ, noop);
+    // Binary lazy cells can render pg's text form directly, skipping the noop parser hop
+    registerBinaryFastPath(DATE, noop, dateCellAsPgText);
+    registerBinaryFastPath(TIMESTAMP, noop, timestampCellAsPgText);
+    registerBinaryFastPath(TIMESTAMPTZ, noop, timestamptzCellAsPgText);
 
     // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
     pg.types.setTypeParser(1182 as number, noopArray); // date[]
     pg.types.setTypeParser(1115 as number, noopArray); // timestamp[]
     pg.types.setTypeParser(1185 as number, noopArray); // timestamptz[]
   } else {
-    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
+    const timestamptz = getTypeParser(builtins.TIMESTAMPTZ);
+    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, timestamptz);
+    // Binary lazy cells can decode µs -> Date directly, skipping the render+regex round trip
+    registerBinaryFastPath(pg.types.builtins.TIMESTAMPTZ, timestamptz, binaryTimestamptzToDate(timestamptz));
   }
 }
 

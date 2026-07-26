@@ -439,6 +439,58 @@ could we keep the wire bytes themselves instead? Probed against the live socket
   expensive per byte than memcpy). Verdict: not worth a deeper runtime patch; the right vehicle
   is the upstream PR (Option 3), where "retainable DataRow views" would be a natural extension.
 
+### Binary result format prototype (2026-07-26)
+
+Lazy queries now request Postgres's *binary* result format (Bind result-format code 1, with
+`queryMode: "extended"` forcing the extended protocol for bindings-less queries), so scalar
+cells decode wire-bytes -> value with no intermediate strings — `readInt32BE` -> number, one
+byte -> boolean. `JOIST_LAZY_BINARY=0` reverts lazy queries to text results while this is a
+prototype.
+
+This is only possible *because* of the lazy path: classic node-postgres cannot do binary — its
+protocol layer utf8-decodes every cell to a string and `result.js` re-encodes with
+`Buffer.from(string)`, corrupting any byte >= 0x80 (measured live: `200::int4` -> 239,
+`-1::int4` -> -272646673), and pg-types' binary registry is missing uuid/date/jsonb/bytea/etc.
+`WireRowData` has the raw payload bytes, so `wireBinaryParser`
+(`packages/orm/src/drivers/binaryParsers.ts`) decodes them with a two-tier parity strategy:
+
+- **Fast paths** (int2/4/8, oid, bool, float4/8, text-likes, uuid, bytea, json/jsonb) apply only
+  when the column's active text parser is identical to the default snapshotted at module load —
+  so any custom parser, registered before or after, disables them for that oid. float4 decodes
+  to its shortest round-trip decimal to match pg's text output exactly.
+- **Everything else renders to pg's canonical text** and feeds the active text parser
+  (pool/client `TypeOverrides`, joist's global temporal/timestamptz overrides, and app custom
+  parsers keep working by construction): numeric honors dscale/NaN/Infinity, timestamps render
+  µs-since-2000 with pg's trailing-zero trimming, arrays render a quoted `{...}` literal for
+  whatever array parser is active, plus date/tstzrange/tsvector. Unknown oids fall back to utf8
+  (enums, citext, domains); being lazy, cells nobody reads are never decoded at all.
+
+Verified: all four suite modes green (both lazy modes exercise binary on every entity test),
+plus a live differential of the corruption-prone values above. (Benchmark note: a wandering
+~250 µs cold-state artifact — hint bits/page cache right after seeding — initially masqueraded
+as a binary-only lump at n=25-100; interleaved reruns reproduced it on both formats.)
+
+**Fast-path pairings (same day):** the initial cut regressed the 100k dense/scalar sweeps ~5%
+because date/numeric cells paid render-then-parse double work. `registerBinaryFastPath(oid,
+textParse, fast)` now pairs a direct binary decoder with a specific *installed* text parser
+(keyed by function identity), declared where `setupLatestPgTypes` installs it: Date-mode
+timestamptz decodes µs -> `Date` directly (sub-ms floors to the millisecond and the infinity
+sentinels delegate to the text parser, matching postgres-date exactly), temporal-mode
+date/timestamp/timestamptz return the rendered pg-text string directly, and default-parsed
+`date` columns decode days -> local-midnight `Date` (with postgres-date's year 0-99 fixup).
+
+Measured, text-lazy -> binary-paired (same code, `JOIST_LAZY_BINARY` A/B): 100k×40 `em.find`
+155.5 -> 140.1 ms (-10%), scalar reads 380.7 -> 273.7 ms (-28%), dense reads 1,228 -> 997 ms
+(-19%, vs 1,287 before the pairings); n=1000 `em.find`+reads 2,757 -> 2,331 µs and `em.loadAll`
+1,988 -> 1,856 µs; small n stays parity under the ~500 µs round-trip. (Classic materialized
+dense-everything remains the floor at ~728 ms — that gap is the C2 prefix-scan + per-fault
+overhead, not decode.)
+
+Bind's result format code is all-or-nothing (every column binary or every column text) — noted
+for completeness, but not a limitation worth pursuing: unread exotic cells cost nothing under
+lazy decode, and the render path covers the read ones, so per-column format mixing has no
+measured upside.
+
 ## Review response (2026-07-22)
 
 `JS-ROW-STORE-REVIEW.md` reviewed the initial prototype; this pass implemented its feedback

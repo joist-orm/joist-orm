@@ -27,7 +27,11 @@ time:
   field access (Joist measured its 100k-row find going 378 ms → 148 ms once DataRow decoding was
   deferred, with GC-traced heap for the held result dropping ~3.4×), streaming/cursor consumers,
   and binary-ish workloads (see #2240's bytea allocation complaints, and #2093 asking how to
-  avoid result materialization).
+  avoid result materialization). For honesty about access patterns: that 378 → 148 ms is entity
+  hydration, which reads ~1 of the 40 cells per row up front (the id) and faults the rest only
+  as application code touches them; typical entity usage reads ~6 of 40, and a worst-case
+  read-every-cell consumer lands at parity with eager decode — the win scales with how many
+  cells are *not* read as strings.
 
 ## The proposed change
 
@@ -109,6 +113,9 @@ reviewable diff, land the lazy getter first and raise retainable views in the PR
    callback that (a) never touches `fields` (the lazy win: expect order-of-magnitude less time
    and near-zero allocation), and (b) reads `fields` once per message (expect parity with
    today's eager decode, within noise — this is the "no regression for pg itself" number).
+   These are deliberately the two extremes: the `fields` getter is all-or-nothing per row, so
+   partial-column consumers (like the ORM numbers below) bypass it and walk `bytes`/`offset`
+   directly — their per-cell selectivity lives in consumer code, not in this getter.
 3. End-to-end sanity: `packages/pg`'s test suite must pass unchanged, since `Result.parseRow`
    exercises the getter on every row of every query.
 

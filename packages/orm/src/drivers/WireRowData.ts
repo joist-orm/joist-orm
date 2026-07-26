@@ -1,5 +1,6 @@
 import { RowData } from "joist-core";
 import pg from "pg";
+import { wireBinaryParser } from "./binaryParsers";
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
 // submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).
@@ -7,7 +8,14 @@ import pg from "pg";
 const PgQuery: any = require("pg/lib/query");
 
 /** One column's RowDescription-derived metadata, resolved once per query. */
-type WireColumn = { name: string; ordinal: number; parse: (value: any) => any; binary: boolean };
+type WireColumn = {
+  name: string;
+  ordinal: number;
+  /** The active *text* parser, i.e. from pool/client `TypeOverrides` or the global registry. */
+  parse: (value: any) => any;
+  /** For binary-format columns, decodes the cell bytes directly (see `wireBinaryParser`). */
+  binaryParse: ((chunk: Buffer, start: number, length: number) => any) | undefined;
+};
 
 /** Payload chunk size; rows larger than this get their own exact-size chunk. */
 const CHUNK_SIZE = 64 * 1024;
@@ -31,12 +39,12 @@ const COMPACT_THRESHOLD = 0.2;
  * cells to the column's ordinal ("row-lazy" decode, see JS-ROW-STORE-DESIGN.md §3/C2). This is
  * deferred decoding of row-major data, not a columnar layout.
  *
- * Cell values go through the same type parsers node-postgres itself resolved for the query
- * (i.e. honoring pool/client/query `TypeOverrides` and each field's text/binary format), so
- * text cells parse identically to classic rows. Binary cells are passed to the binary parser
- * as an exact byte slice — note classic node-postgres round-trips binary cells through a UTF-8
- * string (`Buffer.from(utf8String)`), which corrupts bytes >= 0x80, so lazy mode is byte-exact
- * where classic mode can be lossy.
+ * Text-format cells go through the same active text parsers node-postgres would resolve for
+ * the query (i.e. honoring pool/client `TypeOverrides`), so they parse identically to classic
+ * rows. Binary-format cells decode via `wireBinaryParser`: wire bytes -> value directly for
+ * default-parsed scalar types (no intermediate string), else rendered to pg's canonical text
+ * and fed through the active text parser for parity. (Classic node-postgres cannot do binary
+ * at all — it round-trips cells through a UTF-8 string, corrupting bytes >= 0x80.)
  *
  * Because decoding is deferred, a custom parser that throws will do so on first field access
  * (or `toRow`/`toRows`), not while awaiting the query; `id` and inheritance-discriminator cells
@@ -122,16 +130,17 @@ export class WireRowData implements RowData {
   /**
    * Resolves per-column parsers/formats from the query's RowDescription.
    *
-   * `parsers` is node-postgres's own `Result._parsers` array (computed by
-   * `Result.addFields` from the active pool/client/query `TypeOverrides` and each field's
-   * format); we fall back to the global registry if a future pg version reshapes it.
+   * `parsers` must be the active *text* parsers for each field (i.e. resolved through the
+   * pool/client `TypeOverrides` chain); we fall back to the global registry when omitted.
+   * Binary-format fields decode via `wireBinaryParser`, which uses the text parser for
+   * fast-path eligibility and custom-parser parity.
    */
   setRowDescription(fields: Array<{ name: string; dataTypeID: number; format?: string }>, parsers?: any[]): void {
     for (let i = 0; i < fields.length; i++) {
       const { name, dataTypeID, format } = fields[i];
-      const binary = format === "binary";
-      const parse = parsers?.[i] ?? pg.types.getTypeParser(dataTypeID, binary ? "binary" : "text");
-      const column = { name, ordinal: i, parse, binary };
+      const parse = parsers?.[i] ?? pg.types.getTypeParser(dataTypeID, "text");
+      const binaryParse = format === "binary" ? wireBinaryParser(dataTypeID, parse) : undefined;
+      const column = { name, ordinal: i, parse, binaryParse };
       this.#columns.set(name, column);
       this.#fields.push(column);
     }
@@ -290,12 +299,8 @@ export class WireRowData implements RowData {
 
   /** Decodes one cell through its column's parser, honoring text vs binary format. */
   #parseCell(chunk: Buffer, start: number, length: number, column: WireColumn): any {
-    if (column.binary) {
-      // Binary parsers take Buffers; copy the exact cell bytes (classic pg round-trips through a
-      // utf8 string here, which corrupts bytes >= 0x80 — we are byte-exact instead)
-      const cell = Buffer.allocUnsafe(length);
-      chunk.copy(cell, 0, start, start + length);
-      return column.parse(cell);
+    if (column.binaryParse !== undefined) {
+      return column.binaryParse(chunk, start, length);
     }
     return column.parse(chunk.toString("utf8", start, start + length));
   }
@@ -312,13 +317,31 @@ export class WireRowData implements RowData {
  * joist-orm patched), the query fails with a descriptive error — a misconfiguration any CI
  * build/smoketest will surface immediately, so we fail loudly rather than silently degrade.
  * The rows already streamed are discarded; the connection itself stays usable.
+ *
+ * By default the query requests *binary* result format (via the extended protocol), so scalar
+ * cells decode wire-bytes -> value with no intermediate strings; see `wireBinaryParser` for the
+ * parity strategy. Pass `binary: false` for classic text-format results, or set
+ * `JOIST_LAZY_BINARY=0` to flip the default while the binary path is a prototype (i.e. for
+ * A/B benchmarking or as an escape hatch).
  */
-export function executeRowDataQuery(client: pg.PoolClient, sql: string, bindings: readonly any[]): Promise<RowData> {
+export function executeRowDataQuery(
+  client: pg.PoolClient,
+  sql: string,
+  bindings: readonly any[],
+  opts?: { binary?: boolean },
+): Promise<RowData> {
+  const binary = opts?.binary ?? process.env.JOIST_LAZY_BINARY !== "0";
   return new Promise((resolve, reject) => {
-    const query = new RowDataQuery({ text: sql, values: bindings as any[] }, (err: unknown) => {
-      if (err) reject(err);
-      else resolve(query.rowData);
-    });
+    const query = new RowDataQuery(
+      // Binary results require the extended protocol; `queryMode` forces it for bindings-less queries
+      binary
+        ? { text: sql, values: bindings as any[], binary: true, queryMode: "extended" }
+        : { text: sql, values: bindings as any[] },
+      (err: unknown) => {
+        if (err) reject(err);
+        else resolve(query.rowData);
+      },
+    );
     client.query(query as any);
   });
 }
@@ -339,7 +362,10 @@ export function isRowDataCapableClient(client: unknown): client is pg.PoolClient
 class RowDataQuery extends PgQuery {
   #wire = new WireRowData();
 
-  constructor(config: { text: string; values: any[] }, callback: (err: unknown) => void) {
+  constructor(
+    config: { text: string; values: any[]; binary?: boolean; queryMode?: string },
+    callback: (err: unknown) => void,
+  ) {
     super(config, undefined, callback);
   }
 
@@ -358,8 +384,13 @@ class RowDataQuery extends PgQuery {
     if (this._canceledDueToError) return;
     try {
       super.handleRowDescription(msg);
-      // Reuse the parsers Result.addFields just resolved (they honor pool/client TypeOverrides)
-      this.#wire.setRowDescription(msg.fields, this._result?._parsers);
+      // Resolve the active *text* parsers through the client's TypeOverrides chain (client.js
+      // injects `_types` at submit time); we can't reuse `Result._parsers` because in binary
+      // mode those resolve to pg's (broken) binary registry, while our binary decode path is
+      // built on text-parser parity — see `wireBinaryParser`
+      const types = this._result?._types;
+      const parsers = types ? msg.fields.map((f: any) => types.getTypeParser(f.dataTypeID, "text")) : undefined;
+      this.#wire.setRowDescription(msg.fields, parsers);
     } catch (err) {
       // Mirror pg's Query error containment: record + reject at ReadyForQuery, keeping the
       // connection's protocol state intact

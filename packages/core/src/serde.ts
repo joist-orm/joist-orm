@@ -201,6 +201,17 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
     return new Date(value);
   }
 
+  /**
+   * Returns the `Date` a driver hands back on a read, and not `mapToDb`'s ISO string.
+   *
+   * Otherwise callers that round-trip a row through `rowValue` and back through `setOnEntity` (i.e.
+   * `RunPlugin` mirroring writes into the test em) turn every date into a string, because our
+   * `setOnEntity` assigns the row value as-is.
+   */
+  rowValue(data: any): any {
+    return data[this.fieldName];
+  }
+
   mapToDb(value: Date) {
     // bun.sql needs this, node-pg does it out of the box
     return value?.toISOString();

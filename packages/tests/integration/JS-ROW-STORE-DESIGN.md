@@ -16,6 +16,43 @@ terms; map RowStore→RowData, QueryStore→WireRowData when reading.
 Companion to NATIVE-ROW-STORE-DESIGN.md; this doc deep-dives its "Option C" (pure-JS) with the
 simplifications that fall out of committing to a JS-only structure-of-arrays approach.
 
+## Overall impact: lazy-parsing vs classic (2026-07-27)
+
+**"Lazy-parsing"** is the umbrella term for everything `lazyRows` enables on this branch: lazy
+cell parsing (decode on field access, not at query time), zero-copy socket buffers (rows are
+views over the parser's immutable chunks — the `parse` rework ported from
+brianc/node-postgres#3719), and binary result format (wire bytes -> primitives without
+intermediate strings). The unifying principle: never materialize what isn't read.
+
+Measured end-to-end (`benchmark-lazy-parsing.ts`): 100k-row `em.find` over the ~40-column
+authors table (36 serde fields, 13 columns populated), reading N columns per row on every
+entity, interleaved classic/lazy runs agreeing within noise:
+
+| scenario (100k rows)          | classic  | lazy-parsing | impact             |
+| ----------------------------- | -------- | ------------ | ------------------ |
+| hydrate only (`em.find`)      | 552 ms   | 179 ms       | **3.1x faster**    |
+| read 3 cols/row               | 583 ms   | 232 ms       | **2.5x faster**    |
+| read 20 cols/row              | 845 ms   | 888 ms       | ~wash (-5%)        |
+| read all 36 cols/row          | 1,025 ms | 1,392 ms     | 36% slower         |
+| retained memory (held result) | ~148 MB  | ~71 MB       | **2.1x smaller**   |
+
+Takeaways:
+
+- **The win concentrates where real workloads live.** Hydrate-plus-a-few-fields — a resolver
+  returning ids/names, a report reading 3-5 columns, a rule touching one FK — is 2.5-3.1x
+  faster. These rows are meatier than earlier benchmarks (jsonb/arrays/dates/bigint populated),
+  and the ratio *improved* over the older sparse-seeded 2.2-2.55x numbers.
+- **Break-even is ~20 of 36 columns actually read per row.** Below that, deferred decode wins;
+  at 20 it's a wash. An app has to read more than half of a wide table's columns on every row
+  of a 100k result before classic pulls ahead.
+- **The read-everything worst case is +36%** — the C2 prefix-scan plus per-fault serde hops on
+  3.6M cell reads. Bounded, and only hit by export/serialize-everything patterns; adaptive row
+  offsets (§3/C1) remain the follow-up if that ever matters in practice.
+- **Memory is the quiet headline**: holding the 100k result costs 146 MB of GC-traced heap +
+  2 MB external in classic vs 35 MB traced + 36 MB external in lazy-parsing — half the total,
+  and half of *that* is untraced Buffer memory the GC never scans. For 1M-entity
+  EntityManagers, this is the difference that compounds.
+
 ## 1. Goal
 
 Fork `pg-protocol`'s row parsing so that query results are kept as raw wire bytes in arenas, and
@@ -456,6 +493,15 @@ check that retains a chunk-straddling message across a read shaped to trigger th
 parser's move-to-front compaction over its bytes — so any future pg-protocol internals change
 fails closed to classic rows. If #3719 does land, the patch simply overrides the native
 implementation with equivalent behavior until we can require that version and delete it.
+
+Perspective on the win: the deleted per-row arena loop measures just **5.6 ms of CPU** for a
+100k×300B result (replayed standalone) — bulk memcpy is ~2 orders of magnitude cheaper per
+byte than the per-cell string decode this project eliminated earlier, so the ~1-3 ms wall
+improvement is the expected size, not a shortfall. Retained memory is *conserved* by design:
+rows must live somewhere, and adoption trades "copy into an exact-size arena" for "pin the
+socket chunk" byte-for-byte (measured +0.6 MB external from chunk slack/protocol frames — the
+bounded price of zero-copy). What adoption actually buys is ~30 MB/query less transient
+allocation (the arena) and the deleted machinery, not wall time or footprint.
 
 ### Binary result format prototype (2026-07-26)
 

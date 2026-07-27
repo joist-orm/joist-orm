@@ -4,7 +4,7 @@
 > includes both the lazy `fields` getter *and* the retainable-views buffer rework below.
 > Rather than wait on it landing, joist-orm's runtime patch (`patchPgProtocol.ts`) ports the
 > same rework — patched pg-protocol always provides lazy DataRows + immutable message bytes,
-> and `WireRowData` retains rows zero-copy via `adoptRow`.
+> and `WireRowData` records rows zero-copy via `addRow`.
 
 The following is a self-contained prompt for preparing an upstream PR against
 https://github.com/brianc/node-postgres (the `packages/pg-protocol` workspace). Paste everything

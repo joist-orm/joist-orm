@@ -93,7 +93,7 @@ describe("WireRowData", () => {
       // Unit-level: an int4 cell with a default parser decodes readInt32BE, no strings involved
       const rowData = new WireRowData();
       rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }]);
-      rowData.adoptRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
+      rowData.addRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
       expect(rowData.get(0, "x")).toBe(7);
     });
 
@@ -155,11 +155,11 @@ describe("WireRowData", () => {
       const shared = Buffer.concat(payloads);
       let offset = 0;
       for (const payload of payloads) {
-        rowData.adoptRow(shared, offset, payload.length);
+        rowData.addRow(shared, offset, payload.length);
         offset += payload.length;
       }
       const other = textPayload("row3");
-      rowData.adoptRow(other, 0, other.length);
+      rowData.addRow(other, 0, other.length);
       expect(rowData.rowCount).toBe(4);
       expect(rowData.get(0, "x")).toBe("row0");
       expect(rowData.get(2, "x")).toBe("row2");
@@ -224,13 +224,13 @@ describe("WireRowData", () => {
       rowData.setRowDescription(names.map((name) => ({ name, dataTypeID: pg.types.builtins.TEXT })));
       const cells = names.map((name, i) => (i === 10 ? null : Buffer.from(`v${i}`, "utf8")));
       const payload = dataRowPayload(cells);
-      rowData.adoptRow(payload, 0, payload.length);
-      rowData.adoptRow(payload, 0, payload.length);
+      rowData.addRow(payload, 0, payload.length);
+      rowData.addRow(payload, 0, payload.length);
       for (const i of [2, 9, 15, 19, 3, 12, 10, 0, 19]) {
         expect(rowData.get(0, `c${i}`)).toBe(i === 10 ? null : `v${i}`);
       }
       expect(rowData.get(1, "c19")).toBe("v19");
-      // Compaction rewrites positions, which must invalidate the cursor
+      // The cursor's row-relative offsets stay valid across compaction's payload rewrite
       rowData.retain?.(1);
       rowData.finalize?.();
       expect(rowData.get(1, "c19")).toBe("v19");
@@ -250,7 +250,7 @@ describe("WireRowData", () => {
       bad.writeInt32BE(100, 2);
       const malformed = new WireRowData();
       malformed.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
-      malformed.adoptRow(bad, 0, bad.length);
+      malformed.addRow(bad, 0, bad.length);
       expect(() => malformed.get(0, "x")).toThrow("Malformed cell length");
     });
   });
@@ -397,7 +397,7 @@ function nativeDataRowFrame(cell: string): Buffer {
 /** Adopts a one-text-cell DataRow payload into `rowData` (each call brings its own buffer/chunk). */
 function appendTextRow(rowData: WireRowData, text: string): void {
   const cell = Buffer.from(text, "utf8");
-  rowData.adoptRow(dataRowPayload([cell]), 0, 2 + 4 + cell.length);
+  rowData.addRow(dataRowPayload([cell]), 0, 2 + 4 + cell.length);
 }
 
 /** Builds a one-text-cell DataRow payload buffer. */

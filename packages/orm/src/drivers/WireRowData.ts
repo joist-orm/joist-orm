@@ -11,13 +11,14 @@ const PgQuery: any = require("pg/lib/query");
 type WireColumn = {
   name: string;
   ordinal: number;
-  /** The active *text* parser, i.e. from pool/client `TypeOverrides` or the global registry. */
-  parse: (value: any) => any;
-  /** For binary-format columns, decodes the cell bytes directly (see `wireBinaryParser`). */
-  binaryParse: ((chunk: Buffer, start: number, length: number) => any) | undefined;
+  /** Decodes this column's cell bytes to its value; see `setRowDescription`. */
+  decode: (chunk: Buffer, start: number, length: number) => any;
 };
 
-/** The `#rowLen` sentinel for rows dropped by `finalize` compaction. */
+// Each row is three consecutive entries in the `#rows` table: chunk index, start, length
+const ROW_STRIDE = 3;
+
+/** The row-length sentinel for rows dropped by `finalize` compaction. */
 const DROPPED = 0xffffffff;
 
 /** Only compact when dropped rows hold more than this fraction of the payload bytes. */
@@ -38,7 +39,7 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  * mutations go into `InstanceData.data`, never back into the row bytes).
  *
  * Rows are kept in their row-major wire format (`int16 fieldCount` + length-prefixed cells) as
- * zero-copy views over the parser's own immutable buffers: `adoptRow` retains each DataRow's
+ * zero-copy views over the parser's own immutable buffers: `addRow` records each DataRow's
  * `(bytes, offset, length)` by reference, deduping the socket chunk that consecutive rows
  * share. (Our pg-protocol patch guarantees message bytes are never rewritten — chunks parse in
  * place and straddling messages get a buffer of their own; see `patchPgProtocol.ts`.) A
@@ -76,30 +77,29 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  */
 export class WireRowData implements RowData {
   #chunks: Buffer[] = [];
-  #rowChunk: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
-  #rowStart: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
-  #rowLen: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
+  /** Per-row `(chunk index, start, length)` triples, `ROW_STRIDE` entries per row. */
+  #rows: Uint32Array<ArrayBufferLike> = new Uint32Array(16 * ROW_STRIDE);
   #rowCount = 0;
   #payloadBytes = 0;
   #retained: number[] | undefined = undefined;
   #columns: Map<string, WireColumn> = new Map();
   #fields: WireColumn[] = [];
-  /** The adaptive scan cursor: per row, the furthest scanned `knownOrdinal + 1` (see #readCell). */
-  #scanNext: Uint16Array | undefined = undefined;
-  #scanPos: Uint32Array | undefined = undefined;
+  /** The adaptive scan cursor: per row, the furthest scanned ordinal + its offset (see #readCell). */
+  #scanOrdinal: Uint16Array | undefined = undefined;
+  #scanOffset: Uint32Array | undefined = undefined;
 
   get rowCount(): number {
     return this.#rowCount;
   }
 
-  /** The total DataRow payload bytes appended (before any compaction). */
+  /** The total DataRow payload bytes added (before any compaction). */
   get payloadBytes(): number {
     return this.#payloadBytes;
   }
 
-  /** The bytes currently retained by payload chunks + row-index tables, i.e. for benchmarks. */
+  /** The bytes currently retained by payload chunks + the row-index table, i.e. for benchmarks. */
   get retainedBytes(): number {
-    let bytes = this.#rowChunk.byteLength + this.#rowStart.byteLength + this.#rowLen.byteLength;
+    let bytes = this.#rows.byteLength;
     for (const chunk of this.#chunks) bytes += chunk.length;
     return bytes;
   }
@@ -108,13 +108,19 @@ export class WireRowData implements RowData {
     const column = this.#columns.get(columnName);
     // Tolerate probes for columns the query didn't select, i.e. `__class` on non-CTI queries
     if (column === undefined) return undefined;
-    const [chunk, pos, end] = this.#rowBounds(rowIndex);
-    return this.#readCell(chunk, pos, end, column, rowIndex);
+    const base = this.#rowBase(rowIndex);
+    const rows = this.#rows;
+    const start = rows[base + 1];
+    return this.#readCell(this.#chunks[rows[base]], start, start + rows[base + 2], column, rowIndex);
   }
 
   /** Materializes one row as a POJO, i.e. for legacy serdes or debugging; values are not cached. */
   toRow(rowIndex: number): any {
-    const [chunk, start, end] = this.#rowBounds(rowIndex);
+    const base = this.#rowBase(rowIndex);
+    const rows = this.#rows;
+    const chunk = this.#chunks[rows[base]];
+    const start = rows[base + 1];
+    const end = start + rows[base + 2];
     const row: Record<string, any> = {};
     let pos = start + 2;
     for (const field of this.#fields) {
@@ -123,7 +129,7 @@ export class WireRowData implements RowData {
       if (len === -1) {
         row[field.name] = null;
       } else {
-        row[field.name] = this.#parseCell(chunk, pos, len, field);
+        row[field.name] = field.decode(chunk, pos, len);
         pos += len;
       }
     }
@@ -138,33 +144,34 @@ export class WireRowData implements RowData {
   }
 
   /**
-   * Resolves per-column parsers/formats from the query's RowDescription.
+   * Resolves each column's decoder from the query's RowDescription.
    *
    * `parsers` must be the active *text* parsers for each field (i.e. resolved through the
    * pool/client `TypeOverrides` chain); we fall back to the global registry when omitted.
-   * Binary-format fields decode via `wireBinaryParser`, which uses the text parser for
-   * fast-path eligibility and custom-parser parity.
+   * Text-format fields decode by utf8-slicing the cell into their parser; binary-format fields
+   * decode via `wireBinaryParser`, which uses the text parser for fast-path eligibility and
+   * custom-parser parity.
    */
   setRowDescription(fields: Array<{ name: string; dataTypeID: number; format?: string }>, parsers?: any[]): void {
     for (let i = 0; i < fields.length; i++) {
       const { name, dataTypeID, format } = fields[i];
       const parse = parsers?.[i] ?? pg.types.getTypeParser(dataTypeID, "text");
-      const binaryParse = format === "binary" ? wireBinaryParser(dataTypeID, parse) : undefined;
-      const column = { name, ordinal: i, parse, binaryParse };
+      const decode = format === "binary" ? wireBinaryParser(dataTypeID, parse) : textCellDecoder(parse);
+      const column = { name, ordinal: i, decode };
       this.#columns.set(name, column);
       this.#fields.push(column);
     }
   }
 
   /**
-   * Retains one DataRow payload *by reference* (zero-copy); called synchronously from the wire
+   * Records one DataRow payload *by reference* (zero-copy); called synchronously from the wire
    * parser, whose patched buffer management guarantees the bytes are never rewritten.
    *
    * Consecutive rows usually share one socket chunk, so `bytes` is deduped against the last
    * chunk ref; retaining any row of a chunk pins the whole chunk, which `finalize`'s compaction
    * resolves by copying retained rows out when enough of the payload was dropped.
    */
-  adoptRow(bytes: Buffer, offset: number, payloadLength: number): void {
+  addRow(bytes: Buffer, offset: number, payloadLength: number): void {
     if (payloadLength < 2 || offset + payloadLength > bytes.length) {
       throw new Error(`Malformed DataRow payload (length ${payloadLength})`);
     }
@@ -173,7 +180,17 @@ export class WireRowData implements RowData {
       this.#chunks.push(bytes);
       chunkIndex++;
     }
-    this.#pushRow(chunkIndex, offset, payloadLength);
+    let rows = this.#rows;
+    const base = this.#rowCount * ROW_STRIDE;
+    if (base === rows.length) {
+      const grown = new Uint32Array(rows.length * 2);
+      grown.set(rows);
+      rows = this.#rows = grown;
+    }
+    rows[base] = chunkIndex;
+    rows[base + 1] = offset;
+    rows[base + 2] = payloadLength;
+    this.#rowCount++;
     this.#payloadBytes += payloadLength;
   }
 
@@ -197,87 +214,64 @@ export class WireRowData implements RowData {
     this.#retained = undefined;
     if (retained.length < this.#rowCount) {
       let retainedBytes = 0;
-      for (const i of retained) retainedBytes += this.#rowLen[i];
+      for (const i of retained) retainedBytes += this.#rows[i * ROW_STRIDE + 2];
       const droppedBytes = this.#payloadBytes - retainedBytes;
       if (droppedBytes > this.#payloadBytes * COMPACT_THRESHOLD) {
         this.#compact(retained, retainedBytes);
         return;
       }
     }
-    this.#trim();
+    // Just shrink the row-index table to its used size
+    if (this.#rowCount * ROW_STRIDE < this.#rows.length) {
+      this.#rows = this.#rows.slice(0, this.#rowCount * ROW_STRIDE);
+    }
   }
 
   /** Rebuilds chunks with only the retained rows; dropped rows read as errors afterwards. */
   #compact(retained: readonly number[], bytes: number): void {
     const chunks: Buffer[] = bytes > 0 ? [Buffer.allocUnsafe(bytes)] : [];
-    const rowChunk = new Uint32Array(this.#rowCount);
-    const rowStart = new Uint32Array(this.#rowCount);
-    const rowLen = new Uint32Array(this.#rowCount).fill(DROPPED);
+    const rows = new Uint32Array(this.#rowCount * ROW_STRIDE);
+    for (let i = 0; i < this.#rowCount; i++) rows[i * ROW_STRIDE + 2] = DROPPED;
     let used = 0;
     for (const i of retained) {
-      const source = this.#chunks[this.#rowChunk[i]];
-      const start = this.#rowStart[i];
-      const len = this.#rowLen[i];
+      const base = i * ROW_STRIDE;
+      const source = this.#chunks[this.#rows[base]];
+      const start = this.#rows[base + 1];
+      const len = this.#rows[base + 2];
       source.copy(chunks[0], used, start, start + len);
-      rowStart[i] = used;
-      rowLen[i] = len;
+      rows[base] = 0;
+      rows[base + 1] = used;
+      rows[base + 2] = len;
       used += len;
     }
     this.#chunks = chunks;
-    this.#rowChunk = rowChunk;
-    this.#rowStart = rowStart;
-    this.#rowLen = rowLen;
+    this.#rows = rows;
     this.#payloadBytes = used;
-    // Cached scan positions are chunk-absolute, so they're invalid after the rewrite
-    this.#scanNext = undefined;
-    this.#scanPos = undefined;
+    // The scan cursor survives: its cached offsets are relative to each row's (copied) payload
   }
 
-  /** Shrinks the row-index tables to their used sizes. */
-  #trim(): void {
-    if (this.#rowCount < this.#rowChunk.length) {
-      this.#rowChunk = this.#rowChunk.slice(0, this.#rowCount);
-      this.#rowStart = this.#rowStart.slice(0, this.#rowCount);
-      this.#rowLen = this.#rowLen.slice(0, this.#rowCount);
-    }
-  }
-
-  /** Records one row's location, growing the index tables as needed. */
-  #pushRow(chunkIndex: number, start: number, length: number): void {
-    if (this.#rowCount === this.#rowChunk.length) {
-      const grown = this.#rowChunk.length * 2;
-      this.#rowChunk = growUint32(this.#rowChunk, grown);
-      this.#rowStart = growUint32(this.#rowStart, grown);
-      this.#rowLen = growUint32(this.#rowLen, grown);
-    }
-    this.#rowChunk[this.#rowCount] = chunkIndex;
-    this.#rowStart[this.#rowCount] = start;
-    this.#rowLen[this.#rowCount] = length;
-    this.#rowCount++;
-  }
-
-  /** Validates `rowIndex` and returns its chunk + payload bounds. */
-  #rowBounds(rowIndex: number): [Buffer, number, number] {
+  /** Validates `rowIndex` and returns its base index into the `#rows` table. */
+  #rowBase(rowIndex: number): number {
     if (!(rowIndex >= 0 && rowIndex < this.#rowCount)) {
       throw new Error(`Invalid rowIndex ${rowIndex} (rowCount ${this.#rowCount})`);
     }
-    const len = this.#rowLen[rowIndex];
-    if (len === DROPPED) {
+    const base = rowIndex * ROW_STRIDE;
+    if (this.#rows[base + 2] === DROPPED) {
       throw new Error(`Row ${rowIndex} was compacted away (its entity was already loaded)`);
     }
-    const start = this.#rowStart[rowIndex];
-    return [this.#chunks[this.#rowChunk[rowIndex]], start, start + len];
+    return base;
   }
 
   /**
    * Scans a row's cells to `column`'s ordinal and decodes it.
    *
-   * An adaptive per-row scan cursor caches the furthest cell boundary already scanned
-   * (`#scanNext`/`#scanPos`), so ascending reads resume instead of re-scanning from the row
-   * start — a dense in-order read of all C columns costs one linear pass rather than O(C^2)
-   * length-prefix skips. Out-of-order (descending) faults simply scan from the start, i.e.
-   * never worse than without the cursor. The arrays are a fixed 6 bytes/row, allocated lazily
-   * on the first fault deep enough for resuming to matter.
+   * An adaptive per-row scan cursor caches the furthest cell boundary already scanned — the
+   * ordinal whose row-relative offset is known (`#scanOrdinal`/`#scanOffset`) — so ascending
+   * reads resume instead of re-scanning from the row start: a dense in-order read of all C
+   * columns costs one linear pass rather than O(C^2) length-prefix skips. Out-of-order
+   * (descending) faults simply scan from the start, i.e. never worse than without the cursor.
+   * The arrays are a fixed 6 bytes/row, allocated lazily on the first fault deep enough for
+   * resuming to matter, and — being row-relative — stay valid across compaction.
    */
   #readCell(chunk: Buffer, start: number, end: number, column: WireColumn, rowIndex: number): any {
     const fieldCount = chunk.readInt16BE(start);
@@ -287,17 +281,18 @@ export class WireRowData implements RowData {
     }
     let pos = start + 2;
     let c = 0;
-    let scanNext = this.#scanNext;
-    if (scanNext === undefined && ordinal >= SCAN_CURSOR_MIN_ORDINAL) {
-      scanNext = this.#scanNext = new Uint16Array(this.#rowCount);
-      this.#scanPos = new Uint32Array(this.#rowCount);
+    let scanOrdinal = this.#scanOrdinal;
+    if (scanOrdinal === undefined && ordinal >= SCAN_CURSOR_MIN_ORDINAL) {
+      scanOrdinal = this.#scanOrdinal = new Uint16Array(this.#rowCount);
+      this.#scanOffset = new Uint32Array(this.#rowCount);
     }
-    if (scanNext !== undefined && rowIndex < scanNext.length) {
-      // `scanNext` stores `knownOrdinal + 1` (0 = unset): cell #knownOrdinal starts at scanPos
-      const known = scanNext[rowIndex] - 1;
-      if (known >= 0 && known <= ordinal) {
+    if (scanOrdinal !== undefined && rowIndex < scanOrdinal.length) {
+      // 0 = unset: caching cell #0 would be pointless (it is always at offset 2), so any real
+      // entry is the ordinal, >= 1, whose row-relative offset is in #scanOffset
+      const known = scanOrdinal[rowIndex];
+      if (known !== 0 && known <= ordinal) {
         c = known;
-        pos = this.#scanPos![rowIndex];
+        pos = start + this.#scanOffset![rowIndex];
       }
     }
     for (; c < ordinal; c++) {
@@ -305,13 +300,13 @@ export class WireRowData implements RowData {
       pos += len > 0 ? len + 4 : 4;
     }
     const len = this.#cellLength(chunk, pos, end, rowIndex);
-    if (scanNext !== undefined && rowIndex < scanNext.length && ordinal + 2 > scanNext[rowIndex]) {
-      // advance-only: remember the boundary just past this cell for the next ascending fault
-      scanNext[rowIndex] = ordinal + 2;
-      this.#scanPos![rowIndex] = pos + 4 + (len > 0 ? len : 0);
+    if (scanOrdinal !== undefined && rowIndex < scanOrdinal.length && ordinal + 1 > scanOrdinal[rowIndex]) {
+      // advance-only: after reading cell #ordinal we know where cell #ordinal+1 starts
+      scanOrdinal[rowIndex] = ordinal + 1;
+      this.#scanOffset![rowIndex] = pos + 4 + (len > 0 ? len : 0) - start;
     }
     if (len === -1) return null;
-    return this.#parseCell(chunk, pos + 4, len, column);
+    return column.decode(chunk, pos + 4, len);
   }
 
   /** Reads + validates one cell's length prefix. */
@@ -323,22 +318,14 @@ export class WireRowData implements RowData {
     }
     return len;
   }
-
-  /** Decodes one cell through its column's parser, honoring text vs binary format. */
-  #parseCell(chunk: Buffer, start: number, length: number, column: WireColumn): any {
-    if (column.binaryParse !== undefined) {
-      return column.binaryParse(chunk, start, length);
-    }
-    return column.parse(chunk.toString("utf8", start, start + length));
-  }
 }
 
 /**
  * Executes `sql` on an already-checked-out client, returning a {@link RowData} instead of
  * materialized POJO rows.
  *
- * Uses a `pg` Query subclass that appends each DataRow's raw payload bytes to the result's
- * chunks (via the lazy DataRow message from `patchPgProtocol`) and never materializes per-cell
+ * Uses a `pg` Query subclass that records each DataRow's raw payload bytes into the result
+ * (via the lazy DataRow message from `patchPgProtocol`) and never materializes per-cell
  * strings or per-row objects. If the client's connection turns out to use an unpatched
  * pg-protocol copy (i.e. the app's pool was built from a different `pg` install than the one
  * joist-orm patched), the query fails with a descriptive error — a misconfiguration any CI
@@ -439,16 +426,14 @@ class RowDataQuery extends PgQuery {
       }
       // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
       // our patched message carries the real length from `handlePacket`'s argument
-      this.#wire.adoptRow(msg.bytes, msg.offset, msg.length - 4);
+      this.#wire.addRow(msg.bytes, msg.offset, msg.length - 4);
     } catch (err) {
       this._canceledDueToError = err;
     }
   }
 }
 
-/** Grows a Uint32Array to `size`, copying existing entries. */
-function growUint32(array: Uint32Array, size: number): Uint32Array {
-  const grown = new Uint32Array(size);
-  grown.set(array);
-  return grown;
+/** Builds a text-format cell decoder: utf8-slice the cell bytes into the active text parser. */
+function textCellDecoder(parse: (value: any) => any): (chunk: Buffer, start: number, length: number) => any {
+  return (chunk, start, length) => parse(chunk.toString("utf8", start, start + length));
 }

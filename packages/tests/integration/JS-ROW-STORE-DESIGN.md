@@ -484,7 +484,7 @@ replaces `Parser.prototype.parse` (chunks parse in place; only the message strad
 boundary is reassembled into a buffer of its own, handed to the message and never touched
 again) alongside the existing `handlePacket` wrap. Patched pg-protocol therefore always
 provides both lazy DataRows *and* immutable message bytes, and `WireRowData` collapsed to a
-single zero-copy path: `adoptRow` retains each row's `(chunk, offset, len)` by reference
+single zero-copy path: `addRow` (né `adoptRow`) records each row's `(chunk, offset, len)` by reference
 (deduping consecutive rows' shared socket chunk), the 64 KiB arena/`appendRow` copy is deleted,
 and retain/compact works as before (retaining any row pins its ~64 KiB chunk; compaction copies
 retained rows out into an exact owned buffer past the 20% dropped-bytes threshold). The patch

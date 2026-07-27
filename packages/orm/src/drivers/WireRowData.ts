@@ -15,7 +15,7 @@ type WireColumn = {
   decode: (chunk: Buffer, start: number, length: number) => any;
 };
 
-// Each row is three consecutive entries in the `#rows` table: chunk index, start, length
+// Each row is three consecutive entries in the `#rowSlices` table: chunk index, start, length
 const ROW_STRIDE = 3;
 
 /** The row-length sentinel for rows dropped by `finalize` compaction. */
@@ -77,8 +77,8 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  */
 export class WireRowData implements RowData {
   #chunks: Buffer[] = [];
-  /** Per-row `(chunk index, start, length)` triples, `ROW_STRIDE` entries per row. */
-  #rows: Uint32Array<ArrayBufferLike> = new Uint32Array(16 * ROW_STRIDE);
+  /** Where each row's bytes live: `(chunk index, start, length)` slices, `ROW_STRIDE` entries per row. */
+  #rowSlices: Uint32Array<ArrayBufferLike> = new Uint32Array(16 * ROW_STRIDE);
   #rowCount = 0;
   #payloadBytes = 0;
   #retained: number[] | undefined = undefined;
@@ -97,9 +97,9 @@ export class WireRowData implements RowData {
     return this.#payloadBytes;
   }
 
-  /** The bytes currently held by payload chunks + the row-index table, i.e. for benchmarks. */
+  /** The bytes currently held by payload chunks + the row-slice table, i.e. for benchmarks. */
   get memoryBytes(): number {
-    let bytes = this.#rows.byteLength;
+    let bytes = this.#rowSlices.byteLength;
     for (const chunk of this.#chunks) bytes += chunk.length;
     return bytes;
   }
@@ -109,18 +109,18 @@ export class WireRowData implements RowData {
     // Tolerate probes for columns the query didn't select, i.e. `__class` on non-CTI queries
     if (column === undefined) return undefined;
     const base = this.#rowBase(rowIndex);
-    const rows = this.#rows;
-    const start = rows[base + 1];
-    return this.#readCell(this.#chunks[rows[base]], start, start + rows[base + 2], column, rowIndex);
+    const slices = this.#rowSlices;
+    const start = slices[base + 1];
+    return this.#readCell(this.#chunks[slices[base]], start, start + slices[base + 2], column, rowIndex);
   }
 
   /** Materializes one row as a POJO, i.e. for debugging and differential tests; values are not cached. */
   toRow(rowIndex: number): any {
     const base = this.#rowBase(rowIndex);
-    const rows = this.#rows;
-    const chunk = this.#chunks[rows[base]];
-    const start = rows[base + 1];
-    const end = start + rows[base + 2];
+    const slices = this.#rowSlices;
+    const chunk = this.#chunks[slices[base]];
+    const start = slices[base + 1];
+    const end = start + slices[base + 2];
     const row: Record<string, any> = {};
     let pos = start + 2;
     for (const field of this.#fields) {
@@ -195,16 +195,16 @@ export class WireRowData implements RowData {
       this.#chunks.push(bytes);
       chunkIndex++;
     }
-    let rows = this.#rows;
+    let slices = this.#rowSlices;
     const base = this.#rowCount * ROW_STRIDE;
-    if (base === rows.length) {
-      const grown = new Uint32Array(rows.length * 2);
-      grown.set(rows);
-      rows = this.#rows = grown;
+    if (base === slices.length) {
+      const grown = new Uint32Array(slices.length * 2);
+      grown.set(slices);
+      slices = this.#rowSlices = grown;
     }
-    rows[base] = chunkIndex;
-    rows[base + 1] = offset;
-    rows[base + 2] = payloadLength;
+    slices[base] = chunkIndex;
+    slices[base + 1] = offset;
+    slices[base + 2] = payloadLength;
     this.#rowCount++;
     this.#payloadBytes += payloadLength;
   }
@@ -235,49 +235,49 @@ export class WireRowData implements RowData {
     this.#retained = undefined;
     if (retained.length < this.#rowCount) {
       let retainedBytes = 0;
-      for (const i of retained) retainedBytes += this.#rows[i * ROW_STRIDE + 2];
+      for (const i of retained) retainedBytes += this.#rowSlices[i * ROW_STRIDE + 2];
       const droppedBytes = this.#payloadBytes - retainedBytes;
       if (droppedBytes > this.#payloadBytes * COMPACT_THRESHOLD) {
         this.#compact(retained, retainedBytes);
         return;
       }
     }
-    // Just shrink the row-index table to its used size
-    if (this.#rowCount * ROW_STRIDE < this.#rows.length) {
-      this.#rows = this.#rows.slice(0, this.#rowCount * ROW_STRIDE);
+    // Just shrink the row-slice table to its used size
+    if (this.#rowCount * ROW_STRIDE < this.#rowSlices.length) {
+      this.#rowSlices = this.#rowSlices.slice(0, this.#rowCount * ROW_STRIDE);
     }
   }
 
   /** Copies retained rows into one owned buffer, releasing the pinned socket chunks to the GC. */
   #compact(retained: readonly number[], bytes: number): void {
     const chunks: Buffer[] = bytes > 0 ? [Buffer.allocUnsafe(bytes)] : [];
-    const rows = new Uint32Array(this.#rowCount * ROW_STRIDE);
-    for (let i = 0; i < this.#rowCount; i++) rows[i * ROW_STRIDE + 2] = DROPPED;
+    const slices = new Uint32Array(this.#rowCount * ROW_STRIDE);
+    for (let i = 0; i < this.#rowCount; i++) slices[i * ROW_STRIDE + 2] = DROPPED;
     let used = 0;
     for (const i of retained) {
       const base = i * ROW_STRIDE;
-      const source = this.#chunks[this.#rows[base]];
-      const start = this.#rows[base + 1];
-      const len = this.#rows[base + 2];
+      const source = this.#chunks[this.#rowSlices[base]];
+      const start = this.#rowSlices[base + 1];
+      const len = this.#rowSlices[base + 2];
       source.copy(chunks[0], used, start, start + len);
-      rows[base] = 0;
-      rows[base + 1] = used;
-      rows[base + 2] = len;
+      slices[base] = 0;
+      slices[base + 1] = used;
+      slices[base + 2] = len;
       used += len;
     }
     this.#chunks = chunks;
-    this.#rows = rows;
+    this.#rowSlices = slices;
     this.#payloadBytes = used;
     // The scan cursor survives: its cached offsets are relative to each row's (copied) payload
   }
 
-  /** Validates `rowIndex` and returns its base index into the `#rows` table. */
+  /** Validates `rowIndex` and returns its base index into the `#rowSlices` table. */
   #rowBase(rowIndex: number): number {
     if (!(rowIndex >= 0 && rowIndex < this.#rowCount)) {
       throw new Error(`Invalid rowIndex ${rowIndex} (rowCount ${this.#rowCount})`);
     }
     const base = rowIndex * ROW_STRIDE;
-    if (this.#rows[base + 2] === DROPPED) {
+    if (this.#rowSlices[base + 2] === DROPPED) {
       throw new Error(`Row ${rowIndex} was compacted away (its entity was already loaded)`);
     }
     return base;

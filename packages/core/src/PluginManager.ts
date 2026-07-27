@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { EntityManager, FindOperation, isDefined } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { ParsedFindQuery } from "./QueryParser";
+import { RowData } from "./RowData";
 import { JoinRowTodo, Todo } from "./Todo";
 
 interface PluginMethods {
@@ -44,14 +45,17 @@ interface PluginMethods {
   /**
    * Called after a find operation has been executed to observe the raw database rows.
    *
-   * The rows are observation-only. Mutating the array or row objects is unsupported and is not
-   * guaranteed to affect entity hydration.
+   * The result is an observation-only {@link RowData} view — i.e. `rows.rowCount` for metrics,
+   * `rows.get(i, columnName)` for specific cells, or `rows.toRows()` to materialize POJO rows.
+   * For lazy results, cells decode on access, so a hook that only counts rows costs nothing;
+   * materializing via `toRows()` decodes every cell of every row. Mutating materialized rows is
+   * unsupported and is not guaranteed to affect entity hydration.
    *
    * @param meta Metadata for the entity type that was queried
    * @param operation The type of find operation that was performed
    * @param rows A read-only view of the raw database rows returned from the query
    */
-  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: readonly Readonly<Record<string, unknown>>[]): void;
+  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: RowData): void;
 
   beforeValidate?(entities: readonly Entity[]): Promise<void> | void;
 
@@ -184,7 +188,7 @@ export class PluginManager implements Required<PluginMethods> {
       keepAliases?: string[];
     },
   ): void {}
-  afterFind(meta: EntityMetadata, operation: FindOperation, rows: readonly Readonly<Record<string, unknown>>[]) {}
+  afterFind(meta: EntityMetadata, operation: FindOperation, rows: RowData) {}
   beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}

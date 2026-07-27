@@ -188,7 +188,11 @@ describe("EntityManger.plugins", () => {
       const [meta, operation, rows] = plugin.calls[0];
       expect(meta).toBe(getMetadata(Author));
       expect(operation).toBe("find");
-      expect(rows).toMatchObject([{ first_name: "a1" }]);
+      // The hook receives a read-only RowData view; observe-only hooks can read `rowCount`
+      // without materializing, or `toRows()` when they want the POJO rows
+      expect(rows.rowCount).toBe(1);
+      expect(rows.get(0, "first_name")).toBe("a1");
+      expect(rows.toRows()).toMatchObject([{ first_name: "a1" }]);
     });
   });
 

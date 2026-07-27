@@ -30,18 +30,21 @@ entity, interleaved classic/lazy runs agreeing within noise:
 
 | scenario (100k rows)          | classic  | lazy-parsing | impact             |
 | ----------------------------- | -------- | ------------ | ------------------ |
-| hydrate only (`em.find`)      | 556 ms   | 177 ms       | **3.1x faster**    |
-| read 3 cols/row               | 584 ms   | 228 ms       | **2.6x faster**    |
-| read 20 cols/row              | 854 ms   | 724 ms       | **1.2x faster**    |
-| read all 36 cols/row          | 1,032 ms | 1,060 ms     | ~parity (-3%)      |
+| hydrate only (`em.find`)      | 556 ms   | 175 ms       | **3.2x faster**    |
+| read 3 cols/row               | 582 ms   | 228 ms       | **2.6x faster**    |
+| read 20 cols/row              | 842 ms   | 653 ms       | **1.3x faster**    |
+| read all 36 cols/row          | 1,024 ms | 985 ms       | **1.04x faster**   |
 | retained memory (held result) | ~148 MB  | ~71 MB       | **2.1x smaller**   |
+
+(Re-measured 2026-07-27 after the binary-registry pivot, which nudged the mid/dense widths
+further ahead — date/timestamp cells now decode wire-bytes -> `Date` with no render/parse step.)
 
 Takeaways:
 
-- **Lazy-parsing wins or ties at every column width.** There is no break-even to reason about:
-  sparse reads (the shape of real workloads — resolvers returning ids/names, reports reading a
-  few columns, rules touching one FK) are 2.6-3.1x faster, mid-width reads are ~1.2x, and even
-  reading *every* column of every row lands within ~3% of classic.
+- **Lazy-parsing wins at every column width.** There is no break-even to reason about: sparse
+  reads (the shape of real workloads — resolvers returning ids/names, reports reading a few
+  columns, rules touching one FK) are 2.6-3.2x faster, mid-width reads are ~1.3x, and even
+  reading *every* column of every row is slightly faster than classic.
 - **The dense case owes its parity to the adaptive scan cursor** (see §3/C2's follow-up,
   implemented 2026-07-27): `#readCell` caches each row's furthest-scanned cell boundary
   (6 bytes/row, allocated lazily on the first ordinal >= 8 fault, invalidated on compaction),
@@ -567,9 +570,11 @@ which is completely separate from `pg.types` — text results (knex, classic dri
 - **Unknown oids fail closed**: a query selecting a column with no registered binary parser
   rejects at RowDescription time with a `setBinaryTypeParser` pointer, instead of guessing
   (this killed the utf8 fallback that silently corrupted `time`/`inet`/ranges/etc.).
-- **Custom/extension types are explicit**: native enums, citext, and domains need a one-time
-  `setBinaryTypeParser(oid, binaryTextParser)`; the integration suite registers its own
-  (citext, favorite_shape) in `setupDbTests.ts` by querying `pg_type`.
+- **Custom/extension types are explicit** — except the common ones, which are free: the driver
+  auto-registers the database's native enums and citext (plus their array types) via a single
+  memoized `pg_type` lookup before its first lazy query (`registerDatabaseBinaryParsers`,
+  never overwriting explicit registrations); anything else (domains, hstore, ...) needs a
+  one-time `setBinaryTypeParser(oid, binaryTextParser)`.
 - **Temporal mode goes binary -> Temporal directly**: `registerTemporalBinaryParsers`
   constructs `PlainDate`/`PlainTime`/`PlainDateTime` from civil parts and `ZonedDateTime` (UTC,
   matching the text path's normalization; the configured `timeZone` only governs

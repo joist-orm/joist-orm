@@ -36,6 +36,28 @@ export function getBinaryTypeParser(oid: number): BinaryParse | undefined {
 /** Decodes one binary cell directly from the payload chunk; `length` is the cell's byte length. */
 export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 
+/**
+ * Auto-registers binary parsers for the database's text-like dynamic-oid types — native enums
+ * and citext, plus their array types — so apps get those for free.
+ *
+ * `PostgresDriver` calls this lazily before its first lazy query; apps can also call it
+ * directly (i.e. at boot) if they want the registrations eagerly. Explicit
+ * `setBinaryTypeParser` registrations are never overwritten.
+ */
+export async function registerDatabaseBinaryParsers(pool: {
+  query(sql: string): Promise<{ rows: any[] }>;
+}): Promise<void> {
+  const { rows } = await pool.query(`select oid, typarray from pg_type where typtype = 'e' or typname = 'citext'`);
+  for (const row of rows) {
+    const oid = Number(row.oid);
+    if (getBinaryTypeParser(oid) === undefined) setBinaryTypeParser(oid, binaryTextParser);
+    const arrayOid = Number(row.typarray);
+    if (arrayOid !== 0 && getBinaryTypeParser(arrayOid) === undefined) {
+      setBinaryTypeParser(arrayOid, binaryArrayParser);
+    }
+  }
+}
+
 /** Decodes a cell's bytes as utf8 text, i.e. for text-like custom types (enums, citext, domains). */
 export function binaryTextParser(chunk: Buffer, start: number, length: number): string {
   return chunk.toString("utf8", start, start + length);

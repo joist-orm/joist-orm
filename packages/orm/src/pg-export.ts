@@ -7,6 +7,7 @@ export {
   binaryArrayParser,
   binaryTextParser,
   getBinaryTypeParser,
+  registerDatabaseBinaryParsers,
   setBinaryTypeParser,
 } from "./drivers/binaryParsers.js";
 export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.js";

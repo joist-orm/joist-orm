@@ -32,7 +32,7 @@ import {
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
-import { registerTemporalBinaryParsers } from "./binaryParsers";
+import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers";
 import { ensureLazyDataRows } from "./patchPgProtocol";
 import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData";
 
@@ -92,6 +92,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #preloadPlugin: PreloadPlugin | undefined;
   readonly #onQuery: OnQuery;
   readonly lazyRows: boolean;
+  #databaseBinaryParsers: Promise<void> | undefined = undefined;
 
   constructor(
     readonly pool: pg.Pool,
@@ -128,6 +129,12 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },
   ): Promise<RowData> {
+    // Auto-register binary parsers for the db's dynamic-oid text-likes (native enums, citext)
+    // once, before our first lazy query; on failure, reset so the next query retries
+    await (this.#databaseBinaryParsers ??= registerDatabaseBinaryParsers(this.pool).catch((err) => {
+      this.#databaseBinaryParsers = undefined;
+      throw err;
+    }));
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
     const pgSql = toPgParams(sql);
     this.#onQuery?.(pgSql);

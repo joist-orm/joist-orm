@@ -85,6 +85,21 @@ export class InstanceData {
     }
   }
 
+  /**
+   * Returns the as-loaded value of `columnName`, i.e. `getColumn("rank")`.
+   *
+   * This saves callers from knowing that `rowData`/`rowIndex` are a pair, but note it is
+   * a snapshot of the query that loaded us, and specifically:
+   *
+   * - The value is driver-level, i.e. numeric enum ids, untagged foreign keys, and temporals
+   *   as strings; use `getField` if you want the domain value, and
+   * - The value is not updated by `em.flush`, so after a flush it is the pre-flush value, and
+   * - New entities have no row, so every column is `undefined`.
+   */
+  getColumn(columnName: string): any {
+    return this.rowData.get(this.rowIndex, columnName);
+  }
+
   /** If `em.flush` has detected a dirty RQF, reset our internal dirty state, w/o reseting our external-dirty state. */
   resetForRqfLoop() {
     this.flushedData = {};

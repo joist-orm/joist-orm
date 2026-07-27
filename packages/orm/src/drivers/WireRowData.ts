@@ -204,9 +204,15 @@ export class WireRowData implements RowData {
 
   /**
    * Trims unused capacity, and compacts down to only `retain`-ed rows when enough rows were not
-   * retained (i.e. duplicate rows whose entities were already loaded) to be worth the copy.
+   * retained to be worth the copy.
    *
-   * Compaction re-copies every retained byte, so it only pays off when it buys back a meaningful
+   * Compaction exists to release pinned socket buffers to the GC: rows are zero-copy views into
+   * whole ~64KiB chunks, so keeping any row alive pins its entire chunk — and unretained rows
+   * are typically duplicates whose entities were *already in memory* (identity-map hits that
+   * keep their original `rowData`), making the newly-arrived bytes dead weight. Copying the
+   * retained rows into one exact-size owned buffer lets every chunk reference drop.
+   *
+   * The copy re-copies every retained byte, so it only pays off when it buys back a meaningful
    * fraction of the payload: we compact when the dropped rows hold more than 20% of the payload
    * bytes, and otherwise just trim, accepting the (bounded) leftover bytes. Called once after
    * hydration + sidecar reads (`_tags`, preload aggregates) are complete; retained entities keep
@@ -230,7 +236,7 @@ export class WireRowData implements RowData {
     }
   }
 
-  /** Rebuilds chunks with only the retained rows; dropped rows read as errors afterwards. */
+  /** Copies retained rows into one owned buffer, releasing the pinned socket chunks to the GC. */
   #compact(retained: readonly number[], bytes: number): void {
     const chunks: Buffer[] = bytes > 0 ? [Buffer.allocUnsafe(bytes)] : [];
     const rows = new Uint32Array(this.#rowCount * ROW_STRIDE);

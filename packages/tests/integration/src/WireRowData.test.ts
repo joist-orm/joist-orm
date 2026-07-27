@@ -1,11 +1,9 @@
 import { getInstanceData } from "joist-orm";
-import {
-  ensureLazyDataRows,
-  executeRowDataQuery,
-  getBinaryTypeParser,
-  setBinaryTypeParser,
-  WireRowData,
-} from "joist-orm/pg";
+import { getBinaryTypeParser, setBinaryTypeParser } from "joist-orm/pg";
+// These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
+// into the build directly
+import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol";
+import { executeRowDataQuery, WireRowData } from "../../../orm/build/drivers/WireRowData";
 import pg from "pg";
 import { Author } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";

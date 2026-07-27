@@ -1,5 +1,6 @@
 import { PojoRowData, setDefaultEntityLimit } from "joist-orm";
-import { WireRowData } from "joist-orm/pg";
+// WireRowData is deliberately not public API; this benchmark reaches into the build directly
+import { WireRowData } from "../../orm/build/drivers/WireRowData";
 import { performance } from "node:perf_hooks";
 import { Author } from "./src/entities";
 import { newEntityManager, pool, testDriver } from "./src/testEm";

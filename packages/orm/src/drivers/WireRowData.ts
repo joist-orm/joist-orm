@@ -17,9 +17,6 @@ type WireColumn = {
   binaryParse: ((chunk: Buffer, start: number, length: number) => any) | undefined;
 };
 
-/** Payload chunk size; rows larger than this get their own exact-size chunk. */
-const CHUNK_SIZE = 64 * 1024;
-
 /** The `#rowLen` sentinel for rows dropped by `finalize` compaction. */
 const DROPPED = 0xffffffff;
 
@@ -33,11 +30,18 @@ const COMPACT_THRESHOLD = 0.2;
  * or appended across queries, and the payload is read-only after the query completes (entity
  * mutations go into `InstanceData.data`, never back into the row bytes).
  *
- * Rows are kept in their row-major wire format (`int16 fieldCount` + length-prefixed cells) in
- * lazily-allocated fixed-size chunks (oversized rows get a dedicated exact-size chunk), and a
+ * Rows are kept in their row-major wire format (`int16 fieldCount` + length-prefixed cells) as
+ * zero-copy views over the parser's own immutable buffers: `adoptRow` retains each DataRow's
+ * `(bytes, offset, length)` by reference, deduping the socket chunk that consecutive rows
+ * share. (Our pg-protocol patch guarantees message bytes are never rewritten — chunks parse in
+ * place and straddling messages get a buffer of their own; see `patchPgProtocol.ts`.) A
  * `row × column` cell is decoded on first field access by scanning the row's length-prefixed
  * cells to the column's ordinal ("row-lazy" decode, see JS-ROW-STORE-DESIGN.md §3/C2). This is
  * deferred decoding of row-major data, not a columnar layout.
+ *
+ * Because chunks are whole socket reads, retaining any row pins its ~64KiB chunk (plus whatever
+ * protocol frames share it); `finalize`'s compaction copies retained rows out into an
+ * exact-size owned buffer when enough of the payload was dropped.
  *
  * Text-format cells go through the same active text parsers node-postgres would resolve for
  * the query (i.e. honoring pool/client `TypeOverrides`), so they parse identically to classic
@@ -66,9 +70,6 @@ const COMPACT_THRESHOLD = 0.2;
  */
 export class WireRowData implements RowData {
   #chunks: Buffer[] = [];
-  /** The index of the partial fixed-size chunk we're filling, or -1 (oversized chunks are exact). */
-  #currentChunk = -1;
-  #currentUsed = 0;
   #rowChunk: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
   #rowStart: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
   #rowLen: Uint32Array<ArrayBufferLike> = new Uint32Array(16);
@@ -146,29 +147,24 @@ export class WireRowData implements RowData {
     }
   }
 
-  /** Copies one DataRow payload into a chunk; called synchronously from the wire parser. */
-  appendRow(bytes: Buffer, offset: number, payloadLength: number): void {
+  /**
+   * Retains one DataRow payload *by reference* (zero-copy); called synchronously from the wire
+   * parser, whose patched buffer management guarantees the bytes are never rewritten.
+   *
+   * Consecutive rows usually share one socket chunk, so `bytes` is deduped against the last
+   * chunk ref; retaining any row of a chunk pins the whole chunk, which `finalize`'s compaction
+   * resolves by copying retained rows out when enough of the payload was dropped.
+   */
+  adoptRow(bytes: Buffer, offset: number, payloadLength: number): void {
     if (payloadLength < 2 || offset + payloadLength > bytes.length) {
       throw new Error(`Malformed DataRow payload (length ${payloadLength})`);
     }
-    if (payloadLength > CHUNK_SIZE) {
-      // Oversized rows get a dedicated exact-size chunk; the current partial chunk (if any)
-      // keeps filling with subsequent rows, since each row records its own chunk index
-      const dedicated = Buffer.allocUnsafe(payloadLength);
-      bytes.copy(dedicated, 0, offset, offset + payloadLength);
-      this.#chunks.push(dedicated);
-      this.#pushRow(this.#chunks.length - 1, 0, payloadLength);
-    } else {
-      if (this.#currentChunk === -1 || this.#currentUsed + payloadLength > CHUNK_SIZE) {
-        this.#chunks.push(Buffer.allocUnsafe(CHUNK_SIZE));
-        this.#currentChunk = this.#chunks.length - 1;
-        this.#currentUsed = 0;
-      }
-      const start = this.#currentUsed;
-      bytes.copy(this.#chunks[this.#currentChunk], start, offset, offset + payloadLength);
-      this.#currentUsed = start + payloadLength;
-      this.#pushRow(this.#currentChunk, start, payloadLength);
+    let chunkIndex = this.#chunks.length - 1;
+    if (chunkIndex === -1 || this.#chunks[chunkIndex] !== bytes) {
+      this.#chunks.push(bytes);
+      chunkIndex++;
     }
+    this.#pushRow(chunkIndex, offset, payloadLength);
     this.#payloadBytes += payloadLength;
   }
 
@@ -219,23 +215,14 @@ export class WireRowData implements RowData {
       used += len;
     }
     this.#chunks = chunks;
-    this.#currentChunk = -1;
-    this.#currentUsed = 0;
     this.#rowChunk = rowChunk;
     this.#rowStart = rowStart;
     this.#rowLen = rowLen;
     this.#payloadBytes = used;
   }
 
-  /** Shrinks the partial chunk + row-index tables to their used sizes. */
+  /** Shrinks the row-index tables to their used sizes. */
   #trim(): void {
-    const partial = this.#currentChunk;
-    if (partial !== -1 && this.#currentUsed < this.#chunks[partial].length) {
-      const exact = Buffer.allocUnsafe(this.#currentUsed);
-      this.#chunks[partial].copy(exact, 0, 0, this.#currentUsed);
-      this.#chunks[partial] = exact;
-    }
-    this.#currentChunk = -1;
     if (this.#rowCount < this.#rowChunk.length) {
       this.#rowChunk = this.#rowChunk.slice(0, this.#rowCount);
       this.#rowStart = this.#rowStart.slice(0, this.#rowCount);
@@ -411,8 +398,8 @@ class RowDataQuery extends PgQuery {
         );
       }
       // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
-      // 1.15+ reports length lazily as -1, in which case our lazy message carries the real one
-      this.#wire.appendRow(msg.bytes, msg.offset, msg.length - 4);
+      // our patched message carries the real length from `handlePacket`'s argument
+      this.#wire.adoptRow(msg.bytes, msg.offset, msg.length - 4);
     } catch (err) {
       this._canceledDueToError = err;
     }

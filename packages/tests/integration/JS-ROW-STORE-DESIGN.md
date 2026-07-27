@@ -439,6 +439,24 @@ could we keep the wire bytes themselves instead? Probed against the live socket
   expensive per byte than memcpy). Verdict: not worth a deeper runtime patch; the right vehicle
   is the upstream PR (Option 3), where "retainable DataRow views" would be a natural extension.
 
+**Update (2026-07-26): the buffer rework is now part of the runtime patch.** The design above
+was first proposed upstream as brianc/node-postgres#3719 (lazy `fields` getter +
+adopt-chunks/reassemble-only-the-straddler, so message bytes become immutable) — but rather
+than wait on a PR that may never land, `patchPgProtocol.ts` now *ports* that rework: it
+replaces `Parser.prototype.parse` (chunks parse in place; only the message straddling a read
+boundary is reassembled into a buffer of its own, handed to the message and never touched
+again) alongside the existing `handlePacket` wrap. Patched pg-protocol therefore always
+provides both lazy DataRows *and* immutable message bytes, and `WireRowData` collapsed to a
+single zero-copy path: `adoptRow` retains each row's `(chunk, offset, len)` by reference
+(deduping consecutive rows' shared socket chunk), the 64 KiB arena/`appendRow` copy is deleted,
+and retain/compact works as before (retaining any row pins its ~64 KiB chunk; compaction copies
+retained rows out into an exact owned buffer past the 20% dropped-bytes threshold). The patch
+self-verifies with two probes before being kept: the lazy round-trip, plus an immutability
+check that retains a chunk-straddling message across a read shaped to trigger the *stock*
+parser's move-to-front compaction over its bytes — so any future pg-protocol internals change
+fails closed to classic rows. If #3719 does land, the patch simply overrides the native
+implementation with equivalent behavior until we can require that version and delete it.
+
 ### Binary result format prototype (2026-07-26)
 
 Lazy queries now request Postgres's *binary* result format (Bind result-format code 1, with

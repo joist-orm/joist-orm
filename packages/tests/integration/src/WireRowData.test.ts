@@ -93,7 +93,7 @@ describe("WireRowData", () => {
       // Unit-level: an int4 cell with a default parser decodes readInt32BE, no strings involved
       const rowData = new WireRowData();
       rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }]);
-      rowData.appendRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
+      rowData.adoptRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
       expect(rowData.get(0, "x")).toBe(7);
     });
 
@@ -136,35 +136,52 @@ describe("WireRowData", () => {
       expect(lazy.retainedBytes).toBe(0);
     });
 
-    it("retains roughly one row of bytes for a one-row result after finalize", async () => {
+    it("retains roughly one response chunk for a one-row result after finalize", async () => {
       const [, lazy] = await classicAndLazy("select 'hello' as x");
       lazy.retain?.(0);
       lazy.finalize();
       expect(lazy.payloadBytes).toBeLessThan(64);
-      // The review gate: not the old fixed 256 KiB arena — just the row + tiny index tables
-      expect(lazy.retainedBytes).toBeLessThan(128);
+      // Adoption pins the response's whole socket chunk (protocol frames included) — small for
+      // a small query — plus tiny index tables; nothing like the old fixed 256 KiB arena
+      expect(lazy.retainedBytes).toBeLessThan(1024);
       expect(lazy.get(0, "x")).toBe("hello");
     });
 
-    it("crosses chunk boundaries and gives oversized rows dedicated chunks", () => {
+    it("dedupes consecutive rows sharing an adopted chunk", () => {
       const rowData = new WireRowData();
       rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
-      // ~1 KiB rows to cross the 64 KiB chunk boundary, plus one 100 KiB oversized row
-      const small = "a".repeat(1024);
-      const big = "b".repeat(100 * 1024);
-      for (let i = 0; i < 100; i++) appendTextRow(rowData, small);
-      appendTextRow(rowData, big);
-      for (let i = 0; i < 10; i++) appendTextRow(rowData, small);
-      expect(rowData.rowCount).toBe(111);
-      expect(rowData.get(0, "x")).toBe(small);
-      expect(rowData.get(63, "x")).toBe(small); // around the 64 KiB boundary
-      expect(rowData.get(100, "x")).toBe(big); // the dedicated chunk
-      expect(rowData.get(110, "x")).toBe(small); // resumed the partial chunk
-      // Trim keeps every row readable and drops slack
-      for (let i = 0; i < 111; i++) rowData.retain?.(i);
+      // Three rows inside one buffer (like one socket chunk), plus one from a second buffer
+      const payloads = [textPayload("row0"), textPayload("row1"), textPayload("row2")];
+      const shared = Buffer.concat(payloads);
+      let offset = 0;
+      for (const payload of payloads) {
+        rowData.adoptRow(shared, offset, payload.length);
+        offset += payload.length;
+      }
+      const other = textPayload("row3");
+      rowData.adoptRow(other, 0, other.length);
+      expect(rowData.rowCount).toBe(4);
+      expect(rowData.get(0, "x")).toBe("row0");
+      expect(rowData.get(2, "x")).toBe("row2");
+      expect(rowData.get(3, "x")).toBe("row3");
+      // All retained -> trim only; the shared buffer is counted (pinned) once, not per row
+      for (let i = 0; i < 4; i++) rowData.retain?.(i);
       rowData.finalize();
-      expect(rowData.get(110, "x")).toBe(small);
-      expect(rowData.retainedBytes).toBeLessThan(rowData.payloadBytes + 64 * 1024 + 111 * 12);
+      expect(rowData.retainedBytes).toBe(shared.length + other.length + 4 * 4 * 3);
+      expect(rowData.get(1, "x")).toBe("row1");
+    });
+
+    it("reassembles rows larger than a socket read into their own buffer", async () => {
+      // A ~200 KiB cell spans several 64 KiB socket chunks, exercising the patched parser's
+      // partial-message growth; the row adopts the reassembled buffer
+      const big = "x".repeat(200 * 1024);
+      const [classic, lazy] = await classicAndLazy("select repeat('x', 200 * 1024) as x, 'tail' as y");
+      expect(classic[0].x).toBe(big);
+      expect(lazy.get(0, "x")).toBe(big);
+      expect(lazy.get(0, "y")).toBe("tail");
+      lazy.retain?.(0);
+      lazy.finalize();
+      expect(lazy.get(0, "x")).toBe(big);
     });
 
     it("compacts unretained rows away and errors on their later access", () => {
@@ -212,7 +229,7 @@ describe("WireRowData", () => {
       bad.writeInt32BE(100, 2);
       const malformed = new WireRowData();
       malformed.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
-      malformed.appendRow(bad, 0, bad.length);
+      malformed.adoptRow(bad, 0, bad.length);
       expect(() => malformed.get(0, "x")).toThrow("Malformed cell length");
     });
   });
@@ -278,6 +295,38 @@ describe("WireRowData", () => {
     expect(lazy.toRows()).toEqual(classic);
   });
 
+  describe("adopted (zero-copy) rows", () => {
+    it("retains message bytes by reference and compacts them into owned memory", async () => {
+      // The patched parser guarantees message bytes are immutable, so WireRowData retains rows
+      // as views instead of copying; drive the query lifecycle with parser-shaped messages
+      let query: any;
+      const fakeClient = { query: (q: any) => (query = q) };
+      const promise = executeRowDataQuery(fakeClient as any, "select fake", [], { binary: false });
+      query.handleRowDescription({ fields: [{ name: "x", dataTypeID: 25, format: "text" }] });
+      // Two one-cell rows sharing one buffer, like two DataRows inside one socket chunk;
+      // `length` is the frame's int32 value (payload + the int32 itself)
+      const frame1 = nativeDataRowFrame("hello");
+      const chunk = Buffer.concat([frame1, nativeDataRowFrame("world")]);
+      query.handleDataRow({ name: "dataRow", bytes: chunk, offset: 5, length: frame1.length - 1 });
+      query.handleDataRow({ name: "dataRow", bytes: chunk, offset: frame1.length + 5, length: frame1.length - 1 });
+      query.handleReadyForQuery();
+      const rowData = (await promise) as WireRowData;
+      expect(rowData.rowCount).toBe(2);
+      expect(rowData.get(0, "x")).toBe("hello");
+      expect(rowData.get(1, "x")).toBe("world");
+      // Zero-copy: rows are views over `chunk` (values are not cached), so mutations show through
+      chunk[11] = "H".charCodeAt(0);
+      expect(rowData.get(0, "x")).toBe("Hello");
+      // Retaining only row 1 drops >20% of the payload bytes, so finalize compacts it into
+      // owned memory: later source mutations no longer show, and dropped rows error
+      rowData.retain?.(1);
+      rowData.finalize?.();
+      chunk[frame1.length + 11] = "W".charCodeAt(0);
+      expect(rowData.get(1, "x")).toBe("world");
+      expect(() => rowData.get(0, "x")).toThrow("compacted away");
+    });
+  });
+
   describe("entity loader lifecycle", () => {
     // These go through the real em.load/em.find loaders, so they only apply in lazy mode
     const itLazy = process.env.JOIST_ROW_DATA === "1" ? it : it.skip;
@@ -315,10 +364,24 @@ describe("WireRowData", () => {
   });
 });
 
-/** Appends a one-text-cell DataRow payload to `rowData`. */
+/** Builds a complete one-cell DataRow frame (code + int32 length + payload), i.e. a native message's `bytes`. */
+function nativeDataRowFrame(cell: string): Buffer {
+  const payload = dataRowPayload([Buffer.from(cell, "utf8")]);
+  const header = Buffer.alloc(5);
+  header[0] = "D".charCodeAt(0);
+  header.writeInt32BE(payload.length + 4, 1);
+  return Buffer.concat([header, payload]);
+}
+
+/** Adopts a one-text-cell DataRow payload into `rowData` (each call brings its own buffer/chunk). */
 function appendTextRow(rowData: WireRowData, text: string): void {
   const cell = Buffer.from(text, "utf8");
-  rowData.appendRow(dataRowPayload([cell]), 0, 2 + 4 + cell.length);
+  rowData.adoptRow(dataRowPayload([cell]), 0, 2 + 4 + cell.length);
+}
+
+/** Builds a one-text-cell DataRow payload buffer. */
+function textPayload(text: string): Buffer {
+  return dataRowPayload([Buffer.from(text, "utf8")]);
 }
 
 /** Builds a DataRow payload (int16 fieldCount + length-prefixed cells) from cell buffers. */

@@ -78,7 +78,7 @@ function microBenchmark(): void {
 
   for (const n of [1, 2, 5, 10, 25, 50, 100, 250, 1000]) {
     const iterations = n <= 100 ? 20_000 : 2_000;
-    // Both paths pay the same appendRow streaming cost, so include it in both for realism
+    // Both paths pay the same adoptRow streaming cost, so include it in both for realism
     measureSync("micro", "wire_lazy_reads", n, iterations, () => {
       const wire = buildWire(fields, parsers, payload, n);
       let checksum = 0;
@@ -131,7 +131,7 @@ function buildWire(
 ): WireRowData {
   const wire = new WireRowData();
   wire.setRowDescription(fields, parsers);
-  for (let i = 0; i < n; i++) wire.appendRow(payload, 0, payload.length);
+  for (let i = 0; i < n; i++) wire.adoptRow(payload, 0, payload.length);
   return wire;
 }
 

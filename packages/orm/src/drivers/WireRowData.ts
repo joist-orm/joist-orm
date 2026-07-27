@@ -24,6 +24,13 @@ const DROPPED = 0xffffffff;
 const COMPACT_THRESHOLD = 0.2;
 
 /**
+ * Only allocate the adaptive scan cursor once a fault targets at least this ordinal: shallower
+ * scans cost less than the cursor's bookkeeping, i.e. hydrate-only results (id is ordinal ~0)
+ * and narrow reads never pay the 6 bytes/row.
+ */
+const SCAN_CURSOR_MIN_ORDINAL = 8;
+
+/**
  * A lazy wire-row {@link RowData} over raw Postgres `DataRow` payload bytes.
  *
  * Each query produces its own `WireRowData` — one query, one result; results are never combined
@@ -62,11 +69,10 @@ const COMPACT_THRESHOLD = 0.2;
  * materialize to a `PojoRowData` instead. Measured (benchmark-rowdata-small.ts, 40-col rows):
  * for the typical sparse access pattern (~6 of 40 columns read), keeping the lazy result wins at
  * every size including a single row (n=1: 4.3µs vs 7.6µs; n=1000: 0.76ms vs 3.0ms), because
- * materialization eagerly decodes every column while lazy faults only what is read. The winner
- * flips on column *coverage*, not row count: reading all 40 columns favors materialized rows
- * ~1.6x at any size — but that access pattern is unknowable up-front, and at small n the dense
- * penalty (~2µs/row) is invisible under the ~500µs query round-trip. End-to-end, small finds
- * (n <= 10) measured statistically identical in both modes.
+ * materialization eagerly decodes every column while lazy faults only what is read. Even full
+ * column coverage no longer flips the winner: with binary decode and `#readCell`'s adaptive
+ * scan cursor, reading all ~36 columns of every row measures ~parity with classic end-to-end
+ * (benchmark-lazy-parsing.ts), and small finds (n <= 10) are statistically identical.
  */
 export class WireRowData implements RowData {
   #chunks: Buffer[] = [];
@@ -78,6 +84,9 @@ export class WireRowData implements RowData {
   #retained: number[] | undefined = undefined;
   #columns: Map<string, WireColumn> = new Map();
   #fields: WireColumn[] = [];
+  /** The adaptive scan cursor: per row, the furthest scanned `knownOrdinal + 1` (see #readCell). */
+  #scanNext: Uint16Array | undefined = undefined;
+  #scanPos: Uint32Array | undefined = undefined;
 
   get rowCount(): number {
     return this.#rowCount;
@@ -219,6 +228,9 @@ export class WireRowData implements RowData {
     this.#rowStart = rowStart;
     this.#rowLen = rowLen;
     this.#payloadBytes = used;
+    // Cached scan positions are chunk-absolute, so they're invalid after the rewrite
+    this.#scanNext = undefined;
+    this.#scanPos = undefined;
   }
 
   /** Shrinks the row-index tables to their used sizes. */
@@ -257,19 +269,47 @@ export class WireRowData implements RowData {
     return [this.#chunks[this.#rowChunk[rowIndex]], start, start + len];
   }
 
-  /** Scans a row's cells to `column`'s ordinal and decodes it. */
+  /**
+   * Scans a row's cells to `column`'s ordinal and decodes it.
+   *
+   * An adaptive per-row scan cursor caches the furthest cell boundary already scanned
+   * (`#scanNext`/`#scanPos`), so ascending reads resume instead of re-scanning from the row
+   * start — a dense in-order read of all C columns costs one linear pass rather than O(C^2)
+   * length-prefix skips. Out-of-order (descending) faults simply scan from the start, i.e.
+   * never worse than without the cursor. The arrays are a fixed 6 bytes/row, allocated lazily
+   * on the first fault deep enough for resuming to matter.
+   */
   #readCell(chunk: Buffer, start: number, end: number, column: WireColumn, rowIndex: number): any {
     const fieldCount = chunk.readInt16BE(start);
-    if (column.ordinal >= fieldCount) {
+    const { ordinal } = column;
+    if (ordinal >= fieldCount) {
       throw new Error(`Row ${rowIndex} has ${fieldCount} cells but column ${column.name} is #${column.ordinal}`);
     }
     let pos = start + 2;
-    const { ordinal } = column;
-    for (let c = 0; c < ordinal; c++) {
+    let c = 0;
+    let scanNext = this.#scanNext;
+    if (scanNext === undefined && ordinal >= SCAN_CURSOR_MIN_ORDINAL) {
+      scanNext = this.#scanNext = new Uint16Array(this.#rowCount);
+      this.#scanPos = new Uint32Array(this.#rowCount);
+    }
+    if (scanNext !== undefined && rowIndex < scanNext.length) {
+      // `scanNext` stores `knownOrdinal + 1` (0 = unset): cell #knownOrdinal starts at scanPos
+      const known = scanNext[rowIndex] - 1;
+      if (known >= 0 && known <= ordinal) {
+        c = known;
+        pos = this.#scanPos![rowIndex];
+      }
+    }
+    for (; c < ordinal; c++) {
       const len = this.#cellLength(chunk, pos, end, rowIndex);
       pos += len > 0 ? len + 4 : 4;
     }
     const len = this.#cellLength(chunk, pos, end, rowIndex);
+    if (scanNext !== undefined && rowIndex < scanNext.length && ordinal + 2 > scanNext[rowIndex]) {
+      // advance-only: remember the boundary just past this cell for the next ascending fault
+      scanNext[rowIndex] = ordinal + 2;
+      this.#scanPos![rowIndex] = pos + 4 + (len > 0 ? len : 0);
+    }
     if (len === -1) return null;
     return this.#parseCell(chunk, pos + 4, len, column);
   }

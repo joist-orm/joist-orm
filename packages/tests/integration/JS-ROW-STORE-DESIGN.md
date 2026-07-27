@@ -30,24 +30,24 @@ entity, interleaved classic/lazy runs agreeing within noise:
 
 | scenario (100k rows)          | classic  | lazy-parsing | impact             |
 | ----------------------------- | -------- | ------------ | ------------------ |
-| hydrate only (`em.find`)      | 552 ms   | 179 ms       | **3.1x faster**    |
-| read 3 cols/row               | 583 ms   | 232 ms       | **2.5x faster**    |
-| read 20 cols/row              | 845 ms   | 888 ms       | ~wash (-5%)        |
-| read all 36 cols/row          | 1,025 ms | 1,392 ms     | 36% slower         |
+| hydrate only (`em.find`)      | 556 ms   | 177 ms       | **3.1x faster**    |
+| read 3 cols/row               | 584 ms   | 228 ms       | **2.6x faster**    |
+| read 20 cols/row              | 854 ms   | 724 ms       | **1.2x faster**    |
+| read all 36 cols/row          | 1,032 ms | 1,060 ms     | ~parity (-3%)      |
 | retained memory (held result) | ~148 MB  | ~71 MB       | **2.1x smaller**   |
 
 Takeaways:
 
-- **The win concentrates where real workloads live.** Hydrate-plus-a-few-fields — a resolver
-  returning ids/names, a report reading 3-5 columns, a rule touching one FK — is 2.5-3.1x
-  faster. These rows are meatier than earlier benchmarks (jsonb/arrays/dates/bigint populated),
-  and the ratio *improved* over the older sparse-seeded 2.2-2.55x numbers.
-- **Break-even is ~20 of 36 columns actually read per row.** Below that, deferred decode wins;
-  at 20 it's a wash. An app has to read more than half of a wide table's columns on every row
-  of a 100k result before classic pulls ahead.
-- **The read-everything worst case is +36%** — the C2 prefix-scan plus per-fault serde hops on
-  3.6M cell reads. Bounded, and only hit by export/serialize-everything patterns; adaptive row
-  offsets (§3/C1) remain the follow-up if that ever matters in practice.
+- **Lazy-parsing wins or ties at every column width.** There is no break-even to reason about:
+  sparse reads (the shape of real workloads — resolvers returning ids/names, reports reading a
+  few columns, rules touching one FK) are 2.6-3.1x faster, mid-width reads are ~1.2x, and even
+  reading *every* column of every row lands within ~3% of classic.
+- **The dense case owes its parity to the adaptive scan cursor** (see §3/C2's follow-up,
+  implemented 2026-07-27): `#readCell` caches each row's furthest-scanned cell boundary
+  (6 bytes/row, allocated lazily on the first ordinal >= 8 fault, invalidated on compaction),
+  so ascending reads resume instead of re-scanning — one linear pass per row instead of O(C^2)
+  prefix skips. Before the cursor, read-everything was +36% (1,391 ms); the cursor removed
+  ~330 ms of pure scanning while leaving sparse scenarios untouched.
 - **Memory is the quiet headline**: holding the 100k result costs 146 MB of GC-traced heap +
   2 MB external in classic vs 35 MB traced + 36 MB external in lazy-parsing — half the total,
   and half of *that* is untraced Buffer memory the GC never scans. For 1M-entity
@@ -613,9 +613,11 @@ measured upside.
   bound of the C2 prefix-scan tradeoff (adaptive row offsets are the profiled follow-up).
 
 Still open (deliberately deferred): packed-package npm/pnpm/yarn install fixtures, sidecar
-column stripping, per-meta consolidation evaluation, C1/C3 adaptive cell indexes, and
-paginated-find lazy coverage (the entity-hydrating batch loaders were converted 2026-07-22;
-m2m/lazy-column/id/count loaders stay classic by design, see the Scope update above).
+column stripping, per-meta consolidation evaluation, and paginated-find lazy coverage (the
+entity-hydrating batch loaders were converted 2026-07-22; m2m/lazy-column/id/count loaders stay
+classic by design, see the Scope update above). The C1-style adaptive cell index landed
+2026-07-27 as `#readCell`'s scan cursor (see "Overall impact"); a full C3 columnar layout
+remains unpursued.
 
 ### Small-result threshold investigation (2026-07-22)
 

@@ -216,6 +216,27 @@ describe("WireRowData", () => {
       expect(rowData.get(9, "x")).toBe("row9");
     });
 
+    it("reads cells correctly in any order through the adaptive scan cursor", () => {
+      // 20 columns forces the cursor to allocate (ordinal >= 8 faults); read ascending with
+      // gaps, then descending (from-start fallback), then re-read (values are never cached)
+      const names = Array.from({ length: 20 }, (_, i) => `c${i}`);
+      const rowData = new WireRowData();
+      rowData.setRowDescription(names.map((name) => ({ name, dataTypeID: pg.types.builtins.TEXT })));
+      const cells = names.map((name, i) => (i === 10 ? null : Buffer.from(`v${i}`, "utf8")));
+      const payload = dataRowPayload(cells);
+      rowData.adoptRow(payload, 0, payload.length);
+      rowData.adoptRow(payload, 0, payload.length);
+      for (const i of [2, 9, 15, 19, 3, 12, 10, 0, 19]) {
+        expect(rowData.get(0, `c${i}`)).toBe(i === 10 ? null : `v${i}`);
+      }
+      expect(rowData.get(1, "c19")).toBe("v19");
+      // Compaction rewrites positions, which must invalidate the cursor
+      rowData.retain?.(1);
+      rowData.finalize?.();
+      expect(rowData.get(1, "c19")).toBe("v19");
+      expect(rowData.get(1, "c4")).toBe("v4");
+    });
+
     it("validates row indexes and malformed payloads", () => {
       const rowData = new WireRowData();
       rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
@@ -384,14 +405,15 @@ function textPayload(text: string): Buffer {
   return dataRowPayload([Buffer.from(text, "utf8")]);
 }
 
-/** Builds a DataRow payload (int16 fieldCount + length-prefixed cells) from cell buffers. */
-function dataRowPayload(cells: Buffer[]): Buffer<ArrayBuffer> {
+/** Builds a DataRow payload (int16 fieldCount + length-prefixed cells; null = SQL NULL). */
+function dataRowPayload(cells: Array<Buffer | null>): Buffer<ArrayBuffer> {
   const parts: Buffer[] = [Buffer.alloc(2)];
   parts[0].writeInt16BE(cells.length, 0);
   for (const cell of cells) {
     const len = Buffer.alloc(4);
-    len.writeInt32BE(cell.length, 0);
-    parts.push(len, cell);
+    len.writeInt32BE(cell === null ? -1 : cell.length, 0);
+    parts.push(len);
+    if (cell !== null) parts.push(cell);
   }
   return Buffer.concat(parts) as Buffer<ArrayBuffer>;
 }

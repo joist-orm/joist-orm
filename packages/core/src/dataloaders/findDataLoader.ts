@@ -17,7 +17,6 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
-import { PojoRowData, type RowData } from "../RowData";
 import { OpColumn } from "../drivers/EntityWriter";
 import { equal, equalArrays } from "../fields";
 import { kqDot } from "../keywords";
@@ -77,9 +76,7 @@ export function findDataLoader<T extends Entity>(
           // Maybe add preload joins
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rowData: RowData = em.driver.lazyRows
-            ? await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit)
-            : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit));
+          const rowData = await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit);
           const entities = em.hydrateFromRowData(type, rowData);
           preloadHydrator?.(rowData, entities);
           // All sidecar reads (preload aggregates) are done, so trim/compact the result
@@ -132,9 +129,7 @@ export function findDataLoader<T extends Entity>(
           }
         }
 
-        const rowData: RowData = em.driver.lazyRows
-          ? await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit)
-          : new PojoRowData(await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit));
+        const rowData = await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit);
 
         const entities = em.hydrateFromRowData(type, rowData);
         preloadJoins?.forEach((j) => j.hydrator(rowData, entities));

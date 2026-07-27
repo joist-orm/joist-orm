@@ -92,13 +92,13 @@ export class WireRowData implements RowData {
     return this.#rowCount;
   }
 
-  /** The total DataRow payload bytes added (before any compaction). */
+  /** The DataRow payload bytes currently indexed; drops when compaction discards rows. */
   get payloadBytes(): number {
     return this.#payloadBytes;
   }
 
-  /** The bytes currently retained by payload chunks + the row-index table, i.e. for benchmarks. */
-  get retainedBytes(): number {
+  /** The bytes currently held by payload chunks + the row-index table, i.e. for benchmarks. */
+  get memoryBytes(): number {
     let bytes = this.#rows.byteLength;
     for (const chunk of this.#chunks) bytes += chunk.length;
     return bytes;
@@ -146,16 +146,19 @@ export class WireRowData implements RowData {
   /**
    * Resolves each column's decoder from the query's RowDescription.
    *
-   * `parsers` must be the active *text* parsers for each field (i.e. resolved through the
-   * pool/client `TypeOverrides` chain); we fall back to the global registry when omitted.
-   * Text-format fields decode by utf8-slicing the cell into their parser; binary-format fields
-   * decode via `wireBinaryParser`, which uses the text parser for fast-path eligibility and
-   * custom-parser parity.
+   * `getTypeParser` resolves an oid to its active *text* parser (i.e. through the pool/client
+   * `TypeOverrides` chain), defaulting to the global registry. Text-format fields decode by
+   * utf8-slicing the cell into their parser; binary-format fields decode via
+   * `wireBinaryParser`, which uses the text parser for fast-path eligibility and custom-parser
+   * parity.
    */
-  setRowDescription(fields: Array<{ name: string; dataTypeID: number; format?: string }>, parsers?: any[]): void {
+  setRowDescription(
+    fields: Array<{ name: string; dataTypeID: number; format?: string }>,
+    getTypeParser?: (dataTypeID: number) => (value: any) => any,
+  ): void {
     for (let i = 0; i < fields.length; i++) {
       const { name, dataTypeID, format } = fields[i];
-      const parse = parsers?.[i] ?? pg.types.getTypeParser(dataTypeID, "text");
+      const parse = getTypeParser?.(dataTypeID) ?? pg.types.getTypeParser(dataTypeID, "text");
       const decode = format === "binary" ? wireBinaryParser(dataTypeID, parse) : textCellDecoder(parse);
       const column = { name, ordinal: i, decode };
       this.#columns.set(name, column);
@@ -338,13 +341,16 @@ export class WireRowData implements RowData {
  * `JOIST_LAZY_BINARY=0` to flip the default while the binary path is a prototype (i.e. for
  * A/B benchmarking or as an escape hatch).
  */
+// The prototype escape hatch for binary results, i.e. for A/B benchmarking; read once at load
+const BINARY_BY_DEFAULT = process.env.JOIST_LAZY_BINARY !== "0";
+
 export function executeRowDataQuery(
   client: pg.PoolClient,
   sql: string,
   bindings: readonly any[],
   opts?: { binary?: boolean },
 ): Promise<RowData> {
-  const binary = opts?.binary ?? process.env.JOIST_LAZY_BINARY !== "0";
+  const binary = opts?.binary ?? BINARY_BY_DEFAULT;
   return new Promise((resolve, reject) => {
     const query = new RowDataQuery(
       // Binary results require the extended protocol; `queryMode` forces it for bindings-less queries
@@ -398,13 +404,12 @@ class RowDataQuery extends PgQuery {
     if (this._canceledDueToError) return;
     try {
       super.handleRowDescription(msg);
-      // Resolve the active *text* parsers through the client's TypeOverrides chain (client.js
+      // Resolve active *text* parsers through the client's TypeOverrides chain (client.js
       // injects `_types` at submit time); we can't reuse `Result._parsers` because in binary
       // mode those resolve to pg's (broken) binary registry, while our binary decode path is
       // built on text-parser parity — see `wireBinaryParser`
       const types = this._result?._types;
-      const parsers = types ? msg.fields.map((f: any) => types.getTypeParser(f.dataTypeID, "text")) : undefined;
-      this.#wire.setRowDescription(msg.fields, parsers);
+      this.#wire.setRowDescription(msg.fields, types && ((oid: number) => types.getTypeParser(oid, "text")));
     } catch (err) {
       // Mirror pg's Query error containment: record + reject at ReadyForQuery, keeping the
       // connection's protocol state intact

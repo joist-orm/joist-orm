@@ -534,10 +534,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit);
   }
 
-  /**
-   * Like {@link executeFind}, but returns a {@link RowData}, i.e. lazy wire rows when the
-   * driver has `lazyRows` enabled, else classic POJO rows wrapped in a `PojoRowData`.
-   */
+  /** Like {@link executeFind}, but returns a {@link RowData}; see {@link executePreparedFindRowData}. */
   private async executeFindRowData(
     meta: EntityMetadata,
     operation: FindOperation,
@@ -553,9 +550,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     },
   ): Promise<RowData> {
     const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
-    return this.driver.lazyRows
-      ? this.executePreparedFindRowData(meta, operation, parsed, findSettings, checkLimit)
-      : new PojoRowData(await this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit));
+    return this.executePreparedFindRowData(meta, operation, parsed, findSettings, checkLimit);
   }
 
   /** Executes a query that has already had find hooks and optimizations applied. */
@@ -584,7 +579,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return rows;
   }
 
-  /** The `lazyRows` variant of `executePreparedFind`, returning a `RowData` instead of POJO rows. */
+  /**
+   * Like {@link executePreparedFind}, but returns a {@link RowData}: lazy wire rows when the
+   * driver has `lazyRows` enabled, else classic POJO rows wrapped in a `PojoRowData` — so
+   * loaders can hydrate from one shape without caring which the driver provides.
+   */
   private async executePreparedFindRowData(
     meta: EntityMetadata,
     operation: FindOperation,
@@ -599,6 +598,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     },
     checkLimit: boolean | undefined,
   ): Promise<RowData> {
+    if (this.driver.lazyRows !== true) {
+      return new PojoRowData(await this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit));
+    }
     const { pluginManager } = getEmInternalApi(this);
     const executeFindRowData =
       this.driver.executeFindRowData ?? fail("Driver has lazyRows enabled but no executeFindRowData");

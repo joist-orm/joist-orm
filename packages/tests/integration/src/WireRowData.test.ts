@@ -133,7 +133,7 @@ describe("WireRowData", () => {
       lazy.finalize();
       expect(lazy.rowCount).toBe(0);
       expect(lazy.payloadBytes).toBe(0);
-      expect(lazy.retainedBytes).toBe(0);
+      expect(lazy.memoryBytes).toBe(0);
     });
 
     it("retains roughly one response chunk for a one-row result after finalize", async () => {
@@ -143,13 +143,13 @@ describe("WireRowData", () => {
       expect(lazy.payloadBytes).toBeLessThan(64);
       // Adoption pins the response's whole socket chunk (protocol frames included) — small for
       // a small query — plus tiny index tables; nothing like the old fixed 256 KiB arena
-      expect(lazy.retainedBytes).toBeLessThan(1024);
+      expect(lazy.memoryBytes).toBeLessThan(1024);
       expect(lazy.get(0, "x")).toBe("hello");
     });
 
     it("dedupes consecutive rows sharing an adopted chunk", () => {
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
       // Three rows inside one buffer (like one socket chunk), plus one from a second buffer
       const payloads = [textPayload("row0"), textPayload("row1"), textPayload("row2")];
       const shared = Buffer.concat(payloads);
@@ -167,7 +167,7 @@ describe("WireRowData", () => {
       // All retained -> trim only; the shared buffer is counted (pinned) once, not per row
       for (let i = 0; i < 4; i++) rowData.retain?.(i);
       rowData.finalize();
-      expect(rowData.retainedBytes).toBe(shared.length + other.length + 4 * 4 * 3);
+      expect(rowData.memoryBytes).toBe(shared.length + other.length + 4 * 4 * 3);
       expect(rowData.get(1, "x")).toBe("row1");
     });
 
@@ -186,10 +186,10 @@ describe("WireRowData", () => {
 
     it("compacts unretained rows away and errors on their later access", () => {
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
-      appendTextRow(rowData, "keep0");
-      appendTextRow(rowData, "drop1");
-      appendTextRow(rowData, "keep2");
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      addTextRow(rowData, "keep0");
+      addTextRow(rowData, "drop1");
+      addTextRow(rowData, "keep2");
       rowData.retain?.(0);
       rowData.retain?.(2);
       const before = rowData.payloadBytes;
@@ -202,9 +202,9 @@ describe("WireRowData", () => {
 
     it("skips compaction when dropped rows are under the 20% byte threshold", () => {
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
       // 10 equal rows, 1 dropped = 10% of payload bytes: not worth re-copying the other 9
-      for (let i = 0; i < 10; i++) appendTextRow(rowData, `row${i}`);
+      for (let i = 0; i < 10; i++) addTextRow(rowData, `row${i}`);
       for (let i = 0; i < 10; i++) {
         if (i !== 5) rowData.retain?.(i);
       }
@@ -239,8 +239,8 @@ describe("WireRowData", () => {
 
     it("validates row indexes and malformed payloads", () => {
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
-      appendTextRow(rowData, "ok");
+      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      addTextRow(rowData, "ok");
       expect(() => rowData.get(1, "x")).toThrow("Invalid rowIndex");
       expect(() => rowData.get(-1, "x")).toThrow("Invalid rowIndex");
       expect(rowData.get(0, "not_selected")).toBe(undefined);
@@ -249,7 +249,7 @@ describe("WireRowData", () => {
       bad.writeInt16BE(1, 0);
       bad.writeInt32BE(100, 2);
       const malformed = new WireRowData();
-      malformed.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }], [(value: string) => value]);
+      malformed.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
       malformed.addRow(bad, 0, bad.length);
       expect(() => malformed.get(0, "x")).toThrow("Malformed cell length");
     });
@@ -395,7 +395,7 @@ function nativeDataRowFrame(cell: string): Buffer {
 }
 
 /** Adopts a one-text-cell DataRow payload into `rowData` (each call brings its own buffer/chunk). */
-function appendTextRow(rowData: WireRowData, text: string): void {
+function addTextRow(rowData: WireRowData, text: string): void {
   const cell = Buffer.from(text, "utf8");
   rowData.addRow(dataRowPayload([cell]), 0, 2 + 4 + cell.length);
 }

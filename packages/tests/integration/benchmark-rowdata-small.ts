@@ -71,7 +71,6 @@ async function main(): Promise<void> {
 function microBenchmark(): void {
   const columnCount = 40;
   const fields = zeroTo(columnCount).map((i) => ({ name: `c${i}`, dataTypeID: 25 }));
-  const parsers = zeroTo(columnCount).map(() => identity);
   // Read 6 fields spread across the row, like a typical entity's touched scalars
   const readOrdinals = [0, 3, 8, 15, 25, 39].map((i) => `c${i}`);
   const payload = syntheticPayload(columnCount);
@@ -80,7 +79,7 @@ function microBenchmark(): void {
     const iterations = n <= 100 ? 20_000 : 2_000;
     // Both paths pay the same addRow streaming cost, so include it in both for realism
     measureSync("micro", "wire_lazy_reads", n, iterations, () => {
-      const wire = buildWire(fields, parsers, payload, n);
+      const wire = buildWire(fields, payload, n);
       let checksum = 0;
       for (let i = 0; i < n; i++) {
         for (const name of readOrdinals) checksum += wire.get(i, name).length;
@@ -90,7 +89,7 @@ function microBenchmark(): void {
       return checksum;
     });
     measureSync("micro", "pojo_materialize_reads", n, iterations, () => {
-      const wire = buildWire(fields, parsers, payload, n);
+      const wire = buildWire(fields, payload, n);
       const pojo = new PojoRowData(wire.toRows());
       let checksum = 0;
       for (let i = 0; i < n; i++) {
@@ -101,7 +100,7 @@ function microBenchmark(): void {
     // Dense variant: read every column, i.e. the access pattern most favorable to materialization
     const allNames = fields.map((f) => f.name);
     measureSync("micro", "wire_lazy_dense", n, iterations, () => {
-      const wire = buildWire(fields, parsers, payload, n);
+      const wire = buildWire(fields, payload, n);
       let checksum = 0;
       for (let i = 0; i < n; i++) {
         for (const name of allNames) checksum += wire.get(i, name).length;
@@ -111,7 +110,7 @@ function microBenchmark(): void {
       return checksum;
     });
     measureSync("micro", "pojo_materialize_dense", n, iterations, () => {
-      const wire = buildWire(fields, parsers, payload, n);
+      const wire = buildWire(fields, payload, n);
       const pojo = new PojoRowData(wire.toRows());
       let checksum = 0;
       for (let i = 0; i < n; i++) {
@@ -125,12 +124,11 @@ function microBenchmark(): void {
 /** Builds a WireRowData with `n` copies of the synthetic payload. */
 function buildWire(
   fields: Array<{ name: string; dataTypeID: number }>,
-  parsers: any[],
   payload: Buffer,
   n: number,
 ): WireRowData {
   const wire = new WireRowData();
-  wire.setRowDescription(fields, parsers);
+  wire.setRowDescription(fields);
   for (let i = 0; i < n; i++) wire.addRow(payload, 0, payload.length);
   return wire;
 }
@@ -203,8 +201,6 @@ function report(section: string, scenario: string, rows: number, iterations: num
 function zeroTo(n: number): number[] {
   return Array.from({ length: n }, (_, i) => i);
 }
-
-const identity = (value: string) => value;
 
 main().catch((error) => {
   console.error(error);

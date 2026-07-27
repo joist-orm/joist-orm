@@ -18,6 +18,7 @@ export function newEntityManager(opts?: PostgresDriverOpts) {
   const em = new EntityManager(
     ctx as any,
     new PostgresDriver(pool, {
+      lazyRows: process.env.JOIST_ROW_DATA === "1",
       ...opts,
     }),
   );

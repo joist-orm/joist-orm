@@ -1,75 +1,180 @@
-import pg from "pg";
+import { requireTemporal } from "joist-core";
 
 /**
- * Decoders for Postgres *binary-format* result cells, used by `WireRowData` when a lazy query
- * requests binary results (see `executeRowDataQuery`'s `binary` option).
+ * Joist's registry of PostgreSQL *binary-format* cell parsers, used by `WireRowData` for lazy
+ * `em.find`/`em.load` results (which request binary output; see `executeRowDataQuery`).
  *
- * Every decoder preserves parity with what the classic text-format path would have produced,
- * via a two-tier strategy:
+ * This registry is deliberately **separate from `pg.types`**: `pg.types.setTypeParser` and
+ * pool/client `TypeOverrides` continue to govern classic *text* results (knex, `pool.query`,
+ * non-lazy drivers), while binary cells decode wire-bytes -> values directly — ints via
+ * `readInt32BE`, timestamps via µs arithmetic, Temporal values constructed without ever
+ * materializing a string. There is no fallback from one registry to the other:
  *
- * 1. A direct fast path (wire bytes -> value, zero intermediate strings) is used only when the
- *    column's active text parser is *identical* to the default parser snapshotted at module
- *    load — i.e. nobody customized this oid, so we know the text semantics we're replacing.
- * 2. Otherwise the cell is rendered to Postgres's canonical *text* representation and passed
- *    through the active text parser, so pool/client `TypeOverrides`, joist's global temporal
- *    parsers, and app-registered custom parsers all keep working unchanged.
+ * - Built-in parsers cover the standard scalar/array types below; `setupLatestPgTypes`
+ *   registers the date/time parsers appropriate to Date-vs-Temporal mode.
+ * - Custom/extension types (native enums, citext, domains, hstore, ...) must be registered
+ *   explicitly with {@link setBinaryTypeParser} — text-like types can use
+ *   {@link binaryTextParser}, arrays of registered elements can use {@link binaryArrayParser}.
+ * - A query selecting a column whose oid has no registered parser **fails** with a descriptive
+ *   error (see `WireRowData.setRowDescription`), rather than guessing at a lossy decoding.
  *
- * Unknown oids fall back to utf8 text (correct for enums, citext, and domains over text);
- * known non-text binary layouts we can't render (i.e. tsvector) throw on first access — which,
- * being lazy, only happens if the application actually reads that column.
+ * Values produced here should match what the classic text path produces for the same column
+ * (i.e. `numeric` stays a string, `int8` stays a string, Date-mode timestamps become `Date`s),
+ * so entities hydrate identically in either mode; Temporal-mode parsers construct
+ * `Temporal.PlainDate`/`ZonedDateTime`/etc. directly, and the temporal mappers pass
+ * already-constructed instances through.
  */
-export function wireBinaryParser(oid: number, textParse: (value: any) => any): BinaryParse {
-  const paired = pairedFastPaths.get(oid)?.get(textParse);
-  if (paired !== undefined) return paired;
-  if (textParse === defaultTextParsers.get(oid)) {
-    const fast = fastParsers[oid];
-    if (fast !== undefined) return fast;
-    const factory = fastFactories[oid];
-    if (factory !== undefined) return factory(textParse);
-  }
-  const render = textRenderers[oid] ?? renderUtf8;
-  return (chunk, start, length) => textParse(render(chunk, start, length));
+export function setBinaryTypeParser(oid: number, parse: BinaryParse): void {
+  parsers.set(oid, parse);
 }
 
-/**
- * Pairs an *installed* text parser with a direct binary decoder for `oid`.
- *
- * The fast paths above only apply to untouched default parsers; when joist (or an app)
- * installs a known text parser globally — i.e. `setupLatestPgTypes`'s timestamptz parser —
- * this registers a decoder with matching semantics, keyed by the parser's identity, so binary
- * cells skip the render-to-text-then-parse round trip.
- */
-export function registerBinaryFastPath(oid: number, textParse: (value: any) => any, fast: BinaryParse): void {
-  let byParser = pairedFastPaths.get(oid);
-  if (byParser === undefined) pairedFastPaths.set(oid, (byParser = new Map()));
-  byParser.set(textParse, fast);
-}
-
-/**
- * Builds a µs -> `Date` decoder for timestamptz columns, paired with postgres-date-style text
- * parsers (i.e. what `setupLatestPgTypes` installs in Date mode).
- *
- * Matches the text parser's semantics exactly: sub-ms digits floor to the millisecond (text
- * fraction digits truncate, which is a floor in absolute time), and the infinity sentinels
- * delegate to the text parser (postgres-date returns the JS number `Infinity`, not a Date).
- */
-export function binaryTimestamptzToDate(textParse: (value: any) => any): BinaryParse {
-  return (chunk, start) => {
-    const pgMicros = chunk.readBigInt64BE(start);
-    if (pgMicros === INFINITY_US) return textParse("infinity");
-    if (pgMicros === NEG_INFINITY_US) return textParse("-infinity");
-    const epochMicros = pgMicros + PG_EPOCH_US;
-    let ms = epochMicros / 1000n;
-    if (epochMicros % 1000n < 0n) ms -= 1n;
-    return new Date(Number(ms));
-  };
+/** Returns the registered binary parser for `oid`, i.e. for tests to save/restore. */
+export function getBinaryTypeParser(oid: number): BinaryParse | undefined {
+  return parsers.get(oid);
 }
 
 /** Decodes one binary cell directly from the payload chunk; `length` is the cell's byte length. */
-type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
+export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 
-/** Renders one binary cell to Postgres's canonical text representation. */
-type TextRender = (chunk: Buffer, start: number, length: number) => string;
+/** Decodes a cell's bytes as utf8 text, i.e. for text-like custom types (enums, citext, domains). */
+export function binaryTextParser(chunk: Buffer, start: number, length: number): string {
+  return chunk.toString("utf8", start, start + length);
+}
+
+/**
+ * Decodes a binary array cell into a JS array of element values.
+ *
+ * The element oid is embedded in the wire format, and each element decodes through this
+ * registry — so arrays of any registered type (including custom-registered oids and the
+ * mode-appropriate temporal types) work without separate element wiring. Registered for the
+ * standard `_type` oids below; register it for custom array oids as needed.
+ */
+export function binaryArrayParser(chunk: Buffer, start: number, length: number): any[] {
+  const nDims = chunk.readInt32BE(start);
+  if (nDims === 0) return [];
+  const elemOid = chunk.readInt32BE(start + 8);
+  const parse =
+    parsers.get(elemOid) ??
+    fail(`joist-orm: no binary type parser registered for array element oid ${elemOid}; see setBinaryTypeParser`);
+  const dims: number[] = [];
+  for (let d = 0; d < nDims; d++) dims.push(chunk.readInt32BE(start + 12 + d * 8));
+  let pos = start + 12 + nDims * 8;
+  function readDim(dim: number): any[] {
+    const values: any[] = [];
+    for (let i = 0; i < dims[dim]; i++) {
+      if (dim < nDims - 1) {
+        values.push(readDim(dim + 1));
+      } else {
+        const len = chunk.readInt32BE(pos);
+        pos += 4;
+        if (len === -1) {
+          values.push(null);
+        } else {
+          values.push(parse(chunk, pos, len));
+          pos += len;
+        }
+      }
+    }
+    return values;
+  }
+  return readDim(0);
+}
+
+/** Decodes binary `date` cells to `Date`s, matching postgres-date's text semantics; Date mode. */
+export function binaryDateToDate(chunk: Buffer, start: number): any {
+  const days = chunk.readInt32BE(start);
+  if (days === INFINITY_DAYS) return Infinity;
+  if (days === NEG_INFINITY_DAYS) return -Infinity;
+  const [year, month, day] = civilFromDays(days + PG_EPOCH_DAYS);
+  const date = new Date(year, month - 1, day);
+  // Mirror postgres-date's fixup for years 0-99 being interpreted as 1900-1999
+  if (year < 100) date.setFullYear(year);
+  return date;
+}
+
+/** Decodes binary `timestamp` (without zone) cells to local-time `Date`s; Date mode. */
+export function binaryTimestampToDate(chunk: Buffer, start: number): any {
+  const pgMicros = chunk.readBigInt64BE(start);
+  if (pgMicros === INFINITY_US) return Infinity;
+  if (pgMicros === NEG_INFINITY_US) return -Infinity;
+  const { days, us } = splitPgMicros(pgMicros);
+  const [year, month, day] = civilFromDays(days);
+  const seconds = Math.floor(us / 1_000_000);
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    Math.floor(seconds / 3600),
+    Math.floor((seconds / 60) % 60),
+    seconds % 60,
+    Math.floor((us % 1_000_000) / 1000),
+  );
+  if (year < 100) date.setFullYear(year);
+  return date;
+}
+
+/** Decodes binary `timestamptz` cells to `Date`s (µs floor to ms, like the text parse); Date mode. */
+export function binaryTimestamptzToDate(chunk: Buffer, start: number): any {
+  const pgMicros = chunk.readBigInt64BE(start);
+  if (pgMicros === INFINITY_US) return Infinity;
+  if (pgMicros === NEG_INFINITY_US) return -Infinity;
+  const epochMicros = pgMicros + PG_EPOCH_US;
+  let ms = epochMicros / 1000n;
+  if (epochMicros % 1000n < 0n) ms -= 1n;
+  return new Date(Number(ms));
+}
+
+/**
+ * Registers the Temporal-mode binary parsers: date/time/timestamp/timestamptz cells construct
+ * `Temporal` values *directly* from the wire µs/days — no intermediate strings, no
+ * `temporalMappers.fromDb` parsing (the mappers pass already-constructed instances through).
+ *
+ * `timestamptz` becomes a UTC `ZonedDateTime`, matching the text path's convention (the mapper
+ * normalizes the session's `+00` rendering to `UTC`; the configured `temporal.timeZone` only
+ * governs `now`-conversions, not loads).
+ */
+export function registerTemporalBinaryParsers(): void {
+  const { Temporal: t } = requireTemporal();
+  setBinaryTypeParser(oids.DATE, (chunk, start) => {
+    const days = chunk.readInt32BE(start);
+    if (days === INFINITY_DAYS || days === NEG_INFINITY_DAYS) failTemporalInfinity("date");
+    const [year, month, day] = civilFromDays(days + PG_EPOCH_DAYS);
+    return new t.PlainDate(year, month, day);
+  });
+  setBinaryTypeParser(1083 /* time */, (chunk, start) => {
+    const us = Number(chunk.readBigInt64BE(start));
+    const seconds = Math.floor(us / 1_000_000);
+    return new t.PlainTime(
+      Math.floor(seconds / 3600),
+      Math.floor((seconds / 60) % 60),
+      seconds % 60,
+      Math.floor((us % 1_000_000) / 1000),
+      us % 1000,
+    );
+  });
+  setBinaryTypeParser(oids.TIMESTAMP, (chunk, start) => {
+    const pgMicros = chunk.readBigInt64BE(start);
+    if (pgMicros === INFINITY_US || pgMicros === NEG_INFINITY_US) failTemporalInfinity("timestamp");
+    const { days, us } = splitPgMicros(pgMicros);
+    const [year, month, day] = civilFromDays(days);
+    const seconds = Math.floor(us / 1_000_000);
+    return new t.PlainDateTime(
+      year,
+      month,
+      day,
+      Math.floor(seconds / 3600),
+      Math.floor((seconds / 60) % 60),
+      seconds % 60,
+      Math.floor((us % 1_000_000) / 1000),
+      us % 1000,
+    );
+  });
+  setBinaryTypeParser(oids.TIMESTAMPTZ, (chunk, start) => {
+    const pgMicros = chunk.readBigInt64BE(start);
+    if (pgMicros === INFINITY_US || pgMicros === NEG_INFINITY_US) failTemporalInfinity("timestamptz");
+    return t.Instant.fromEpochNanoseconds((pgMicros + PG_EPOCH_US) * 1000n).toZonedDateTimeISO("UTC");
+  });
+}
 
 // Microseconds between the Postgres epoch (2000-01-01) and the Unix epoch (1970-01-01)
 const PG_EPOCH_US = 946_684_800_000_000n;
@@ -81,128 +186,102 @@ const NEG_INFINITY_US = -0x8000000000000000n;
 const INFINITY_DAYS = 0x7fffffff;
 const NEG_INFINITY_DAYS = -0x80000000;
 
-const oids = pg.types.builtins;
-
-/** Direct decoders paired with specific installed text parsers, keyed by oid then parser identity. */
-const pairedFastPaths = new Map<number, Map<(value: any) => any, BinaryParse>>();
-
-/** Direct wire-bytes -> value decoders, valid only against the default text-parser semantics. */
-const fastParsers: Record<number, BinaryParse> = {
-  [oids.BOOL]: (chunk, start) => chunk[start] !== 0,
-  [oids.INT2]: (chunk, start) => chunk.readInt16BE(start),
-  [oids.INT4]: (chunk, start) => chunk.readInt32BE(start),
-  [oids.OID]: (chunk, start) => chunk.readUInt32BE(start),
-  [oids.FLOAT4]: (chunk, start) => readFloat4(chunk, start),
-  [oids.FLOAT8]: (chunk, start) => chunk.readDoubleBE(start),
-  // pg's default text parser leaves int8 as a string, so match that shape
-  [oids.INT8]: (chunk, start) => chunk.readBigInt64BE(start).toString(),
-  [oids.TEXT]: renderUtf8,
-  [oids.VARCHAR]: renderUtf8,
-  [oids.BPCHAR]: renderUtf8,
-  [19 /* name */]: renderUtf8,
-  [oids.UUID]: (chunk, start) => renderUuid(chunk, start),
-  // Exact byte copy — note this also fixes classic pg's lossy utf8 round-trip for binary cells
-  [oids.BYTEA]: (chunk, start, length) => copyBytes(chunk, start, length),
-  [oids.JSON]: (chunk, start, length) => JSON.parse(chunk.toString("utf8", start, start + length)),
-  // jsonb payloads have a 1-byte version prefix before the JSON text
-  [oids.JSONB]: (chunk, start, length) => JSON.parse(chunk.toString("utf8", start + 1, start + length)),
+// pg's builtin oids, inlined to avoid importing pg here (these are protocol constants)
+const oids = {
+  BOOL: 16,
+  BYTEA: 17,
+  INT8: 20,
+  INT2: 21,
+  INT4: 23,
+  TEXT: 25,
+  OID: 26,
+  JSON: 114,
+  FLOAT4: 700,
+  FLOAT8: 701,
+  BPCHAR: 1042,
+  VARCHAR: 1043,
+  DATE: 1082,
+  TIMESTAMP: 1114,
+  TIMESTAMPTZ: 1184,
+  NUMERIC: 1700,
+  UUID: 2950,
+  JSONB: 3802,
 };
 
-/** Binary -> canonical pg text renderers, for the custom-parser and always-text-shaped types. */
-const textRenderers: Record<number, TextRender> = {
-  [oids.BOOL]: (chunk, start) => (chunk[start] !== 0 ? "t" : "f"),
-  [oids.INT2]: (chunk, start) => String(chunk.readInt16BE(start)),
-  [oids.INT4]: (chunk, start) => String(chunk.readInt32BE(start)),
-  [oids.OID]: (chunk, start) => String(chunk.readUInt32BE(start)),
-  [oids.INT8]: (chunk, start) => chunk.readBigInt64BE(start).toString(),
-  [oids.FLOAT4]: (chunk, start) => String(readFloat4(chunk, start)),
-  [oids.FLOAT8]: (chunk, start) => String(chunk.readDoubleBE(start)),
-  [oids.UUID]: (chunk, start) => renderUuid(chunk, start),
-  [oids.BYTEA]: (chunk, start, length) => `\\x${chunk.toString("hex", start, start + length)}`,
-  [oids.JSONB]: (chunk, start, length) => chunk.toString("utf8", start + 1, start + length),
-  [oids.NUMERIC]: renderNumeric,
-  [oids.DATE]: dateCellAsPgText,
-  [oids.TIMESTAMP]: timestampCellAsPgText,
-  [oids.TIMESTAMPTZ]: timestamptzCellAsPgText,
-  [3910 /* tstzrange */]: (chunk, start) =>
-    renderRange(chunk, start, (c, s) => `"${renderTimestamp(c.readBigInt64BE(s), "+00")}"`),
-  [3614 /* tsvector */]: renderTsVector,
-};
+const parsers = new Map<number, BinaryParse>();
 
-// Array oids -> element oids; arrays always render a `{...}` literal for the active text parser,
-// which guarantees parity with text mode for default, custom, and unregistered array parsers alike
-const arrayOids: Record<number, number> = {
-  1000: oids.BOOL,
-  1005: oids.INT2,
-  1007: oids.INT4,
-  1016: oids.INT8,
-  1021: oids.FLOAT4,
-  1022: oids.FLOAT8,
-  1009: oids.TEXT,
-  1015: oids.VARCHAR,
-  1014: oids.BPCHAR,
-  1231: oids.NUMERIC,
-  1182: oids.DATE,
-  1115: oids.TIMESTAMP,
-  1185: oids.TIMESTAMPTZ,
-  2951: oids.UUID,
-  199: oids.JSON,
-  3807: oids.JSONB,
-  1001: oids.BYTEA,
-};
-
-for (const arrayOid of Object.keys(arrayOids)) {
-  textRenderers[Number(arrayOid)] = renderArrayLiteral;
-}
-
-/** Default-parser fast paths that need the text parser in scope, i.e. for sentinel fallbacks. */
-const fastFactories: Record<number, (textParse: (value: any) => any) => BinaryParse> = {
-  [oids.DATE]: binaryDateToLocalDate,
-};
-
-/** The untouched default text parsers, snapshotted before any later app customization. */
-const defaultTextParsers = new Map<number, (value: any) => any>(
-  [...Object.keys(fastParsers), ...Object.keys(fastFactories)].map((oid) => [
-    Number(oid),
-    pg.types.getTypeParser(Number(oid), "text"),
-  ]),
+// The standard scalar builtins; values match what the classic text path produces for the same
+// column, i.e. int8/numeric stay strings, bytea stays a Buffer (byte-exact, where classic pg's
+// binary handling is utf8-lossy)
+setBinaryTypeParser(oids.BOOL, (chunk, start) => chunk[start] !== 0);
+setBinaryTypeParser(oids.INT2, (chunk, start) => chunk.readInt16BE(start));
+setBinaryTypeParser(oids.INT4, (chunk, start) => chunk.readInt32BE(start));
+setBinaryTypeParser(oids.OID, (chunk, start) => chunk.readUInt32BE(start));
+setBinaryTypeParser(oids.INT8, (chunk, start) => chunk.readBigInt64BE(start).toString());
+setBinaryTypeParser(oids.FLOAT4, (chunk, start) => readFloat4(chunk, start));
+setBinaryTypeParser(oids.FLOAT8, (chunk, start) => chunk.readDoubleBE(start));
+setBinaryTypeParser(oids.TEXT, binaryTextParser);
+setBinaryTypeParser(oids.VARCHAR, binaryTextParser);
+setBinaryTypeParser(oids.BPCHAR, binaryTextParser);
+setBinaryTypeParser(19 /* name */, binaryTextParser);
+setBinaryTypeParser(oids.UUID, (chunk, start) => renderUuid(chunk, start));
+setBinaryTypeParser(oids.BYTEA, copyBytes);
+setBinaryTypeParser(oids.JSON, (chunk, start, length) => JSON.parse(chunk.toString("utf8", start, start + length)));
+// jsonb payloads have a 1-byte version prefix before the JSON text
+setBinaryTypeParser(oids.JSONB, (chunk, start, length) =>
+  JSON.parse(chunk.toString("utf8", start + 1, start + length)),
+);
+setBinaryTypeParser(oids.NUMERIC, renderNumeric);
+setBinaryTypeParser(3614 /* tsvector */, renderTsVector);
+setBinaryTypeParser(3910 /* tstzrange */, (chunk, start) =>
+  renderRange(chunk, start, (c, s) => `"${renderTimestamp(c.readBigInt64BE(s), "+00")}"`),
 );
 
-/** Renders a binary date cell to pg's text form, i.e. `2020-01-02`; usable as a temporal-mode pairing. */
-export function dateCellAsPgText(chunk: Buffer, start: number): string {
-  const days = chunk.readInt32BE(start);
-  if (days === INFINITY_DAYS) return "infinity";
-  if (days === NEG_INFINITY_DAYS) return "-infinity";
-  return renderDate(days + PG_EPOCH_DAYS);
+// The standard `_type` array oids; elements decode through the registry (see binaryArrayParser)
+for (const arrayOid of [
+  1000, // bool[]
+  1001, // bytea[]
+  1005, // int2[]
+  1007, // int4[]
+  1009, // text[]
+  1014, // bpchar[]
+  1015, // varchar[]
+  1016, // int8[]
+  1021, // float4[]
+  1022, // float8[]
+  1182, // date[]
+  1183, // time[]
+  1115, // timestamp[]
+  1185, // timestamptz[]
+  1231, // numeric[]
+  2951, // uuid[]
+  199, // json[]
+  3807, // jsonb[]
+]) {
+  setBinaryTypeParser(arrayOid, binaryArrayParser);
 }
 
-/** Renders a binary timestamp cell to pg's text form, i.e. `2020-01-02 03:04:05.678`. */
-export function timestampCellAsPgText(chunk: Buffer, start: number): string {
-  return renderTimestamp(chunk.readBigInt64BE(start), "");
+// Default the date/time oids to Date-mode semantics; `setupLatestPgTypes` re-registers the
+// Temporal-mode parsers when the app runs with `temporal` configured
+setBinaryTypeParser(oids.DATE, binaryDateToDate);
+setBinaryTypeParser(oids.TIMESTAMP, binaryTimestampToDate);
+setBinaryTypeParser(oids.TIMESTAMPTZ, binaryTimestamptzToDate);
+
+/** Splits pg timestamp µs into days-since-1970 and µs-within-day, flooring correctly pre-epoch. */
+function splitPgMicros(pgMicros: bigint): { days: number; us: number } {
+  const epochMicros = pgMicros + PG_EPOCH_US;
+  let days = epochMicros / US_PER_DAY;
+  let micros = epochMicros % US_PER_DAY;
+  if (micros < 0n) {
+    days -= 1n;
+    micros += US_PER_DAY;
+  }
+  return { days: Number(days), us: Number(micros) };
 }
 
-/** Renders a binary timestamptz cell to pg's text form, i.e. `2020-01-02 03:04:05.678+00`. */
-export function timestamptzCellAsPgText(chunk: Buffer, start: number): string {
-  return renderTimestamp(chunk.readBigInt64BE(start), "+00");
-}
-
-/** Builds a days -> local-midnight `Date` decoder for date columns, mirroring postgres-date. */
-function binaryDateToLocalDate(textParse: (value: any) => any): BinaryParse {
-  return (chunk, start) => {
-    const days = chunk.readInt32BE(start);
-    if (days === INFINITY_DAYS) return textParse("infinity");
-    if (days === NEG_INFINITY_DAYS) return textParse("-infinity");
-    const [year, month, day] = civilFromDays(days + PG_EPOCH_DAYS);
-    const date = new Date(year, month - 1, day);
-    // Mirror postgres-date's fixup for years 0-99 being interpreted as 1900-1999
-    if (year < 100) date.setFullYear(year);
-    return date;
-  };
-}
-
-/** Renders the cell bytes as a utf8 string, i.e. text-like types and unknown oids (enums, citext). */
-function renderUtf8(chunk: Buffer, start: number, length: number): string {
-  return chunk.toString("utf8", start, start + length);
+/** Fails on the ±infinity wire sentinels, which have no Temporal representation. */
+function failTemporalInfinity(type: string): never {
+  return fail(`joist-orm: cannot represent an 'infinity' ${type} as a Temporal value`);
 }
 
 /** Reads a float4 as its shortest round-trip decimal, matching pg's shortest text output. */
@@ -259,64 +338,6 @@ function renderNumeric(chunk: Buffer, start: number): string {
   return `${sign === 0x4000 ? "-" : ""}${integer}.${fraction}`;
 }
 
-/** Renders days-since-1970 as pg's date text, i.e. `2020-01-02` or `0001-01-01 BC`. */
-function renderDate(epochDays: number): string {
-  const { text, bc } = renderDatePart(epochDays);
-  return bc ? `${text} BC` : text;
-}
-
-/**
- * Renders the `YYYY-MM-DD` part, converting astronomical years to pg's BC numbering
- * (astronomical year 0 = `0001 BC`); timestamps append the ` BC` marker after the time/zone.
- */
-function renderDatePart(epochDays: number): { text: string; bc: boolean } {
-  const [year, month, day] = civilFromDays(epochDays);
-  const bc = year <= 0;
-  const displayYear = bc ? 1 - year : year;
-  return {
-    text: `${String(displayYear).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-    bc,
-  };
-}
-
-/** Renders a binary timestamp (µs since 2000-01-01) to pg's text form, i.e. `2020-01-02 03:04:05.678+00`. */
-function renderTimestamp(pgMicros: bigint, suffix: string): string {
-  if (pgMicros === INFINITY_US) return "infinity";
-  if (pgMicros === NEG_INFINITY_US) return "-infinity";
-  const epochMicros = pgMicros + PG_EPOCH_US;
-  let days = epochMicros / US_PER_DAY;
-  let micros = epochMicros % US_PER_DAY;
-  if (micros < 0n) {
-    days -= 1n;
-    micros += US_PER_DAY;
-  }
-  const { text: date, bc } = renderDatePart(Number(days));
-  const us = Number(micros);
-  const seconds = Math.floor(us / 1_000_000);
-  const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((seconds / 60) % 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
-  // pg renders up to 6 fractional digits with trailing zeros trimmed, and no "." when zero
-  let fraction = "";
-  const usPart = us % 1_000_000;
-  if (usPart > 0) fraction = `.${String(usPart).padStart(6, "0")}`.replace(/0+$/, "");
-  return `${date} ${hh}:${mm}:${ss}${fraction}${suffix}${bc ? " BC" : ""}`;
-}
-
-/** Converts days-since-1970 to a civil [year, month, day], i.e. Howard Hinnant's algorithm. */
-function civilFromDays(epochDays: number): [number, number, number] {
-  const z = epochDays + 719_468;
-  const era = Math.floor(z / 146_097);
-  const doe = z - era * 146_097;
-  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
-  const y = yoe + era * 400;
-  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
-  const mp = Math.floor((5 * doy + 2) / 153);
-  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
-  const m = mp < 10 ? mp + 3 : mp - 9;
-  return [m <= 2 ? y + 1 : y, m, d];
-}
-
 /** Renders a binary tsvector (lexeme cstrings + position/weight words) to pg's text form, i.e. `'new':2A`. */
 function renderTsVector(chunk: Buffer, start: number): string {
   const count = chunk.readInt32BE(start);
@@ -360,33 +381,58 @@ function renderRange(chunk: Buffer, start: number, bound: (c: Buffer, s: number)
   return `${flags & 0x02 ? "[" : "("}${lower},${upper}${flags & 0x04 ? "]" : ")"}`;
 }
 
-/** Renders a binary array to pg's `{...}` literal, quoting every element for unambiguous parsing. */
-function renderArrayLiteral(chunk: Buffer, start: number, length: number): string {
-  const nDims = chunk.readInt32BE(start);
-  if (nDims === 0) return "{}";
-  const elemOid = chunk.readInt32BE(start + 8);
-  const dims: number[] = [];
-  for (let d = 0; d < nDims; d++) dims.push(chunk.readInt32BE(start + 12 + d * 8));
-  const elemRender = textRenderers[elemOid] ?? renderUtf8;
-  let pos = start + 12 + nDims * 8;
-  function renderDim(dim: number): string {
-    const parts: string[] = [];
-    for (let i = 0; i < dims[dim]; i++) {
-      if (dim < nDims - 1) {
-        parts.push(renderDim(dim + 1));
-      } else {
-        const len = chunk.readInt32BE(pos);
-        pos += 4;
-        if (len === -1) {
-          parts.push("NULL");
-        } else {
-          const text = elemRender(chunk, pos, len);
-          pos += len;
-          parts.push(`"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
-        }
-      }
-    }
-    return `{${parts.join(",")}}`;
-  }
-  return renderDim(0);
+/** Renders days-since-1970 as pg's date text, i.e. `2020-01-02` or `0001-01-01 BC`. */
+function renderDate(epochDays: number): string {
+  const { text, bc } = renderDatePart(epochDays);
+  return bc ? `${text} BC` : text;
+}
+
+/**
+ * Renders the `YYYY-MM-DD` part, converting astronomical years to pg's BC numbering
+ * (astronomical year 0 = `0001 BC`); timestamps append the ` BC` marker after the time/zone.
+ */
+function renderDatePart(epochDays: number): { text: string; bc: boolean } {
+  const [year, month, day] = civilFromDays(epochDays);
+  const bc = year <= 0;
+  const displayYear = bc ? 1 - year : year;
+  return {
+    text: `${String(displayYear).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    bc,
+  };
+}
+
+/** Renders a binary timestamp (µs since 2000-01-01) to pg's text form, i.e. `2020-01-02 03:04:05.678+00`. */
+function renderTimestamp(pgMicros: bigint, suffix: string): string {
+  if (pgMicros === INFINITY_US) return "infinity";
+  if (pgMicros === NEG_INFINITY_US) return "-infinity";
+  const { days, us } = splitPgMicros(pgMicros);
+  const { text: date, bc } = renderDatePart(days);
+  const seconds = Math.floor(us / 1_000_000);
+  const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((seconds / 60) % 60)).padStart(2, "0");
+  const ss = String(seconds % 60).padStart(2, "0");
+  // pg renders up to 6 fractional digits with trailing zeros trimmed, and no "." when zero
+  let fraction = "";
+  const usPart = us % 1_000_000;
+  if (usPart > 0) fraction = `.${String(usPart).padStart(6, "0")}`.replace(/0+$/, "");
+  return `${date} ${hh}:${mm}:${ss}${fraction}${suffix}${bc ? " BC" : ""}`;
+}
+
+/** Converts days-since-1970 to a civil [year, month, day], i.e. Howard Hinnant's algorithm. */
+function civilFromDays(epochDays: number): [number, number, number] {
+  const z = epochDays + 719_468;
+  const era = Math.floor(z / 146_097);
+  const doe = z - era * 146_097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const y = yoe + era * 400;
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp < 10 ? mp + 3 : mp - 9;
+  return [m <= 2 ? y + 1 : y, m, d];
+}
+
+/** Throws an `Error` with `message`. */
+function fail(message: string): never {
+  throw new Error(message);
 }

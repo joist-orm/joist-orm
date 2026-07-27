@@ -555,6 +555,39 @@ for completeness, but not a limitation worth pursuing: unread exotic cells cost 
 lazy decode, and the render path covers the read ones, so per-column format mixing has no
 measured upside.
 
+### Binary parsing pivoted to a Joist-owned registry (2026-07-27)
+
+The original binary implementation kept parity with `pg.types` by snapshot-gated fast paths
+plus a render-binary-to-canonical-text fallback for custom parsers and unknown oids. That was
+replaced wholesale: binary cells now decode **only** through Joist's own registry
+(`setBinaryTypeParser` / `getBinaryTypeParser` / `binaryTextParser` / `binaryArrayParser`),
+which is completely separate from `pg.types` — text results (knex, classic drivers) keep using
+`pg.types`/`TypeOverrides`; binary results never consult them. Consequences:
+
+- **Unknown oids fail closed**: a query selecting a column with no registered binary parser
+  rejects at RowDescription time with a `setBinaryTypeParser` pointer, instead of guessing
+  (this killed the utf8 fallback that silently corrupted `time`/`inet`/ranges/etc.).
+- **Custom/extension types are explicit**: native enums, citext, and domains need a one-time
+  `setBinaryTypeParser(oid, binaryTextParser)`; the integration suite registers its own
+  (citext, favorite_shape) in `setupDbTests.ts` by querying `pg_type`.
+- **Temporal mode goes binary -> Temporal directly**: `registerTemporalBinaryParsers`
+  constructs `PlainDate`/`PlainTime`/`PlainDateTime` from civil parts and `ZonedDateTime` (UTC,
+  matching the text path's normalization; the configured `timeZone` only governs
+  `now`-conversions) from the instant — zero intermediate strings, no
+  `temporalMappers.fromDb` parsing. The mappers gained `instanceof` passthroughs so they accept
+  either pg text (classic/knex/json_agg paths) or already-constructed instances (binary path).
+- **Arrays decode elements through the registry** (the element oid is in the wire format), so
+  arrays of any registered type — including Temporal elements — work with no literal
+  rendering; the render-to-array-literal machinery is gone.
+- The render-to-text machinery survives only where the string *is* the value (numeric,
+  tsvector, tstzrange); `wireBinaryParser`, the default-parser snapshots, and the
+  `registerBinaryFastPath` pairing registry are all deleted.
+
+The trade, accepted deliberately: `TypeOverrides`-style custom *text* parsers no longer affect
+lazy binary results at all (previously they were honored via the render path, with documented
+GUC caveats). This is simpler, more explicit, and removes the whole class of "synthesized text
+almost matches server text" parity concerns.
+
 ## Review response (2026-07-22)
 
 `JS-ROW-STORE-REVIEW.md` reviewed the initial prototype; this pass implemented its feedback

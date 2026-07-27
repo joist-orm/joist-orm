@@ -1,5 +1,11 @@
 import { getInstanceData } from "joist-orm";
-import { ensureLazyDataRows, executeRowDataQuery, WireRowData } from "joist-orm/pg";
+import {
+  ensureLazyDataRows,
+  executeRowDataQuery,
+  getBinaryTypeParser,
+  setBinaryTypeParser,
+  WireRowData,
+} from "joist-orm/pg";
 import pg from "pg";
 import { Author } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
@@ -65,8 +71,9 @@ describe("WireRowData", () => {
       }
     });
 
-    it("honors pool-level custom type parsers", async () => {
-      // Use a dedicated pool with a custom int4 parser (the review's bypass repro)
+    it("uses joist's binary registry, not pg.types/TypeOverrides", async () => {
+      // pg.types/pool TypeOverrides govern classic *text* results only; binary lazy results
+      // decode exclusively through joist's own registry (see setBinaryTypeParser)
       const customPool = new pg.Pool({
         connectionString,
         types: {
@@ -80,7 +87,7 @@ describe("WireRowData", () => {
         try {
           const lazy = await executeRowDataQuery(client, "select 7::int4 as x", []);
           expect(classic).toBe("custom:7");
-          expect(lazy.get(0, "x")).toBe("custom:7");
+          expect(lazy.get(0, "x")).toBe(7);
         } finally {
           client.release();
         }
@@ -89,45 +96,34 @@ describe("WireRowData", () => {
       }
     });
 
-    it("renders temporal infinity and BC values as pg's exact text for custom parsers", async () => {
-      // Custom parsers route binary cells through the render-to-pg-text path, so the rendered
-      // strings must match classic text-format output byte-for-byte, including the edge forms
-      const tagged = new Set([pg.types.builtins.DATE, pg.types.builtins.TIMESTAMPTZ]);
-      const customPool = new pg.Pool({
-        connectionString,
-        types: {
-          getTypeParser: (oid: number, format?: any) =>
-            tagged.has(oid) ? (value: string) => `raw:${value}` : pg.types.getTypeParser(oid, format),
-        } as any,
-      });
+    it("fails queries selecting oids with no registered binary parser", async () => {
+      // Unknown binary layouts fail closed (before any rows arrive) instead of guessing
+      const client = await pool.connect();
       try {
-        const sql = `
-          select
-            'infinity'::date as date_inf,
-            '-infinity'::date as date_neg_inf,
-            '0001-01-01 BC'::date as date_bc,
-            '2020-01-02'::date as date_ad,
-            '0001-01-01 00:00:00+00 BC'::timestamptz as tstz_bc,
-            'infinity'::timestamptz as tstz_inf
-        `;
-        const classic = (await customPool.query(sql)).rows[0];
-        expect(classic).toEqual({
-          date_inf: "raw:infinity",
-          date_neg_inf: "raw:-infinity",
-          date_bc: "raw:0001-01-01 BC",
-          date_ad: "raw:2020-01-02",
-          tstz_bc: "raw:0001-01-01 00:00:00+00 BC",
-          tstz_inf: "raw:infinity",
-        });
-        const client = await customPool.connect();
-        try {
-          const lazy = await executeRowDataQuery(client, sql, []);
-          expect(lazy.toRow(0)).toEqual(classic);
-        } finally {
-          client.release();
-        }
+        await expect(executeRowDataQuery(client, "select 12.34::money as m", [])).rejects.toThrow(
+          "no binary type parser registered for oid",
+        );
+        // The connection stays usable afterwards
+        const lazy = await executeRowDataQuery(client, "select 2 as two", []);
+        expect(lazy.get(0, "two")).toBe(2);
       } finally {
-        await customPool.end();
+        client.release();
+      }
+    });
+
+    it("supports custom types via setBinaryTypeParser", async () => {
+      // Users register binary parsers for their custom oids, i.e. interval's (µs, days, months)
+      setBinaryTypeParser(1186, (chunk, start) => ({
+        us: Number(chunk.readBigInt64BE(start)),
+        days: chunk.readInt32BE(start + 8),
+        months: chunk.readInt32BE(start + 12),
+      }));
+      const client = await pool.connect();
+      try {
+        const lazy = await executeRowDataQuery(client, "select '1 day 2 hours'::interval as i", []);
+        expect(lazy.get(0, "i")).toEqual({ us: 2 * 3600 * 1_000_000, days: 1, months: 0 });
+      } finally {
+        client.release();
       }
     });
 
@@ -328,30 +324,24 @@ describe("WireRowData", () => {
       await expect(promise).rejects.toThrow("emits classic DataRows");
     });
 
-    it("defers custom-parser errors to first access, not query await", async () => {
-      const throwingPool = new pg.Pool({
-        connectionString,
-        types: {
-          getTypeParser: (oid: number, format?: any) =>
-            oid === pg.types.builtins.INT4
-              ? () => {
-                  throw new Error("boom parser");
-                }
-              : pg.types.getTypeParser(oid, format),
-        } as any,
+    it("defers parser errors to first access, not query await", async () => {
+      // Lazy mode resolves the query and throws on field access (classic pg would have thrown
+      // while awaiting); use a throwing binary parser, restored afterwards
+      const int4 = pg.types.builtins.INT4;
+      const original = getBinaryTypeParser(int4)!;
+      setBinaryTypeParser(int4, () => {
+        throw new Error("boom parser");
       });
       try {
-        const client = await throwingPool.connect();
+        const client = await pool.connect();
         try {
-          // Classic mode throws while awaiting the query; lazy mode resolves and throws on access
-          await expect(client.query("select 7::int4 as x")).rejects.toThrow("boom parser");
           const lazy = await executeRowDataQuery(client, "select 7::int4 as x", []);
           expect(() => lazy.get(0, "x")).toThrow("boom parser");
         } finally {
           client.release();
         }
       } finally {
-        await throwingPool.end();
+        setBinaryTypeParser(int4, original);
       }
     });
   });

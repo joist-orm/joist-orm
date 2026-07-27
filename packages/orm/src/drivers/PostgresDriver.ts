@@ -32,13 +32,7 @@ import {
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
-import {
-  binaryTimestamptzToDate,
-  dateCellAsPgText,
-  registerBinaryFastPath,
-  timestampCellAsPgText,
-  timestamptzCellAsPgText,
-} from "./binaryParsers";
+import { registerTemporalBinaryParsers } from "./binaryParsers";
 import { ensureLazyDataRows } from "./patchPgProtocol";
 import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData";
 
@@ -400,7 +394,9 @@ async function m2mBatchDelete(client: pg.PoolClient, joinTableName: string, todo
  */
 export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   if (temporal) {
-    // Don't eagerly parse the strings, instead defer to the serde logic
+    // Don't eagerly parse the strings, instead defer to the serde logic. This only governs
+    // classic *text* results (knex, pool.query, non-lazy drivers); binary lazy cells construct
+    // Temporal values directly, with no strings involved (see registerTemporalBinaryParsers).
     const noop = (s: string) => s;
     const noopArray = (s: string) => array.parse(s, noop);
 
@@ -408,20 +404,16 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
     pg.types.setTypeParser(DATE, noop);
     pg.types.setTypeParser(TIMESTAMP, noop);
     pg.types.setTypeParser(TIMESTAMPTZ, noop);
-    // Binary lazy cells can render pg's text form directly, skipping the noop parser hop
-    registerBinaryFastPath(DATE, noop, dateCellAsPgText);
-    registerBinaryFastPath(TIMESTAMP, noop, timestampCellAsPgText);
-    registerBinaryFastPath(TIMESTAMPTZ, noop, timestamptzCellAsPgText);
 
     // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
     pg.types.setTypeParser(1182 as number, noopArray); // date[]
     pg.types.setTypeParser(1115 as number, noopArray); // timestamp[]
     pg.types.setTypeParser(1185 as number, noopArray); // timestamptz[]
+
+    registerTemporalBinaryParsers();
   } else {
-    const timestamptz = getTypeParser(builtins.TIMESTAMPTZ);
-    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, timestamptz);
-    // Binary lazy cells can decode µs -> Date directly, skipping the render+regex round trip
-    registerBinaryFastPath(pg.types.builtins.TIMESTAMPTZ, timestamptz, binaryTimestamptzToDate(timestamptz));
+    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
+    // The binary registry's date/timestamp/timestamptz builtins already decode to Dates
   }
 }
 

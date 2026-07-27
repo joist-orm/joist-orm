@@ -1,3 +1,10 @@
+export {
+  type BinaryParse,
+  binaryArrayParser,
+  binaryTextParser,
+  getBinaryTypeParser,
+  setBinaryTypeParser,
+} from "./drivers/binaryParsers.js";
 export { LazyDataRowMessage, ensureLazyDataRows } from "./drivers/patchPgProtocol.js";
 export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.js";
 export { WireRowData, executeRowDataQuery, isRowDataCapableClient } from "./drivers/WireRowData.js";

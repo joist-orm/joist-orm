@@ -1,11 +1,21 @@
 import { expect } from "@jest/globals";
+import { binaryTextParser, setBinaryTypeParser } from "joist-orm/pg";
 import { areEntitiesEqual, toMatchEntity } from "joist-test-utils";
-import { resetQueryCount, setApiCallMock, testDriver } from "src/testEm";
+import { pool, resetQueryCount, setApiCallMock, testDriver } from "src/testEm";
 
 export const makeApiCall = jest.fn();
 
 expect.extend({ toMatchEntity });
 expect.addEqualityTesters([areEntitiesEqual]);
+
+beforeAll(async () => {
+  // Our schema has text-like types with database-assigned oids (citext, the favorite_shape
+  // native enum), which lazy binary queries require explicit binary parsers for
+  if (!testDriver.isInMemory) {
+    const { rows } = await pool.query(`select oid from pg_type where typname in ('citext', 'favorite_shape')`);
+    for (const row of rows) setBinaryTypeParser(Number(row.oid), binaryTextParser);
+  }
+});
 
 beforeEach(async () => {
   setApiCallMock(makeApiCall);

@@ -1,6 +1,6 @@
 import { RowData } from "joist-core";
 import pg from "pg";
-import { wireBinaryParser } from "./binaryParsers";
+import { getBinaryTypeParser } from "./binaryParsers";
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
 // submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).
@@ -146,11 +146,12 @@ export class WireRowData implements RowData {
   /**
    * Resolves each column's decoder from the query's RowDescription.
    *
-   * `getTypeParser` resolves an oid to its active *text* parser (i.e. through the pool/client
-   * `TypeOverrides` chain), defaulting to the global registry. Text-format fields decode by
-   * utf8-slicing the cell into their parser; binary-format fields decode via
-   * `wireBinaryParser`, which uses the text parser for fast-path eligibility and custom-parser
-   * parity.
+   * Binary-format fields decode through Joist's own binary registry only (see
+   * `setBinaryTypeParser`) — `pg.types`/`TypeOverrides` are never consulted, and a column whose
+   * oid has no registered binary parser fails the query here, before any rows arrive, rather
+   * than guessing at a lossy decoding. Text-format fields (the `binary: false` escape hatch)
+   * decode by utf8-slicing the cell into the active text parser, resolved via `getTypeParser`
+   * (i.e. the pool/client `TypeOverrides` chain) or the global registry.
    */
   setRowDescription(
     fields: Array<{ name: string; dataTypeID: number; format?: string }>,
@@ -158,8 +159,19 @@ export class WireRowData implements RowData {
   ): void {
     for (let i = 0; i < fields.length; i++) {
       const { name, dataTypeID, format } = fields[i];
-      const parse = getTypeParser?.(dataTypeID) ?? pg.types.getTypeParser(dataTypeID, "text");
-      const decode = format === "binary" ? wireBinaryParser(dataTypeID, parse) : textCellDecoder(parse);
+      let decode;
+      if (format === "binary") {
+        decode = getBinaryTypeParser(dataTypeID);
+        if (decode === undefined) {
+          throw new Error(
+            `joist-orm: no binary type parser registered for oid ${dataTypeID} (column "${name}");` +
+              ` register one with setBinaryTypeParser (i.e. binaryTextParser for text-like types)`,
+          );
+        }
+      } else {
+        const parse = getTypeParser?.(dataTypeID) ?? pg.types.getTypeParser(dataTypeID, "text");
+        decode = textCellDecoder(parse);
+      }
       const column = { name, ordinal: i, decode };
       this.#columns.set(name, column);
       this.#fields.push(column);

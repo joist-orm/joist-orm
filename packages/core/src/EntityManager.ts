@@ -2228,12 +2228,36 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
+   * Hydrates a query's `RowData`, running any sidecar reads, and always `finalize`s the result.
+   *
+   * This is the internal API for Joist's find/load loaders: `sidecars` is where reads of
+   * non-entity columns (preload aggregates, `_tags`, found-id checks) belong — they must run
+   * before `finalize`, because compaction drops unretained rows — and the `try/finally`
+   * guarantees a failed hydration or sidecar read still releases the result's unretained
+   * buffers instead of pinning them.
+   */
+  private hydrateAndFinalize<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rowData: RowData,
+    opts?: { overwriteExisting?: boolean; sidecars?: (entities: T[]) => void },
+  ): T[] {
+    try {
+      const entities = this.hydrateFromRowData(type, rowData, opts);
+      opts?.sidecars?.(entities);
+      return entities;
+    } finally {
+      rowData.finalize?.();
+    }
+  }
+
+  /**
    * Like {@link hydrate}, but reads rows from a {@link RowData}, i.e. a driver-produced
    * lazy query result, instead of an array of POJO rows.
    *
-   * This is an internal API used by Joist's own find loaders; rows whose entities are kept
-   * (newly created or overwrite-refreshed) are `retain`-ed on the `RowData` so the loader can
-   * later `finalize` (trim/compact) the result.
+   * This is an internal API used by Joist's own find loaders (usually via
+   * {@link hydrateAndFinalize}); rows whose entities are kept (newly created or
+   * overwrite-refreshed) are `retain`-ed on the `RowData` so the caller can later `finalize`
+   * (trim/compact) the result.
    */
   public hydrateFromRowData<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,

@@ -77,10 +77,9 @@ export function findDataLoader<T extends Entity>(
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
           const rowData = await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit);
-          const entities = em.hydrateFromRowData(type, rowData);
-          preloadHydrator?.(rowData, entities);
-          // All sidecar reads (preload aggregates) are done, so trim/compact the result
-          rowData.finalize?.();
+          const entities = em["hydrateAndFinalize"](type, rowData, {
+            sidecars: (entities) => preloadHydrator?.(rowData, entities),
+          });
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -131,20 +130,20 @@ export function findDataLoader<T extends Entity>(
 
         const rowData = await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit);
 
-        const entities = em.hydrateFromRowData(type, rowData);
-        preloadJoins?.forEach((j) => j.hydrator(rowData, entities));
-
         // Make an empty array for each batched query, per the dataloader contract
         const results = entries.map(() => [] as T[]);
-        // Then put each row into the tagged query it matched
-        for (let i = 0; i < entities.length; i++) {
-          const entity = entities[i];
-          if (!entity.isDeletedEntity) {
-            for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
-          }
-        }
-        // All sidecar reads (`_tags`, preload aggregates) are done, so trim/compact the result
-        rowData.finalize?.();
+        em["hydrateAndFinalize"](type, rowData, {
+          sidecars: (entities) => {
+            preloadJoins?.forEach((j) => j.hydrator(rowData, entities));
+            // Put each row into the tagged query it matched
+            for (let i = 0; i < entities.length; i++) {
+              const entity = entities[i];
+              if (!entity.isDeletedEntity) {
+                for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
+              }
+            }
+          },
+        });
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.

@@ -51,8 +51,7 @@ export function oneToOneBatchLoader<T extends Entity, U extends Entity>(
     addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
     const rowData = await em["executeFindRowData"](otherMeta, oneToOneLoadOperation, query, {});
-    const entities = em.hydrateFromRowData(otherMeta.cstr, rowData);
-    rowData.finalize?.();
+    const entities = em["hydrateAndFinalize"](otherMeta.cstr, rowData);
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
       const ownerId = maybeResolveReferenceToId(getField(entity, otherFieldName));

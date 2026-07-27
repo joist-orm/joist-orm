@@ -62,7 +62,6 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
     // Since we're preloading m2os up the tree, merely having the entities in the EM is enough
     // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the
     // keys, or push them into the preloader cache.
-    em.hydrateFromRowData(meta.cstr, rowData);
-    rowData.finalize?.();
+    em["hydrateAndFinalize"](meta.cstr, rowData);
   });
 }

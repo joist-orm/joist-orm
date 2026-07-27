@@ -170,7 +170,10 @@ const defaultTextParsers = new Map<number, (value: any) => any>(
 
 /** Renders a binary date cell to pg's text form, i.e. `2020-01-02`; usable as a temporal-mode pairing. */
 export function dateCellAsPgText(chunk: Buffer, start: number): string {
-  return renderDate(chunk.readInt32BE(start) + PG_EPOCH_DAYS);
+  const days = chunk.readInt32BE(start);
+  if (days === INFINITY_DAYS) return "infinity";
+  if (days === NEG_INFINITY_DAYS) return "-infinity";
+  return renderDate(days + PG_EPOCH_DAYS);
 }
 
 /** Renders a binary timestamp cell to pg's text form, i.e. `2020-01-02 03:04:05.678`. */
@@ -256,10 +259,24 @@ function renderNumeric(chunk: Buffer, start: number): string {
   return `${sign === 0x4000 ? "-" : ""}${integer}.${fraction}`;
 }
 
-/** Renders days-since-1970 as `YYYY-MM-DD`. */
+/** Renders days-since-1970 as pg's date text, i.e. `2020-01-02` or `0001-01-01 BC`. */
 function renderDate(epochDays: number): string {
+  const { text, bc } = renderDatePart(epochDays);
+  return bc ? `${text} BC` : text;
+}
+
+/**
+ * Renders the `YYYY-MM-DD` part, converting astronomical years to pg's BC numbering
+ * (astronomical year 0 = `0001 BC`); timestamps append the ` BC` marker after the time/zone.
+ */
+function renderDatePart(epochDays: number): { text: string; bc: boolean } {
   const [year, month, day] = civilFromDays(epochDays);
-  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const bc = year <= 0;
+  const displayYear = bc ? 1 - year : year;
+  return {
+    text: `${String(displayYear).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    bc,
+  };
 }
 
 /** Renders a binary timestamp (µs since 2000-01-01) to pg's text form, i.e. `2020-01-02 03:04:05.678+00`. */
@@ -273,7 +290,7 @@ function renderTimestamp(pgMicros: bigint, suffix: string): string {
     days -= 1n;
     micros += US_PER_DAY;
   }
-  const date = renderDate(Number(days));
+  const { text: date, bc } = renderDatePart(Number(days));
   const us = Number(micros);
   const seconds = Math.floor(us / 1_000_000);
   const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
@@ -283,7 +300,7 @@ function renderTimestamp(pgMicros: bigint, suffix: string): string {
   let fraction = "";
   const usPart = us % 1_000_000;
   if (usPart > 0) fraction = `.${String(usPart).padStart(6, "0")}`.replace(/0+$/, "");
-  return `${date} ${hh}:${mm}:${ss}${fraction}${suffix}`;
+  return `${date} ${hh}:${mm}:${ss}${fraction}${suffix}${bc ? " BC" : ""}`;
 }
 
 /** Converts days-since-1970 to a civil [year, month, day], i.e. Howard Hinnant's algorithm. */

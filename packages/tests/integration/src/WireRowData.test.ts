@@ -89,6 +89,48 @@ describe("WireRowData", () => {
       }
     });
 
+    it("renders temporal infinity and BC values as pg's exact text for custom parsers", async () => {
+      // Custom parsers route binary cells through the render-to-pg-text path, so the rendered
+      // strings must match classic text-format output byte-for-byte, including the edge forms
+      const tagged = new Set([pg.types.builtins.DATE, pg.types.builtins.TIMESTAMPTZ]);
+      const customPool = new pg.Pool({
+        connectionString,
+        types: {
+          getTypeParser: (oid: number, format?: any) =>
+            tagged.has(oid) ? (value: string) => `raw:${value}` : pg.types.getTypeParser(oid, format),
+        } as any,
+      });
+      try {
+        const sql = `
+          select
+            'infinity'::date as date_inf,
+            '-infinity'::date as date_neg_inf,
+            '0001-01-01 BC'::date as date_bc,
+            '2020-01-02'::date as date_ad,
+            '0001-01-01 00:00:00+00 BC'::timestamptz as tstz_bc,
+            'infinity'::timestamptz as tstz_inf
+        `;
+        const classic = (await customPool.query(sql)).rows[0];
+        expect(classic).toEqual({
+          date_inf: "raw:infinity",
+          date_neg_inf: "raw:-infinity",
+          date_bc: "raw:0001-01-01 BC",
+          date_ad: "raw:2020-01-02",
+          tstz_bc: "raw:0001-01-01 00:00:00+00 BC",
+          tstz_inf: "raw:infinity",
+        });
+        const client = await customPool.connect();
+        try {
+          const lazy = await executeRowDataQuery(client, sql, []);
+          expect(lazy.toRow(0)).toEqual(classic);
+        } finally {
+          client.release();
+        }
+      } finally {
+        await customPool.end();
+      }
+    });
+
     it("decodes binary-format cells via the wire-bytes fast path", () => {
       // Unit-level: an int4 cell with a default parser decodes readInt32BE, no strings involved
       const rowData = new WireRowData();
@@ -118,6 +160,11 @@ describe("WireRowData", () => {
           '1969-06-01T12:30:45.5Z'::timestamptz as tstz_pre_epoch,
           '1955-11-05'::date as date_pre_epoch,
           '0080-02-29'::date as date_two_digit_year,
+          'infinity'::date as date_inf,
+          '-infinity'::date as date_neg_inf,
+          '0001-01-01 BC'::date as date_bc,
+          'infinity'::timestamptz as tstz_inf,
+          '0001-01-01 00:00:00+00 BC'::timestamptz as tstz_bc,
           array[-1, null, 200]::int4[] as neg_array,
           to_tsvector('english', 'The Brand New Worlds') as tsv,
           tstzrange('2020-01-02T03:04:05Z', '2020-01-03T00:00:00Z', '[)') as tsrange

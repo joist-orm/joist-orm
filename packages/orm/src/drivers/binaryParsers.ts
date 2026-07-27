@@ -47,7 +47,19 @@ export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 export async function registerDatabaseBinaryParsers(pool: {
   query(sql: string): Promise<{ rows: any[] }>;
 }): Promise<void> {
-  const { rows } = await pool.query(`select oid, typarray from pg_type where typtype = 'e' or typname = 'citext'`);
+  // Also capture the session's TimeZone, which zones temporal-mode timestamptz loads to match
+  // what classic text parsing would have produced (pg renders timestamps in the session zone)
+  const [{ rows: settings }, { rows }] = await Promise.all([
+    pool.query(`select current_setting('TimeZone') as tz`),
+    pool.query(
+      `select t.oid, t.typarray
+       from pg_type t
+       where t.typtype = 'e'
+          or t.typname = 'citext'
+          or (t.typtype = 'd' and (select b.typcategory from pg_type b where b.oid = t.typbasetype) = 'S')`,
+    ),
+  ]);
+  setSessionTimeZone(settings[0].tz);
   for (const row of rows) {
     const oid = Number(row.oid);
     if (getBinaryTypeParser(oid) === undefined) setBinaryTypeParser(oid, binaryTextParser);
@@ -57,6 +69,17 @@ export async function registerDatabaseBinaryParsers(pool: {
     }
   }
 }
+
+/**
+ * Sets the session `TimeZone` used to zone temporal-mode `timestamptz` loads; normally captured
+ * automatically by {@link registerDatabaseBinaryParsers}. One zone per process — pools with
+ * differing session TimeZones are not supported by the binary path.
+ */
+export function setSessionTimeZone(timeZone: string): void {
+  sessionTimeZone = timeZone === "Etc/UTC" ? "UTC" : timeZone;
+}
+
+let sessionTimeZone = "UTC";
 
 /** Decodes a cell's bytes as utf8 text, i.e. for text-like custom types (enums, citext, domains). */
 export function binaryTextParser(chunk: Buffer, start: number, length: number): string {
@@ -151,9 +174,10 @@ export function binaryTimestamptzToDate(chunk: Buffer, start: number): any {
  * `Temporal` values *directly* from the wire µs/days — no intermediate strings, no
  * `temporalMappers.fromDb` parsing (the mappers pass already-constructed instances through).
  *
- * `timestamptz` becomes a UTC `ZonedDateTime`, matching the text path's convention (the mapper
- * normalizes the session's `+00` rendering to `UTC`; the configured `temporal.timeZone` only
- * governs `now`-conversions, not loads).
+ * `timestamptz` matches the text path's zoning exactly: classic parsing zones the value by the
+ * offset the session's `TimeZone` rendered (normalizing `+00` to `UTC`), so we compute the
+ * session zone's offset at each instant (see `setSessionTimeZone`; the configured
+ * `temporal.timeZone` only governs `now`-conversions, not loads).
  */
 export function registerTemporalBinaryParsers(): void {
   const { Temporal: t } = requireTemporal();
@@ -194,7 +218,12 @@ export function registerTemporalBinaryParsers(): void {
   setBinaryTypeParser(oids.TIMESTAMPTZ, (chunk, start) => {
     const pgMicros = chunk.readBigInt64BE(start);
     if (pgMicros === INFINITY_US || pgMicros === NEG_INFINITY_US) failTemporalInfinity("timestamptz");
-    return t.Instant.fromEpochNanoseconds((pgMicros + PG_EPOCH_US) * 1000n).toZonedDateTimeISO("UTC");
+    const instant = t.Instant.fromEpochNanoseconds((pgMicros + PG_EPOCH_US) * 1000n);
+    if (sessionTimeZone === "UTC") return instant.toZonedDateTimeISO("UTC");
+    // Zone by the session zone's offset at this instant, i.e. what pg's text rendering carries
+    const zoned = instant.toZonedDateTimeISO(sessionTimeZone);
+    const { offset } = zoned;
+    return offset === "+00:00" ? zoned.withTimeZone("UTC") : zoned.withTimeZone(offset);
   });
 }
 
@@ -256,8 +285,14 @@ setBinaryTypeParser(oids.JSONB, (chunk, start, length) =>
 setBinaryTypeParser(oids.NUMERIC, renderNumeric);
 setBinaryTypeParser(3614 /* tsvector */, renderTsVector);
 setBinaryTypeParser(3910 /* tstzrange */, (chunk, start) =>
-  renderRange(chunk, start, (c, s) => `"${renderTimestamp(c.readBigInt64BE(s), "+00")}"`),
+  renderRange(chunk, start, (c, s) => {
+    // pg quotes finite bounds (they contain spaces) but renders infinity bounds bare
+    const text = renderTimestamp(c.readBigInt64BE(s), "+00");
+    return text === "infinity" || text === "-infinity" ? text : `"${text}"`;
+  }),
 );
+// Rendered like pg's text output, which is also what the classic text path yields (no parser)
+setBinaryTypeParser(1083 /* time */, (chunk, start) => renderTimeOfDay(Number(chunk.readBigInt64BE(start))));
 
 // The standard `_type` array oids; elements decode through the registry (see binaryArrayParser)
 for (const arrayOid of [
@@ -279,6 +314,8 @@ for (const arrayOid of [
   2951, // uuid[]
   199, // json[]
   3807, // jsonb[]
+  3643, // tsvector[]
+  3911, // tstzrange[]
 ]) {
   setBinaryTypeParser(arrayOid, binaryArrayParser);
 }
@@ -367,7 +404,8 @@ function renderTsVector(chunk: Buffer, start: number): string {
   const lexemes: string[] = [];
   for (let i = 0; i < count; i++) {
     const end = chunk.indexOf(0, pos);
-    const word = chunk.toString("utf8", pos, end).replace(/'/g, "''");
+    // pg's output doubles both backslashes and quotes inside lexemes
+    const word = chunk.toString("utf8", pos, end).replace(/\\/g, "\\\\").replace(/'/g, "''");
     pos = end + 1;
     const nPositions = chunk.readUInt16BE(pos);
     pos += 2;
@@ -429,6 +467,11 @@ function renderTimestamp(pgMicros: bigint, suffix: string): string {
   if (pgMicros === NEG_INFINITY_US) return "-infinity";
   const { days, us } = splitPgMicros(pgMicros);
   const { text: date, bc } = renderDatePart(days);
+  return `${date} ${renderTimeOfDay(us)}${suffix}${bc ? " BC" : ""}`;
+}
+
+/** Renders µs-since-midnight to pg's time text, i.e. `03:04:05.678` with trailing zeros trimmed. */
+function renderTimeOfDay(us: number): string {
   const seconds = Math.floor(us / 1_000_000);
   const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
   const mm = String(Math.floor((seconds / 60) % 60)).padStart(2, "0");
@@ -437,7 +480,7 @@ function renderTimestamp(pgMicros: bigint, suffix: string): string {
   let fraction = "";
   const usPart = us % 1_000_000;
   if (usPart > 0) fraction = `.${String(usPart).padStart(6, "0")}`.replace(/0+$/, "");
-  return `${date} ${hh}:${mm}:${ss}${fraction}${suffix}${bc ? " BC" : ""}`;
+  return `${hh}:${mm}:${ss}${fraction}`;
 }
 
 /** Converts days-since-1970 to a civil [year, month, day], i.e. Howard Hinnant's algorithm. */

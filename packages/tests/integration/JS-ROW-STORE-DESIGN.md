@@ -593,6 +593,19 @@ lazy binary results at all (previously they were honored via the render path, wi
 GUC caveats). This is simpler, more explicit, and removes the whole class of "synthesized text
 almost matches server text" parity concerns.
 
+**Follow-up review round (2026-07-28):** (1) Temporal-mode `timestamptz` now zones by the
+*session's* `TimeZone` — `registerDatabaseBinaryParsers` captures `current_setting('TimeZone')`
+(see `setSessionTimeZone`; one zone per process) and the parser zones each instant by that
+zone's offset, normalizing `+00:00` to `UTC` — matching classic parsing under non-UTC sessions
+(pinned by a `America/New_York` classic-vs-lazy test in the temporal app). (2) Coverage gaps
+closed: tstzrange renders infinity bounds bare (pg quotes only finite bounds), tsvector output
+doubles backslashes as well as quotes, `tsvector[]`/`tstzrange[]` array oids registered,
+non-Temporal `time` registered (pg-text string), and auto-registration extended to text-category
+*domains* + their arrays. Known deliberate divergences: tstzrange *string* bounds still render
+`+00` regardless of session zone (rare type; classic parity only under UTC sessions), and
+dynamic-oid arrays (domain[]/tsvector[]/tstzrange[]) decode to real arrays where classic
+pg-types returns the raw `{...}` literal string — an improvement, asserted explicitly in tests.
+
 ## Review response (2026-07-22)
 
 `JS-ROW-STORE-REVIEW.md` reviewed the initial prototype; this pass implemented its feedback

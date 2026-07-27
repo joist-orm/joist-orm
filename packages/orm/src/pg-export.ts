@@ -9,6 +9,7 @@ export {
   getBinaryTypeParser,
   registerDatabaseBinaryParsers,
   setBinaryTypeParser,
+  setSessionTimeZone,
 } from "./drivers/binaryParsers.js";
 export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.js";
 export { seed } from "./seed.js";

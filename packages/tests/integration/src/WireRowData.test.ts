@@ -1,5 +1,5 @@
 import { getInstanceData } from "joist-orm";
-import { getBinaryTypeParser, setBinaryTypeParser } from "joist-orm/pg";
+import { getBinaryTypeParser, registerDatabaseBinaryParsers, setBinaryTypeParser } from "joist-orm/pg";
 // These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
 // into the build directly
 import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol";
@@ -109,6 +109,37 @@ describe("WireRowData", () => {
       }
     });
 
+    it("auto-registers text-like domains via registerDatabaseBinaryParsers", async () => {
+      await pool.query("drop domain if exists td_review cascade");
+      await pool.query("create domain td_review as text");
+      try {
+        // The driver runs this automatically before its first lazy query; re-run it here since
+        // the domain was created after that
+        await registerDatabaseBinaryParsers(pool);
+        const [classic, lazy] = await classicAndLazy("select 'x'::td_review as d, array['y', 'z']::td_review[] as ds");
+        // For the domain-array column, classic pg-types has no parser and returns the raw
+        // literal; the binary registry decodes a real array — a deliberate improvement
+        expect(classic[0]).toEqual({ d: "x", ds: "{y,z}" });
+        expect(lazy.toRow(0)).toEqual({ d: "x", ds: ["y", "z"] });
+      } finally {
+        await pool.query("drop domain td_review cascade");
+      }
+    });
+
+    it("decodes dynamic-oid arrays that classic pg leaves as raw literals", async () => {
+      // pg-types has no parsers for tsvector[]/tstzrange[] (classic returns the `{...}` literal
+      // string); the binary registry decodes real arrays of the same element values
+      const [classic, lazy] = await classicAndLazy(`
+        select
+          array[to_tsvector('english', 'ab cd')] as tsvs,
+          array[tstzrange('2020-01-02T03:04:05Z', '2020-01-03T00:00:00Z')] as ranges
+      `);
+      expect(typeof classic[0].tsvs).toBe("string");
+      expect(typeof classic[0].ranges).toBe("string");
+      expect(lazy.get(0, "tsvs")).toEqual(["'ab':1 'cd':2"]);
+      expect(lazy.get(0, "ranges")).toEqual(['["2020-01-02 03:04:05+00","2020-01-03 00:00:00+00")']);
+    });
+
     it("supports custom types via setBinaryTypeParser", async () => {
       // Users register binary parsers for their custom oids, i.e. interval's (µs, days, months)
       setBinaryTypeParser(1186, (chunk, start) => ({
@@ -161,7 +192,11 @@ describe("WireRowData", () => {
           '0001-01-01 00:00:00+00 BC'::timestamptz as tstz_bc,
           array[-1, null, 200]::int4[] as neg_array,
           to_tsvector('english', 'The Brand New Worlds') as tsv,
-          tstzrange('2020-01-02T03:04:05Z', '2020-01-03T00:00:00Z', '[)') as tsrange
+          $$a\\\\b qu'ote$$::tsvector as tsv_escapes,
+          tstzrange('2020-01-02T03:04:05Z', '2020-01-03T00:00:00Z', '[)') as tsrange,
+          tstzrange('2020-01-02T03:04:05Z', 'infinity', '[)') as tsrange_inf,
+          '03:04:05.678'::time as time_col,
+          array['03:04:05'::time, null] as time_array
       `;
       const [classic, lazy] = await classicAndLazy(sql);
       expect(lazy.toRow(0)).toEqual(classic[0]);

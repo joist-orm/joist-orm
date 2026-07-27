@@ -114,7 +114,7 @@ export class WireRowData implements RowData {
     return this.#readCell(this.#chunks[rows[base]], start, start + rows[base + 2], column, rowIndex);
   }
 
-  /** Materializes one row as a POJO, i.e. for legacy serdes or debugging; values are not cached. */
+  /** Materializes one row as a POJO, i.e. for debugging and differential tests; values are not cached. */
   toRow(rowIndex: number): any {
     const base = this.#rowBase(rowIndex);
     const rows = this.#rows;

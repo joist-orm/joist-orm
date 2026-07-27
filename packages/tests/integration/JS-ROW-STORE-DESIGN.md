@@ -586,7 +586,8 @@ measured upside.
   is now the sole, required contract and the legacy method + `applySetOnEntity` dispatch helper
   are deleted (custom serdes fail loudly at compile time; a one-row `PojoRowData` recreates the
   old shape where needed, e.g. `RunPlugin`). `PreloadHydrator` receives plain row arrays
-  everywhere except lazy mode; `InstanceData.row` is back as a deprecated materializing getter;
+  everywhere except lazy mode; `InstanceData.row` is back as a deprecated materializing getter
+  (removed 2026-07-27 once the legacy serdes were gone and no consumers remained);
   `RowData.toRow(i)` supports cheap one-row compat/debugging.
 - **Scope + claims (Medium 9/11, Low 13)**: `lazyRows` docs now say unpaginated `em.find` only
   (other loaders stay classic), and deferred custom-parser error timing is documented + tested.

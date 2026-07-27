@@ -347,9 +347,12 @@ function failTemporalInfinity(type: string): never {
 function readFloat4(chunk: Buffer, start: number): number {
   const value = chunk.readFloatBE(start);
   if (!Number.isFinite(value)) return value;
+  // ±0 as-is: toPrecision would drop -0's sign, and === cannot tell the zeros apart
+  if (value === 0) return value;
   // The raw float32 -> float64 widening (i.e. 0.1f -> 0.10000000149...) diverges from the text
   // path, which parses pg's shortest repr; find the shortest decimal that round-trips instead
-  for (let precision = 1; precision <= 8; precision++) {
+  // (binary32 needs at most 9 significant decimal digits)
+  for (let precision = 1; precision <= 9; precision++) {
     const shortest = Number(value.toPrecision(precision));
     if (Math.fround(shortest) === value) return shortest;
   }

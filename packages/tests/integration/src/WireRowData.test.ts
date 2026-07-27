@@ -175,6 +175,8 @@ describe("WireRowData", () => {
           (-32768)::int2 as neg2,
           9007199254740993::int8 as big,
           0.1::float4 as f4,
+          '1.02424515e-36'::float4 as f4_nine_digits,
+          '-0'::float4 as f4_neg_zero,
           -1.5::float8 as f8,
           'NaN'::numeric as nan,
           12.340::numeric as trailing_scale,

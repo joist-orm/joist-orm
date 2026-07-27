@@ -92,6 +92,8 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #preloadPlugin: PreloadPlugin | undefined;
   readonly #onQuery: OnQuery;
   readonly lazyRows: boolean;
+  /** Defined only when `lazyRows` is enabled; its presence is the capability signal the EM checks. */
+  readonly executeFindRowData: Driver["executeFindRowData"];
   #databaseBinaryParsers: Promise<void> | undefined = undefined;
 
   constructor(
@@ -112,6 +114,9 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     if (opts?.lazyRows && !this.lazyRows) {
       console.warn("joist-orm: lazyRows was requested, but patching pg-protocol failed; using classic rows.");
     }
+    this.executeFindRowData = this.lazyRows
+      ? (em, parsed, settings) => this.#executeFindRowData(em, parsed, settings)
+      : undefined;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -124,7 +129,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     return this.executeQuery(em, sql, bindings);
   }
 
-  async executeFindRowData(
+  async #executeFindRowData(
     em: EntityManager,
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },

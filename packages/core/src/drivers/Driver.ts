@@ -20,10 +20,13 @@ export interface Driver<TX = unknown> {
   /** Executes a raw SQL query with bindings. */
   executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
 
-  /** Whether `executeFindRowData` is available + enabled, i.e. entity finds should use lazy `RowData` results. */
-  readonly lazyRows?: boolean;
-
-  /** Like `executeFind`, but returns a lazy {@link RowData} instead of materialized POJO rows. */
+  /**
+   * Like `executeFind`, but returns a lazy {@link RowData} instead of materialized POJO rows.
+   *
+   * This method's *presence* is the capability signal: drivers define it only when lazy rows
+   * are supported + enabled (i.e. `PostgresDriver` with `lazyRows: true`), and entity-hydrating
+   * loaders fall back to classic rows wrapped in a `PojoRowData` when it is undefined.
+   */
   executeFindRowData?(
     em: EntityManager,
     parsed: ParsedFindQuery,

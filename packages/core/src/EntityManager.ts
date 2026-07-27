@@ -598,12 +598,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     },
     checkLimit: boolean | undefined,
   ): Promise<RowData> {
-    if (this.driver.lazyRows !== true) {
+    const { executeFindRowData } = this.driver;
+    if (executeFindRowData === undefined) {
       return new PojoRowData(await this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit));
     }
     const { pluginManager } = getEmInternalApi(this);
-    const executeFindRowData =
-      this.driver.executeFindRowData ?? fail("Driver has lazyRows enabled but no executeFindRowData");
     const rowData = await executeFindRowData.call(this.driver, this, parsed, findSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
     const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);

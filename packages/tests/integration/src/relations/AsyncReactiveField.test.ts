@@ -24,7 +24,7 @@ describe("AsyncReactiveField", () => {
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::text[]) as shared_column, unnest($3::text[]) as country) INSERT INTO large_publishers (id, shared_column, country) SELECT * FROM data",
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as first_name, unnest($3::character varying[]) as last_name, unnest($4::character varying[]) as ssn, unnest($5::character varying[]) as initials, unnest($6::int[]) as number_of_books, unnest($7::text[]) as book_comments, unnest($8::boolean[]) as is_popular, unnest($9::int[]) as age, unnest($10::date[]) as graduated, unnest_arrays($11::character varying[][], true) as nick_names, unnest_arrays($12::character varying[][], true) as nick_names_upper, unnest($13::boolean[]) as was_ever_popular, unnest($14::boolean[]) as is_funny, unnest($15::text[]) as mentor_names, unnest($16::text[]) as mentee_names, unnest($17::jsonb[]) as address, unnest($18::jsonb[]) as business_address, unnest($19::jsonb[]) as quotes, unnest($20::bigint[]) as number_of_atoms, unnest($21::timestamp with time zone[]) as deleted_at, unnest($22::int[]) as number_of_public_reviews, unnest($23::int[]) as "numberOfPublicReviews2", unnest($24::character varying[]) as tags_of_all_books, unnest($25::text[]) as search, unnest($26::text[]) as image_file_name, unnest($27::bytea[]) as certificate, unnest($28::timestamp with time zone[]) as created_at, unnest($29::timestamp with time zone[]) as updated_at, unnest($30::favorite_shape[]) as favorite_shape, unnest($31::int[]) as range_of_books, unnest_arrays($32::int[][], true) as favorite_colors, unnest($33::int[]) as mentor_id, unnest($34::int[]) as root_mentor_id, unnest($35::int[]) as current_draft_book_id, unnest($36::int[]) as favorite_book_id, unnest($37::int[]) as publisher_id) INSERT INTO authors (id, first_name, last_name, ssn, initials, number_of_books, book_comments, is_popular, age, graduated, nick_names, nick_names_upper, was_ever_popular, is_funny, mentor_names, mentee_names, address, business_address, quotes, number_of_atoms, deleted_at, number_of_public_reviews, "numberOfPublicReviews2", tags_of_all_books, search, image_file_name, certificate, created_at, updated_at, favorite_shape, range_of_books, favorite_colors, mentor_id, root_mentor_id, current_draft_book_id, favorite_book_id, publisher_id) SELECT * FROM data",
        "WITH data AS (SELECT unnest($1::int[]) as mentor_id, unnest($2::int[]) as mentee_id) INSERT INTO author_to_mentees_closure (mentor_id, mentee_id) SELECT * FROM data ON CONFLICT (mentor_id, mentee_id) DO UPDATE SET id = author_to_mentees_closure.id RETURNING id;",
-       "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id WHERE a.publisher_id = $1 LIMIT $2",
        "COMMIT;",
      ]
     `);
@@ -52,7 +52,7 @@ describe("AsyncReactiveField", () => {
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as title, unnest($3::int[]) as "order", unnest($4::text[]) as notes, unnest($5::text[]) as acknowledgements, unnest($6::text[]) as authors_nick_names, unnest($7::text[]) as search, unnest($8::timestamp with time zone[]) as deleted_at, unnest($9::timestamp with time zone[]) as created_at, unnest($10::timestamp with time zone[]) as updated_at, unnest($11::int[]) as prequel_id, unnest($12::int[]) as author_id, unnest($13::int[]) as reviewer_id, unnest($14::int[]) as random_comment_id) INSERT INTO books (id, title, "order", notes, acknowledgements, authors_nick_names, search, deleted_at, created_at, updated_at, prequel_id, author_id, reviewer_id, random_comment_id) SELECT * FROM data",
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as rating, unnest($3::boolean[]) as is_public, unnest($4::boolean[]) as is_test, unnest($5::boolean[]) as is_test_chain, unnest($6::timestamp with time zone[]) as created_at, unnest($7::timestamp with time zone[]) as updated_at, unnest($8::int[]) as book_id, unnest($9::int[]) as critic_id) INSERT INTO book_reviews (id, rating, is_public, is_test, is_test_chain, created_at, updated_at, book_id, critic_id) SELECT * FROM data",
        "WITH data AS (SELECT unnest($1::int[]) as mentor_id, unnest($2::int[]) as mentee_id) INSERT INTO author_to_mentees_closure (mentor_id, mentee_id) SELECT * FROM data ON CONFLICT (mentor_id, mentee_id) DO UPDATE SET id = author_to_mentees_closure.id RETURNING id;",
-       "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id WHERE a.publisher_id = $1 LIMIT $2",
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as number_of_book_reviews, unnest($3::timestamp with time zone[]) as updated_at, unnest($4::timestamptz[]) as __original_updated_at) UPDATE publishers SET number_of_book_reviews = data.number_of_book_reviews, updated_at = data.updated_at FROM data WHERE publishers.id = data.id AND date_trunc('milliseconds', publishers.updated_at) = data.__original_updated_at RETURNING publishers.id",
        "COMMIT;",
        "select * from "publishers" order by "id" asc",
@@ -114,9 +114,12 @@ describe("AsyncReactiveField", () => {
       id: 1,
       number_of_book_reviews: 1,
     });
-    expect(queries).toContain(
-      `SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2`,
-    );
+    // Isolate the RF's count query, b/c the surrounding populate queries differ by preloading plugin
+    expect(queries.filter((q) => q.startsWith("SELECT count"))).toMatchInlineSnapshot(`
+     [
+       "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id WHERE a.publisher_id = $1 LIMIT $2",
+     ]
+    `);
   });
 
   it("can recalc dependent reactive fields", async () => {

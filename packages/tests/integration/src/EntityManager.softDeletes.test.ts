@@ -173,6 +173,14 @@ describe("EntityManager.softDeletes", () => {
     expect(books).toMatchEntity([{ title: "b1" }]);
   });
 
+  it("find can explicitly filter soft-deleted entities on a m2o join", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const books = await em.find(Book, { author: { deletedAt: null } });
+    expect(books).toMatchEntity([]);
+  });
+
   it("find ignores soft-deleted entities at end of m2m join", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1, deleted_at: jan1 });

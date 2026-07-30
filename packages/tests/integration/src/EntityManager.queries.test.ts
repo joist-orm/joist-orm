@@ -2072,10 +2072,7 @@ describe("EntityManager.queries", () => {
       ],
       condition: {
         op: "and",
-        conditions: [
-          { alias: "b", column: "deleted_at" },
-          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "t" } },
-        ],
+        conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "t" } }],
       },
       orderBys: [expect.anything()],
     });

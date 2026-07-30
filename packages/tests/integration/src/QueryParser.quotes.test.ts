@@ -12,7 +12,6 @@ describe("QueryParser", () => {
         " from books as b",
         " inner join authors as a on b.author_id = a.id",
         " where b.deleted_at IS NULL",
-        " AND a.deleted_at IS NULL",
         " AND a.first_name = ?",
         ' AND EXISTS (select 1 from author_schedules as "as" where a.id = "as".author_id AND "as".id = ?)',
         " order by b.title ASC, b.id ASC",

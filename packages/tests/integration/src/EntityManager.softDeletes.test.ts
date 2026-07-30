@@ -146,20 +146,41 @@ describe("EntityManager.softDeletes", () => {
     expect(authors.length).toBe(0);
   });
 
-  it("find ignores soft-deleted entities at end of m2o join", async () => {
+  it("find includes soft-deleted entities at end of m2o join", async () => {
     await insertAuthor({ first_name: "a1", deleted_at: jan1 });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();
+    // The book itself is not soft-deleted, and `book.author.get` would return the soft-deleted
+    // author, so the m2o join should not filter the book out
     const books = await em.find(Book, { author: { firstName: "a1" } });
-    expect(books.length).toBe(0);
+    expect(books).toMatchEntity([{ title: "b1" }]);
   });
 
-  it("find ignores soft-deleted entities at end of m2o without join", async () => {
+  it("find includes soft-deleted entities at end of m2o without join", async () => {
     await insertAuthor({ first_name: "a1", deleted_at: jan1 });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();
     const books = await em.find(Book, { author: "a:1" });
-    expect(books.length).toBe(0);
+    expect(books).toMatchEntity([{ title: "b1" }]);
+  });
+
+  it("find includes soft-deleted entities at end of o2o join", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    const books = await em.find(Book, { favoriteAuthor: { firstName: "a1" } });
+    expect(books).toMatchEntity([{ title: "b1" }]);
+  });
+
+  it("find ignores soft-deleted entities at end of m2m join", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1, deleted_at: jan1 });
+    await insertTag({ name: "t1" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    const em = newEntityManager();
+    const tags = await em.find(Tag, { books: { title: "b1" } });
+    expect(tags).toMatchEntity([]);
   });
 
   it("find can return soft-deleted entities", async () => {

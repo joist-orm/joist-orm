@@ -250,6 +250,7 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
+  /** Adds a `deleted_at IS NULL` condition for `alias`, i.e. for the primary table or a collection join. */
   function addSoftDeleteCondition(meta: EntityMetadata, alias: string, targetCb: ConditionBuilder): void {
     if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
@@ -273,6 +274,8 @@ export function parseFindQuery(
     filter: any,
     fieldName?: string,
     targetCb: ConditionBuilder = cb,
+    /** Whether this table is the "other side" of a collection, i.e. `books` in `em.find(Author, { books: ... })`. */
+    isCollection: boolean = false,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const scopeFilter = isScope(filter);
@@ -319,7 +322,13 @@ export function parseFindQuery(
       addStiSubtypeFilter(targetCb, meta, alias);
     }
 
-    addSoftDeleteCondition(meta, alias, targetCb);
+    // Only the primary table & collection joins filter soft-deletes, to match the in-memory relation
+    // semantics of "o2m/m2m collections filter out soft-deletes, but m2o/o2o references still return
+    // them". I.e. `book.author.get` returns a soft-deleted author, so `em.find(Book, { author: ... })`
+    // should still match the book, as long as the book itself is not soft-deleted.
+    if (join === "primary" || isCollection) {
+      addSoftDeleteCondition(meta, alias, targetCb);
+    }
 
     // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
@@ -419,10 +428,11 @@ export function parseFindQuery(
           );
         }
         const f = parseEntityFilter(field.otherMetadata(), sub);
-        // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
+        // Probe the filter and see if it's just an id, if so we can avoid the join; m2os don't need
+        // a join for soft-delete filtering because references don't filter out soft-deletes.
         if (!f) {
           // skip
-        } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
+        } else if (f.kind === "join") {
           const a = getAlias(field.otherMetadata().tableName);
           addTable(
             field.otherMetadata(),
@@ -555,6 +565,7 @@ export function parseFindQuery(
           (subFilter as any)[key],
           field.otherFieldName,
           targetCb,
+          true,
         );
         if (!isCtiBaseFk) {
           const table = tables.find((t) => t.alias === a);
@@ -588,6 +599,7 @@ export function parseFindQuery(
             sub,
             undefined,
             targetCb,
+            true,
           );
           const table = tables.find((t) => t.alias === a);
           if (table && (table.join === "inner" || table.join === "outer")) {

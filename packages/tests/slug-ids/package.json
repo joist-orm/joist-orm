@@ -18,10 +18,10 @@
     "joist-orm": "workspace:*"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.43",
+    "@swc/core": "^1.15.47",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.2.0",
     "env-cmd": "^11.0.0",
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
@@ -30,11 +30,11 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.6",
     "prettier-plugin-organize-imports": "^4.3.0",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.11",
     "typescript": "6.0.3"
   }
 }

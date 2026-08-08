@@ -44,15 +44,15 @@
     "joist-test-utils": "workspace:*"
   },
   "dependencies": {
-    "graphql": "^16.14.2"
+    "graphql": "^17.0.2"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.43",
+    "@swc/core": "^1.15.47",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.2.0",
     "jest": "30.4.2",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.6",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "6.0.3"

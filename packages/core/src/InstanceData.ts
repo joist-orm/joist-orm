@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
+import { emptyRowData, RowData } from "./RowData";
 import { hasAnyKey } from "./utils";
 
 /** The `#orm` metadata field we track on each instance. */
@@ -13,8 +14,10 @@ export class InstanceData {
   readonly metadata: EntityMetadata;
   /** A bag for our lazy-initialized relations, allocated on first relation access. */
   relations: Record<any, any> | undefined = undefined;
-  /** The database-value of columns, as-is returned from the driver. */
-  row!: Record<string, any>;
+  /** The as-loaded database row, i.e. our `rowIndex`-th row within our query's `RowData` result. */
+  rowData: RowData = emptyRowData;
+  /** Our row's index within `rowData`; see {@link RowData}. */
+  rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
   /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */
@@ -73,7 +76,6 @@ export class InstanceData {
     if (isNew) {
       this.#new = Operation.Pending;
       this.data = {};
-      this.row = {};
       this.flushedData = undefined;
       if (em) this.markMaybePending();
     } else {
@@ -81,6 +83,21 @@ export class InstanceData {
       this.data = {};
       this.flushedData = undefined;
     }
+  }
+
+  /**
+   * Returns the as-loaded value of `columnName`, i.e. `getColumn("rank")`.
+   *
+   * This saves callers from knowing that `rowData`/`rowIndex` are a pair, but note it is
+   * a snapshot of the query that loaded us, and specifically:
+   *
+   * - The value is driver-level, i.e. numeric enum ids, untagged foreign keys, and temporals
+   *   as strings; use `getField` if you want the domain value, and
+   * - The value is not updated by `em.flush`, so after a flush it is the pre-flush value, and
+   * - New entities have no row, so every column is `undefined`.
+   */
+  getColumn(columnName: string): any {
+    return this.rowData.get(this.rowIndex, columnName);
   }
 
   /** If `em.flush` has detected a dirty RQF, reset our internal dirty state, w/o reseting our external-dirty state. */

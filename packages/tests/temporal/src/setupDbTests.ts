@@ -11,13 +11,14 @@ import { EntityManager } from "src/entities";
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
-let pool: pg.Pool;
+export let pool: pg.Pool;
 
 export function newEntityManager(opts?: PostgresDriverOpts) {
   const ctx = { knex };
   const em = new EntityManager(
     ctx as any,
     new PostgresDriver(pool, {
+      lazyRows: process.env.JOIST_ROW_DATA === "1",
       ...opts,
     }),
   );

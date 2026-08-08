@@ -46,6 +46,7 @@ export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
 export * from "./QueryParser.collectionJoins";
 export { visitConditions } from "./QueryVisitor";
+export * from "./RowData";
 export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
@@ -133,7 +134,7 @@ export {
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
 export * from "./scopes";
-export { Temporal } from "./temporal";
+export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal";
 export * from "./temporalMappers";
 export { isInTrustedContext, runInTrustedContext } from "./trusted";
 export * from "./typeMap";
@@ -172,7 +173,7 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  *
  * Note that constructors _always_ call this method, but if the call is coming from `em.hydrate`, we
  * use `values` being a primary key to short-circuit and let `hydrate` set the fields via the serde
- * `setOnEntity` methods.
+ * `setOnEntityFromRowData` methods.
  */
 export function setOpts<T extends Entity>(
   entity: T,

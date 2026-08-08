@@ -177,14 +177,22 @@ describe("EntityManger.plugins", () => {
       }
     }
 
-    it.withCtx("is called with the meta, operation and returned rows on find", async (ctx) => {
+    it.withCtx("can observe the meta, operation, and returned rows on find", async (ctx) => {
       await insertAuthor({ first_name: "a1" });
       const { em } = ctx;
       const plugin = new AfterFindPlugin();
       em.addPlugin(plugin);
       expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});
-      expect(plugin.calls).toEqual([[getMetadata(Author), "find", [expect.objectContaining({})]]]);
+      expect(plugin.calls).toHaveLength(1);
+      const [meta, operation, rows] = plugin.calls[0];
+      expect(meta).toBe(getMetadata(Author));
+      expect(operation).toBe("find");
+      // The hook receives a read-only RowData view; observe-only hooks can read `rowCount`
+      // without materializing, or `toRows()` when they want the POJO rows
+      expect(rows.rowCount).toBe(1);
+      expect(rows.get(0, "first_name")).toBe("a1");
+      expect(rows.toRows()).toMatchObject([{ first_name: "a1" }]);
     });
   });
 

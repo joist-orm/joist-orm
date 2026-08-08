@@ -18,13 +18,14 @@ export function getField(entity: Entity, fieldName: string): any {
   const api = getEmInternalApi(em);
   api.pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
-  const { data, row } = getInstanceData(entity);
+  const instanceData = getInstanceData(entity);
+  const { data } = instanceData;
   if (fieldName in data) {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
       const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
-      serde.setOnEntity(data, row);
+      serde.setOnEntityFromRowData(data, instanceData.rowData, instanceData.rowIndex);
     }
     return data[fieldName];
   }

@@ -1,5 +1,6 @@
 import { EntityManager } from "../EntityManager";
 import { ParsedFindQuery } from "../QueryParser";
+import { RowData } from "../RowData";
 import { JoinRowTodo, Todo } from "../Todo";
 import { PreloadPlugin } from "../plugins/PreloadPlugin";
 
@@ -18,6 +19,19 @@ export interface Driver<TX = unknown> {
 
   /** Executes a raw SQL query with bindings. */
   executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
+
+  /**
+   * Like `executeFind`, but returns a lazy {@link RowData} instead of materialized POJO rows.
+   *
+   * This method's *presence* is the capability signal: drivers define it only when lazy rows
+   * are supported + enabled (i.e. `PostgresDriver` with `lazyRows: true`), and entity-hydrating
+   * loaders fall back to classic rows wrapped in a `PojoRowData` when it is undefined.
+   */
+  executeFindRowData?(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<RowData>;
 
   transaction<T>(em: EntityManager, fn: (txn: TX) => Promise<T>): Promise<T>;
 

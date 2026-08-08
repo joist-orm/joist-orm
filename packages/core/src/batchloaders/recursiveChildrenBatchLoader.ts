@@ -73,8 +73,8 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
-    const rows = await em["executeFind"](meta, recursiveChildrenOperation, query, {});
-    const entities = em.hydrate(meta.cstr, rows);
+    const rowData = await em["executeFindRowData"](meta, recursiveChildrenOperation, query, {});
+    const entities = em["hydrateAndFinalize"](meta.cstr, rowData);
 
     // For all the entities we found, group them by their parent (or the root node, which has no parent)
     const entitiesById = groupBy(entities, (entity) => {

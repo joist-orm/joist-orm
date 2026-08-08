@@ -1,14 +1,15 @@
 import { getInstanceData } from "../BaseEntity";
+import { BatchLoader } from "../batchloaders/BatchLoader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata, PrimitiveField } from "../EntityMetadata";
 import { setField } from "../fields";
 import { keyToNumber, tagId } from "../keys";
 import { kqDot } from "../keywords";
-import { ParsedFindQuery } from "../QueryParser";
-import { abbreviation } from "../utils";
 import { lazyField } from "../newEntity";
-import { BatchLoader } from "../batchloaders/BatchLoader";
+import { ParsedFindQuery } from "../QueryParser";
+import { PojoRowData } from "../RowData";
+import { abbreviation } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { LoadedProperty, Property, PropertyT } from "./hasProperty";
 
@@ -143,9 +144,10 @@ function lazyColumnBatchLoader(em: EntityManager, meta: EntityMetadata, fieldNam
       orderBys: [],
     };
     const rows = await em["executeFind"](meta, lazyColumnLoadOperation, query, {});
-    for (const row of rows) {
-      const entity = em.findExistingInstance(tagId(meta, row.id));
-      if (entity) field.serde.setOnEntity(getInstanceData(entity).data, row);
+    const rowData = new PojoRowData(rows);
+    for (let i = 0; i < rows.length; i++) {
+      const entity = em.findExistingInstance(tagId(meta, rows[i].id));
+      if (entity) field.serde.setOnEntityFromRowData(getInstanceData(entity).data, rowData, i);
     }
   });
 }

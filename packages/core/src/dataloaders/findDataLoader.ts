@@ -76,9 +76,10 @@ export function findDataLoader<T extends Entity>(
           // Maybe add preload joins
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
-          const entities = em.hydrate(type, rows);
-          preloadHydrator?.(rows, entities);
+          const rowData = await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit);
+          const entities = em["hydrateAndFinalize"](type, rowData, {
+            sidecars: (entities) => preloadHydrator?.(rowData, entities),
+          });
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -127,20 +128,21 @@ export function findDataLoader<T extends Entity>(
           }
         }
 
-        const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
-
-        const entities = em.hydrate(type, rows);
-        preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+        const rowData = await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit);
 
         // Make an empty array for each batched query, per the dataloader contract
         const results = entries.map(() => [] as T[]);
-        // Then put each row into the tagged query it matched
-        rows.forEach((row, i) => {
-          const entity = entities[i];
-          if (!entity.isDeletedEntity) {
-            for (const tag of row._tags) results[tag].push(entity);
-          }
-          delete row._tags;
+        em["hydrateAndFinalize"](type, rowData, {
+          sidecars: (entities) => {
+            preloadJoins?.forEach((j) => j.hydrator(rowData, entities));
+            // Put each row into the tagged query it matched
+            for (let i = 0; i < entities.length; i++) {
+              const entity = entities[i];
+              if (!entity.isDeletedEntity) {
+                for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
+              }
+            }
+          },
         });
         return results;
       },

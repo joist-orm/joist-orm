@@ -1,5 +1,5 @@
 import { LoadHint } from "joist-orm";
-import { Critic, newCritic, newPublisherGroup, newTag, Publisher, PublisherGroup } from "src/entities";
+import { Critic, Publisher, PublisherGroup, newCritic, newPublisherGroup, newTag } from "src/entities";
 import { insertCritic, insertPublisher, insertPublisherGroup, select } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 

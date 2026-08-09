@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TaggedId } from "../EntityManager";
 import {
@@ -9,6 +10,8 @@ import {
   getBaseMeta,
   getMetadata,
 } from "../EntityMetadata";
+import { deTagIds, tagId } from "../keys";
+import { mapPathsToTarget } from "../loadLens";
 import {
   ColumnCondition,
   ParsedFindQuery,
@@ -17,8 +20,6 @@ import {
   addTablePerClassJoinsAndClassTag,
   maybeAddOrderBy,
 } from "../QueryParser";
-import { deTagIds, tagId } from "../keys";
-import { mapPathsToTarget } from "../loadLens";
 import { abbreviation, groupBy } from "../utils";
 
 export const lensOperation = "lens";

@@ -1,4 +1,5 @@
 import { DeepNew, EntityManager, FactoryOpts, maybeNew, newTestInstance, testIndex } from "joist-orm";
+
 import { Author, Book } from "../entities";
 
 // for testing factories

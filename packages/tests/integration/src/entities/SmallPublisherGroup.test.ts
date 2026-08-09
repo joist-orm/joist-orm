@@ -1,4 +1,5 @@
 import { newEntityManager } from "src/testEm";
+
 import { newSmallPublisherGroup } from "./entities";
 
 describe("SmallPublisherGroup", () => {

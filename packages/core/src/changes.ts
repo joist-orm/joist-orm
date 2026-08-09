@@ -342,7 +342,7 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
       ? EnumCollectionFieldStatus<E>
       : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
         ? OneToManyFieldStatus<U>
-        : FieldsOf<T>[P] extends { type: infer U | undefined }
+        : FieldsOf<T>[P] extends { type: (infer U) | undefined }
           ? U extends Entity
             ? ManyToOneFieldStatus<U>
             : PrimitiveFieldStatus<U>

@@ -1,4 +1,5 @@
 import { DeepNew, EntityManager, FactoryOpts, newTestInstance, testIndex } from "joist-orm";
+
 import { BookReview } from "../entities";
 
 export function newBookReview(em: EntityManager, opts: FactoryOpts<BookReview> = {}): DeepNew<BookReview> {

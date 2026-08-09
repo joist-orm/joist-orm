@@ -1,8 +1,8 @@
+import { type Reactable } from "./config";
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { type Reactable } from "./config";
-import { EntityManager, getEmInternalApi, NoIdError } from "./index";
-import { globalLogger, noopReactionLogger, ReactionLogger } from "./logging/ReactionLogger";
+import { EntityManager, NoIdError, getEmInternalApi } from "./index";
+import { ReactionLogger, globalLogger, noopReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 import { runInTrustedContext } from "./trusted";
 

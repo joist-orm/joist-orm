@@ -1,5 +1,6 @@
 import { RowData } from "joist-core";
 import pg from "pg";
+
 import { getBinaryTypeParser } from "./binaryParsers";
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol

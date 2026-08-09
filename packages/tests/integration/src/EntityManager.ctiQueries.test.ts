@@ -5,9 +5,9 @@ import {
   AuthorFilter,
   BookAdvance,
   LargePublisher,
-  newSmallPublisher,
   Publisher,
   SmallPublisher,
+  newSmallPublisher,
 } from "src/entities";
 import {
   insertAuthor,

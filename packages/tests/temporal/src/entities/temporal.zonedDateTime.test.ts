@@ -1,9 +1,10 @@
-import { alias, getMetadata, PrimitiveField, Temporal } from "joist-orm";
+import { PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
 import { PostgresDriver, registerDatabaseBinaryParsers } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import pg from "pg";
 import { knex, newEntityManager, pool } from "src/setupDbTests";
-import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "src/utils";
+import { jan1DateTime, jan1at10am, jan2DateTime, jan3DateTime } from "src/utils";
+
 import { Author, Book, BookFilter, EntityManager, newBook } from "./entities";
 
 describe("zonedDateTime", () => {

@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
-import { join } from "path";
 import { tmpdir } from "os";
+import { join } from "path";
+
 import { DocsCache, getMtime } from "./cache";
 
 describe("DocsCache", () => {

@@ -1,16 +1,16 @@
+import { type Reactable, setAfterMetadataLocked, setBooted } from "./config";
+import { AsyncDefault } from "./defaults";
 import { type Entity } from "./Entity";
 import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager";
 import {
-  getBaseAndSelfMetas,
-  getBaseSelfAndSubMetas,
-  getMetadata,
   type EntityMetadata,
   type EnumField,
   type ManyToOneField,
   type OneToManyField,
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
 } from "./EntityMetadata";
-import { setAfterMetadataLocked, setBooted, type Reactable } from "./config";
-import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";

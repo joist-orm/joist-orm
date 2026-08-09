@@ -1,20 +1,20 @@
 import {
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  ManyToManyField,
+  ReadOnlyCollection,
+  ensureNotDeleted,
   fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
   isLoaded,
-  ManyToManyField,
-  ReadOnlyCollection,
 } from "..";
 import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
-import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
+import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 

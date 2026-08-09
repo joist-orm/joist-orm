@@ -1,6 +1,4 @@
-import { TaskItemCodegen } from "./entities";
-
-import { taskItemConfig as config } from "./entities";
+import { TaskItemCodegen, taskItemConfig as config } from "./entities";
 
 export class TaskItem extends TaskItemCodegen {}
 

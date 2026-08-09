@@ -1,9 +1,9 @@
 import { getInstanceData } from "./BaseEntity";
+import { getDefaultDependencies } from "./defaults";
+import { buildWhereClause } from "./drivers/buildUtils";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
-import { getDefaultDependencies } from "./defaults";
-import { buildWhereClause } from "./drivers/buildUtils";
 import { getField, setField } from "./fields";
 import { getProperties } from "./getProperties";
 import { New } from "./loadHints";
@@ -19,8 +19,8 @@ import {
   isReactiveGetter,
 } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
 

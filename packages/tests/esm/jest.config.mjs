@@ -1,8 +1,6 @@
-import type { Config } from "@jest/types";
-import { createDefaultEsmPreset } from "ts-jest";
-
 export default {
-  ...createDefaultEsmPreset(),
+  extensionsToTreatAsEsm: [".ts", ".tsx", ".mts"],
+  transform: { "^.+\\.m?tsx?$": "@swc/jest" },
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   globalSetup: "<rootDir>/src/setupTestEnv.ts",
   setupFilesAfterEnv: ["<rootDir>/src/setupIt.ts", "<rootDir>/src/setupDbTests.ts"],
@@ -22,4 +20,4 @@ export default {
       },
     ],
   ],
-} satisfies Config.InitialOptions;
+};

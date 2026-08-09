@@ -1,24 +1,24 @@
 import { isPlainObject } from "joist-utils";
+
 import { getInstanceData } from "./BaseEntity";
+import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { Entity, isEntity } from "./Entity";
-import { EntityConstructor, EntityManager, IdOf, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { EntityConstructor, EntityManager, IdOf, MaybeAbstractEntityConstructor, isId } from "./EntityManager";
 import {
   EntityMetadata,
-  getBaseAndSelfMetas,
-  getBaseSelfAndSubMetas,
-  getMetadata,
-  isManyToOneField,
-  isOneToOneField,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
   PrimitiveField,
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
+  isManyToOneField,
+  isOneToOneField,
 } from "./EntityMetadata";
-import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, FactoryExtrasOf, New } from "./index";
-
 import { FactoryLogger } from "./logging/FactoryLogger";
 import { maybeRequireTemporal } from "./temporal";
 import { ActualFactoryOpts, OptsOf } from "./typeMap";

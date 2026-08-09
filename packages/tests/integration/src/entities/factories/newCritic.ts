@@ -1,4 +1,5 @@
 import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "joist-orm";
+
 import { Critic } from "../entities";
 
 // for testing factories

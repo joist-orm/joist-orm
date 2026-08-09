@@ -4,14 +4,15 @@ import {
   DbMetadata,
   EntityDbMetadata,
   EnumField,
-  makeEntity,
   ManyToOneField,
   PolymorphicField,
   PrimitiveField,
+  makeEntity,
 } from "joist-codegen";
 import { keyBy } from "joist-utils";
 import { plural } from "pluralize";
 import { CodegenFile, imp } from "ts-poet";
+
 import { Fs, getImportExtension } from "./utils";
 
 export function newFs(files: Record<string, string>): Fs {

@@ -2,10 +2,10 @@ import {
   Collection,
   CustomCollection,
   Entity,
+  Lens,
   getLens,
   getMetadata,
   isLensLoaded,
-  Lens,
   lensToLoadHint,
   loadLens,
 } from "../index";

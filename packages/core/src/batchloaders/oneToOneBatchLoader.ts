@@ -1,13 +1,13 @@
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { getMetadata, OneToOneField } from "../EntityMetadata";
+import { OneToOneField, getMetadata } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
+  ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-  ParsedFindQuery,
 } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { abbreviation, groupBy } from "../utils";

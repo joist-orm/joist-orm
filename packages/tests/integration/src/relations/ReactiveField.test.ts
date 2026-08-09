@@ -13,19 +13,20 @@ import {
   update,
 } from "src/entities/inserts";
 import { knex, newEntityManager } from "src/testEm";
+
 import {
   Author,
   Book,
   BookRange,
   BookReview,
+  Publisher,
+  Tag,
   newAuthor,
   newBook,
   newBookAdvance,
   newBookReview,
   newComment,
   newPublisher,
-  Publisher,
-  Tag,
 } from "../entities";
 
 describe("ReactiveField", () => {

@@ -3,9 +3,9 @@ import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
-import { isAsyncReactiveField, isLoadedReference, ManyToOneReferenceImpl } from "./relations";
+import { ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "./relations";
 import { FieldsOf } from "./typeMap";
-import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
+import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
 export enum ValidationCode {
   required = "required",

@@ -4,7 +4,7 @@ import { type Entity } from "../../core/src/Entity";
 import { type EntityMetadata, type Field } from "../../core/src/EntityMetadata";
 import { InstanceData } from "../../core/src/InstanceData";
 import { Todo } from "../../core/src/Todo";
-import { generateOps, type OpColumn } from "../../core/src/drivers/EntityWriter";
+import { type OpColumn, generateOps } from "../../core/src/drivers/EntityWriter";
 
 interface ScenarioContext {
   todo: Todo;

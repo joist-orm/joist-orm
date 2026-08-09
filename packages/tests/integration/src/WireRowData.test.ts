@@ -1,13 +1,14 @@
 import { getInstanceData } from "joist-orm";
 import { getBinaryTypeParser, registerDatabaseBinaryParsers, setBinaryTypeParser } from "joist-orm/pg";
-// These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
-// into the build directly
-import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol";
-import { executeRowDataQuery, WireRowData } from "../../../orm/build/drivers/WireRowData";
 import pg from "pg";
 import { Author } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
+// These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
+// into the build directly
+import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol";
+import { WireRowData, executeRowDataQuery } from "../../../orm/build/drivers/WireRowData";
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist";
 
@@ -447,9 +448,7 @@ describe("WireRowData", () => {
       const dropped = Array.from({ length: 20 }, (_, i) => i).filter((i) => !freshIndexes.has(i));
       expect(dropped).toHaveLength(10);
       expect(() => wire.get(dropped[0], "first_name")).toThrow("compacted away");
-      expect(fresh.map((a) => a.firstName).sort()).toEqual(
-        Array.from({ length: 10 }, (_, i) => `a${i + 11}`).sort(),
-      );
+      expect(fresh.map((a) => a.firstName).sort()).toEqual(Array.from({ length: 10 }, (_, i) => `a${i + 11}`).sort());
       expect(preloaded.map((a) => a.firstName).sort()).toEqual(
         Array.from({ length: 10 }, (_, i) => `a${i + 1}`).sort(),
       );

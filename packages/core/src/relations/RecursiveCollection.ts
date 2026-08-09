@@ -2,10 +2,13 @@ import { recursiveChildrenBatchLoader } from "../batchloaders/recursiveChildrenB
 import { recursiveM2mBatchLoader } from "../batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsBatchLoader } from "../batchloaders/recursiveParentsBatchLoader";
 import {
-  appendStack,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  ManyToManyField,
+  Reference,
+  Relation,
+  appendStack,
+  ensureNotDeleted,
   fail,
   getEmInternalApi,
   getMetadata,
@@ -15,9 +18,6 @@ import {
   isLoadedReference,
   isOneToOneReference,
   isReference,
-  ManyToManyField,
-  Reference,
-  Relation,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";

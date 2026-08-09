@@ -1,13 +1,13 @@
 import {
   type ExistsCondition,
   type JoinTable,
-  maybeAddIdNotNulls,
-  parseAlias,
   type ParsedExpressionCondition,
   type ParsedExpressionFilter,
   type ParsedFindQuery,
   type PrimaryTable,
   type RawCondition,
+  maybeAddIdNotNulls,
+  parseAlias,
 } from "./QueryParser";
 import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning";
 import { assertNever } from "./utils";

@@ -1,5 +1,7 @@
 import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
 import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
+
 import {
   Author,
   Book,
@@ -15,8 +17,6 @@ import {
   newPublisher,
   newSmallPublisher,
 } from "./entities";
-
-import { newEntityManager } from "src/testEm";
 
 describe("EntityManager.clone", () => {
   it("can clone entities", async () => {

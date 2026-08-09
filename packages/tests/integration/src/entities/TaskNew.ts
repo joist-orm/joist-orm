@@ -1,5 +1,6 @@
-import { hasReactiveField, ReactiveField } from "joist-orm";
-import { taskNewConfig as config, TaskNewCodegen } from "./entities";
+import { ReactiveField, hasReactiveField } from "joist-orm";
+
+import { TaskNewCodegen, taskNewConfig as config } from "./entities";
 
 export class TaskNew extends TaskNewCodegen {
   transientFields = {

@@ -1,6 +1,7 @@
-import { code, Code } from "ts-poet";
-import { EntityDbMetadata } from "./EntityDbMetadata";
+import { Code, code } from "ts-poet";
+
 import { Config } from "./config";
+import { EntityDbMetadata } from "./EntityDbMetadata";
 
 /** Creates the placeholder file for our entity's test. */
 export function generateEntityTestFile(config: Config, meta: EntityDbMetadata): Code {

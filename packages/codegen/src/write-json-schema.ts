@@ -1,7 +1,9 @@
+import { promises as fs, readFileSync } from "fs";
+
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { promises as fs, readFileSync } from "fs";
 import { z } from "zod";
+
 import { config } from "./config";
 
 const jsonFormatter = createFromBuffer(readFileSync(getPath()));

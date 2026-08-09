@@ -1,6 +1,5 @@
 import { Author, newAuthor } from "src/entities";
 import { insertAuthor, select } from "src/entities/inserts";
-
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("Entity.arrayColumns", () => {

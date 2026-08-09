@@ -1,4 +1,5 @@
 import type { Temporal } from "temporal-polyfill";
+
 import { CustomSerde } from "./serde";
 import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";

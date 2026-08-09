@@ -1,5 +1,6 @@
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
+
 import { runMigrationsIfNeeded } from "./migrate";
 
 export * from "./migrate";

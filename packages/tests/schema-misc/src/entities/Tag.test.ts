@@ -1,4 +1,5 @@
 import { newEntityManager } from "src/setupDbTests";
+
 import { newTag } from "./entities";
 
 describe("Tag", () => {

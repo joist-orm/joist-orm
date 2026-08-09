@@ -1,4 +1,4 @@
-import { aliases, getMetadata, ParsedExpressionCondition, ParsedFindQuery, parseFindQuery, Plugin } from "joist-orm";
+import { ParsedExpressionCondition, ParsedFindQuery, Plugin, aliases, getMetadata, parseFindQuery } from "joist-orm";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -11,6 +11,7 @@ import {
   update,
 } from "src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
+
 import { AdvanceStatus, Author, Book, BookReview, Comment, Tag } from "./entities";
 
 const am = getMetadata(Author);

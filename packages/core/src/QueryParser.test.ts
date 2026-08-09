@@ -17,8 +17,8 @@ describe("QueryParser", () => {
     });
 
     it("parses json path filters", () => {
-      expect(parseValueFilter({ pathExists: "$.tags[*] ? (@ == \"orm\")" })).toEqual([
-        { kind: "jsonPathExists", value: "$.tags[*] ? (@ == \"orm\")" },
+      expect(parseValueFilter({ pathExists: '$.tags[*] ? (@ == "orm")' })).toEqual([
+        { kind: "jsonPathExists", value: '$.tags[*] ? (@ == "orm")' },
       ]);
       expect(parseValueFilter({ pathIsTrue: "$.active == true" })).toEqual([
         { kind: "jsonPathPredicate", value: "$.active == true" },

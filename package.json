@@ -9,7 +9,8 @@
     "trust-npm-circleci": "node ./scripts/trust-npm-circleci.mjs",
     "migrate": "yarn workspaces foreach --all run migrate",
     "codegen": "yarn workspaces foreach --all run codegen",
-    "format": "yarn workspaces foreach --all run format",
+    "format": "oxlint --fix packages && oxfmt --write 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format:check": "oxlint packages && oxfmt --check 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "start": "yarn mprocs",
     "test": "yarn workspaces foreach --all run test",
     "docker": "docker-compose build",
@@ -53,11 +54,13 @@
     "env-cmd": "^11.0.0",
     "expect-type": "^1.4.0",
     "mprocs": "^0.9.6",
+    "oxfmt": "0.62.0",
+    "oxlint": "1.77.0",
     "semantic-release": "^25.0.9",
     "typescript": "7.0.2"
   },
   "resolutions": {
     "marked": "15.0.8"
   },
-  "packageManager": "yarn@4.17.1"
+  "packageManager": "yarn@4.18.0"
 }

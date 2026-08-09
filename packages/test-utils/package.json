@@ -4,9 +4,6 @@
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "scripts": {
-    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
-  },
   "files": [
     "build"
   ],
@@ -20,10 +17,7 @@
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "jest": "30.4.2",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

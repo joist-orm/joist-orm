@@ -1,5 +1,6 @@
-import { hasCustomReference, Reference } from "joist-orm";
-import { Author, Book, imageConfig as config, ImageCodegen, ImageType, Publisher } from "./entities";
+import { Reference, hasCustomReference } from "joist-orm";
+
+import { Author, Book, ImageCodegen, ImageType, Publisher, imageConfig as config } from "./entities";
 
 type ImageOwner = Book | Publisher | Author;
 

@@ -2,17 +2,18 @@ import {
   BaseEntity,
   Entity,
   EntityManager,
+  Property,
+  ReadOnlyCollection,
+  Reference,
   isCollection,
   isDefined,
   isEntity,
   isProperty,
   isReactiveField,
   isReference,
-  Property,
-  ReadOnlyCollection,
-  Reference,
 } from "joist-core";
 import { isPlainObject } from "joist-utils";
+
 import { CustomMatcherResult } from "./index";
 
 // This might be undefined if running outside of jest
@@ -114,7 +115,7 @@ export type MatchedEntity<T> =
                   ? V
                   : T[K] extends Entity | null | undefined
                     ? MatchedEntity<T[K]> | T[K] | null | undefined
-                    : T[K] extends ReadonlyArray<infer U | undefined>
+                    : T[K] extends ReadonlyArray<(infer U) | undefined>
                       ? readonly (MatchedEntity<U> | U | undefined)[]
                       : T[K] extends ReadonlyArray<infer U> | null
                         ? readonly (MatchedEntity<U> | U | null)[]

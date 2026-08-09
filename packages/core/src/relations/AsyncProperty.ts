@@ -16,18 +16,13 @@ export interface AsyncProperty<T extends Entity, V> extends Property<T, V> {
  * - For new (un-flushed) entities, `load` throws because the entity has no id yet.
  * - The result is cached until the next `em.flush`.
  */
-export function hasAsyncProperty<T extends Entity, V>(
-  fn: (entity: T) => Promise<V>,
-): Property<T, V> {
+export function hasAsyncProperty<T extends Entity, V>(fn: (entity: T) => Promise<V>): Property<T, V> {
   return lazyField((entity: T) => {
     return new AsyncPropertyImpl(entity, fn);
   });
 }
 
-export class AsyncPropertyImpl<T extends Entity, V>
-  extends AbstractPropertyImpl<T>
-  implements AsyncProperty<T, V>
-{
+export class AsyncPropertyImpl<T extends Entity, V> extends AbstractPropertyImpl<T> implements AsyncProperty<T, V> {
   #loadPromise: Promise<V> | undefined;
   #loaded = false;
   #value: V | undefined;

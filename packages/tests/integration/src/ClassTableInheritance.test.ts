@@ -1,17 +1,9 @@
-import { Changes, type FieldsOf, getMetadataForField, getProperties, type RelationsOf } from "joist-orm";
+import { Changes, type FieldsOf, type RelationsOf, getMetadataForField, getProperties } from "joist-orm";
 import {
   AdminUser,
   Author,
   Critic,
   LargePublisher,
-  newAuthor,
-  newBook,
-  newLargePublisher,
-  newPublisher,
-  newPublisherGroup,
-  newSmallPublisher,
-  newSmallPublisherGroup,
-  newUser,
   Publisher,
   PublisherGroup,
   PublisherOpts,
@@ -20,6 +12,14 @@ import {
   SmallPublisherOpts,
   Tag,
   User,
+  newAuthor,
+  newBook,
+  newLargePublisher,
+  newPublisher,
+  newPublisherGroup,
+  newSmallPublisher,
+  newSmallPublisherGroup,
+  newUser,
 } from "src/entities";
 import {
   insertAuthor,
@@ -36,6 +36,7 @@ import {
   select,
 } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
+
 import { jan1 } from "./testDates";
 import { zeroTo } from "./utils";
 

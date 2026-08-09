@@ -1,7 +1,7 @@
+import { maybeGetConstructorFromReference } from "../configure";
 import { Entity, isEntity } from "../Entity";
 import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
-import { maybeGetConstructorFromReference } from "../configure";
 import { getField, setField } from "../fields";
 import {
   OneToOneReference,

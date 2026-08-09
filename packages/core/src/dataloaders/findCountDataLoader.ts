@@ -4,8 +4,8 @@ import { GraphQLFilterWithAlias } from "../EntityGraphQLFilter";
 import {
   EntityManager,
   FindCountFilterOptions,
-  getEmInternalApi,
   MaybeAbstractEntityConstructor,
+  getEmInternalApi,
 } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";

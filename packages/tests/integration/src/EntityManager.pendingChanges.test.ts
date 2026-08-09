@@ -1,5 +1,6 @@
 import { insertAuthor, insertAuthorToTag, insertTag } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
 import { Author, Tag, newAuthor, newBook } from "./entities";
 
 describe("EntityManager.pendingChanges", () => {

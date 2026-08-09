@@ -1,9 +1,8 @@
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
-import { Stepper } from "src/Stepper.test";
 import { Publisher, SmallPublisher } from "src/entities";
 import { select } from "src/entities/inserts";
-
+import { Stepper } from "src/Stepper.test";
 import { knex, newEntityManager } from "src/testEm";
 
 describe("EntityManager", () => {

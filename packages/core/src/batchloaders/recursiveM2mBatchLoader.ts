@@ -1,6 +1,8 @@
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
+  ManyToManyField,
+  ParsedFindQuery,
   deTagIds,
   getMetadataForField,
   isLoadedCollection,
@@ -8,8 +10,6 @@ import {
   kq,
   kqDot,
   kqStar,
-  ManyToManyField,
-  ParsedFindQuery,
 } from "../index";
 import { RecursiveM2mCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";

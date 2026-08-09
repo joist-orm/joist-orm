@@ -2,6 +2,7 @@ import { camelCase } from "change-case";
 import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import pluralize from "pluralize";
+
 import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";

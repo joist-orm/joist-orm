@@ -10,7 +10,7 @@ import type {
 } from "./EntityFilter";
 import type { GraphQLFilterWithAlias } from "./EntityGraphQLFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
-import type { Loaded, LoadHint } from "./loadHints";
+import type { LoadHint, Loaded } from "./loadHints";
 import type { OrderOf } from "./typeMap";
 
 /**

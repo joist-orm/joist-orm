@@ -1,5 +1,6 @@
 import { insertAuthor, insertBook } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
 import { Author, Book, newAuthor, newBook } from "../entities";
 
 describe("Book", () => {

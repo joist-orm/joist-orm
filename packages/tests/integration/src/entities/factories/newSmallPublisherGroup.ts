@@ -1,4 +1,5 @@
 import { type DeepNew, type FactoryOpts, newTestInstance, testIndex } from "joist-orm";
+
 import { type EntityManager, SmallPublisherGroup } from "../entities";
 
 export function newSmallPublisherGroup(

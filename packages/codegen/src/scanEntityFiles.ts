@@ -1,5 +1,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+
+import { Config } from "./config";
 import {
   DbMetadata,
   EntityDbMetadata,
@@ -9,7 +11,6 @@ import {
   PolymorphicField,
   PrimitiveField,
 } from "./EntityDbMetadata";
-import { Config } from "./config";
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
 const regex = /config\.setDefault\([\s\n]*["'](\w+)["']/g;

@@ -1,11 +1,10 @@
 import { groupBy, isPlainObject } from "joist-utils";
+
 import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases";
+import { getMetadataForTable } from "./configure";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
-import { getBaseMeta, type EntityMetadata, type Field } from "./EntityMetadata";
-import { pruneUnusedJoins } from "./QueryParser.pruning";
-import { visitConditions } from "./QueryVisitor";
-import { getMetadataForTable } from "./configure";
+import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata";
 import {
   Column,
   ConditionBuilder,
@@ -15,7 +14,9 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 import { kq, kqDot } from "./keywords";
-import { isScope, isScopeJoinFilter, resolveScope, type Scope } from "./scopes";
+import { pruneUnusedJoins } from "./QueryParser.pruning";
+import { visitConditions } from "./QueryVisitor";
+import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "./scopes";
 import { abbreviation, assertNever, fail } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */

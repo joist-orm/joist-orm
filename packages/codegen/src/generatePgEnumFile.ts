@@ -1,5 +1,6 @@
 import { pascalCase } from "change-case";
-import { code, Code } from "ts-poet";
+import { Code, code } from "ts-poet";
+
 import { Config } from "./config";
 import { PgEnumData } from "./index";
 

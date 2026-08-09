@@ -2,7 +2,6 @@ import { User } from "src/entities";
 import { insertUser, select } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2 } from "src/testDates";
-
 import { newEntityManager } from "src/testEm";
 
 const PASSWORD = "correct.horse.battery.staple";

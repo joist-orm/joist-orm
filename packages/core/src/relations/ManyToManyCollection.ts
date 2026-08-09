@@ -1,15 +1,15 @@
 import {
-  appendStack,
   Collection,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  IdOf,
+  ManyToManyField,
+  appendStack,
+  ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-  IdOf,
-  ManyToManyField,
   toTaggedId,
 } from "../";
 import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";

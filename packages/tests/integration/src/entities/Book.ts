@@ -1,10 +1,11 @@
-import { hasReactiveField, hasReactiveProperty, Property, ReactiveField } from "joist-orm";
+import { Property, ReactiveField, hasReactiveField, hasReactiveProperty } from "joist-orm";
+
 import {
   Author,
   BookCodegen,
+  PublisherType,
   bookReviewBeforeFlushRan,
   bookConfig as config,
-  PublisherType,
   bookScope as scope,
 } from "./entities";
 

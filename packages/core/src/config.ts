@@ -5,16 +5,16 @@ import {
   EntityConstructor,
   EntityField,
   EntityMetadata,
-  fail,
   FieldsOf,
-  getMetadata,
-  Loaded,
   LoadHint,
+  Loaded,
   MaybeAbstractEntityConstructor,
   Reacted,
   ReactiveHint,
   RelationsIn,
   SettableFields,
+  fail,
+  getMetadata,
 } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { ValidationRule, ValidationRuleInternal } from "./rules";

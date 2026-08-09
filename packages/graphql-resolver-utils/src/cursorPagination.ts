@@ -4,7 +4,8 @@ import {
   type MaybeAbstractEntityConstructor,
   type ValueGraphQLFilter,
 } from "joist-core";
-import { type ContextWithEm, defaultLimit, type PaginationFilter } from "./paginationUtils";
+
+import { type ContextWithEm, type PaginationFilter, defaultLimit } from "./paginationUtils";
 
 type CursorArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   filter?: F | null;

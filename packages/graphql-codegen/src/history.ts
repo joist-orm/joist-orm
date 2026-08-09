@@ -1,6 +1,8 @@
+import { readFileSync } from "fs";
+
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { readFileSync } from "fs";
+
 import { Fs, sortKeys } from "./utils";
 
 /** A map from GraphQL object type name -> its field names that have already been scaffolded. */

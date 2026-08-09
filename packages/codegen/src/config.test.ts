@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
-import { config, type Config, type FieldConfig, isFieldIgnored, loadConfig, writeConfig } from "./config";
+
+import { type Config, type FieldConfig, config, isFieldIgnored, loadConfig, writeConfig } from "./config";
 import { makeEntity } from "./EntityDbMetadata";
 
 describe("config", () => {

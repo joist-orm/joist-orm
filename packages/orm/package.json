@@ -75,9 +75,6 @@
       "default": "./build/pg-export.js"
     }
   },
-  "scripts": {
-    "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
-  },
   "files": [
     "build"
   ],
@@ -115,9 +112,7 @@
   "devDependencies": {
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

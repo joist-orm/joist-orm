@@ -1,22 +1,22 @@
 import { expect } from "@jest/globals";
-import { getInstanceData, getMetadata, type MaybeAbstractEntityConstructor } from "joist-orm";
+import { type MaybeAbstractEntityConstructor, getInstanceData, getMetadata } from "joist-orm";
 import {
   Author,
   Book,
   Image,
   ImageType,
   LargePublisher,
-  newAuthor,
-  newBook,
-  newParentGroup,
-  newParentItem,
-  newPublisher,
   ParentGroup,
   ParentItem,
   Publisher,
   SmallPublisher,
   Tag,
   User,
+  newAuthor,
+  newBook,
+  newParentGroup,
+  newParentItem,
+  newPublisher,
 } from "src/entities";
 import {
   insertAuthor,

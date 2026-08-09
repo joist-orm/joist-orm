@@ -11,7 +11,6 @@
   },
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/bun node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
-    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen",
     "test": "bun test --reporter=junit --reporter-outfile=../../../artifacts/junit-tests-bun.xml"
   },
@@ -26,9 +25,7 @@
     "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
     "tsx": "^4.23.11",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

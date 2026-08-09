@@ -1,5 +1,5 @@
 import { getMetadata, setField } from "joist-orm";
-import { Author, Book, newBook, newTag, Tag } from "src/entities";
+import { Author, Book, Tag, newBook, newTag } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
 import { newEntityManager, testDriver } from "src/testEm";
 

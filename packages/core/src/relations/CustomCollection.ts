@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
-import { getEmInternalApi, IdOf } from "../EntityManager";
-import { Collection, ensureNotDeleted, fail, LoadHint } from "../index";
+import { IdOf, getEmInternalApi } from "../EntityManager";
+import { Collection, LoadHint, ensureNotDeleted, fail } from "../index";
 import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";

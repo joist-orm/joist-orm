@@ -1,7 +1,7 @@
 import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { addTablePerClassJoinsAndClassTag, deTagIds, getField, kq, ManyToOneField, ParsedFindQuery } from "../index";
+import { ManyToOneField, ParsedFindQuery, addTablePerClassJoinsAndClassTag, deTagIds, getField, kq } from "../index";
 import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";
 import { BatchLoader } from "./BatchLoader";

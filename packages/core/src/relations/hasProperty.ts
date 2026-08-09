@@ -125,8 +125,6 @@ export function isProperty(maybeProperty: any): maybeProperty is Property<any, a
 }
 
 /** Type guard utility for determining if an entity field is a loaded Property. */
-export function isLoadedProperty(
-  maybeProperty: any,
-): maybeProperty is Property<any, any> & LoadedProperty<any, any> {
+export function isLoadedProperty(maybeProperty: any): maybeProperty is Property<any, any> & LoadedProperty<any, any> {
   return isProperty(maybeProperty) && maybeProperty.isLoaded;
 }

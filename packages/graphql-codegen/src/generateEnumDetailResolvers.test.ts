@@ -1,4 +1,5 @@
 import { Config } from "joist-codegen";
+
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { renderCodegenFile } from "./testUtils";
 

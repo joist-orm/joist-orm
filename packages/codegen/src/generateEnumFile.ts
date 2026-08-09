@@ -1,6 +1,7 @@
 import { pascalCase } from "change-case";
 import pluralize from "pluralize";
-import { code, Code } from "ts-poet";
+import { Code, code } from "ts-poet";
+
 import { Config } from "./config";
 import { EnumTableData } from "./index";
 import { EnumMetadata } from "./symbols";

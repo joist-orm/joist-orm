@@ -1,4 +1,6 @@
 import { groupBy } from "joist-utils";
+
+import { getMetadataForTable } from "./configure";
 import { Entity, IdType } from "./Entity";
 import { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import {
@@ -9,9 +11,8 @@ import {
   getBaseAndSelfMetas,
   getMetadata,
 } from "./EntityMetadata";
-import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
-import { getMetadataForTable } from "./configure";
 import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
+import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
 import { Column } from "./serde";
 import { FieldsOf } from "./typeMap";
 import { fail } from "./utils";

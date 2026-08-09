@@ -1,6 +1,4 @@
-import { AdminUserCodegen } from "./entities";
-
-import { adminUserConfig as config } from "./entities";
+import { AdminUserCodegen, adminUserConfig as config } from "./entities";
 
 export class AdminUser extends AdminUserCodegen {}
 

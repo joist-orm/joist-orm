@@ -1,4 +1,4 @@
-import { getLens, getMetadata, Lens, lensToLoadHint, lensToPath, loadLensPath, testing } from "joist-orm";
+import { Lens, getLens, getMetadata, lensToLoadHint, lensToPath, loadLensPath, testing } from "joist-orm";
 import {
   insertAuthor,
   insertBook,
@@ -12,7 +12,8 @@ import {
   insertTaskItem,
 } from "src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
-import { Author, Book, Image, newAuthor, newBook, Publisher, Tag, TaskItem, TaskNew } from "./entities";
+
+import { Author, Book, Image, Publisher, Tag, TaskItem, TaskNew, newAuthor, newBook } from "./entities";
 
 const { isAllSqlPaths } = testing;
 

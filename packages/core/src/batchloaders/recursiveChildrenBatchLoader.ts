@@ -2,17 +2,17 @@ import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+  ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   deTagIds,
   getField,
   isLoadedCollection,
   isLoadedOneToOneReference,
   kq,
-  ManyToOneField,
   maybeResolveReferenceToId,
-  OneToManyField,
-  OneToOneField,
-  ParsedFindQuery,
 } from "../index";
 import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation, groupBy } from "../utils";

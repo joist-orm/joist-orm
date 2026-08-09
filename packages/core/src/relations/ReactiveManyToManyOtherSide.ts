@@ -1,13 +1,13 @@
 import {
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  ManyToManyField,
+  ReadOnlyCollection,
+  ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-  ManyToManyField,
-  ReadOnlyCollection,
 } from "..";
 import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";

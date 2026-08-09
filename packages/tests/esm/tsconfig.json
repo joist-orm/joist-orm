@@ -11,7 +11,7 @@
       "src/*": ["./src/*"]
     }
   },
-  "include": ["./src", "./migrations", "./jest.config.ts", "./test.d.ts"],
+  "include": ["./src", "./migrations", "./test.d.ts"],
   "references": [
     { "path": "../../core" },
     { "path": "../../graphql-resolver-utils" },

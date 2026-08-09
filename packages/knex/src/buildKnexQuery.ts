@@ -1,5 +1,6 @@
-import { internals, kq, kqDot, ParsedFindQuery, ParsedTable } from "joist-core";
+import { ParsedFindQuery, ParsedTable, internals, kq, kqDot } from "joist-core";
 import { Knex } from "knex";
+
 import { assertNever } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 

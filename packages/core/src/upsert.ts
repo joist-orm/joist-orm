@@ -1,15 +1,16 @@
 import { isPlainObject } from "joist-utils";
+
 import { setSyncDefaults } from "./defaults";
 import { Entity, isEntity } from "./Entity";
-import { EntityManager, IdOf, isKey, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { getMetadata, ManyToManyField, ManyToOneField, OneToManyField, OneToOneField } from "./EntityMetadata";
+import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
+import { ManyToManyField, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
 import {
+  PartialOrNull,
+  TimestampSerde,
   asConcreteCstr,
   getConstructorFromTaggedId,
   getProperties,
-  PartialOrNull,
   setOpt,
-  TimestampSerde,
 } from "./index";
 import { findExistingIfUniqueBy } from "./resurrection";
 import { OptIdsOf, OptsOf } from "./typeMap";

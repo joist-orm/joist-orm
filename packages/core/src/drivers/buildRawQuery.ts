@@ -1,5 +1,5 @@
-import { ParsedCteClause, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
+import { ParsedCteClause, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { assertNever, cleanSql } from "../utils";
 import { buildWhereClause } from "./buildUtils";
 
@@ -112,9 +112,7 @@ export function buildRawQuery(
   if (parsed.groupBys && parsed.groupBys.length > 0) {
     sql +=
       " GROUP BY " +
-      parsed.groupBys
-        .map((gb) => ("expression" in gb ? gb.expression : kqDot(gb.alias, gb.column)))
-        .join(", ");
+      parsed.groupBys.map((gb) => ("expression" in gb ? gb.expression : kqDot(gb.alias, gb.column))).join(", ");
   }
 
   if (parsed.orderBys.length > 0) {

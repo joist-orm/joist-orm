@@ -1,4 +1,4 @@
-import { setDefaultEntityLimit, type Entity } from "joist-orm";
+import { type Entity, setDefaultEntityLimit } from "joist-orm";
 import { performance } from "node:perf_hooks";
 import { Author, type EntityManager } from "./src/entities";
 import { newEntityManager, setApiCallMock, testDriver } from "./src/testEm";

@@ -1,4 +1,5 @@
 import { Client } from "pg";
+
 import { DbMetadata } from "./EntityDbMetadata";
 
 /** Creates a `flush_database` stored procedure to truncate all the tables between tests. */
@@ -86,14 +87,9 @@ export function generateExplicitFlushFunction(db: DbMetadata): string {
  * and ~5,000 tests, it gave an 8% speed-up vs. the "DELETE every table" approach).
  */
 export function generateSequenceFlushFunction(db: DbMetadata): string {
-  const stableTables = [
-    ...Object.values(db.enums).map((e) => e.table.name),
-    ...db.otherTables,
-  ];
+  const stableTables = [...Object.values(db.enums).map((e) => e.table.name), ...db.otherTables];
   const maybeSkipStable =
-    stableTables.length === 0
-      ? ""
-      : `AND sequencename NOT IN (${stableTables.map((t) => `'${t}_id_seq'`).join(", ")})`;
+    stableTables.length === 0 ? "" : `AND sequencename NOT IN (${stableTables.map((t) => `'${t}_id_seq'`).join(", ")})`;
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
     DECLARE seq RECORD;
     BEGIN

@@ -1,7 +1,8 @@
 import { promises as fs } from "fs";
+import { dirname } from "path";
+
 import { Config } from "joist-codegen";
 import { isPlainObject } from "joist-utils";
-import { dirname } from "path";
 
 /** A super-simple file system abstraction for testing. */
 export interface Fs {

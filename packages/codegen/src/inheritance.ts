@@ -1,13 +1,13 @@
+import { Config } from "./config";
 import {
-  canonicalizeOtherEntities,
   DbMetadata,
   EntityDbMetadata,
-  makeEntity,
   ManyToManyField,
   ManyToOneField,
   PolymorphicFieldComponent,
+  canonicalizeOtherEntities,
+  makeEntity,
 } from "./EntityDbMetadata";
-import { Config } from "./config";
 import { fail } from "./utils";
 
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {

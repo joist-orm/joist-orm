@@ -24,6 +24,7 @@ export function getField(entity: Entity, fieldName: string): any {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
+      api.pluginManager.beforeGetFieldFault(entity, fieldName);
       const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
       serde.setOnEntityFromRowData(data, instanceData.rowData, instanceData.rowIndex);
     }

@@ -14,6 +14,18 @@ interface PluginMethods {
    */
   beforeGetField?(entity: Entity, field: string): void;
   /**
+   * Called when getField faults a field's value out of the entity's as-loaded row, i.e. only on
+   * the first read of each entity+field (later reads hit the already-converted `data` bag).
+   *
+   * Unlike `beforeGetField`, this fires before the row value is converted-and-cached, so plugins
+   * can observe which fields are actually read (at fault granularity instead of every-read), and
+   * can throw to prevent a missing/partially-selected column from being cached as `undefined`.
+   *
+   * @param entity The entity instance being accessed; never a new entity
+   * @param field The field name being faulted from the entity's row
+   */
+  beforeGetFieldFault?(entity: Entity, field: string): void;
+  /**
    * Called before a field value is set on an entity via setField.
    *
    * @param entity The entity instance being modified
@@ -66,6 +78,7 @@ interface PluginMethods {
 
 const syncPluginMethods = [
   "beforeGetField",
+  "beforeGetFieldFault",
   "beforeSetField",
   "beforeFind",
   "afterFind",
@@ -174,6 +187,7 @@ export class PluginManager implements Required<PluginMethods> {
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
   beforeGetField(entity: Entity, field: string): void {}
+  beforeGetFieldFault(entity: Entity, field: string): void {}
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,

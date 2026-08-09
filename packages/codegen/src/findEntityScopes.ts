@@ -1,9 +1,16 @@
+import { type namedTypes } from "ast-types";
 import { camelCase } from "change-case";
 import { readFile } from "fs/promises";
+import jscodeshift from "jscodeshift";
 import { join } from "path";
-import ts from "typescript";
 import { type Config } from "./config";
 import { type Entity } from "./EntityDbMetadata";
+
+const j = jscodeshift.withParser("ts");
+
+type Expression = NonNullable<namedTypes.ClassProperty["value"]>;
+type Parameter = namedTypes.ArrowFunctionExpression["params"][number];
+type TypeNode = namedTypes.TSTypeAnnotation["typeAnnotation"];
 
 /** Each `static active = ...` scope in an entity. */
 export interface ScopeMember {
@@ -32,13 +39,17 @@ async function findEntityScopes(config: Config, entity: Entity): Promise<[string
   if (contents === undefined) return [entityName, []];
   if (contents.indexOf(scopeFnName) === -1) return [entityName, []];
 
-  const sourceFile = ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
-  for (const statement of sourceFile.statements) {
+  const program = j(contents).find(j.Program).nodes()[0];
+  for (const statement of program.body) {
+    const declaration =
+      j.ExportNamedDeclaration.check(statement) || j.ExportDefaultDeclaration.check(statement)
+        ? statement.declaration
+        : statement;
     // i.e. `export class Author extends AuthorCodegen { ... }`.
-    if (ts.isClassDeclaration(statement) && statement.name?.text === entityName) {
+    if (declaration && j.ClassDeclaration.check(declaration) && declaration.id?.name === entityName) {
       return [
         entityName,
-        statement.members.flatMap((member) => maybeScopeMember(sourceFile, member, entityName, scopeTypeName)),
+        declaration.body.body.flatMap((member) => maybeScopeMember(member, entityName, scopeTypeName)),
       ];
     }
   }
@@ -61,93 +72,93 @@ function isNoSuchFileError(e: unknown): boolean {
 }
 
 /** Converts a static property declaration into a generated scope member. */
-function maybeScopeMember(
-  sourceFile: ts.SourceFile,
-  member: ts.ClassElement,
-  entityName: string,
-  scopeTypeName: string,
-): ScopeMember[] {
-  if (!ts.isPropertyDeclaration(member)) return [];
-  if (!isStaticMember(member)) return [];
+function maybeScopeMember(member: namedTypes.Node, entityName: string, scopeTypeName: string): ScopeMember[] {
+  if (!j.ClassProperty.check(member) || !member.static) return [];
   // i.e. accept `static adult = scope(...)`, but skip methods/getters/unsupported fields.
-  if (!member.initializer || !ts.isIdentifier(member.name)) return [];
-  if (!isScopeInitializer(member.initializer, entityName)) return [];
-  if (member.type) {
-    if (!isScopeType(member.type, scopeTypeName)) return [];
-    return [{ name: member.name.text, type: member.type.getText(sourceFile) }];
+  if (!member.value || !j.Identifier.check(member.key)) return [];
+  if (!isScopeInitializer(member.value, entityName)) return [];
+  if (member.typeAnnotation) {
+    if (!j.TSTypeAnnotation.check(member.typeAnnotation)) return [];
+    const type = member.typeAnnotation.typeAnnotation;
+    if (!isScopeType(type, scopeTypeName)) return [];
+    return [{ name: member.key.name, type: j(type).toSource() }];
   }
-  const type = inferScopeType(sourceFile, member.initializer, scopeTypeName);
-  return type ? [{ name: member.name.text, type }] : [];
+  const type = inferScopeType(member.value, scopeTypeName);
+  return type ? [{ name: member.key.name, type }] : [];
 }
 
 /** Infers a generated scope member type from an untyped static scope initializer. */
-function inferScopeType(sourceFile: ts.SourceFile, initializer: ts.Expression, scopeTypeName: string): string | undefined {
+function inferScopeType(initializer: Expression, scopeTypeName: string): string | undefined {
   return isParameterizedScopeInitializer(initializer)
-    ? maybeParameterizedScope(sourceFile, initializer, scopeTypeName)
+    ? maybeParameterizedScope(initializer, scopeTypeName)
     : scopeTypeName;
 }
 
 /** Returns true for `scope.fn(...)` initializers. */
-function isParameterizedScopeInitializer(initializer: ts.Expression): boolean {
+function isParameterizedScopeInitializer(initializer: Expression): boolean {
   return (
-    ts.isCallExpression(initializer) &&
-    ts.isPropertyAccessExpression(initializer.expression) &&
-    initializer.expression.name.text === "fn"
+    j.CallExpression.check(initializer) &&
+    j.MemberExpression.check(initializer.callee) &&
+    !initializer.callee.computed &&
+    j.Identifier.check(initializer.callee.property) &&
+    initializer.callee.property.name === "fn"
   );
 }
 
 /** Returns a function type for `scope.fn((prefix: string) => ...)` initializers. */
-function maybeParameterizedScope(
-  sourceFile: ts.SourceFile,
-  initializer: ts.Expression,
-  scopeTypeName: string,
-): string | undefined {
-  if (!ts.isCallExpression(initializer)) return undefined;
-  if (!ts.isPropertyAccessExpression(initializer.expression)) return undefined;
-  if (initializer.expression.name.text !== "fn") return undefined;
+function maybeParameterizedScope(initializer: Expression, scopeTypeName: string): string | undefined {
+  if (!j.CallExpression.check(initializer)) return undefined;
+  if (!j.MemberExpression.check(initializer.callee)) return undefined;
+  if (initializer.callee.computed || !j.Identifier.check(initializer.callee.property)) return undefined;
+  if (initializer.callee.property.name !== "fn") return undefined;
   const fn = initializer.arguments[0];
-  if (!fn || (!ts.isArrowFunction(fn) && !ts.isFunctionExpression(fn))) return undefined;
-  const params = fn.parameters.map((param) => parameterType(sourceFile, param));
+  if (!fn || (!j.ArrowFunctionExpression.check(fn) && !j.FunctionExpression.check(fn))) return undefined;
+  const params = fn.params.map(parameterType);
   if (params.some((param) => param === undefined)) return undefined;
   return `(${params.join(", ")}) => ${scopeTypeName}`;
 }
 
 /** Returns a function-type parameter, i.e. `prefix: string`, when syntax-only inference is safe. */
-function parameterType(sourceFile: ts.SourceFile, param: ts.ParameterDeclaration): string | undefined {
-  if (!ts.isIdentifier(param.name) || !param.type || param.initializer) return undefined;
-  const rest = param.dotDotDotToken ? "..." : "";
-  const optional = param.questionToken ? "?" : "";
-  return `${rest}${param.name.text}${optional}: ${param.type.getText(sourceFile)}`;
-}
-
-/** Returns true if the member has a static modifier. */
-function isStaticMember(member: ts.ClassElement): boolean {
-  const modifiers = ts.canHaveModifiers(member) ? ts.getModifiers(member) : undefined;
-  return modifiers?.some((modifier: ts.ModifierLike) => modifier.kind === ts.SyntaxKind.StaticKeyword) ?? false;
+function parameterType(param: Parameter): string | undefined {
+  if (j.Identifier.check(param)) {
+    if (!param.typeAnnotation || !j.TSTypeAnnotation.check(param.typeAnnotation)) return undefined;
+    const optional = param.optional ? "?" : "";
+    return `${param.name}${optional}: ${j(param.typeAnnotation.typeAnnotation).toSource()}`;
+  }
+  if (j.RestElement.check(param) && j.Identifier.check(param.argument)) {
+    const typeAnnotation = param.typeAnnotation ?? param.argument.typeAnnotation;
+    if (!typeAnnotation || !j.TSTypeAnnotation.check(typeAnnotation)) return undefined;
+    return `...${param.argument.name}: ${j(typeAnnotation.typeAnnotation).toSource()}`;
+  }
+  return undefined;
 }
 
 /** Returns true for `EntityScope` and function types returning `EntityScope`. */
-function isScopeType(type: ts.TypeNode, scopeTypeName: string): boolean {
+function isScopeType(type: TypeNode, scopeTypeName: string): boolean {
   // i.e. `AuthorScope`.
-  if (ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName)) return type.typeName.text === scopeTypeName;
+  if (j.TSTypeReference.check(type) && j.Identifier.check(type.typeName)) return type.typeName.name === scopeTypeName;
   // i.e. `(prefix: string) => AuthorScope`.
-  if (ts.isFunctionTypeNode(type)) return isScopeType(type.type, scopeTypeName);
-  if (ts.isParenthesizedTypeNode(type)) return isScopeType(type.type, scopeTypeName);
+  if (j.TSFunctionType.check(type) && type.typeAnnotation && j.TSTypeAnnotation.check(type.typeAnnotation)) {
+    return isScopeType(type.typeAnnotation.typeAnnotation, scopeTypeName);
+  }
+  if (j.TSParenthesizedType.check(type)) return isScopeType(type.typeAnnotation, scopeTypeName);
   return false;
 }
 
 /** Returns true for scope initializers, I.e. `scope(...)`, `scope(...).orderBy(...)`, or `Author.adult...`. */
-function isScopeInitializer(initializer: ts.Expression, entityName: string): boolean {
-  if (!ts.isCallExpression(initializer) && !ts.isPropertyAccessExpression(initializer)) return false;
+function isScopeInitializer(initializer: Expression, entityName: string): boolean {
+  if (!j.CallExpression.check(initializer) && !j.MemberExpression.check(initializer)) return false;
   return isScopeRootedExpression(initializer, entityName);
 }
 
 /** Returns true for a call/property expression chain rooted at `scope` or the current entity. */
-function isScopeRootedExpression(expression: ts.Expression, entityName: string): boolean {
+function isScopeRootedExpression(expression: Expression, entityName: string): boolean {
   // i.e. `scope({ age: { gte: 18 } })`.
-  if (ts.isIdentifier(expression)) return expression.text === "scope" || expression.text === entityName;
-  if (ts.isCallExpression(expression)) return isScopeRootedExpression(expression.expression, entityName);
+  if (j.Identifier.check(expression)) return expression.name === "scope" || expression.name === entityName;
+  if (j.CallExpression.check(expression)) return isScopeRootedExpression(expression.callee, entityName);
   // i.e. `scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`))` or `Author.adult.orderBy(...)`.
-  if (ts.isPropertyAccessExpression(expression)) return isScopeRootedExpression(expression.expression, entityName);
+  if (j.MemberExpression.check(expression) && !expression.computed) {
+    return isScopeRootedExpression(expression.object, entityName);
+  }
   return false;
 }

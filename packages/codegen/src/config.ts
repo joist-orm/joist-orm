@@ -1,8 +1,9 @@
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { promises as fs, readFileSync } from "fs";
+import { existsSync, promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
-import ts from "typescript";
+import { parse, type ParseError } from "jsonc-parser";
+import { dirname, join } from "path";
 import { z } from "zod";
 import { getLatestCodemodVersion } from "./codemods";
 import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
@@ -425,15 +426,26 @@ export function getTimestampConfig(config: Config): {
 
 function projectIsUsingEsmWithImports(): boolean {
   // Attempt to find the project's tsconfig.json in the current directory or up the directory hierarchy
-  const configPath = ts.findConfigFile("./", ts.sys.fileExists, "tsconfig.json");
+  const configPath = findTsConfigFile(process.cwd());
   if (!configPath) {
     return false;
   }
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (configFile.error) {
+  try {
+    // Use jsonc-parser to parse the tsconfig.json file (not the old tsc readConfigFile which was
+    // dropped in TypeScript 7), allowing for comments and trailing commas.
+    const errors: ParseError[] = [];
+    const parsed: unknown = parse(readFileSync(configPath, "utf8"), errors, { allowTrailingComma: true });
+    if (errors.length > 0 || typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false;
+    const compilerOptions = (parsed as Record<string, unknown>).compilerOptions;
+    return (
+      typeof compilerOptions === "object" &&
+      compilerOptions !== null &&
+      !Array.isArray(compilerOptions) &&
+      (compilerOptions as Record<string, unknown>).allowImportingTsExtensions === true
+    );
+  } catch {
     return false;
   }
-  return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
 }
 
 /** Normalizes `uniqueBy` config sugar into runtime identity candidates. */
@@ -451,4 +463,15 @@ function stripLegacyConfigKeys(raw: unknown): unknown {
   const parsed = { ...(raw as Record<string, unknown>) };
   delete parsed.version;
   return parsed;
+}
+
+/** Finds the nearest `tsconfig.json` in `directory` or one of its ancestors. */
+function findTsConfigFile(directory: string): string | undefined {
+  while (true) {
+    const fileName = join(directory, "tsconfig.json");
+    if (existsSync(fileName)) return fileName;
+    const parent = dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
+  }
 }

@@ -10014,6 +10014,7 @@ __metadata:
     fast-glob: "npm:^3.3.3"
     jest: "npm:30.4.2"
     jscodeshift: "npm:^17.4.0"
+    jsonc-parser: "npm:^3.3.1"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.9.6"

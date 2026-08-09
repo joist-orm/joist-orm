@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { config, type Config, type FieldConfig, isFieldIgnored, loadConfig, writeConfig } from "./config";
@@ -45,6 +45,33 @@ describe("config", () => {
       await writeConfig(config.parse({ paginationStyle: "limit" }));
       const written = JSON.parse((await readFile("joist-config.json")).toString()) as Record<string, unknown>;
       expect(written).toMatchObject({ paginationStyle: "limit" });
+    } finally {
+      process.chdir(originalCwd);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reads allowImportingTsExtensions from the nearest JSONC tsconfig", async () => {
+    const originalCwd = process.cwd();
+    const dir = await mkdtemp(path.join(tmpdir(), "joist-config-"));
+    const projectDir = path.join(dir, "packages", "app");
+
+    try {
+      await mkdir(projectDir, { recursive: true });
+      await writeFile(
+        path.join(dir, "tsconfig.json"),
+        `{
+          // TypeScript permits comments and trailing commas in tsconfig files.
+          "compilerOptions": {
+            "allowImportingTsExtensions": true,
+          },
+        }`,
+      );
+      process.chdir(projectDir);
+
+      const loaded = await loadConfig();
+
+      expect(loaded.allowImportingTsExtensions).toEqual(true);
     } finally {
       process.chdir(originalCwd);
       await rm(dir, { recursive: true, force: true });

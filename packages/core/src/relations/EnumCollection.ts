@@ -1,14 +1,14 @@
 import {
-  appendStack,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  ManyToManyEnumField,
+  ManyToManyLike,
+  appendStack,
+  ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-  ManyToManyEnumField,
-  ManyToManyLike,
 } from "../";
 import { enumCollectionBatchLoader } from "../batchloaders/enumCollectionBatchLoader";
 import { EnumMetadata } from "../EnumMetadata";

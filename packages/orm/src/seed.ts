@@ -1,5 +1,6 @@
 import { EntityManager, newPgConnectionConfig } from "joist-core";
 import pg from "pg";
+
 import { PostgresDriver } from "./drivers/PostgresDriver.js";
 
 /**

@@ -1,4 +1,5 @@
-import { code, CodegenFile } from "ts-poet";
+import { CodegenFile, code } from "ts-poet";
+
 import { DbMetadata } from "../EntityDbMetadata";
 import { type ParsedDoc } from "./markdown";
 

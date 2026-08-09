@@ -1,7 +1,7 @@
 import {
   countOfAuthors,
-  countOfBooks,
   countOfBookToTags,
+  countOfBooks,
   countOfTags,
   insertAuthor,
   insertBook,
@@ -14,6 +14,7 @@ import {
   update,
 } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
 import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
 import { jan1 } from "./testDates";
 

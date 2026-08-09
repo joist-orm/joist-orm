@@ -1,8 +1,9 @@
-import { PgEnumData } from "./index";
 import { Table } from "pg-structure";
-import { code, Code } from "ts-poet";
+import { Code, code } from "ts-poet";
+
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
+import { PgEnumData } from "./index";
 import { tableToEntityName } from "./utils";
 
 export function generateEntitiesFile(

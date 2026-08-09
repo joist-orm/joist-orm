@@ -1,6 +1,7 @@
 import { pascalCase } from "change-case";
 import { Client } from "pg";
 import { Db, EnumType, Table } from "pg-structure";
+
 import { Config, EntityDbMetadata, PrimitiveField } from "./index";
 import { isEnumTable } from "./utils";
 

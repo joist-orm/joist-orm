@@ -7,7 +7,8 @@ import {
   select,
 } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
-import { Book, BookReview, newBookReview, newLargePublisher, Publisher, SmallPublisherGroup } from "../entities";
+
+import { Book, BookReview, Publisher, SmallPublisherGroup, newBookReview, newLargePublisher } from "../entities";
 
 describe("AsyncReactiveField", () => {
   it("skips UPDATE after INSERT if value hasn't changed", async () => {

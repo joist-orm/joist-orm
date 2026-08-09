@@ -1,10 +1,11 @@
 import { Deferred } from "joist-utils";
+
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityMetadata, EnumField, Field, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
+import { EntityMetadata, EnumField, Field, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
-import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
+import { ReactiveHint, convertToLoadHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 import { runInTrustedContext } from "./trusted";
 import { fail, failIfAnyRejected } from "./utils";

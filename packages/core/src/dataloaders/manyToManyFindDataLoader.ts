@@ -1,7 +1,8 @@
 import DataLoader from "dataloader";
+
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { keyToNumber, ManyToManyCollection, ManyToManyLargeCollection, ParsedFindQuery, tagId } from "../index";
+import { ManyToManyCollection, ManyToManyLargeCollection, ParsedFindQuery, keyToNumber, tagId } from "../index";
 import { abbreviation } from "../utils";
 
 export const manyToManyFindOperation = "m2m-find";

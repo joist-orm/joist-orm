@@ -1,9 +1,14 @@
+import { OpColumn } from "../drivers/EntityWriter";
 import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
 import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
+import { equal, equalArrays } from "../fields";
 import { buildHintTree } from "../HintTree";
+import { kqDot } from "../keywords";
+import { LoadHint } from "../loadHints";
+import { hintKey } from "../normalizeHints";
 import {
   ColumnCondition,
   ParsedCteClause,
@@ -17,11 +22,6 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
-import { OpColumn } from "../drivers/EntityWriter";
-import { equal, equalArrays } from "../fields";
-import { kqDot } from "../keywords";
-import { LoadHint } from "../loadHints";
-import { hintKey } from "../normalizeHints";
 import { buildUnnestCte } from "../unnest";
 import { assertNever, fail } from "../utils";
 import { fastWhereFilterHash } from "./fastWhereFilterHash";

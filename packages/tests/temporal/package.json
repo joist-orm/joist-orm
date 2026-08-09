@@ -11,7 +11,6 @@
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/temporal node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
     "test": "jest --runInBand --logHeapUsage",
-    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen"
   },
   "dependencies": {
@@ -31,11 +30,8 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
     "superstruct": "^2.0.2",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

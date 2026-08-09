@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
-import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import process from "node:process";
+
+import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveNameConflicts } from "./EntityDbMetadata";
+
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
 import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
+import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveNameConflicts } from "./EntityDbMetadata";
 import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";

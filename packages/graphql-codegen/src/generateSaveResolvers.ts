@@ -1,6 +1,7 @@
 import { camelCase } from "change-case";
 import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
+
 import { getEntitiesImportPath } from "./utils";
 
 const saveEntity = imp("saveEntity@src/resolvers/utils.ts");

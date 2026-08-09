@@ -1,22 +1,22 @@
 import { Entity } from "./Entity";
-import { assertLoaded, Loaded, LoadHint } from "./loadHints";
+import { LoadHint, Loaded, assertLoaded } from "./loadHints";
 import {
+  LoadedCollection,
+  LoadedProperty,
+  LoadedReadOnlyCollection,
+  LoadedReference,
+  PolymorphicReference,
+  isAsyncReactiveField,
   isLoadedCollection,
   isLoadedProperty,
   isLoadedReference,
   isProperty,
   isReactiveField,
   isReactiveGetter,
-  isAsyncReactiveField,
   isRelation,
-  LoadedCollection,
-  LoadedProperty,
-  LoadedReadOnlyCollection,
-  LoadedReference,
-  PolymorphicReference,
 } from "./relations";
 import { isLoadedAsyncReactiveField } from "./relations/AsyncReactiveField";
-import { fail, MaybePromise, maybePromiseThen } from "./utils";
+import { MaybePromise, fail, maybePromiseThen } from "./utils";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.

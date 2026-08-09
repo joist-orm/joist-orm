@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+
 import { Entity, isEntity } from "../Entity";
 import { EntityConstructor, EntityManager, TooManyError, sameEntity } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";

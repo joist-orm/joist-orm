@@ -5,10 +5,10 @@ import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
 import { AsyncMethod, Collection, Property, ReactiveGetter, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
 import { PropertyImpl } from "./relations/hasProperty";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
+import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 
 /**
  * A JSON hint of a single key, multiple keys, or nested keys and sub-hints.

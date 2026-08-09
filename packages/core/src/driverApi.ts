@@ -1,6 +1,6 @@
 import { buildValuesCte } from "./dataloaders/findDataLoader";
-import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./drivers/EntityWriter";
 import { buildCteSql } from "./drivers/buildRawQuery";
+import { DeleteOp, InsertOp, UpdateOp, generateOps } from "./drivers/EntityWriter";
 import { getRuntimeConfig } from "./runtimeConfig";
 import { batched, cleanSql } from "./utils";
 

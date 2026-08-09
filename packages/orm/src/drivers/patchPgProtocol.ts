@@ -138,8 +138,7 @@ function startPartial(parser: any, chunk: Buffer, offset: number): void {
   parser._joistPartial = emptyBuffer;
   parser._joistPartialLength = 0;
   // the length is only known once the header is complete
-  parser._joistPartialTotal =
-    remaining >= HEADER_LENGTH ? CODE_LENGTH + chunk.readUInt32BE(offset + CODE_LENGTH) : -1;
+  parser._joistPartialTotal = remaining >= HEADER_LENGTH ? CODE_LENGTH + chunk.readUInt32BE(offset + CODE_LENGTH) : -1;
   growPartial(parser, remaining);
   chunk.copy(parser._joistPartial, 0, offset);
   parser._joistPartialLength = remaining;

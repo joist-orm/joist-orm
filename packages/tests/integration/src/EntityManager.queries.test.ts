@@ -1,15 +1,15 @@
 import {
-  alias,
-  aliases,
   EntityFilter,
   ExpressionFilter,
-  getAliasMetadata,
-  getMetadata,
   NotFoundError,
-  optimizeCollectionJoins,
-  parseFindQuery,
   TooManyError,
   UniqueFilter,
+  alias,
+  aliases,
+  getAliasMetadata,
+  getMetadata,
+  optimizeCollectionJoins,
+  parseFindQuery,
 } from "joist-orm";
 import {
   insertAuthor,
@@ -30,6 +30,7 @@ import {
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2, jan3 } from "src/testDates";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+
 import {
   Author,
   AuthorFilter,
@@ -46,9 +47,6 @@ import {
   FavoriteShape,
   Image,
   ImageType,
-  newAuthor,
-  newBook,
-  newTag,
   Publisher,
   PublisherFilter,
   PublisherId,
@@ -62,6 +60,9 @@ import {
   TaskItemFilter,
   User,
   UserFilter,
+  newAuthor,
+  newBook,
+  newTag,
 } from "./entities";
 import { twoOf } from "./utils";
 

@@ -84,7 +84,9 @@ describe("QueryParser.collectionJoins", () => {
       condition: {
         kind: "exp",
         op: "and",
-        conditions: [{ kind: "column", alias: "b", column: "title", dbType: "text", cond: { kind: "eq", value: "b1" } }],
+        conditions: [
+          { kind: "column", alias: "b", column: "title", dbType: "text", cond: { kind: "eq", value: "b1" } },
+        ],
       },
       orderBys: [],
     };
@@ -340,7 +342,9 @@ describe("QueryParser.collectionJoins", () => {
       condition: {
         kind: "exp",
         op: "and",
-        conditions: [{ kind: "column", alias: "rpm", column: "market_id", dbType: "int", cond: { kind: "in", value: [2] } }],
+        conditions: [
+          { kind: "column", alias: "rpm", column: "market_id", dbType: "int", cond: { kind: "in", value: [2] } },
+        ],
       },
       orderBys: [{ alias: "pp", column: "id", order: "ASC" }],
     };
@@ -368,7 +372,11 @@ describe("QueryParser.collectionJoins", () => {
               op: "and",
               conditions: [
                 // I.e. `_pp_version` must be tracked as the outer alias, not just the declared collection parent `pp`.
-                { kind: "raw", aliases: ["rpm", "_pp_version"], condition: "_pp_version.id = rpm.ready_plan_version_id" },
+                {
+                  kind: "raw",
+                  aliases: ["rpm", "_pp_version"],
+                  condition: "_pp_version.id = rpm.ready_plan_version_id",
+                },
                 { kind: "column", alias: "rpm", column: "market_id", cond: { kind: "in", value: [2] } },
               ],
             },

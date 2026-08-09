@@ -10,7 +10,6 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "files": [
@@ -24,7 +23,6 @@
   "dependencies": {
     "@dprint/formatter": "^0.5.1",
     "@dprint/json": "^0.21.3",
-    "@types/prettier": "^3.0.0",
     "change-case": "^4.1.2",
     "graphql": "^17.0.2",
     "pluralize": "^8.0.0",
@@ -37,8 +35,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
     "jest": "30.4.2",
-    "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

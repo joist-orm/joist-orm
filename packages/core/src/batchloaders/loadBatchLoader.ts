@@ -2,9 +2,9 @@ import { getInstanceData } from "../BaseEntity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
-import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, lazyExcludedSelects } from "../QueryParser";
 import { keyToNumber, tagId } from "../keys";
 import { LoadHint } from "../loadHints";
+import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, lazyExcludedSelects } from "../QueryParser";
 import { abbreviation } from "../utils";
 import { BatchLoader } from "./BatchLoader";
 

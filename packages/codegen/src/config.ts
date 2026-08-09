@@ -1,10 +1,12 @@
+import { existsSync, promises as fs, readFileSync } from "fs";
+import { dirname, join } from "path";
+
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { existsSync, promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
-import { parse, type ParseError } from "jsonc-parser";
-import { dirname, join } from "path";
+import { type ParseError, parse } from "jsonc-parser";
 import { z } from "zod";
+
 import { getLatestCodemodVersion } from "./codemods";
 import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import { getStiEntities } from "./inheritance";

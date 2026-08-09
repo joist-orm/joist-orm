@@ -1,5 +1,6 @@
 import { type Entity, type MaybeAbstractEntityConstructor } from "joist-core";
-import { type ContextWithEm, defaultLimit, type PaginationFilter } from "./paginationUtils";
+
+import { type ContextWithEm, type PaginationFilter, defaultLimit } from "./paginationUtils";
 
 type LimitArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   filter?: F | null;

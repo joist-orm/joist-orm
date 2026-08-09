@@ -1,6 +1,5 @@
-import { Author, newAuthor, newTag, Tag } from "src/entities";
+import { Author, Tag, newAuthor, newTag } from "src/entities";
 import { insertAuthor, insertAuthorToTag, insertTag } from "src/entities/inserts";
-
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("ManyToManyLargeCollection", () => {

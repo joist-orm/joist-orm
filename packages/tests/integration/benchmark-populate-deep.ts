@@ -1,4 +1,4 @@
-import { setDefaultEntityLimit, type Loaded } from "joist-orm";
+import { type Loaded, setDefaultEntityLimit } from "joist-orm";
 import { performance } from "node:perf_hooks";
 import { Author, type EntityManager } from "./src/entities";
 import { knex, newEntityManager, numberOfQueries, resetQueryCount, testDriver } from "./src/testEm";

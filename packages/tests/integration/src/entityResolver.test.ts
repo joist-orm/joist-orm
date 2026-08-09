@@ -4,9 +4,9 @@ import {
   type FieldNode,
   type GraphQLResolveInfo,
   type GraphQLSchema,
-  isOutputType,
   Kind,
   type SelectionNode,
+  isOutputType,
 } from "graphql";
 import { convertInfoToLoadHint, entityResolver } from "joist-graphql-resolver-utils";
 import { getMetadata } from "joist-orm";

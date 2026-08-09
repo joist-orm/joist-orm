@@ -1,6 +1,9 @@
 import { camelCase, pascalCase } from "change-case";
 import { plural } from "pluralize";
 import { Code, code, imp, joinCode } from "ts-poet";
+
+import { type Config } from "./config";
+import { type ParsedDoc, buildJSDocBlock, generatedTag } from "./docs";
 import {
   DbMetadata,
   Entity,
@@ -12,8 +15,6 @@ import {
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
-import { type Config } from "./config";
-import { buildJSDocBlock, generatedTag, type ParsedDoc } from "./docs";
 import { type ScopeMember } from "./findEntityScopes";
 import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";

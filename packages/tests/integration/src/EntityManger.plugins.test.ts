@@ -1,5 +1,5 @@
-import { type Entity, getMetadata, ImmutableEntitiesPlugin, isInTrustedContext, Plugin } from "joist-orm";
-import { Author, Book, BookReview, Image, newAuthor, newBook, newImage, Publisher, Tag, User } from "src/entities";
+import { type Entity, ImmutableEntitiesPlugin, Plugin, getMetadata, isInTrustedContext } from "joist-orm";
+import { Author, Book, BookReview, Image, Publisher, Tag, User, newAuthor, newBook, newImage } from "src/entities";
 import { insertAuthor, insertBook, insertPublisher, insertTag, select } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";

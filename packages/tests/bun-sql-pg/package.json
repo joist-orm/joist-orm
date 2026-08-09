@@ -10,7 +10,6 @@
     "directory": "packages/tests/bun-sql-pg"
   },
   "scripts": {
-    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen",
     "test-skip": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
@@ -26,9 +25,7 @@
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   },
   "imports": {
     "src/": "src/*"

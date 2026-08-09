@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+
 import { syncDocs } from "./index";
 
 let testDir: string;

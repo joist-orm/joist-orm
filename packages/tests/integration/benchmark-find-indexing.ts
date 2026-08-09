@@ -1,6 +1,6 @@
 import { setDefaultEntityLimit } from "joist-orm";
 import { performance } from "node:perf_hooks";
-import { Author, SmallPublisher, type EntityManager, type Publisher } from "./src/entities";
+import { Author, type EntityManager, type Publisher, SmallPublisher } from "./src/entities";
 import { newEntityManager, testDriver } from "./src/testEm";
 
 type Row = Record<string, unknown>;

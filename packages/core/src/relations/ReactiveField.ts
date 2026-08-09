@@ -1,11 +1,11 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
-import { getMetadata, PrimitiveField } from "../EntityMetadata";
+import { PrimitiveField, getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
-import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
+import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { PropertyT } from "./hasProperty";
 

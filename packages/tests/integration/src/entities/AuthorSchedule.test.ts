@@ -1,6 +1,6 @@
 import { Author, AuthorSchedule, newAuthor, newAuthorSchedule } from "../entities";
-import { select } from "./inserts";
 import { newEntityManager } from "../testEm";
+import { select } from "./inserts";
 
 describe("AuthorSchedule commit rules", () => {
   it("runs a commit rule whose em.find sees the just-flushed siblings", async () => {

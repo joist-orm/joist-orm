@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
-import { Author, AuthorId, BookId, FavoriteShape, ImageId, newAuthor, PublisherId } from "src/entities";
+import { Author, AuthorId, BookId, FavoriteShape, ImageId, PublisherId, newAuthor } from "src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,

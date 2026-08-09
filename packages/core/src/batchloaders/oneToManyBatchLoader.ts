@@ -2,13 +2,13 @@ import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { getField } from "../fields";
 import {
+  OneToManyCollection,
+  OneToManyField,
+  ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-  OneToManyCollection,
-  OneToManyField,
-  ParsedFindQuery,
 } from "../index";
 import { abbreviation, groupBy } from "../utils";
 import { BatchLoader } from "./BatchLoader";

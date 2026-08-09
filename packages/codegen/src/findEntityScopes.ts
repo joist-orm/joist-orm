@@ -1,8 +1,10 @@
+import { readFile } from "fs/promises";
+import { join } from "path";
+
 import { type namedTypes } from "ast-types";
 import { camelCase } from "change-case";
-import { readFile } from "fs/promises";
 import jscodeshift from "jscodeshift";
-import { join } from "path";
+
 import { type Config } from "./config";
 import { type Entity } from "./EntityDbMetadata";
 

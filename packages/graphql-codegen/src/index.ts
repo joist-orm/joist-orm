@@ -1,5 +1,6 @@
 import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile } from "ts-poet";
+
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { generateEnumsGraphql } from "./generateEnumsGraphql";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";

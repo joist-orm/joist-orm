@@ -1,7 +1,8 @@
 import * as crypto from "crypto";
+
 import { getInstanceData } from "../BaseEntity";
-import { Todo } from "../Todo";
 import { keyToTaggedId } from "../keys";
+import { Todo } from "../Todo";
 
 export interface IdAssigner {
   assignNewIds(todos: Record<string, Todo>): Promise<void>;

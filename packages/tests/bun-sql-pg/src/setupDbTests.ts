@@ -1,5 +1,6 @@
-import { SQL } from "bun";
 import { beforeEach, expect } from "bun:test";
+
+import { SQL } from "bun";
 import { BunPgDriver } from "joist-driver-bun-pg";
 import { toMatchEntity } from "joist-test-utils";
 import { EntityManager } from "src/entities/index.ts";

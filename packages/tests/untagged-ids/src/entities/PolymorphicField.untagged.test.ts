@@ -1,4 +1,5 @@
 import { newEntityManager } from "src/setupDbTests";
+
 import { Comment, newBook, newComment } from "./entities";
 
 describe("Comment", () => {

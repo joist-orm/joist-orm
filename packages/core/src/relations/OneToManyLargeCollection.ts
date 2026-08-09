@@ -1,8 +1,8 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import { Entity } from "../Entity";
-import { appendStack, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata, getMetadataForField, LargeOneToManyField } from "../EntityMetadata";
-import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
+import { IdOf, appendStack, sameEntity } from "../EntityManager";
+import { EntityMetadata, LargeOneToManyField, getMetadataForField } from "../EntityMetadata";
+import { ManyToOneReferenceImpl, ensureNotDeleted, getMetadata } from "../index";
 import { lazyField } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";

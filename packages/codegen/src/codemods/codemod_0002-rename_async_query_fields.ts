@@ -1,4 +1,5 @@
 import { type Transform } from "jscodeshift";
+
 import { JscodeshiftMod } from "./JscodeshiftMod";
 
 export const codemod_0002_rename_async_query_fields = new JscodeshiftMod(
@@ -24,31 +25,25 @@ const renames = new Map<string, string>([
 const transform: Transform = function (file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
-  root
-    .find(j.Identifier)
-    .forEach((path) => {
-      const rename = renames.get(path.node.name);
-      if (!rename) {
-        return;
-      }
-      j(path).replaceWith(j.identifier(rename));
-    });
-  root
-    .find(j.ImportDeclaration)
-    .forEach((path) => {
-      const rename = renameModulePath(path.node.source.value);
-      if (rename) {
-        path.node.source.value = rename;
-      }
-    });
-  root
-    .find(j.ExportNamedDeclaration)
-    .forEach((path) => {
-      const rename = renameModulePath(path.node.source?.value);
-      if (rename && path.node.source) {
-        path.node.source.value = rename;
-      }
-    });
+  root.find(j.Identifier).forEach((path) => {
+    const rename = renames.get(path.node.name);
+    if (!rename) {
+      return;
+    }
+    j(path).replaceWith(j.identifier(rename));
+  });
+  root.find(j.ImportDeclaration).forEach((path) => {
+    const rename = renameModulePath(path.node.source.value);
+    if (rename) {
+      path.node.source.value = rename;
+    }
+  });
+  root.find(j.ExportNamedDeclaration).forEach((path) => {
+    const rename = renameModulePath(path.node.source?.value);
+    if (rename && path.node.source) {
+      path.node.source.value = rename;
+    }
+  });
   return root.toSource();
 };
 

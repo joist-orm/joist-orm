@@ -2,9 +2,9 @@ import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
 import { EnumMetadata } from "./EnumMetadata";
+import { keyToNumber, keyToTaggedId } from "./keys";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
-import { keyToNumber, keyToTaggedId } from "./keys";
 import { remove } from "./utils";
 
 /**

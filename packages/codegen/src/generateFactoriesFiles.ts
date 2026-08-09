@@ -1,5 +1,6 @@
 import { pascalCase } from "change-case";
-import { code, CodegenFile, imp } from "ts-poet";
+import { CodegenFile, code, imp } from "ts-poet";
+
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { DeepNew, FactoryOpts, newTestInstance } from "./symbols";
 

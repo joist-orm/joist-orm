@@ -1,7 +1,8 @@
 import { promises as fs } from "fs";
 import { join } from "path";
+
 import { DocsCache, getMtime } from "./cache";
-import { getMarkdownFilePath, maybeReadMarkdownFile, type ParsedDoc, updateMarkdownDoc } from "./markdown";
+import { type ParsedDoc, getMarkdownFilePath, maybeReadMarkdownFile, updateMarkdownDoc } from "./markdown";
 import { applyEdits, buildJSDocEdit, generatedTag, parseEntityJSDocs } from "./parsing";
 export { generateMetadataDocsFile } from "./generate-metadata-docs";
 export { type ParsedDoc } from "./markdown";

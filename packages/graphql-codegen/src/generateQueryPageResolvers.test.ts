@@ -1,4 +1,5 @@
 import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
+
 import { generateQueryPageResolvers } from "./generateQueryPageResolvers";
 import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils";
 

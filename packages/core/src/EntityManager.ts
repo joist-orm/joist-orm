@@ -1,21 +1,17 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
+
 import { getInstanceData } from "./BaseEntity";
 import { BatchLoader } from "./batchloaders/BatchLoader";
 import { enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader";
-import { loadOperation } from "./batchloaders/loadBatchLoader";
+import { loadBatchLoader, loadOperation } from "./batchloaders/loadBatchLoader";
 import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
 import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
 import { oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader";
-import { setAsyncDefaults, setSyncDefaults } from "./defaults";
-import { getField, setField } from "./fields";
-import { IndexManager } from "./IndexManager";
-// We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
 import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
 import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { type ConfigData, constraintNameToValidationError, type ReactiveRule } from "./config";
+import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
@@ -26,16 +22,16 @@ import { findPaginatedDataLoader } from "./dataloaders/findPaginatedDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
+import { setAsyncDefaults, setSyncDefaults } from "./defaults";
 import { Driver } from "./drivers";
+// We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { getField, setField } from "./fields";
 import { FlushLock } from "./FlushLock";
 import {
-  asConcreteCstr,
-  assertLoaded,
   Column,
   CustomCollection,
   CustomReference,
-  deepNormalizeHint,
   DeepPartialOrNull,
   EntityHook,
   EntityMetadata,
@@ -45,24 +41,11 @@ import {
   FieldLogger,
   FieldLoggerWatch,
   FindFilter,
-  getBaseAndSelfMetas,
-  getBaseMeta,
-  getBaseSelfAndSubMetas,
-  getConstructorFromTaggedId,
-  getMetadata,
-  getRelationEntries,
-  getRelations,
   GraphQLFilterOf,
   GraphQLFilterWithAlias,
   InstanceData,
-  isLoadedReference,
-  keyToNumber,
-  keyToTaggedId,
   Lens,
-  loadLens,
-  mergeFindOptions,
   OneToManyCollection,
-  optimizeCollectionJoins,
   ParsedFindQuery,
   PartialOrNull,
   Plugin,
@@ -70,20 +53,37 @@ import {
   ReactionLogger,
   ReactiveHint,
   Reference,
-  setOpts,
-  tagId,
   TimestampSerde,
-  toTaggedId,
   UniqueFilter,
   ValidationError,
   ValidationErrors,
   ValidationRule,
   type ValidationRuleInternal,
   ValidationRuleResult,
+  asConcreteCstr,
+  assertLoaded,
+  deepNormalizeHint,
+  getBaseAndSelfMetas,
+  getBaseMeta,
+  getBaseSelfAndSubMetas,
+  getConstructorFromTaggedId,
+  getMetadata,
+  getRelationEntries,
+  getRelations,
+  isLoadedReference,
+  keyToNumber,
+  keyToTaggedId,
+  loadLens,
+  mergeFindOptions,
+  optimizeCollectionJoins,
+  setOpts,
+  tagId,
+  toTaggedId,
 } from "./index";
+import { IndexManager } from "./IndexManager";
 import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows, ManyToManyLike } from "./JoinRows";
-import { isLoadedForPopulate, Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn, isLoadedForPopulate } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { noopFieldLogger } from "./logging/FieldLogger";
 import { newEntity } from "./newEntity";
@@ -98,22 +98,22 @@ import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { lazyColumnLoadOperation, LazyFieldImpl } from "./relations/LazyField";
+import { LazyFieldImpl, lazyColumnLoadOperation } from "./relations/LazyField";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { PojoRowData, RowData } from "./RowData";
 import { isSelectAllFilter } from "./scopes";
-import { combineJoinRows, createTodos, getTodo, JoinRowTodo, Todo } from "./Todo";
+import { JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
 import {
+  MaybePromise,
   assertNever,
   fail,
   failIfAnyRejected,
   getOrSet,
   groupBy,
   hasAnyKey,
-  MaybePromise,
   partition,
   toArray,
 } from "./utils";

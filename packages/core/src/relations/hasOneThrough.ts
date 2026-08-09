@@ -1,14 +1,14 @@
 import {
   CustomReference,
   Entity,
+  Lens,
+  Reference,
   getLensPath,
   getMetadata,
   isLensLoadedPath,
-  Lens,
   lensPathToLoadHint,
   lensToPath,
   loadLensPath,
-  Reference,
 } from "../index";
 import { lazyField } from "../newEntity";
 

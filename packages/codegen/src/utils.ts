@@ -3,8 +3,9 @@ import { isPlainObject } from "joist-utils";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
 import { code, imp } from "ts-poet";
-import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
+
 import { Config, getTimestampConfig } from "./config";
+import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
 
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);

@@ -1,5 +1,5 @@
-import { setDefaultEntityLimit, type Entity } from "joist-orm";
-import { performance, PerformanceObserver } from "node:perf_hooks";
+import { type Entity, setDefaultEntityLimit } from "joist-orm";
+import { PerformanceObserver, performance } from "node:perf_hooks";
 import { Author, type EntityManager } from "./src/entities";
 import { newEntityManager, testDriver } from "./src/testEm";
 

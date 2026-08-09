@@ -1,7 +1,7 @@
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
-import { emptyRowData, RowData } from "./RowData";
+import { RowData, emptyRowData } from "./RowData";
 import { hasAnyKey } from "./utils";
 
 /** The `#orm` metadata field we track on each instance. */

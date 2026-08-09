@@ -1,4 +1,5 @@
-import { Code, code, imp, Import } from "ts-poet";
+import { Code, Import, code, imp } from "ts-poet";
+
 import { Config } from "./config";
 import { DatabaseColumnType, DbMetadata, EntityDbMetadata, OneToManyField } from "./EntityDbMetadata";
 import {

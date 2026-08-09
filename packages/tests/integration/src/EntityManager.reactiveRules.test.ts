@@ -1,18 +1,18 @@
-import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
+import { MaybeAbstractEntityConstructor, getMetadata } from "joist-orm";
 import {
   Author,
   Book,
   BookReview,
   Color,
   Comment,
+  SmallPublisher,
+  Tag,
   newAuthor,
   newBook,
   newBookReview,
   newPublisher,
   newSmallPublisher,
   newTag,
-  SmallPublisher,
-  Tag,
 } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -481,7 +481,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
-      name: "Book.ts:138",
+      name: "Book.ts:139",
       fields: ["notes"],
       path: [],
       runOnce: false,

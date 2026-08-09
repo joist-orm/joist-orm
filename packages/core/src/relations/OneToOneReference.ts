@@ -1,14 +1,14 @@
 import {
+  IdOf,
+  LoadedReference,
+  OneToOneField,
+  TaggedId,
   appendStack,
   deTagId,
   ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
-  IdOf,
-  LoadedReference,
-  OneToOneField,
-  TaggedId,
 } from "../";
 import { oneToOneBatchLoader } from "../batchloaders/oneToOneBatchLoader";
 import { Entity } from "../Entity";
@@ -16,7 +16,7 @@ import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
 import { lazyField } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
+import { ManyToOneReference, failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { isReactiveReference } from "./ReactiveReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";

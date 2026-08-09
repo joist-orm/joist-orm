@@ -1,6 +1,5 @@
 import { Author, BookReview, newBookReview } from "src/entities";
 import { insertAuthor, insertBook, insertBookReview } from "src/entities/inserts";
-
 import { newEntityManager } from "src/testEm";
 
 describe("hasOneThrough", () => {

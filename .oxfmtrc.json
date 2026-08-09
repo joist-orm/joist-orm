@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "trailingComma": "all",
+  "sortPackageJson": false,
+  "sortImports": true,
+  "ignorePatterns": [
+    "**/entities/codegen/*.ts",
+    "**/entities/metadata.ts",
+    "**/entities/factories.ts",
+    "**/src/generated/*.ts",
+    "**/__testfixtures__/**"
+  ]
+}

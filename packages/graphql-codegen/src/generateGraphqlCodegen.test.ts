@@ -1,5 +1,6 @@
 import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { Code } from "ts-poet";
+
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
 
 describe("generateGraphqlCodegen", () => {

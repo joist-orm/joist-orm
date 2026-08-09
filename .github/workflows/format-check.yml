@@ -15,4 +15,4 @@ jobs:
         with:
           node-version: 22
       - run: yarn install
-      - run: yarn format --check
+      - run: yarn format:check

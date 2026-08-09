@@ -3,6 +3,7 @@ import { groupBy } from "joist-utils";
 import { Action, Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { Code, Import, code, imp } from "ts-poet";
+
 import {
   Config,
   fieldTypeConfig,

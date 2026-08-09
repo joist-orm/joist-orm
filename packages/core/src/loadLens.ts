@@ -1,16 +1,16 @@
+import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { Entity, isEntity } from "./Entity";
 import { appendStack } from "./EntityManager";
 import {
   EntityMetadata,
   Field,
-  getMetadata,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PrimitiveField,
+  getMetadata,
 } from "./EntityMetadata";
-import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { LoadHint } from "./loadHints";
 import { isProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";

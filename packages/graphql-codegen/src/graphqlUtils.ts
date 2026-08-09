@@ -3,15 +3,16 @@ import {
   InputObjectTypeDefinitionNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
+  UnionTypeDefinitionNode,
   parse,
   print,
-  UnionTypeDefinitionNode,
   visit,
 } from "graphql";
 import { PrimitiveField, PrimitiveTypescriptType } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import prettier, { Options, resolveConfig } from "prettier";
 import { Code, Import } from "ts-poet";
+
 import { Fs } from "./utils";
 
 /** A type for the fields we want to add to `*.graphql` files. */

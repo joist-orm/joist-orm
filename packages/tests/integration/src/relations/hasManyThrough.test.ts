@@ -1,7 +1,7 @@
 import { insertAuthor, insertBook, insertBookReview } from "src/entities/inserts";
-import { Author, BookReview, newAuthor } from "../entities";
-
 import { newEntityManager } from "src/testEm";
+
+import { Author, BookReview, newAuthor } from "../entities";
 
 describe("hasManyThrough", () => {
   it("can load a collection", async () => {

@@ -1,5 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertImage, select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
 import { Author, Book, BookReview, Image, ImageType } from "../entities";
 
 describe("CustomReference", () => {

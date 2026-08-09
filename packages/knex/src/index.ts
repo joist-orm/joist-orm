@@ -1,13 +1,14 @@
 import {
   Entity,
   FilterAndSettings,
-  getMetadata,
   MaybeAbstractEntityConstructor,
+  getMetadata,
   optimizeCollectionJoins,
   parseFindQuery,
 } from "joist-core";
-import { knex as baseCreateKnex, Knex } from "knex";
+import { Knex, knex as baseCreateKnex } from "knex";
 import pg from "pg";
+
 import { buildKnexQuery } from "./buildKnexQuery";
 
 /**

@@ -1,15 +1,16 @@
 import {
+  Property,
+  ReactiveField,
+  Reference,
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
   hasReactiveField,
   hasReactiveProperty,
-  Property,
-  ReactiveField,
-  Reference,
   withLoaded,
 } from "joist-orm";
-import { Author, Book, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
+
+import { Author, Book, BookReviewCodegen, Publisher, bookReviewConfig as config } from "./entities";
 
 // For testing cross-entity hook ordering. Normally we'd used a transientFields flag, but we want
 // the `Book.beforeFlush` to be able to read this value without a `"reviews"` load hint, as that

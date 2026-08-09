@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { keyToNumber, ManyToManyLike, ParsedFindQuery } from "../index";
+import { ManyToManyLike, ParsedFindQuery, keyToNumber } from "../index";
 import { abbreviation, getOrSet } from "../utils";
 import { BatchLoader } from "./BatchLoader";
 

@@ -2,7 +2,7 @@ import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { FindFilterOptions, IdOf } from "./EntityManager";
 import { ColumnCondition, RawCondition } from "./QueryParser";
-import { isScope, resolveScope, type Scope } from "./scopes";
+import { type Scope, isScope, resolveScope } from "./scopes";
 import { FieldsOf, FilterOf, OrderOf } from "./typeMap";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */

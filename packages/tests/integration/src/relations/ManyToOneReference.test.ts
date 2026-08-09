@@ -2,6 +2,7 @@ import { expect } from "@jest/globals";
 import { NoIdError } from "joist-orm";
 import { insertAuthor, insertBook, insertPublisher, select, update } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+
 import { Author, Book, newAuthor, newBook, newPublisher, newUser } from "../entities";
 
 describe("ManyToOneReference", () => {

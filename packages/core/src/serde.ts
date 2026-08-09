@@ -1,6 +1,7 @@
 import type { Temporal } from "temporal-polyfill";
+
 import { InsertFixup } from "./drivers/EntityWriter";
-import { Field, getBaseMeta, getMetadata, PolymorphicField, SerdeField } from "./EntityMetadata";
+import { Field, PolymorphicField, SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata";
 import {
   Entity,
   EntityMetadata,

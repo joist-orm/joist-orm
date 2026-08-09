@@ -2,7 +2,7 @@ import { getInstanceData } from "../BaseEntity";
 import { BatchLoader } from "../batchloaders/BatchLoader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { EntityMetadata, getMetadata, PrimitiveField } from "../EntityMetadata";
+import { EntityMetadata, PrimitiveField, getMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
 import { keyToNumber, tagId } from "../keys";
 import { kqDot } from "../keywords";

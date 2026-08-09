@@ -1,5 +1,7 @@
 import { readdir } from "fs/promises";
-import { code, CodegenFile, def, imp } from "ts-poet";
+
+import { CodegenFile, code, def, imp } from "ts-poet";
+
 import { generateMetadataDocsFile, loadEntityDocs, syncDocs } from "./docs";
 import { findAllEntityScopes } from "./findEntityScopes";
 import { generateEntitiesFile } from "./generateEntitiesFile";
@@ -11,7 +13,7 @@ import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
-import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
+import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;

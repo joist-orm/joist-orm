@@ -1,15 +1,8 @@
 import {
-  assertNever,
   Column,
-  createRowFromEntityData,
   Entity,
   EntityManager,
   EnumCollectionImpl,
-  getEmInternalApi,
-  getInstanceData,
-  getMetadata,
-  getRelations,
-  isEntity,
   JoinRow,
   JoinRowTodo,
   ManyToManyCollection,
@@ -25,6 +18,13 @@ import {
   ReactiveManyToManyOtherSideImpl,
   ReactiveReferenceImpl,
   Todo,
+  assertNever,
+  createRowFromEntityData,
+  getEmInternalApi,
+  getInstanceData,
+  getMetadata,
+  getRelations,
+  isEntity,
 } from "joist-core";
 
 /*

@@ -8,10 +8,10 @@ import {
   getBaseSelfAndSubMetas,
   getMetadata,
 } from "../EntityMetadata";
-import { Todo } from "../Todo";
 import { getField, isChangeableField } from "../fields";
 import { keyToNumber } from "../keys";
 import { Column, TimestampSerde, hasSerde } from "../serde";
+import { Todo } from "../Todo";
 import { groupBy } from "../utils";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */

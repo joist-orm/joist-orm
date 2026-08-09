@@ -1,20 +1,20 @@
 import { getInstanceData } from "./BaseEntity";
+import { Changes } from "./changes";
 import { Entity, isEntity } from "./Entity";
-import { getEmInternalApi, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { MaybeAbstractEntityConstructor, getEmInternalApi, isId } from "./EntityManager";
 import {
   EntityMetadata,
-  getBaseAndSelfMetas,
-  getMetadata,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicFieldComponent,
+  getBaseAndSelfMetas,
+  getMetadata,
 } from "./EntityMetadata";
-import { Changes } from "./changes";
 import { getProperties } from "./getProperties";
-import { Loadable, Loaded, LoadHint } from "./loadHints";
-import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
+import { LoadHint, Loadable, Loaded } from "./loadHints";
+import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
 import {
   Collection,
   EnumCollection,

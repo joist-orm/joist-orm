@@ -1,6 +1,4 @@
-import { ChildGroupCodegen } from "./entities";
-
-import { childGroupConfig as config } from "./entities";
+import { ChildGroupCodegen, childGroupConfig as config } from "./entities";
 
 export class ChildGroup extends ChildGroupCodegen {}
 

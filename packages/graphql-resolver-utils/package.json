@@ -33,9 +33,6 @@
       ]
     }
   },
-  "scripts": {
-    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
-  },
   "files": [
     "build"
   ],
@@ -52,9 +49,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
     "jest": "30.4.2",
-    "prettier": "^3.9.6",
-    "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

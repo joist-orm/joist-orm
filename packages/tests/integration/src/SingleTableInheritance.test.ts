@@ -1,14 +1,14 @@
 import { getProperties } from "joist-orm";
 import {
-  newAuthor,
-  newTaskItem,
-  newTaskNew,
-  newTaskOld,
   Task,
   TaskItem,
   TaskNew,
   TaskOld,
   TaskType,
+  newAuthor,
+  newTaskItem,
+  newTaskNew,
+  newTaskOld,
 } from "src/entities";
 import { insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";

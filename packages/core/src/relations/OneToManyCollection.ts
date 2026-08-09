@@ -1,18 +1,18 @@
 import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
-  appendStack,
   Collection,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
+  IdOf,
+  OneToManyField,
+  appendStack,
+  ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
-  getMetadataForField,
   getMetadata,
-  IdOf,
+  getMetadataForField,
   maybeResolveReferenceToId,
-  OneToManyField,
   sameEntity,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";

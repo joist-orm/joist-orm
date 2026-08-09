@@ -2,6 +2,7 @@ import { camelCase } from "change-case";
 import { Config, DbMetadata } from "joist-codegen";
 import pluralize from "pluralize";
 import { CodegenFile, code, imp } from "ts-poet";
+
 import { getEntitiesImportPath } from "./utils";
 
 const queryResolvers = imp("t:QueryResolvers@src/generated/graphql-types.ts");

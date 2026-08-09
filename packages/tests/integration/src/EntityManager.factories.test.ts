@@ -16,6 +16,9 @@ import {
   Comment,
   CommentParent,
   LargePublisher,
+  Publisher,
+  PublisherType,
+  SmallPublisher,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
   lastCriticFactory,
@@ -35,9 +38,6 @@ import {
   newSmallPublisher,
   newTag,
   parentGroupBranchValue,
-  Publisher,
-  PublisherType,
-  SmallPublisher,
 } from "src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "src/testEm";
 

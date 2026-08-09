@@ -1,5 +1,6 @@
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
+import { kqDot } from "../keywords";
 import {
   type ColumnCondition,
   type ExistsCondition,
@@ -7,7 +8,6 @@ import {
   type ParsedFindQuery,
   type RawCondition,
 } from "../QueryParser";
-import { kqDot } from "../keywords";
 import { assertNever, fail } from "../utils";
 
 /** Renders a ParsedFindQuery subquery to SQL — passed in to avoid circular imports with buildRawQuery. */

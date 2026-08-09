@@ -109,6 +109,10 @@ export class WireRowData implements RowData {
     return bytes;
   }
 
+  has(rowIndex: number, columnName: string): boolean {
+    return this.#columns.has(columnName);
+  }
+
   get(rowIndex: number, columnName: string): any {
     const column = this.#columns.get(columnName);
     // Tolerate probes for columns the query didn't select, i.e. `__class` on non-CTI queries

@@ -1,6 +1,6 @@
 import { DeepNew, getInstanceData } from "joist-orm";
 import { alignedAnsiStyleSerializer } from "src/alignedAnsiStyleSerializer";
-import { Author, Book, newAuthor, newBook } from "src/entities";
+import { Author, Book, newAuthor, newBook, newPublisher } from "src/entities";
 import { jan1 } from "src/testDates";
 import { newEntityManager } from "src/testEm";
 
@@ -52,18 +52,26 @@ describe("toMatchEntity", () => {
     expect(a1).toMatchEntity({ books: [{ deletedAt: jan1 }] });
   });
 
-  it("can match async properties", async () => {
+  it("can match properties", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
     expect(a1).toMatchEntity({ numberOfBooks2: 2 });
   });
 
-  it("can match persisted async properties", async () => {
+  it("can match reactive fields", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
     expect(a1).toMatchEntity({ numberOfBooks: 2 });
+  });
+
+  it("can match async properties, if they're loaded", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { authors: [{}] });
+    await em.flush();
+    await p1.numberOfAuthors.load();
+    expect(p1).toMatchEntity({ numberOfAuthors: 1 });
   });
 
   it("can match reference with entity directly", async () => {

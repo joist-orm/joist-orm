@@ -5,6 +5,7 @@ import {
   Property,
   ReadOnlyCollection,
   Reference,
+  isAsyncProperty,
   isCollection,
   isDefined,
   isEntity,
@@ -170,7 +171,9 @@ function maybeGetRelation(actualValue: unknown): unknown {
     isReference(actualValue) ||
     isCollection(actualValue) ||
     isProperty(actualValue) ||
-    isReactiveField(actualValue)
+    isReactiveField(actualValue) ||
+    // hasAsyncPropertys will work if they've been already loaded, so let the user try it
+    isAsyncProperty(actualValue)
   ) {
     return getWithSoftDeleted(actualValue);
   }

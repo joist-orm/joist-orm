@@ -314,6 +314,36 @@ describe("EntityManager.reactions", () => {
     });
   });
 
+  it.withCtx("manually runs a named reaction", async ({ em }) => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ id: 2, first_name: "a2" });
+    const authors = await em.find(Author, {}, { orderBy: { id: "ASC" } });
+
+    await em.recalc(authors, "direct");
+
+    expect(authors.map((a) => a.transientFields.reactions.direct)).toEqual([1, 1]);
+    expect(authors.map((a) => a.transientFields.reactions.m2o)).toEqual([0, 0]);
+  });
+
+  it.withCtx("loads a manually-run reaction's hint", async ({ em }) => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const author = await em.load(Author, "a:1");
+
+    await em.recalc(author, "m2o");
+
+    expect(author.transientFields.reactions.m2o).toBe(1);
+    expect(author.transientFields.reactions.observedPublishers).toMatchEntity([{ id: "p:1" }]);
+  });
+
+  it.withCtx("rejects an unknown manually-run reaction", async ({ em }) => {
+    await insertAuthor({ first_name: "a1" });
+    const author = await em.load(Author, "a:1");
+
+    await expect(em.recalc(author, "missing")).rejects.toThrow("Reaction 'missing' not found on Author");
+    expect(author.transientFields.reactions.direct).toBe(0);
+  });
+
   it.withCtx("runs all reactions on create", async ({ em }) => {
     // Given a new author
     const a = newAuthor(em);

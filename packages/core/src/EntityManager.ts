@@ -2348,7 +2348,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Recalculates the reactive fields for an entity, and any downstream reactive fields or reactions that depend on them.
+   * Recalculates an entity's reactive fields or explicitly runs a named reaction.
    *
    * You shouldn't need to call this unless the derived fields have drifted from the underlying data, which
    * should only happen if:
@@ -2356,15 +2356,34 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * - The underlying data was changed by a raw SQL query, or
    * - You've changed the field's business logic and want to update the database to the latest value.
    *
-   * You can also trigger a recalc for specific fields by calling `.load()` on the property, i.e.
+   * Pass `reactionName` to run only that named reaction on each entity. You can also trigger a recalc for
+   * specific fields by calling `.load()` on the property, i.e.
    * `author.numberOfBooks.load()`. This `recalc` method is just a helper method to call `load` for
    * all derived fields on the given entity/entities.
    */
   public recalc(entity: EntityW): Promise<void>;
   public recalc(entities: EntityW[]): Promise<void>;
-  public async recalc(entityOrEntities: EntityW | EntityW[]): Promise<void> {
+  public recalc(entity: EntityW, reactionName: string): Promise<void>;
+  public recalc(entities: EntityW[], reactionName: string): Promise<void>;
+  public async recalc(entityOrEntities: EntityW | EntityW[], reactionName?: string): Promise<void> {
+    const entities = toArray(entityOrEntities);
+    if (reactionName !== undefined) {
+      // Resolve every reaction before invoking any of them so a mixed list cannot partially run.
+      const reactions = entities.map((entity) => {
+        const reaction = getBaseAndSelfMetas(getMetadata(entity))
+          .flatMap((meta) => meta.config.__data.reactions)
+          .find((reaction) => reaction.name === reactionName);
+        return reaction ?? fail(`Reaction '${reactionName}' not found on ${getMetadata(entity).type}`);
+      });
+      await runInTrustedContext(() =>
+        Promise.allSettled(reactions.map((reaction, i) => reaction.fn(entities[i], this.ctx))).then(failIfAnyRejected),
+      );
+      await this.#rm.recalcPendingReactables("reactables");
+      return;
+    }
+
     // Look for async reactive fields
-    const relations = toArray(entityOrEntities).flatMap((entity) =>
+    const relations = entities.flatMap((entity) =>
       Object.values(getMetadata(entity).allFields)
         .filter((f) => "derived" in f && f.derived === "async")
         .map((field) => (entity as any)[field.fieldName]),
@@ -2373,7 +2392,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await Promise.all(relations.map((r: any) => r.load({ forceReload: true })));
 
     // And also sync reactive fields
-    toArray(entityOrEntities).flatMap((entity) =>
+    entities.flatMap((entity) =>
       Object.values(getMetadata(entity).allFields)
         .filter((f) => "derived" in f && f.derived === "sync")
         .forEach((field) => {

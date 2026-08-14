@@ -444,7 +444,7 @@ export type Reactable = ReactiveField | Reaction;
 
 interface ReactionInternal<T extends Entity, H extends ReactiveHint<T>, C> {
   name: string;
-  fn: HookFn<Reacted<T, H>, C>;
+  fn: HookFn<T, C>;
   hint: H;
   runOnce: boolean;
 }

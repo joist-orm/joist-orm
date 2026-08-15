@@ -1,7 +1,7 @@
 import { Entity } from "../Entity";
 import { lazyField } from "../newEntity";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { Property, PropertyT } from "./hasProperty";
+import { type LoadedProperty, Property, PropertyT } from "./hasProperty";
 
 export interface AsyncProperty<T extends Entity, V> extends Property<T, V> {
   load(opts?: { forceReload?: boolean }): Promise<V>;
@@ -81,6 +81,6 @@ export function isAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> {
 }
 
 /** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> {
+export function isLoadedAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> & LoadedProperty<any, any> {
   return isAsyncProperty(maybe) && maybe.isLoaded;
 }

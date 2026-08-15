@@ -10,7 +10,7 @@ import {
 } from "graphql";
 import { convertInfoToLoadHint, entityResolver } from "joist-graphql-resolver-utils";
 import { getMetadata } from "joist-orm";
-import { Author, BookRange, ParentGroup, type Publisher } from "src/entities";
+import { Author, BookRange, ParentGroup, Publisher } from "src/entities";
 import { insertAuthor, insertBook, insertParentGroup, insertPublisher, update } from "src/entities/inserts";
 import { type Resolver } from "src/generated/graphql-types";
 import { newEntityManager } from "src/testEm";
@@ -189,6 +189,17 @@ describe("entityResolver", () => {
     const a = await em.load(Author, "a:1");
     const result = await entityResolver(Author).isRed(a, {}, {}, undefined!);
     expect(result).toBe(false);
+  });
+
+  it("loads async properties on demand and returns loaded values synchronously", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    const resolver = entityResolver(Publisher).numberOfAuthors;
+
+    expect(await resolver(p, {}, {}, undefined!)).toBe(1);
+    expect(resolver(p, {}, {}, undefined!)).toBe(1);
   });
 
   it("loads lazy jsonb fields on demand", async () => {

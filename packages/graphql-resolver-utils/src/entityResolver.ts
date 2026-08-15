@@ -19,7 +19,9 @@ import {
   Reference,
   getMetadata,
   getProperties,
+  isAsyncProperty,
   isCollection,
+  isLoadedAsyncProperty,
   isLoadedCollection,
   isLoadedLazyField,
   isLoadedProperty,
@@ -188,8 +190,13 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         return (property as Function).apply(entity);
       } else if (isReactiveGetter(property)) {
         return property.get;
-      } else if (isReference(property) || isCollection(property) || isProperty(property)) {
-        if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedProperty(property)) {
+      } else if (isReference(property) || isCollection(property) || isProperty(property) || isAsyncProperty(property)) {
+        if (
+          isLoadedReference(property) ||
+          isLoadedCollection(property) ||
+          isLoadedProperty(property) ||
+          isLoadedAsyncProperty(property)
+        ) {
           return property.get;
         }
         // ...we need to know the `property.otherMetadata()` return type, which isn't available right now

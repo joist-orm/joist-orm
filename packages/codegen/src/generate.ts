@@ -1,4 +1,5 @@
 import { readdir } from "fs/promises";
+import { createRequire } from "node:module";
 
 import { CodegenFile, code, def, imp } from "ts-poet";
 
@@ -15,6 +16,8 @@ import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
 import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
+
+const runtimeRequire = createRequire(__filename);
 
 export type DPrintOptions = Record<string, unknown>;
 
@@ -154,7 +157,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const pluginFiles: CodegenFile[] = (
     await Promise.all(
       (config.codegenPlugins ?? []).map((p) => {
-        const plugin = require(p) as CodegenPlugin;
+        const plugin = runtimeRequire(p) as CodegenPlugin;
         return plugin.run(config, dbMeta);
       }),
     )

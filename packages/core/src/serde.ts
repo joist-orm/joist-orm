@@ -1,4 +1,4 @@
-import type { Temporal } from "temporal-polyfill";
+import { createRequire } from "node:module";
 
 import { InsertFixup } from "./drivers/EntityWriter";
 import { Field, PolymorphicField, SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata";
@@ -14,9 +14,11 @@ import {
 } from "./index";
 import { RowData } from "./RowData";
 import { getRuntimeConfig } from "./runtimeConfig";
-import { requireTemporal } from "./temporal";
+import { type Temporal, requireTemporal } from "./temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers";
 import { groupBy } from "./utils";
+
+const runtimeRequire = createRequire(__filename);
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -544,7 +546,7 @@ export class SuperstructSerde implements FieldSerde {
 
   // Use a dynamic require so that downstream projects don't have to depend on superstruct
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
-  private assert = require("superstruct").assert;
+  private assert = runtimeRequire("superstruct").assert;
 
   constructor(
     private fieldName: string,

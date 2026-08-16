@@ -1,4 +1,7 @@
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+
+const runtimeRequire = createRequire(__filename);
 
 /**
  * Patches pg-protocol at runtime so that DataRow messages are lazy *and* their bytes are
@@ -193,11 +196,11 @@ function growPartial(parser: any, needed: number): void {
 function resolvePgProtocol(): { Parser: any; version: string } {
   // Resolve pg-protocol relative to pg, so that we patch the copy pg's Connections actually
   // use, even if the dependency tree has multiple pg-protocol installs
-  const pgPath = require.resolve("pg");
-  const parserPath = require.resolve("pg-protocol/dist/parser.js", { paths: [dirname(pgPath)] });
+  const pgPath = runtimeRequire.resolve("pg");
+  const parserPath = runtimeRequire.resolve("pg-protocol/dist/parser.js", { paths: [dirname(pgPath)] });
   // An absolute-path require bypasses the package's exports map, so this is always readable
-  const { version } = require(join(dirname(parserPath), "..", "package.json"));
-  return { Parser: require(parserPath).Parser, version };
+  const { version } = runtimeRequire(join(dirname(parserPath), "..", "package.json"));
+  return { Parser: runtimeRequire(parserPath).Parser, version };
 }
 
 /** Round-trips a synthetic two-cell DataRow (utf8 + NULL) through a fresh patched Parser. */

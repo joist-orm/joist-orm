@@ -1,7 +1,7 @@
 import path from "path";
 
 import fastglob from "fast-glob";
-import { run as jscodeshift } from "jscodeshift/src/Runner";
+import { run as jscodeshift } from "jscodeshift/src/Runner.js";
 
 import { type Config } from "../config";
 import { type Codemod } from "./Codemod";

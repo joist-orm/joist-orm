@@ -4579,6 +4579,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@topoconfig/extends@npm:^0.16.2":
+  version: 0.16.5
+  resolution: "@topoconfig/extends@npm:0.16.5"
+  bin:
+    xtends: target/esm/cli.mjs
+  checksum: 10/3c5d16fb57f86212dece35861891e4de7c1dd6c548abc29ab0b05ee35613f768fd30e602dd7eafbe587588d56b6f78710ef75ae8dfa07a59cb378ddaf57fdb40
+  languageName: node
+  linkType: hard
+
 "@tsconfig/node20@npm:^20.1.9":
   version: 20.1.9
   resolution: "@tsconfig/node20@npm:20.1.9"
@@ -6893,6 +6902,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"depseek@npm:^0.4.1":
+  version: 0.4.6
+  resolution: "depseek@npm:0.4.6"
+  checksum: 10/9f1f92b08bb5f398e878d681f54d6ba4d53d8a552a9fc3d969cfc8b7f7d745f85608838d6f7d2f102045686402ce57c113c9d9f46eddb9490dd051bd366355a4
+  languageName: node
+  linkType: hard
+
 "dequal@npm:^2.0.0":
   version: 2.0.3
   resolution: "dequal@npm:2.0.3"
@@ -7593,7 +7609,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-glob@npm:^3.2.9, fast-glob@npm:^3.3.3":
+"fast-glob@npm:^3.2.9, fast-glob@npm:^3.3.2, fast-glob@npm:^3.3.3":
   version: 3.3.3
   resolution: "fast-glob@npm:3.3.3"
   dependencies:
@@ -7866,6 +7882,17 @@ __metadata:
     jsonfile: "npm:^6.0.1"
     universalify: "npm:^2.0.0"
   checksum: 10/0579bf6726a4cd054d4aa308f10b483f52478bb16284f32cf60b4ce0542063d551fca1a08a2af365e35db21a3fa5a06cf2a6ed614004b4368982bc754cb816b3
+  languageName: node
+  linkType: hard
+
+"fs-extra@npm:^11.2.0":
+  version: 11.4.0
+  resolution: "fs-extra@npm:11.4.0"
+  dependencies:
+    graceful-fs: "npm:^4.2.0"
+    jsonfile: "npm:^6.0.1"
+    universalify: "npm:^2.0.0"
+  checksum: 10/a1bd91076fe9de9114bd037a433f1f498857eb3f0cf778e647fd00dc5984374dee5e088854de3d6ca77cd9f11554a85f6f016a6004d0838bbc7cd722e33601ce
   languageName: node
   linkType: hard
 
@@ -9885,6 +9912,7 @@ __metadata:
     dataloader: "npm:^2.2.3"
     jest: "npm:30.4.2"
     temporal-polyfill: "npm:^0.3.2"
+    temporal-spec: "npm:^0.3.1"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
   peerDependencies:
@@ -10379,6 +10407,7 @@ __metadata:
     oxfmt: "npm:0.62.0"
     oxlint: "npm:1.77.0"
     semantic-release: "npm:^25.0.9"
+    tsc-esm-fix: "npm:3.1.2"
     typescript: "npm:7.0.2"
   languageName: unknown
   linkType: soft
@@ -15766,7 +15795,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-spec@npm:0.3.1":
+"temporal-spec@npm:0.3.1, temporal-spec@npm:^0.3.1":
   version: 0.3.1
   resolution: "temporal-spec@npm:0.3.1"
   checksum: 10/69509d1a4162c834b76d1394a3a97cef57df9ec912b8aa549a989be8bd75f25a72c987fcc7747d566298b73d4264be9e48a8d0a91e60edcb71c7901aabfb00e7
@@ -16010,6 +16039,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tsc-esm-fix@npm:3.1.2":
+  version: 3.1.2
+  resolution: "tsc-esm-fix@npm:3.1.2"
+  dependencies:
+    "@topoconfig/extends": "npm:^0.16.2"
+    depseek: "npm:^0.4.1"
+    fast-glob: "npm:^3.3.2"
+    fs-extra: "npm:^11.2.0"
+    json5: "npm:^2.2.3"
+    type-flag: "npm:^3.0.0"
+  bin:
+    tsc-esm-fix: target/esm/cli.mjs
+  checksum: 10/bccaf74aeae01d3cc2aedbbd628d809659027a594710886c48ed7cb01884e4f57d7130e1e5dfa0000cb238daa50683ed692609959572c0ddf687765eca3c1813
+  languageName: node
+  linkType: hard
+
 "tsconfig-paths@npm:^4.2.0":
   version: 4.2.0
   resolution: "tsconfig-paths@npm:4.2.0"
@@ -16109,6 +16154,13 @@ __metadata:
   dependencies:
     tagged-tag: "npm:^1.0.0"
   checksum: 10/2cc7a510f46a538af7a365ed50cee10e51a69bd353ca66c2a432e172b90ff12efff9ba59c7ba493d6361d07fd298c84945b9e4481ab63f85a29860c0b0430233
+  languageName: node
+  linkType: hard
+
+"type-flag@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "type-flag@npm:3.0.0"
+  checksum: 10/1a9ddaba06355666ca5d26725604dd707d31dadf7536eb6e7e3c2520d84d773944b4e53f94da8b08bf9064be721a6b9ebbff65d524e5f03767a729966087fd32
   languageName: node
   linkType: hard
 

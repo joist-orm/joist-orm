@@ -10,10 +10,12 @@ import {
   makeEntity,
 } from "joist-codegen";
 import { keyBy } from "joist-utils";
-import { plural } from "pluralize";
+import pluralize from "pluralize";
 import { CodegenFile, imp } from "ts-poet";
 
 import { Fs, getImportExtension } from "./utils";
+
+const { plural } = pluralize;
 
 export function newFs(files: Record<string, string>): Fs {
   return {

@@ -1,7 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
 import { Action, Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
-import { plural, singular } from "pluralize";
+import pluralize from "pluralize";
 import { Code, Import, code, imp } from "ts-poet";
 
 import {
@@ -35,6 +35,8 @@ import {
   parseOrder,
   tableToEntityName,
 } from "./utils";
+
+const { plural, singular } = pluralize;
 
 /** All the entities + enums in our database. */
 export interface DbMetadata {

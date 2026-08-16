@@ -6,10 +6,12 @@ import {
   optimizeCollectionJoins,
   parseFindQuery,
 } from "joist-core";
-import { Knex, knex as baseCreateKnex } from "knex";
+import knex, { type Knex } from "knex";
 import pg from "pg";
 
 import { buildKnexQuery } from "./buildKnexQuery";
+
+const { knex: baseCreateKnex } = knex;
 
 /**
  * Builds the Knex queries from `em.find`-style parameters.

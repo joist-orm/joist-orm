@@ -2,8 +2,35 @@
   "name": "joist-test-utils",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "commonjs",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "bun": "./build/esm/index.mjs",
+      "module-sync": "./build/esm/index.mjs",
+      "import": "./build/esm/index.mjs",
+      "require": "./build/index.js",
+      "default": "./build/index.js"
+    },
+    "./build/*.js": {
+      "types": "./build/*.d.ts",
+      "bun": "./build/esm/*.mjs",
+      "module-sync": "./build/esm/*.mjs",
+      "import": "./build/esm/*.mjs",
+      "require": "./build/*.js",
+      "default": "./build/*.js"
+    },
+    "./build/*": {
+      "types": "./build/*.d.ts",
+      "bun": "./build/esm/*.mjs",
+      "module-sync": "./build/esm/*.mjs",
+      "import": "./build/esm/*.mjs",
+      "require": "./build/*.js",
+      "default": "./build/*.js"
+    }
+  },
   "files": [
     "build"
   ],

@@ -17,7 +17,7 @@ export async function joistMigrate(): Promise<void> {
 }
 
 // If we're being run locally.
-if (require.main === module) {
+if (typeof module !== "undefined" && require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
   }

@@ -1,5 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
-import { plural } from "pluralize";
+import pluralize from "pluralize";
 import { Code, code, imp, joinCode } from "ts-poet";
 
 import { type Config } from "./config";
@@ -95,6 +95,8 @@ import {
 } from "./symbols";
 import { tsdocComments } from "./tsdoc";
 import { assertNever, fail, uncapitalize } from "./utils";
+
+const { plural } = pluralize;
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;

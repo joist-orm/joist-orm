@@ -1,8 +1,8 @@
 import { promises as fs } from "fs";
-import { join, resolve } from "path";
+import { basename, join, resolve } from "path";
 
 /** The bundled skills live at the package root, alongside `build`/`src`. */
-const bundledSkillsDir = resolve(__dirname, "../skills");
+const bundledSkillsDir = resolve(__dirname, basename(__dirname) === "esm" ? "../../skills" : "../skills");
 
 /**
  * Targets that each get a full copy of every skill directory.

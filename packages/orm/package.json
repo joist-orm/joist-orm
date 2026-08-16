@@ -2,6 +2,7 @@
   "name": "joist-orm",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -44,34 +45,66 @@
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
+      "bun": "./build/esm/index.mjs",
+      "module-sync": "./build/esm/index.mjs",
+      "import": "./build/esm/index.mjs",
+      "require": "./build/index.js",
       "default": "./build/index.js"
     },
     "./codegen": {
       "types": "./build/codegen.d.ts",
+      "bun": "./build/esm/codegen.mjs",
+      "module-sync": "./build/esm/codegen.mjs",
+      "import": "./build/esm/codegen.mjs",
+      "require": "./build/codegen.js",
       "default": "./build/codegen.js"
     },
     "./pg-migrate": {
       "types": "./build/pg-migrate.d.ts",
+      "bun": "./build/esm/pg-migrate.mjs",
+      "module-sync": "./build/esm/pg-migrate.mjs",
+      "import": "./build/esm/pg-migrate.mjs",
+      "require": "./build/pg-migrate.js",
       "default": "./build/pg-migrate.js"
     },
     "./graphql": {
       "types": "./build/graphql-export.d.ts",
+      "bun": "./build/esm/graphql-export.mjs",
+      "module-sync": "./build/esm/graphql-export.mjs",
+      "import": "./build/esm/graphql-export.mjs",
+      "require": "./build/graphql-export.js",
       "default": "./build/graphql-export.js"
     },
     "./graphql-codegen": {
       "types": "./build/graphql-codegen-export.d.ts",
+      "bun": "./build/esm/graphql-codegen-export.mjs",
+      "module-sync": "./build/esm/graphql-codegen-export.mjs",
+      "import": "./build/esm/graphql-codegen-export.mjs",
+      "require": "./build/graphql-codegen-export.js",
       "default": "./build/graphql-codegen-export.js"
     },
     "./tests": {
       "types": "./build/tests-export.d.ts",
+      "bun": "./build/esm/tests-export.mjs",
+      "module-sync": "./build/esm/tests-export.mjs",
+      "import": "./build/esm/tests-export.mjs",
+      "require": "./build/tests-export.js",
       "default": "./build/tests-export.js"
     },
     "./knex": {
       "types": "./build/knex-export.d.ts",
+      "bun": "./build/esm/knex-export.mjs",
+      "module-sync": "./build/esm/knex-export.mjs",
+      "import": "./build/esm/knex-export.mjs",
+      "require": "./build/knex-export.js",
       "default": "./build/knex-export.js"
     },
     "./pg": {
       "types": "./build/pg-export.d.ts",
+      "bun": "./build/esm/pg-export.mjs",
+      "module-sync": "./build/esm/pg-export.mjs",
+      "import": "./build/esm/pg-export.mjs",
+      "require": "./build/pg-export.js",
       "default": "./build/pg-export.js"
     }
   },

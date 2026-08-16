@@ -189,7 +189,7 @@ function validateTagDelimiter(config: Config, entities: EntityDbMetadata[]): voi
   }
 }
 
-if (require.main === module) {
+if (typeof module !== "undefined" && require.main === module) {
   joistCodegen()
     .then(() => maybeSetExitCode())
     .catch((err) => {

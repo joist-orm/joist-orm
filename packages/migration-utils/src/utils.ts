@@ -6,7 +6,9 @@ import {
   PgLiteral,
   TableOptions,
 } from "node-pg-migrate";
-import { singular } from "pluralize";
+import pluralize from "pluralize";
+
+const { singular } = pluralize;
 
 /**
  * Creates an entity table with our conventions.

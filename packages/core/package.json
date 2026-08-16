@@ -2,6 +2,7 @@
   "name": "joist-core",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -12,6 +13,48 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "bun": "./build/esm/index.mjs",
+      "module-sync": "./build/esm/index.mjs",
+      "import": "./build/esm/index.mjs",
+      "require": "./build/index.js",
+      "default": "./build/index.js"
+    },
+    "./build/drivers": {
+      "types": "./build/drivers/index.d.ts",
+      "bun": "./build/esm/drivers/index.mjs",
+      "module-sync": "./build/esm/drivers/index.mjs",
+      "import": "./build/esm/drivers/index.mjs",
+      "require": "./build/drivers/index.js",
+      "default": "./build/drivers/index.js"
+    },
+    "./build/relations": {
+      "types": "./build/relations/index.d.ts",
+      "bun": "./build/esm/relations/index.mjs",
+      "module-sync": "./build/esm/relations/index.mjs",
+      "import": "./build/esm/relations/index.mjs",
+      "require": "./build/relations/index.js",
+      "default": "./build/relations/index.js"
+    },
+    "./build/*.js": {
+      "types": "./build/*.d.ts",
+      "bun": "./build/esm/*.mjs",
+      "module-sync": "./build/esm/*.mjs",
+      "import": "./build/esm/*.mjs",
+      "require": "./build/*.js",
+      "default": "./build/*.js"
+    },
+    "./build/*": {
+      "types": "./build/*.d.ts",
+      "bun": "./build/esm/*.mjs",
+      "module-sync": "./build/esm/*.mjs",
+      "import": "./build/esm/*.mjs",
+      "require": "./build/*.js",
+      "default": "./build/*.js"
+    }
+  },
   "scripts": {
     "test": "jest"
   },
@@ -23,7 +66,8 @@
   },
   "dependencies": {
     "ansis": "^4.3.1",
-    "dataloader": "^2.2.3"
+    "dataloader": "^2.2.3",
+    "temporal-spec": "^0.3.1"
   },
   "devDependencies": {
     "@swc/core": "^1.15.47",

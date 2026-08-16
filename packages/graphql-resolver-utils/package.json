@@ -2,6 +2,7 @@
   "name": "joist-graphql-resolver-utils",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -11,14 +12,26 @@
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
+      "bun": "./build/esm/index.mjs",
+      "module-sync": "./build/esm/index.mjs",
+      "import": "./build/esm/index.mjs",
+      "require": "./build/index.js",
       "default": "./build/index.js"
     },
     "./index.js": {
       "types": "./build/index.d.ts",
+      "bun": "./build/esm/index.mjs",
+      "module-sync": "./build/esm/index.mjs",
+      "import": "./build/esm/index.mjs",
+      "require": "./build/index.js",
       "default": "./build/index.js"
     },
     "./tests": {
       "types": "./build/tests.d.ts",
+      "bun": "./build/esm/tests.mjs",
+      "module-sync": "./build/esm/tests.mjs",
+      "import": "./build/esm/tests.mjs",
+      "require": "./build/tests.js",
       "default": "./build/tests.js"
     }
   },

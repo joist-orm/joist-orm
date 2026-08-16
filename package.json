@@ -2,7 +2,9 @@
   "version": "2.0.3",
   "name": "joist",
   "scripts": {
-    "build": "tsc --build",
+    "build": "yarn clean && yarn build:packages && yarn build:esm && yarn typecheck:consumers && node scripts/test-module-sync.mjs",
+    "build:packages": "tsc --build tsconfig.packages.json --force",
+    "build:esm": "yarn workspaces foreach --all --topological-dev --include 'joist-*' --exclude 'joist-tests-*' --exclude joist-docs exec tsc -p tsconfig.json --module esnext --moduleResolution bundler --outDir build/esm --composite false --declaration false --declarationMap false --incremental false && yarn workspaces foreach --all --include 'joist-*' --exclude 'joist-tests-*' --exclude joist-docs exec tsc-esm-fix --target build/esm --ext .mjs --source-map",
     "clean": "rm -rf build && find packages -type d -name build -prune -exec rm -rf '{}' + && find packages -name '*.tsbuildinfo' -delete",
     "semantic-release": "semantic-release",
     "publish-next": "./scripts/publish-next.sh",
@@ -13,6 +15,7 @@
     "format:check": "oxlint packages && oxfmt --check 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "start": "yarn mprocs",
     "test": "yarn workspaces foreach --all run test",
+    "typecheck:consumers": "tsc --project tsconfig.unit-tests.json --composite false && yarn workspaces foreach --all --include 'joist-tests-*' exec tsc --project tsconfig.json --composite false",
     "docker": "docker-compose build",
     "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
     "psql": "docker compose exec db ./console.sh"
@@ -57,6 +60,7 @@
     "oxfmt": "0.62.0",
     "oxlint": "1.77.0",
     "semantic-release": "^25.0.9",
+    "tsc-esm-fix": "3.1.2",
     "typescript": "7.0.2"
   },
   "resolutions": {

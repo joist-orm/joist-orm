@@ -78,7 +78,7 @@ export type EntityResolver<T extends Entity> = {
 /**
  * Creates field resolvers for each of the fields on our entity.
  */
-export function entityResolver<T extends Entity, A extends Record<string, keyof T> = Record<string, any>>(
+export function entityResolver<T extends Entity, A extends Record<string, keyof T> = {}>(
   entity: MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {

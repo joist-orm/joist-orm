@@ -1,10 +1,10 @@
 import {
   BaseEntity,
-  Entity,
-  EntityManager,
-  Property,
-  ReadOnlyCollection,
-  Reference,
+  type Entity,
+  type EntityManager,
+  type Property,
+  type ReadOnlyCollection,
+  type Reference,
   isAsyncProperty,
   isCollection,
   isDefined,
@@ -15,7 +15,7 @@ import {
 } from "joist-core";
 import { isPlainObject } from "joist-utils";
 
-import { CustomMatcherResult } from "./index";
+import { type CustomMatcherResult } from "./index.ts";
 
 // This might be undefined if running outside of jest
 const jestMatchers = (globalThis as any)[Symbol.for("$$jest-matchers-object")];

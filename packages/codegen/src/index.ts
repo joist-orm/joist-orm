@@ -2,39 +2,47 @@
 
 import process from "node:process";
 
-import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
+import { type ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
-import pgStructure from "pg-structure";
+import pgStructureModule from "pg-structure";
 import { saveFiles } from "ts-poet";
 
-import { assignTags } from "./assignTags";
-import { maybeRunTransforms } from "./codemods";
-import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveNameConflicts } from "./EntityDbMetadata";
-import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering";
-import { generateFiles } from "./generate";
-import { createFlushFunction } from "./generateFlushFunction";
-import { applyInheritanceUpdates } from "./inheritance";
-import { installSkills } from "./installSkills";
-import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
-import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
-import { scanEntityFiles } from "./scanEntityFiles";
-import { isEntityTable, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
+import { assignTags } from "./assignTags.ts";
+import { maybeRunTransforms } from "./codemods/index.ts";
+import { type Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config.ts";
+import {
+  type DbMetadata,
+  EntityDbMetadata,
+  failIfOverlappingFieldNames,
+  resolveNameConflicts,
+} from "./EntityDbMetadata.ts";
+import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering.ts";
+import { generateFiles } from "./generate.ts";
+import { createFlushFunction } from "./generateFlushFunction.ts";
+import { applyInheritanceUpdates } from "./inheritance.ts";
+import { installSkills } from "./installSkills.ts";
+import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata.ts";
+import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger.ts";
+import { scanEntityFiles } from "./scanEntityFiles.ts";
+import { isEntityTable, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils.ts";
+
+const { default: pgStructure } = pgStructureModule;
 
 export {
-  DbMetadata,
-  EnumField,
+  type DbMetadata,
+  type EnumField,
   makeEntity,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimitiveField,
-  PrimitiveTypescriptType,
-} from "./EntityDbMetadata";
-export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
-export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
+  type PrimitiveTypescriptType,
+} from "./EntityDbMetadata.ts";
+export type { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata.ts";
+export { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "./utils.ts";
+export { type Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export async function joistCodegen() {
   const config = await loadConfig();

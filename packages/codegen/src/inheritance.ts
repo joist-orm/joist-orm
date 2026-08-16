@@ -1,14 +1,14 @@
-import { Config } from "./config";
+import { type Config } from "./config.ts";
 import {
-  DbMetadata,
-  EntityDbMetadata,
-  ManyToManyField,
-  ManyToOneField,
-  PolymorphicFieldComponent,
+  type DbMetadata,
+  type EntityDbMetadata,
+  type ManyToManyField,
+  type ManyToOneField,
+  type PolymorphicFieldComponent,
   canonicalizeOtherEntities,
   makeEntity,
-} from "./EntityDbMetadata";
-import { fail } from "./utils";
+} from "./EntityDbMetadata.ts";
+import { fail } from "./utils.ts";
 
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;

@@ -1,14 +1,20 @@
-import { Entity, isEntity } from "./Entity";
-import { IdOf } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
-import { normalizeHint } from "./normalizeHints";
-import { convertToLoadHint } from "./reactiveHints";
-import { AsyncMethod, Collection, Property, ReactiveGetter, Reference } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
-import { PropertyImpl } from "./relations/hasProperty";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
+import { type Entity, isEntity } from "./Entity.ts";
+import { type IdOf } from "./EntityManager.ts";
+import { getMetadata } from "./EntityMetadata.ts";
+import { normalizeHint } from "./normalizeHints.ts";
+import { convertToLoadHint } from "./reactiveHints.ts";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
+import { PropertyImpl } from "./relations/hasProperty.ts";
+import {
+  type AsyncMethod,
+  type Collection,
+  type Property,
+  type ReactiveGetter,
+  type Reference,
+} from "./relations/index.ts";
+import { ReactiveFieldImpl } from "./relations/ReactiveField.ts";
+import { ReactiveGetterImpl } from "./relations/ReactiveGetter.ts";
 
 /**
  * A JSON hint of a single key, multiple keys, or nested keys and sub-hints.

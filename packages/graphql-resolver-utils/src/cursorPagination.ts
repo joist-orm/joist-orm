@@ -5,7 +5,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-core";
 
-import { type ContextWithEm, type PaginationFilter, defaultLimit } from "./paginationUtils";
+import { type ContextWithEm, type PaginationFilter, defaultLimit } from "./paginationUtils.ts";
 
 type CursorArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   filter?: F | null;

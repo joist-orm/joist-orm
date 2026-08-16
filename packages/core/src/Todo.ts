@@ -1,9 +1,9 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
-import { getInstanceData } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { JoinRow, JoinRows, ManyToManyLike } from "./JoinRows";
-import { groupBy } from "./utils";
+import { getInstanceData } from "./BaseEntity.ts";
+import { type Entity } from "./Entity.ts";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
+import { type JoinRow, type JoinRows, type ManyToManyLike } from "./JoinRows.ts";
+import { groupBy } from "./utils.ts";
 
 /** A group of insert/update/delete operations for a given entity. */
 export class Todo {

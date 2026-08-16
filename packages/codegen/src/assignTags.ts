@@ -1,9 +1,9 @@
 import { camelCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
 
-import { Config } from "./config";
-import { DbMetadata } from "./index";
-import { logger } from "./logger";
+import { type Config } from "./config.ts";
+import { type DbMetadata } from "./index.ts";
+import { logger } from "./logger.ts";
 
 /**
  * Looks for any entities that don't have tags in `config` yet, and guesses at what a good tag would be.

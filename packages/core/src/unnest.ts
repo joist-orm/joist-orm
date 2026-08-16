@@ -1,5 +1,5 @@
-import { OpColumn } from "./drivers/EntityWriter";
-import { ParsedCteClause } from "./QueryParser";
+import { type OpColumn } from "./drivers/EntityWriter.ts";
+import { type ParsedCteClause } from "./QueryParser.ts";
 
 /**
  * Creates a CTE named `alias` that bulk-injects the `columnValues` into a SQL query.

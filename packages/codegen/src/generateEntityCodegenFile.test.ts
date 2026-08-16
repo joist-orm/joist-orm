@@ -1,6 +1,6 @@
-import { config } from "./config";
-import { makeEntity } from "./EntityDbMetadata";
-import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
+import { config } from "./config.ts";
+import { makeEntity } from "./EntityDbMetadata.ts";
+import { generateEntityCodegenFile } from "./generateEntityCodegenFile.ts";
 
 describe("generateEntityCodegenFile", () => {
   it("injects a documented primitive's .md doc as a tagged JSDoc on the getter", async () => {

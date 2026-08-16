@@ -1,8 +1,8 @@
 import { camelCase, sentenceCase } from "change-case";
-import { type Config, DbMetadata } from "joist-codegen";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type Config, type DbMetadata } from "joist-codegen";
+import { type CodegenFile, code, imp } from "ts-poet";
 
-import { getEntitiesImportPath } from "./utils";
+import { getEntitiesImportPath } from "./utils.ts";
 
 const queryResolvers = imp("t:QueryResolvers@src/generated/graphql-types.ts");
 const makeRunQuery = imp("makeRunQuery@src/resolvers/testUtils.ts");

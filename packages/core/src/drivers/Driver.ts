@@ -1,8 +1,8 @@
-import { EntityManager } from "../EntityManager";
-import { PreloadPlugin } from "../plugins/PreloadPlugin";
-import { ParsedFindQuery } from "../QueryParser";
-import { RowData } from "../RowData";
-import { JoinRowTodo, Todo } from "../Todo";
+import { type EntityManager } from "../EntityManager.ts";
+import { type PreloadPlugin } from "../plugins/PreloadPlugin.ts";
+import { type ParsedFindQuery } from "../QueryParser.ts";
+import { type RowData } from "../RowData.ts";
+import { type JoinRowTodo, type Todo } from "../Todo.ts";
 
 /**
  * Isolates all SQL calls that Joist needs to make to fetch/save data.

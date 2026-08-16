@@ -1,5 +1,5 @@
-import { Entity } from "./Entity";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { type Entity } from "./Entity.ts";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.

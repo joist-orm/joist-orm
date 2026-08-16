@@ -1,9 +1,9 @@
-import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
-import { EntityOrId, HintNode } from "../HintTree";
-import { LoadHint, NestedLoadHint } from "../loadHints";
-import { LateralJoinTable, ParsedFindQuery } from "../QueryParser";
-import { RowData } from "../RowData";
+import { type Entity } from "../Entity.ts";
+import { type EntityMetadata } from "../EntityMetadata.ts";
+import { type EntityOrId, type HintNode } from "../HintTree.ts";
+import { type LoadHint, type NestedLoadHint } from "../loadHints.ts";
+import { type LateralJoinTable, type ParsedFindQuery } from "../QueryParser.ts";
+import { type RowData } from "../RowData.ts";
 
 /**
  * This is a plugin API dedicated to preloading data for subtrees of entities.

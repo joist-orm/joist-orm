@@ -1,18 +1,18 @@
-import { getInstanceData } from "../BaseEntity";
-import { Entity } from "../Entity";
+import { getInstanceData } from "../BaseEntity.ts";
+import { type Entity } from "../Entity.ts";
 import {
-  EntityMetadata,
-  Field,
-  PrimitiveField,
+  type EntityMetadata,
+  type Field,
+  type PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "../EntityMetadata";
-import { getField, isChangeableField } from "../fields";
-import { keyToNumber } from "../keys";
-import { Column, TimestampSerde, hasSerde } from "../serde";
-import { Todo } from "../Todo";
-import { groupBy } from "../utils";
+} from "../EntityMetadata.ts";
+import { getField, isChangeableField } from "../fields.ts";
+import { keyToNumber } from "../keys.ts";
+import { type Column, type TimestampSerde, hasSerde } from "../serde.ts";
+import { type Todo } from "../Todo.ts";
+import { groupBy } from "../utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };

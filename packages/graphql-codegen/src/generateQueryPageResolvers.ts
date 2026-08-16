@@ -1,9 +1,9 @@
 import { camelCase } from "change-case";
-import { Config, DbMetadata } from "joist-codegen";
+import { type Config, type DbMetadata } from "joist-codegen";
 import pluralize from "pluralize";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type CodegenFile, code, imp } from "ts-poet";
 
-import { getEntitiesImportPath } from "./utils";
+import { getEntitiesImportPath } from "./utils.ts";
 
 const queryResolvers = imp("t:QueryResolvers@src/generated/graphql-types.ts");
 const makeRunQuery = imp("makeRunQuery@src/resolvers/testUtils.ts");

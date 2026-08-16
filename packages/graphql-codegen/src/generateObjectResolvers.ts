@@ -1,8 +1,8 @@
 import { camelCase, sentenceCase } from "change-case";
-import { Config, EntityDbMetadata } from "joist-codegen";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type Config, type EntityDbMetadata } from "joist-codegen";
+import { type CodegenFile, code, imp } from "ts-poet";
 
-import { getEntitiesImportPath } from "./utils";
+import { getEntitiesImportPath } from "./utils.ts";
 
 const entityResolver = imp("entityResolver@src/resolvers/utils.ts");
 const makeRunObjectFields = imp("makeRunObjectFields@src/resolvers/testUtils.ts");

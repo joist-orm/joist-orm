@@ -1,12 +1,12 @@
 import {
-  EntityMetadata,
-  Field,
-  ManyToManyEnumField,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-} from "../EntityMetadata";
+  type EntityMetadata,
+  type Field,
+  type ManyToManyEnumField,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+} from "../EntityMetadata.ts";
 
 export function canPreload(
   meta: EntityMetadata,

@@ -1,26 +1,26 @@
-import DataLoader from "dataloader";
+import type DataLoader from "dataloader";
 
-import { Entity } from "../Entity";
-import { EntityManager, MaybeAbstractEntityConstructor, TaggedId } from "../EntityManager";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, type TaggedId } from "../EntityManager.ts";
 import {
-  EntityMetadata,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
+  type EntityMetadata,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
   getBaseMeta,
   getMetadata,
-} from "../EntityMetadata";
-import { deTagIds, tagId } from "../keys";
-import { mapPathsToTarget } from "../loadLens";
+} from "../EntityMetadata.ts";
+import { deTagIds, tagId } from "../keys.ts";
+import { mapPathsToTarget } from "../loadLens.ts";
 import {
-  ColumnCondition,
-  ParsedFindQuery,
-  ParsedOrderBy,
-  ParsedTable,
+  type ColumnCondition,
+  type ParsedFindQuery,
+  type ParsedOrderBy,
+  type ParsedTable,
   addTablePerClassJoinsAndClassTag,
   maybeAddOrderBy,
-} from "../QueryParser";
-import { abbreviation, groupBy } from "../utils";
+} from "../QueryParser.ts";
+import { abbreviation, groupBy } from "../utils.ts";
 
 export const lensOperation = "lens";
 

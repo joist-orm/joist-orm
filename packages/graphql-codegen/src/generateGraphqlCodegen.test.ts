@@ -1,7 +1,7 @@
-import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
-import { Code } from "ts-poet";
+import { type Config, type EntityDbMetadata, type EnumMetadata } from "joist-codegen";
+import { type Code } from "ts-poet";
 
-import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
+import { generateGraphqlCodegen } from "./generateGraphqlCodegen.ts";
 
 describe("generateGraphqlCodegen", () => {
   it("creates a cjs file by default", async () => {

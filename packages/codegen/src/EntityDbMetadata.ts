@@ -1,11 +1,21 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
-import { Action, Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
+import {
+  type Action,
+  type Column,
+  EnumType,
+  type Index,
+  type JSONData,
+  type M2MRelation,
+  M2ORelation,
+  type O2MRelation,
+  type Table,
+} from "pg-structure";
 import pluralize from "pluralize";
-import { Code, Import, code, imp } from "ts-poet";
+import { type Code, Import, code, imp } from "ts-poet";
 
 import {
-  Config,
+  type Config,
   fieldTypeConfig,
   getTimestampConfig,
   isFieldHasDefault,
@@ -22,9 +32,9 @@ import {
   softDeletesConfig,
   superstructConfig,
   zodSchemaConfig,
-} from "./config";
-import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
-import { Zod } from "./symbols";
+} from "./config.ts";
+import { type EnumMetadata, type EnumRow, type PgEnumMetadata } from "./loadMetadata.ts";
+import { Zod } from "./symbols.ts";
 import {
   fail,
   isEnumTable,
@@ -34,7 +44,7 @@ import {
   mapSimpleDbTypeToTypescriptType,
   parseOrder,
   tableToEntityName,
-} from "./utils";
+} from "./utils.ts";
 
 const { plural, singular } = pluralize;
 
@@ -340,12 +350,10 @@ export class EntityDbMetadata {
         .map((column) => newEnumArrayField(config, this.entity, column, enums))
         .filter((f) => !f.ignore),
     ];
-    this.pgEnums = [
-      ...table.columns
-        .filter((c) => isPgEnum(c))
-        .map((column) => newPgEnumField(config, this.entity, column))
-        .filter((f) => !f.ignore),
-    ];
+    this.pgEnums = table.columns
+      .filter((c) => isPgEnum(c))
+      .map((column) => newPgEnumField(config, this.entity, column))
+      .filter((f) => !f.ignore);
 
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(config, r.targetTable))

@@ -1,8 +1,8 @@
-import { type Config } from "../config";
-import { type Codemod } from "./Codemod";
-import { codemod_0001_rename_has_async_property } from "./codemod_0001-rename_has_async_property";
-import { codemod_0002_rename_async_query_fields } from "./codemod_0002-rename_async_query_fields";
-import { codemod_0003_rename_find_paginated } from "./codemod_0003-rename_find_paginated";
+import { type Config } from "../config.ts";
+import { type Codemod } from "./Codemod.ts";
+import { codemod_0001_rename_has_async_property } from "./codemod_0001-rename_has_async_property.ts";
+import { codemod_0002_rename_async_query_fields } from "./codemod_0002-rename_async_query_fields.ts";
+import { codemod_0003_rename_find_paginated } from "./codemod_0003-rename_find_paginated.ts";
 
 const codemods: Codemod[] = [
   codemod_0001_rename_has_async_property,

@@ -1,4 +1,4 @@
-import { EntityDbMetadata, ManyToOneField, PolymorphicFieldComponent } from "./EntityDbMetadata";
+import { type EntityDbMetadata, type ManyToOneField, type PolymorphicFieldComponent } from "./EntityDbMetadata.ts";
 
 /**
  * Sorts entities by non-deferred foreign key order.

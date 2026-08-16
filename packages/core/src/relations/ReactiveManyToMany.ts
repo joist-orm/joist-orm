@@ -1,8 +1,9 @@
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
 import {
-  Entity,
-  EntityMetadata,
-  ManyToManyField,
-  ReadOnlyCollection,
+  type Entity,
+  type EntityMetadata,
+  type ManyToManyField,
+  type ReadOnlyCollection,
   ensureNotDeleted,
   fail,
   getEmInternalApi,
@@ -10,13 +11,12 @@ import {
   getMetadata,
   getMetadataForField,
   isLoaded,
-} from "..";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import { lazyField } from "../newEntity.ts";
+import { type MaybeReactedEntity, type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 /**
  * A reactive, derived many-to-many collection.

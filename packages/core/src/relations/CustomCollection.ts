@@ -1,9 +1,9 @@
-import { Entity } from "../Entity";
-import { IdOf, getEmInternalApi } from "../EntityManager";
-import { Collection, LoadHint, ensureNotDeleted, fail } from "../index";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+import { type Entity } from "../Entity.ts";
+import { type IdOf, getEmInternalApi } from "../EntityManager.ts";
+import { type Collection, type LoadHint, ensureNotDeleted, fail } from "../index.ts";
+import { lazyField } from "../newEntity.ts";
+import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`

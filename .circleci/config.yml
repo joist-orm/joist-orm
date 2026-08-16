@@ -11,7 +11,6 @@ workflows:
           matrix:
             parameters:
               node-version:
-                - "22" # EOL 30 Apr 2027
                 - "24" # EOL 30 Apr 2028
                 - "25" # EOL 01 Jun 2026
                 - "26" # Current
@@ -94,7 +93,7 @@ jobs:
           condition:
             and:
               - equal: [main, << pipeline.git.branch >>]
-              - equal: ["22", << parameters.node-version >>]
+              - equal: ["24", << parameters.node-version >>]
           steps:
             - run:
                 name: Publish Next Release
@@ -106,7 +105,7 @@ jobs:
           condition:
             and:
               - equal: [release, << pipeline.git.branch >>]
-              - equal: ["22", << parameters.node-version >>]
+              - equal: ["24", << parameters.node-version >>]
           steps:
             - run:
                 name: Release

@@ -1,11 +1,11 @@
 import { camelCase } from "change-case";
-import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
+import { type Config, type DbMetadata, type EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import pluralize from "pluralize";
 
-import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
-import { loadHistory, writeHistory } from "./history";
-import { Fs } from "./utils";
+import { type GqlField, type GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils.ts";
+import { loadHistory, writeHistory } from "./history.ts";
+import { type Fs } from "./utils.ts";
 
 /**
  * Generates `*.graphql` files based on the database schema.

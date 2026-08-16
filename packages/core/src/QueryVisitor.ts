@@ -1,11 +1,11 @@
 import {
-  ColumnCondition,
-  ParsedExpressionCondition,
-  ParsedExpressionFilter,
-  ParsedFindQuery,
-  RawCondition,
-} from "./QueryParser";
-import { assertNever } from "./utils";
+  type ColumnCondition,
+  type ParsedExpressionCondition,
+  type ParsedExpressionFilter,
+  type ParsedFindQuery,
+  type RawCondition,
+} from "./QueryParser.ts";
+import { assertNever } from "./utils.ts";
 
 /** A generic visitor over the simple & complex conditions of a query. */
 interface Visitor {

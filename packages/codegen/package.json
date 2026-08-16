@@ -2,57 +2,37 @@
   "name": "joist-codegen",
   "version": "2.0.3",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
     "directory": "packages/codegen"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/index.cjs",
+  "module": "build/index.js",
+  "types": "build/index.d.mts",
   "exports": {
     ".": {
-      "types": "./build/index.d.ts",
-      "bun": "./build/esm/index.mjs",
-      "module-sync": "./build/esm/index.mjs",
-      "import": "./build/esm/index.mjs",
-      "require": "./build/index.js",
+      "bun": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "module-sync": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      },
       "default": "./build/index.js"
-    },
-    "./build/codemods": {
-      "types": "./build/codemods/index.d.ts",
-      "bun": "./build/esm/codemods/index.mjs",
-      "module-sync": "./build/esm/codemods/index.mjs",
-      "import": "./build/esm/codemods/index.mjs",
-      "require": "./build/codemods/index.js",
-      "default": "./build/codemods/index.js"
-    },
-    "./build/docs": {
-      "types": "./build/docs/index.d.ts",
-      "bun": "./build/esm/docs/index.mjs",
-      "module-sync": "./build/esm/docs/index.mjs",
-      "import": "./build/esm/docs/index.mjs",
-      "require": "./build/docs/index.js",
-      "default": "./build/docs/index.js"
-    },
-    "./build/*.js": {
-      "types": "./build/*.d.ts",
-      "bun": "./build/esm/*.mjs",
-      "module-sync": "./build/esm/*.mjs",
-      "import": "./build/esm/*.mjs",
-      "require": "./build/*.js",
-      "default": "./build/*.js"
-    },
-    "./build/*": {
-      "types": "./build/*.d.ts",
-      "bun": "./build/esm/*.mjs",
-      "module-sync": "./build/esm/*.mjs",
-      "import": "./build/esm/*.mjs",
-      "require": "./build/*.js",
-      "default": "./build/*.js"
     }
   },
-  "bin": "build/index.js",
+  "bin": "build/index.cjs",
   "files": [
     "build",
     "skills"

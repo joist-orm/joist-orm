@@ -1,7 +1,7 @@
-import { CodegenFile, code } from "ts-poet";
+import { type CodegenFile, code } from "ts-poet";
 
-import { DbMetadata } from "../EntityDbMetadata";
-import { type ParsedDoc } from "./markdown";
+import { type DbMetadata } from "../EntityDbMetadata.ts";
+import { type ParsedDoc } from "./markdown.ts";
 
 /** Creates the `metadata-docs.ts` runtime artifact to access docs. */
 export function generateMetadataDocsFile(dbMeta: DbMetadata, docsByEntity: Record<string, ParsedDoc>): CodegenFile {

@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 
-import { installSkills } from "./installSkills";
+import { installSkills } from "./installSkills.ts";
 
 /** Mirror of `installSkills.ts`'s bundled skills dir, so tests stay in sync with what actually ships. */
 const bundledSkillsDir = resolve(__dirname, "../skills");

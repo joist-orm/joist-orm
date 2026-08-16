@@ -1,24 +1,24 @@
-import { maybeGetConstructorFromReference } from "../configure";
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, sameEntity } from "../EntityManager";
-import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
-import { getField, setField } from "../fields";
+import { maybeGetConstructorFromReference } from "../configure.ts";
+import { type Entity, isEntity } from "../Entity.ts";
+import { type IdOf, type TaggedId, sameEntity } from "../EntityManager.ts";
+import { type PolymorphicFieldComponent, getMetadata } from "../EntityMetadata.ts";
+import { getField, setField } from "../fields.ts";
 import {
-  OneToOneReference,
-  PolymorphicField,
-  Reference,
+  type OneToOneReference,
+  type PolymorphicField,
+  type Reference,
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
   getInstanceData,
   maybeResolveReferenceToId,
-} from "../index";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId } from "./ManyToOneReference";
-import { OneToManyCollection } from "./OneToManyCollection";
-import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { lazyField } from "../newEntity.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { failIfNewEntity, failNoId } from "./ManyToOneReference.ts";
+import { OneToManyCollection } from "./OneToManyCollection.ts";
+import { ReferenceN } from "./ReferenceSymbols.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 export function hasOnePolymorphic<
   T extends Entity,

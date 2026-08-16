@@ -1,9 +1,9 @@
 import { camelCase } from "change-case";
-import { Config, EnumMetadata } from "joist-codegen";
+import { type Config, type EnumMetadata } from "joist-codegen";
 import pluralize from "pluralize";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type CodegenFile, code, imp } from "ts-poet";
 
-import { getEntitiesImportPath } from "./utils";
+import { getEntitiesImportPath } from "./utils.ts";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
 export function generateEnumDetailResolvers(config: Config, enums: EnumMetadata): CodegenFile {

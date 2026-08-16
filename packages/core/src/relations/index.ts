@@ -1,75 +1,85 @@
-export { Collection, LoadedCollection, isCollection, isLoadedCollection } from "./Collection";
-export { CustomCollection, hasCustomCollection } from "./CustomCollection";
-export { EnumCollection, EnumCollectionImpl, LoadedEnumCollection, hasEnumCollection } from "./EnumCollection";
-export { CustomReference, hasCustomReference } from "./CustomReference";
-export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
+export { type Collection, type LoadedCollection, isCollection, isLoadedCollection } from "./Collection.ts";
+export { CustomCollection, hasCustomCollection } from "./CustomCollection.ts";
 export {
-  LoadedProperty,
-  Property,
+  type EnumCollection,
+  EnumCollectionImpl,
+  type LoadedEnumCollection,
+  hasEnumCollection,
+} from "./EnumCollection.ts";
+export { CustomReference, hasCustomReference } from "./CustomReference.ts";
+export { type AsyncMethod, type LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod.ts";
+export {
+  type LoadedProperty,
+  type Property,
   PropertyImpl,
   hasProperty,
   hasReactiveProperty,
   isLoadedProperty,
   isProperty,
-} from "./hasProperty";
+} from "./hasProperty.ts";
 export {
-  AsyncProperty,
+  type AsyncProperty,
   AsyncPropertyImpl,
   hasAsyncProperty,
   isAsyncProperty,
   isLoadedAsyncProperty,
-} from "./AsyncProperty";
-export { LazyField, LazyFieldImpl, hasLazyField, isLazyField, isLoadedLazyField } from "./LazyField";
-export { hasManyDerived } from "./hasManyDerived";
-export { hasManyThrough } from "./hasManyThrough";
-export { hasOneDerived } from "./hasOneDerived";
-export { hasOneThrough } from "./hasOneThrough";
-export { LargeCollection } from "./LargeCollection";
-export { ManyToManyCollection, hasManyToMany } from "./ManyToManyCollection";
-export { ManyToManyLargeCollection, hasLargeManyToMany } from "./ManyToManyLargeCollection";
-export { ManyToOneReference, ManyToOneReferenceImpl, hasOne, isManyToOneReference } from "./ManyToOneReference";
-export { OneToManyCollection, hasMany } from "./OneToManyCollection";
-export { OneToManyLargeCollection, hasLargeMany } from "./OneToManyLargeCollection";
+} from "./AsyncProperty.ts";
+export { type LazyField, LazyFieldImpl, hasLazyField, isLazyField, isLoadedLazyField } from "./LazyField.ts";
+export { hasManyDerived } from "./hasManyDerived.ts";
+export { hasManyThrough } from "./hasManyThrough.ts";
+export { hasOneDerived } from "./hasOneDerived.ts";
+export { hasOneThrough } from "./hasOneThrough.ts";
+export type { LargeCollection } from "./LargeCollection.ts";
+export { ManyToManyCollection, hasManyToMany } from "./ManyToManyCollection.ts";
+export { ManyToManyLargeCollection, hasLargeManyToMany } from "./ManyToManyLargeCollection.ts";
+export { type ManyToOneReference, ManyToOneReferenceImpl, hasOne, isManyToOneReference } from "./ManyToOneReference.ts";
+export { OneToManyCollection, hasMany } from "./OneToManyCollection.ts";
+export { OneToManyLargeCollection, hasLargeMany } from "./OneToManyLargeCollection.ts";
 export {
-  OneToOneReference,
+  type OneToOneReference,
   OneToOneReferenceImpl,
   hasOneToOne,
   isLoadedOneToOneReference,
   isOneToOneReference,
-} from "./OneToOneReference";
+} from "./OneToOneReference.ts";
 export {
-  PolymorphicReference,
+  type PolymorphicReference,
   PolymorphicReferenceImpl,
   hasOnePolymorphic,
   isPolymorphicReference,
-} from "./PolymorphicReference";
-export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
-export { ReactiveGetter, hasReactiveGetter, isReactiveGetter } from "./ReactiveGetter";
+} from "./PolymorphicReference.ts";
+export { type ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField.ts";
+export { type ReactiveGetter, hasReactiveGetter, isReactiveGetter } from "./ReactiveGetter.ts";
 export {
-  ReactiveManyToMany,
+  type ReactiveManyToMany,
   ReactiveManyToManyImpl,
   hasReactiveManyToMany,
   isReactiveManyToMany,
-} from "./ReactiveManyToMany";
+} from "./ReactiveManyToMany.ts";
 export {
-  ReactiveManyToManyOtherSide,
+  type ReactiveManyToManyOtherSide,
   ReactiveManyToManyOtherSideImpl,
   hasReactiveManyToManyOtherSide,
   isReactiveManyToManyOtherSide,
-} from "./ReactiveManyToManyOtherSide";
-export { hasAsyncReactiveField, isAsyncReactiveField } from "./AsyncReactiveField";
+} from "./ReactiveManyToManyOtherSide.ts";
+export { hasAsyncReactiveField, isAsyncReactiveField } from "./AsyncReactiveField.ts";
 export {
-  ReactiveReference,
+  type ReactiveReference,
   ReactiveReferenceImpl,
   hasReactiveReference,
   isReactiveReference,
-} from "./ReactiveReference";
+} from "./ReactiveReference.ts";
 export {
-  LoadedReadOnlyCollection,
-  ReadOnlyCollection,
+  type LoadedReadOnlyCollection,
+  type ReadOnlyCollection,
   isLoadedReadOnlyCollection,
   isReadOnlyCollection,
-} from "./ReadOnlyCollection";
-export { RecursiveCycleError, hasRecursiveChildren, hasRecursiveM2m, hasRecursiveParents } from "./RecursiveCollection";
-export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
-export { Relation, isRelation } from "./Relation";
+} from "./ReadOnlyCollection.ts";
+export {
+  RecursiveCycleError,
+  hasRecursiveChildren,
+  hasRecursiveM2m,
+  hasRecursiveParents,
+} from "./RecursiveCollection.ts";
+export { type LoadedReference, type Reference, isLoadedReference, isReference } from "./Reference.ts";
+export { type Relation, isRelation } from "./Relation.ts";

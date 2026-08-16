@@ -1,13 +1,13 @@
 import {
-  ColumnCondition,
-  ExistsCondition,
-  JoinTable,
-  ParsedExpressionFilter,
-  ParsedFindQuery,
-  RawCondition,
+  type ColumnCondition,
+  type ExistsCondition,
+  type JoinTable,
+  type ParsedExpressionFilter,
+  type ParsedFindQuery,
+  type RawCondition,
   parseAlias,
-} from "./QueryParser";
-import { assertNever } from "./utils";
+} from "./QueryParser.ts";
+import { assertNever } from "./utils.ts";
 
 // Remove any joins that are not used in the select or conditions
 export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {

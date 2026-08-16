@@ -1,6 +1,6 @@
-import { Entity } from "./Entity";
-import { LoadHint } from "./loadHints";
-import { ReactiveHint } from "./reactiveHints";
+import { type Entity } from "./Entity.ts";
+import { type LoadHint } from "./loadHints.ts";
+import { type ReactiveHint } from "./reactiveHints.ts";
 
 /** Normalizes a `key | key[] | { key: nested }` hint into `{ key: nested }`. */
 export type NormalizeHint<H> = H extends string

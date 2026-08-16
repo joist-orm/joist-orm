@@ -1,4 +1,4 @@
-import { newPgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "./connection.ts";
 
 describe("connection", () => {
   it("should parse single DATABASE_URL", () => {

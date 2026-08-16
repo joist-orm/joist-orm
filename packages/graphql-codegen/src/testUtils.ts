@@ -1,19 +1,19 @@
 import { pascalCase, snakeCase } from "change-case";
 import {
-  Config,
-  DbMetadata,
-  EntityDbMetadata,
-  EnumField,
-  ManyToOneField,
-  PolymorphicField,
-  PrimitiveField,
+  type Config,
+  type DbMetadata,
+  type EntityDbMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
   makeEntity,
 } from "joist-codegen";
 import { keyBy } from "joist-utils";
 import pluralize from "pluralize";
-import { CodegenFile, imp } from "ts-poet";
+import { type CodegenFile, imp } from "ts-poet";
 
-import { Fs, getImportExtension } from "./utils";
+import { type Fs, getImportExtension } from "./utils.ts";
 
 const { plural } = pluralize;
 
@@ -155,7 +155,11 @@ export function newManyToOneField(
 }
 
 /** Creates a polymorphic field for tests. */
-export function newPolymorphicField(fieldName: string, components: string[], opts: Partial<PolymorphicField> = {}) {
+export function newPolymorphicField(
+  fieldName: string,
+  components: string[],
+  opts: Partial<PolymorphicField> = {},
+): PolymorphicField {
   return {
     kind: "poly",
     fieldName,

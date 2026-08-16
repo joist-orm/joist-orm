@@ -1,13 +1,13 @@
-import DataLoader from "dataloader";
+import type DataLoader from "dataloader";
 
-import { Entity, isEntity } from "../Entity";
-import { EntityConstructor, EntityManager, TooManyError, sameEntity } from "../EntityManager";
-import { EntityMetadata, getMetadata } from "../EntityMetadata";
-import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
-import { resurrectIfSoftDeleted } from "../resurrection";
-import { OptsOf } from "../typeMap";
-import { cleanStringValue, fail } from "../utils";
-import { whereFilterHash } from "./findDataLoader";
+import { type Entity, isEntity } from "../Entity.ts";
+import { type EntityConstructor, type EntityManager, TooManyError, sameEntity } from "../EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
+import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "../relations/index.ts";
+import { resurrectIfSoftDeleted } from "../resurrection.ts";
+import { type OptsOf } from "../typeMap.ts";
+import { cleanStringValue, fail } from "../utils.ts";
+import { whereFilterHash } from "./findDataLoader.ts";
 
 interface FindOrCreateKey<T extends Entity> {
   ifNew: OptsOf<T>;

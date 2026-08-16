@@ -1,7 +1,7 @@
-export { ConnectionConfig, newPgConnectionConfig } from "./connection";
-export { Deferred } from "./Deferred";
-export { isPlainObject } from "./is-plain-object";
-export { stripAnsi } from "./stripAnsi";
+export { type ConnectionConfig, newPgConnectionConfig } from "./connection.ts";
+export { Deferred } from "./Deferred.ts";
+export { isPlainObject } from "./is-plain-object.ts";
+export { stripAnsi } from "./stripAnsi.ts";
 
 export function fail(message?: string): never {
   throw new Error(message || "Failed");

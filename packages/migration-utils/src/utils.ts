@@ -1,10 +1,10 @@
 import {
-  ColumnDefinition,
-  ColumnDefinitions,
-  DropOptions,
-  MigrationBuilder,
+  type ColumnDefinition,
+  type ColumnDefinitions,
+  type DropOptions,
+  type MigrationBuilder,
   PgLiteral,
-  TableOptions,
+  type TableOptions,
 } from "node-pg-migrate";
 import pluralize from "pluralize";
 

@@ -1,9 +1,9 @@
 import { pascalCase } from "change-case";
-import { Client } from "pg";
-import { Db, EnumType, Table } from "pg-structure";
+import { type Client } from "pg";
+import { type Db, EnumType, type Table } from "pg-structure";
 
-import { Config, EntityDbMetadata, PrimitiveField } from "./index";
-import { isEnumTable } from "./utils";
+import { type Config, EntityDbMetadata, type PrimitiveField } from "./index.ts";
+import { isEnumTable } from "./utils.ts";
 
 /** A map from Enum table name to the rows currently in the table. */
 export type EnumTableData = {

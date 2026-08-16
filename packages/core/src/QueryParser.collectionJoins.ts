@@ -1,3 +1,4 @@
+import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning.ts";
 import {
   type ExistsCondition,
   type JoinTable,
@@ -8,9 +9,8 @@ import {
   type RawCondition,
   maybeAddIdNotNulls,
   parseAlias,
-} from "./QueryParser";
-import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning";
-import { assertNever } from "./utils";
+} from "./QueryParser.ts";
+import { assertNever } from "./utils.ts";
 
 /** A collection root plus every join nested under it, i.e. `books b` with `book_reviews br`. */
 interface CollectionRoot {

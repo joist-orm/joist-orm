@@ -1,12 +1,12 @@
-import { Entity } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
-import { buildHintTree } from "../HintTree";
-import { LoadHint } from "../loadHints";
-import { hintKey } from "../normalizeHints";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { buildUnnestCte } from "../unnest";
+import { type Entity } from "../Entity.ts";
+import { type FilterAndSettings } from "../EntityFilter.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager.ts";
+import { getMetadata } from "../EntityMetadata.ts";
+import { buildHintTree } from "../HintTree.ts";
+import { type LoadHint } from "../loadHints.ts";
+import { hintKey } from "../normalizeHints.ts";
+import { type ParsedFindQuery, parseFindQuery } from "../QueryParser.ts";
+import { buildUnnestCte } from "../unnest.ts";
 import {
   collectAndReplaceArgs,
   collectValues,
@@ -15,7 +15,7 @@ import {
   findOperation,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader";
+} from "./findDataLoader.ts";
 
 interface PreparedPaginatedFindEntry<T extends Entity> {
   filter: FilterAndSettings<T>;

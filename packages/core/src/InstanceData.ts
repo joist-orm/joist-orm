@@ -1,8 +1,8 @@
-import { Entity } from "./Entity";
-import { EntityManager, getEmInternalApi } from "./EntityManager";
-import { EntityMetadata } from "./EntityMetadata";
-import { RowData, emptyRowData } from "./RowData";
-import { hasAnyKey } from "./utils";
+import { type Entity } from "./Entity.ts";
+import { type EntityManager, getEmInternalApi } from "./EntityManager.ts";
+import { type EntityMetadata } from "./EntityMetadata.ts";
+import { type RowData, emptyRowData } from "./RowData.ts";
+import { hasAnyKey } from "./utils.ts";
 
 /** The `#orm` metadata field we track on each instance. */
 export class InstanceData {

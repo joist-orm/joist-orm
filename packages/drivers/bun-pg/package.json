@@ -2,7 +2,7 @@
   "name": "joist-driver-bun-pg",
   "version": "1.224.0",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -11,32 +11,28 @@
   "engines": {
     "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/index.cjs",
+  "module": "build/index.js",
+  "types": "build/index.d.mts",
   "exports": {
     ".": {
-      "types": "./build/index.d.ts",
-      "bun": "./build/esm/index.mjs",
-      "module-sync": "./build/esm/index.mjs",
-      "import": "./build/esm/index.mjs",
-      "require": "./build/index.js",
+      "bun": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "module-sync": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      },
       "default": "./build/index.js"
-    },
-    "./build/*.js": {
-      "types": "./build/*.d.ts",
-      "bun": "./build/esm/*.mjs",
-      "module-sync": "./build/esm/*.mjs",
-      "import": "./build/esm/*.mjs",
-      "require": "./build/*.js",
-      "default": "./build/*.js"
-    },
-    "./build/*": {
-      "types": "./build/*.d.ts",
-      "bun": "./build/esm/*.mjs",
-      "module-sync": "./build/esm/*.mjs",
-      "import": "./build/esm/*.mjs",
-      "require": "./build/*.js",
-      "default": "./build/*.js"
     }
   },
   "files": [

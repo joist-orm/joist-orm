@@ -1,20 +1,26 @@
 import { isPlainObject } from "joist-utils";
 
-import { setSyncDefaults } from "./defaults";
-import { Entity, isEntity } from "./Entity";
-import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { ManyToManyField, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
+import { setSyncDefaults } from "./defaults.ts";
+import { type Entity, isEntity } from "./Entity.ts";
+import { type EntityManager, type IdOf, type MaybeAbstractEntityConstructor, isKey } from "./EntityManager.ts";
 import {
-  PartialOrNull,
-  TimestampSerde,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  getMetadata,
+} from "./EntityMetadata.ts";
+import {
+  type PartialOrNull,
+  type TimestampSerde,
   asConcreteCstr,
   getConstructorFromTaggedId,
   getProperties,
   setOpt,
-} from "./index";
-import { findExistingIfUniqueBy } from "./resurrection";
-import { OptIdsOf, OptsOf } from "./typeMap";
-import { NullOrDefinedOr, toArray } from "./utils";
+} from "./index.ts";
+import { findExistingIfUniqueBy } from "./resurrection.ts";
+import { type OptIdsOf, type OptsOf } from "./typeMap.ts";
+import { type NullOrDefinedOr, toArray } from "./utils.ts";
 
 /**
  * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.

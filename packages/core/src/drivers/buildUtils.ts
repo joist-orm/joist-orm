@@ -1,14 +1,14 @@
-import { opToFn } from "../EntityGraphQLFilter";
-import { isDefined } from "../EntityManager";
-import { kqDot } from "../keywords";
+import { opToFn } from "../EntityGraphQLFilter.ts";
+import { isDefined } from "../EntityManager.ts";
+import { kqDot } from "../keywords.ts";
 import {
   type ColumnCondition,
   type ExistsCondition,
   type ParsedExpressionFilter,
   type ParsedFindQuery,
   type RawCondition,
-} from "../QueryParser";
-import { assertNever, fail } from "../utils";
+} from "../QueryParser.ts";
+import { assertNever, fail } from "../utils.ts";
 
 /** Renders a ParsedFindQuery subquery to SQL — passed in to avoid circular imports with buildRawQuery. */
 export type SubqueryRenderer = (q: ParsedFindQuery) => { sql: string; bindings: readonly any[] };

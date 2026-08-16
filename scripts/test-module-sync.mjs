@@ -5,15 +5,7 @@ import { sep } from "node:path";
 const require = createRequire(import.meta.url);
 const entryPoints = [
   "joist-codegen",
-  "joist-codegen/build/codemods",
-  "joist-codegen/build/docs",
-  "joist-codegen/build/installSkills",
-  "joist-codegen/build/utils",
   "joist-core",
-  "joist-core/build/drivers",
-  "joist-core/build/IndexManager",
-  "joist-core/build/relations",
-  "joist-core/build/temporal",
   "joist-graphql-codegen",
   "joist-graphql-resolver-utils",
   "joist-graphql-resolver-utils/index.js",
@@ -37,8 +29,9 @@ for (const entryPoint of entryPoints) {
   const imported = await import(entryPoint);
   const required = require(entryPoint);
   assert.strictEqual(required, imported, `${entryPoint} loaded separate CommonJS and ESM instances`);
+  const resolved = require.resolve(entryPoint);
   assert.ok(
-    require.resolve(entryPoint).includes(`${sep}build${sep}esm${sep}`),
+    resolved.includes(`${sep}build${sep}`) && resolved.endsWith(".js"),
     `${entryPoint} did not resolve through module-sync`,
   );
 }

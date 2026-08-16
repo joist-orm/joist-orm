@@ -1,8 +1,8 @@
 import { pascalCase } from "change-case";
-import { Code, code } from "ts-poet";
+import { type Code, code } from "ts-poet";
 
-import { Config } from "./config";
-import { PgEnumData } from "./index";
+import { type Config } from "./config.ts";
+import { type PgEnumData } from "./index.ts";
 
 export function generatePgEnumFile(config: Config, enumData: PgEnumData): Code {
   const { name, values } = enumData;

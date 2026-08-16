@@ -7,8 +7,8 @@ import { newEntityManager } from "src/testEm";
 
 // These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
 // into the build directly
-import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol";
-import { WireRowData, executeRowDataQuery } from "../../../orm/build/drivers/WireRowData";
+import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol.cjs";
+import { WireRowData, executeRowDataQuery } from "../../../orm/build/drivers/WireRowData.cjs";
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist";
 

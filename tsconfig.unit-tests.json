@@ -10,11 +10,5 @@
     "./packages/graphql-codegen/src",
     "./packages/utils/src"
   ],
-  "exclude": ["./packages/codegen/src/codemods/__testfixtures__"],
-  "references": [
-    { "path": "./packages/codegen" },
-    { "path": "./packages/core" },
-    { "path": "./packages/graphql-codegen" },
-    { "path": "./packages/utils" }
-  ]
+  "exclude": ["./packages/codegen/src/codemods/__testfixtures__"]
 }

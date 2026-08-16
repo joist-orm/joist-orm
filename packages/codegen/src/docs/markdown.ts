@@ -39,7 +39,7 @@ export function parseMarkdownContent(content: string): ParsedDoc {
       continue;
     }
     // Any other ## resets us out of known sections
-    if (/^## /.test(line)) {
+    if (line.startsWith("## ")) {
       currentSection = null;
       currentField = null;
       continue;
@@ -164,7 +164,7 @@ function mergeMarkdownContent(existing: string, overview: string | undefined, fi
       result.push(line);
       i++;
       // Skip over old overview body (until next ## or EOF)
-      while (i < lines.length && !/^## /.test(lines[i])) i++;
+      while (i < lines.length && !lines[i].startsWith("## ")) i++;
       // Write new overview body
       result.push(overview || "");
       result.push("");
@@ -176,7 +176,7 @@ function mergeMarkdownContent(existing: string, overview: string | undefined, fi
       result.push(line);
       i++;
       // Process the fields section line by line
-      while (i < lines.length && !/^## /.test(lines[i])) {
+      while (i < lines.length && !lines[i].startsWith("## ")) {
         const fieldMatch = lines[i].match(/^### (\w+)\s*$/);
         if (fieldMatch && fieldMatch[1] in fields) {
           const fieldName = fieldMatch[1];
@@ -184,7 +184,7 @@ function mergeMarkdownContent(existing: string, overview: string | undefined, fi
           result.push(lines[i]); // ### fieldName
           i++;
           // Skip old field body (until next ### or ## or EOF)
-          while (i < lines.length && !/^###? /.test(lines[i]) && !/^## /.test(lines[i])) i++;
+          while (i < lines.length && !/^###? /.test(lines[i]) && !lines[i].startsWith("## ")) i++;
           // Write new field body
           result.push("");
           result.push(fields[fieldName]);

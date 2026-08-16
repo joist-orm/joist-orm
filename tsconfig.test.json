@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "composite": true,
     "noEmit": true,
     "types": ["jest", "node"]

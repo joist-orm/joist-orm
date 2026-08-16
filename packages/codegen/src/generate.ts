@@ -1,23 +1,23 @@
 import { readdir } from "fs/promises";
 import { createRequire } from "node:module";
 
-import { CodegenFile, code, def, imp } from "ts-poet";
+import { type CodegenFile, code, def, imp } from "ts-poet";
 
-import { generateMetadataDocsFile, loadEntityDocs, syncDocs } from "./docs";
-import { findAllEntityScopes } from "./findEntityScopes";
-import { generateEntitiesFile } from "./generateEntitiesFile";
-import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
-import { generateEntityFile } from "./generateEntityFile";
-import { generateEntityTestFile } from "./generateEntityTestFile";
-import { generateEnumFile } from "./generateEnumFile";
-import { generateFactoriesFiles } from "./generateFactoriesFiles";
-import { generateMetadataFile } from "./generateMetadataFile";
-import { generatePgEnumFile } from "./generatePgEnumFile";
-import { Config, DbMetadata } from "./index";
-import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols";
-import { merge, tableToEntityName } from "./utils";
+import { generateMetadataDocsFile, loadEntityDocs, syncDocs } from "./docs/index.ts";
+import { findAllEntityScopes } from "./findEntityScopes.ts";
+import { generateEntitiesFile } from "./generateEntitiesFile.ts";
+import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile.ts";
+import { generateEntityFile } from "./generateEntityFile.ts";
+import { generateEntityTestFile } from "./generateEntityTestFile.ts";
+import { generateEnumFile } from "./generateEnumFile.ts";
+import { generateFactoriesFiles } from "./generateFactoriesFiles.ts";
+import { generateMetadataFile } from "./generateMetadataFile.ts";
+import { generatePgEnumFile } from "./generatePgEnumFile.ts";
+import { type Config, type DbMetadata } from "./index.ts";
+import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols.ts";
+import { merge, tableToEntityName } from "./utils.ts";
 
-const runtimeRequire = createRequire(__filename);
+const runtimeRequire = createRequire(import.meta.url);
 
 export type DPrintOptions = Record<string, unknown>;
 

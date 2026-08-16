@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
-const runtimeRequire = createRequire(__filename);
+const runtimeRequire = createRequire(import.meta.url);
 
 /**
  * Patches pg-protocol at runtime so that DataRow messages are lazy *and* their bytes are
@@ -89,7 +89,7 @@ function tryPatch(): boolean {
     const { Parser, version } = resolvePgProtocol();
     // Only patch the protocol major we've verified `handlePacket`'s shape against (1.10-1.15);
     // anything else fails closed (the driver then uses classic rows) until explicitly vetted
-    if (!/^1\./.test(version)) return false;
+    if (!version.startsWith("1.")) return false;
     const originalHandlePacket = Parser.prototype.handlePacket;
     const originalParse = Parser.prototype.parse;
     if (typeof originalHandlePacket !== "function" || typeof originalParse !== "function") return false;

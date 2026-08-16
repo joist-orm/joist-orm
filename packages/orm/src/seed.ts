@@ -1,7 +1,7 @@
 import { EntityManager, newPgConnectionConfig } from "joist-core";
 import pg from "pg";
 
-import { PostgresDriver } from "./drivers/PostgresDriver.js";
+import { PostgresDriver } from "./drivers/PostgresDriver.ts";
 
 /**
  * Seeds your local/test database with data created via the factories.

@@ -1,8 +1,8 @@
 import { camelCase } from "change-case";
-import { Config, DbMetadata } from "joist-codegen";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type Config, type DbMetadata } from "joist-codegen";
+import { type CodegenFile, code, imp } from "ts-poet";
 
-import { getEntitiesImportPath } from "./utils";
+import { getEntitiesImportPath } from "./utils.ts";
 
 const saveEntity = imp("saveEntity@src/resolvers/utils.ts");
 const mutationResolvers = imp("t:MutationResolvers@src/generated/graphql-types.ts");

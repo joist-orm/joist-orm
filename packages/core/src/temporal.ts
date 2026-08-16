@@ -2,7 +2,7 @@
 
 import { createRequire } from "node:module";
 
-const runtimeRequire = createRequire(__filename);
+const runtimeRequire = createRequire(import.meta.url);
 
 type RequireTemporal = {
   Temporal: typeof globalThis.Temporal;

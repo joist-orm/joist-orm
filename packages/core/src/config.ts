@@ -1,24 +1,24 @@
-import { resetConstructorMap } from "./configure";
-import { AsyncDefault } from "./defaults";
-import { Entity } from "./Entity";
+import { resetConstructorMap } from "./configure.ts";
+import { AsyncDefault } from "./defaults.ts";
+import { type Entity } from "./Entity.ts";
 import {
-  EntityConstructor,
-  EntityField,
-  EntityMetadata,
-  FieldsOf,
-  LoadHint,
-  Loaded,
-  MaybeAbstractEntityConstructor,
-  Reacted,
-  ReactiveHint,
-  RelationsIn,
-  SettableFields,
+  type EntityConstructor,
+  type EntityField,
+  type EntityMetadata,
+  type FieldsOf,
+  type LoadHint,
+  type Loaded,
+  type MaybeAbstractEntityConstructor,
+  type Reacted,
+  type ReactiveHint,
+  type RelationsIn,
+  type SettableFields,
   fail,
   getMetadata,
-} from "./index";
-import { convertToLoadHint } from "./reactiveHints";
-import { ValidationRule, ValidationRuleInternal } from "./rules";
-import { MaybePromise } from "./utils";
+} from "./index.ts";
+import { convertToLoadHint } from "./reactiveHints.ts";
+import { type ValidationRule, type ValidationRuleInternal } from "./rules.ts";
+import { type MaybePromise } from "./utils.ts";
 
 export type EntityHook =
   | "beforeFlush"

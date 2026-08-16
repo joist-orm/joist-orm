@@ -1,4 +1,4 @@
-import { config } from "./config";
+import { config } from "./config.ts";
 import {
   canonicalizeOtherEntities,
   collectionName,
@@ -6,8 +6,8 @@ import {
   oneToOneName,
   referenceName,
   resolveNameConflicts,
-} from "./EntityDbMetadata";
-import { tableToEntityName } from "./utils";
+} from "./EntityDbMetadata.ts";
+import { tableToEntityName } from "./utils.ts";
 
 const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] }, foreignKey: { columns: [{}] } };
 const configDummy: any = { entities: [] };

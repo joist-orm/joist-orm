@@ -1,7 +1,7 @@
-import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
+import { type Config, type DbMetadata, type EntityDbMetadata } from "joist-codegen";
 
-import { generateQueryPageResolvers } from "./generateQueryPageResolvers";
-import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils";
+import { generateQueryPageResolvers } from "./generateQueryPageResolvers.ts";
+import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils.ts";
 
 describe("generateQueryPageResolvers", () => {
   it("generates cursor resolver", async () => {

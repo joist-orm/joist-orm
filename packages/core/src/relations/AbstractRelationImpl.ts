@@ -1,5 +1,5 @@
-import { getBaseAndSelfMetas, getMetadata } from "../EntityMetadata";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
+import { getBaseAndSelfMetas, getMetadata } from "../EntityMetadata.ts";
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
 
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.

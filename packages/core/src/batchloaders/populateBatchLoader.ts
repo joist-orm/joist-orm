@@ -1,26 +1,26 @@
-import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
-import { HintNode, buildHintTree } from "../HintTree";
+import { type Entity } from "../Entity.ts";
+import { type EntityMetadata } from "../EntityMetadata.ts";
+import { type HintNode, buildHintTree } from "../HintTree.ts";
 import {
   AliasAssigner,
-  EntityManager,
-  ParsedFindQuery,
+  type EntityManager,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   getEmInternalApi,
   indexBy,
   keyToNumber,
   kqDot,
-} from "../index";
-import { LoadHint } from "../loadHints";
-import { hintKey } from "../normalizeHints";
-import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
-import { ReactiveFieldImpl } from "../relations/ReactiveField";
-import { toArray } from "../utils";
-import { BatchLoader } from "./BatchLoader";
-import { loadBatchLoader } from "./loadBatchLoader";
-import { manyToManyBatchLoader } from "./manyToManyBatchLoader";
-import { oneToManyBatchLoader } from "./oneToManyBatchLoader";
-import { oneToOneBatchLoader } from "./oneToOneBatchLoader";
+} from "../index.ts";
+import { type LoadHint } from "../loadHints.ts";
+import { hintKey } from "../normalizeHints.ts";
+import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints.ts";
+import { ReactiveFieldImpl } from "../relations/ReactiveField.ts";
+import { toArray } from "../utils.ts";
+import { type BatchLoader } from "./BatchLoader.ts";
+import { loadBatchLoader } from "./loadBatchLoader.ts";
+import { manyToManyBatchLoader } from "./manyToManyBatchLoader.ts";
+import { oneToManyBatchLoader } from "./oneToManyBatchLoader.ts";
+import { oneToOneBatchLoader } from "./oneToOneBatchLoader.ts";
 
 export const populateOperation = "populate";
 

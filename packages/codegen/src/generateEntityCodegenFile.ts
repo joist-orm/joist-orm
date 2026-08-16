@@ -1,23 +1,23 @@
 import { camelCase, pascalCase } from "change-case";
 import pluralize from "pluralize";
-import { Code, code, imp, joinCode } from "ts-poet";
+import { type Code, code, imp, joinCode } from "ts-poet";
 
-import { type Config } from "./config";
-import { type ParsedDoc, buildJSDocBlock, generatedTag } from "./docs";
+import { type Config } from "./config.ts";
+import { type ParsedDoc, buildJSDocBlock, generatedTag } from "./docs/index.ts";
 import {
-  DbMetadata,
-  Entity,
-  EntityDbMetadata,
-  EnumField,
-  ManyToOneField,
-  PgEnumField,
-  PolymorphicField,
-  PrimitiveField,
-  PrimitiveTypescriptType,
-} from "./EntityDbMetadata";
-import { type ScopeMember } from "./findEntityScopes";
-import { getStiEntities } from "./inheritance";
-import { keywords } from "./keywords";
+  type DbMetadata,
+  type Entity,
+  type EntityDbMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type PgEnumField,
+  type PolymorphicField,
+  type PrimitiveField,
+  type PrimitiveTypescriptType,
+} from "./EntityDbMetadata.ts";
+import { type ScopeMember } from "./findEntityScopes.ts";
+import { getStiEntities } from "./inheritance.ts";
+import { keywords } from "./keywords.ts";
 import {
   BaseEntity,
   BooleanFilter,
@@ -92,9 +92,9 @@ import {
   toIdOf,
   toJSON,
   updatePartial,
-} from "./symbols";
-import { tsdocComments } from "./tsdoc";
-import { assertNever, fail, uncapitalize } from "./utils";
+} from "./symbols.ts";
+import { tsdocComments } from "./tsdoc.ts";
+import { assertNever, fail, uncapitalize } from "./utils.ts";
 
 const { plural } = pluralize;
 

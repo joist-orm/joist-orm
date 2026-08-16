@@ -1,5 +1,5 @@
 import type { namedTypes } from "ast-types";
-import jscodeshift, { ASTNode } from "jscodeshift";
+import jscodeshift, { type ASTNode } from "jscodeshift";
 
 const j = jscodeshift.withParser("ts");
 

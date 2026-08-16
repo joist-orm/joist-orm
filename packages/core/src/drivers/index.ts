@@ -1,5 +1,5 @@
-export * from "./buildRawQuery";
-export * from "./buildUtils";
-export * from "./Driver";
-export * from "./EntityWriter";
-export * from "./IdAssigner";
+export * from "./buildRawQuery.ts";
+export * from "./buildUtils.ts";
+export type * from "./Driver.ts";
+export * from "./EntityWriter.ts";
+export * from "./IdAssigner.ts";

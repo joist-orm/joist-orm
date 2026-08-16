@@ -1,25 +1,25 @@
-import { Entity, IdType } from "../Entity";
-import { FilterAndSettings, FindFilter } from "../EntityFilter";
-import { GraphQLFilterWithAlias } from "../EntityGraphQLFilter";
+import { type Entity, type IdType } from "../Entity.ts";
+import { type FilterAndSettings, type FindFilter } from "../EntityFilter.ts";
+import { type GraphQLFilterWithAlias } from "../EntityGraphQLFilter.ts";
 import {
-  EntityManager,
-  FindCountFilterOptions,
-  MaybeAbstractEntityConstructor,
+  type EntityManager,
+  type FindCountFilterOptions,
+  type MaybeAbstractEntityConstructor,
   getEmInternalApi,
-} from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
-import { kq } from "../keywords";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { isScope, isSelectAllFilter, resolveScope } from "../scopes";
-import { buildUnnestCte } from "../unnest";
-import { fail } from "../utils";
+} from "../EntityManager.ts";
+import { getMetadata } from "../EntityMetadata.ts";
+import { kq } from "../keywords.ts";
+import { type ParsedFindQuery, parseFindQuery } from "../QueryParser.ts";
+import { isScope, isSelectAllFilter, resolveScope } from "../scopes.ts";
+import { buildUnnestCte } from "../unnest.ts";
+import { fail } from "../utils.ts";
 import {
   collectAndReplaceArgs,
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader";
+} from "./findDataLoader.ts";
 
 export const findCountOperation = "find-count";
 

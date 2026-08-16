@@ -1,13 +1,13 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
-import { getField, setField } from "../fields";
+import { type Entity, isEntity } from "../Entity.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "../EntityManager.ts";
+import { type EntityMetadata, type ManyToOneField, getMetadata } from "../EntityMetadata.ts";
+import { getField, setField } from "../fields.ts";
 import {
   BaseEntity,
   NoIdError,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
-  Reference,
+  type Reference,
   deTagId,
   ensureNotDeleted,
   ensureTagged,
@@ -16,13 +16,13 @@ import {
   maybeResolveReferenceToId,
   toIdOf,
   toTaggedId,
-} from "../index";
-import { lazyField } from "../newEntity";
-import { maybeAdd, maybeRemove } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { OneToManyCollection } from "./OneToManyCollection";
-import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { lazyField } from "../newEntity.ts";
+import { maybeAdd, maybeRemove } from "../utils.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { OneToManyCollection } from "./OneToManyCollection.ts";
+import { ReferenceN } from "./ReferenceSymbols.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {

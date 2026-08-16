@@ -1,11 +1,11 @@
 import { createRequire } from "node:module";
 
-import { RowData } from "joist-core";
+import { type RowData } from "joist-core";
 import pg from "pg";
 
-import { getBinaryTypeParser } from "./binaryParsers";
+import { getBinaryTypeParser } from "./binaryParsers.ts";
 
-const runtimeRequire = createRequire(__filename);
+const runtimeRequire = createRequire(import.meta.url);
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
 // submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).

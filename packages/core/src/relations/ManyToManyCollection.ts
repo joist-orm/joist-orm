@@ -1,9 +1,9 @@
 import {
-  Collection,
-  Entity,
-  EntityMetadata,
-  IdOf,
-  ManyToManyField,
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type IdOf,
+  type ManyToManyField,
   appendStack,
   ensureNotDeleted,
   getEmInternalApi,
@@ -11,13 +11,13 @@ import {
   getMetadata,
   getMetadataForField,
   toTaggedId,
-} from "../";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { lazyField } from "../newEntity";
-import { maybeAdd, maybeRemove, remove } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "..//index.ts";
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
+import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader.ts";
+import { lazyField } from "../newEntity.ts";
+import { maybeAdd, maybeRemove, remove } from "../utils.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {
@@ -560,7 +560,7 @@ class LoadedState<T extends Entity, U extends Entity> implements M2MState<T, U> 
 
   set(values: readonly U[]): M2MState<T, U> {
     this.#hasBeenSet = true;
-    const loaded = new Set([...this.#loaded]);
+    const loaded = new Set(this.#loaded);
     const valuesSet = new Set(values);
     for (const other of loaded) {
       if (!valuesSet.has(other)) {

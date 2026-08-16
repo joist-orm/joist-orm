@@ -1,4 +1,4 @@
-import { findApplicableCodemods, getLatestCodemodVersion } from ".";
+import { findApplicableCodemods, getLatestCodemodVersion } from "./index.ts";
 
 describe("codemods", () => {
   it("returns the latest codemod version", () => {

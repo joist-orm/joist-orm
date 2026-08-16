@@ -1,8 +1,15 @@
-import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
-import { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "joist-codegen/build/utils";
+import {
+  type Config,
+  type DbMetadata,
+  type EntityDbMetadata,
+  dateCode,
+  plainDateCode,
+  plainDateTimeCode,
+  zonedDateTimeCode,
+} from "joist-codegen";
 import { keyBy } from "joist-utils";
 
-import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
+import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles.ts";
 import {
   newEntityMetadata,
   newEnumField,
@@ -10,8 +17,8 @@ import {
   newManyToOneField,
   newPolymorphicField,
   newPrimitiveField,
-} from "./testUtils";
-import { Fs } from "./utils";
+} from "./testUtils.ts";
+import { type Fs } from "./utils.ts";
 
 describe("generateGraphqlSchemaFiles", () => {
   it("creates a new file", async () => {

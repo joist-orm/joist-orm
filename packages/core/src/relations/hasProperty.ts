@@ -1,12 +1,18 @@
-import { Entity } from "../Entity";
-import { getMetadata } from "../EntityMetadata";
-import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { lazyField } from "../newEntity";
-import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { tryResolve } from "../utils";
-import { RecursiveCycleError } from "./RecursiveCycleError";
+import { type Entity } from "../Entity.ts";
+import { getMetadata } from "../EntityMetadata.ts";
+import { type LoadHint, type Loaded, isLoaded } from "../loadHints.ts";
+import { lazyField } from "../newEntity.ts";
+import {
+  type MaybeReactedPropertyEntity,
+  type Reacted,
+  type ReactiveHint,
+  convertToLoadHint,
+} from "../reactiveHints.ts";
+import { tryResolve } from "../utils.ts";
+import { PropertyT } from "./PropertySymbols.ts";
+import { RecursiveCycleError } from "./RecursiveCycleError.ts";
 
-export const PropertyT = Symbol();
+export { PropertyT };
 
 export interface Property<T extends Entity, V> {
   // Differentiate from AsyncMethod

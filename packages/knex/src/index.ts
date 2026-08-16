@@ -1,7 +1,7 @@
 import {
-  Entity,
-  FilterAndSettings,
-  MaybeAbstractEntityConstructor,
+  type Entity,
+  type FilterAndSettings,
+  type MaybeAbstractEntityConstructor,
   getMetadata,
   optimizeCollectionJoins,
   parseFindQuery,
@@ -9,7 +9,7 @@ import {
 import knex, { type Knex } from "knex";
 import pg from "pg";
 
-import { buildKnexQuery } from "./buildKnexQuery";
+import { buildKnexQuery } from "./buildKnexQuery.ts";
 
 const { knex: baseCreateKnex } = knex;
 

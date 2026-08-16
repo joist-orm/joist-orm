@@ -1,17 +1,17 @@
-import { Entity } from "../Entity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { OneToOneField, getMetadata } from "../EntityMetadata";
-import { getField } from "../fields";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { type OneToOneField, getMetadata } from "../EntityMetadata.ts";
+import { getField } from "../fields.ts";
 import {
-  ParsedFindQuery,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-} from "../index";
-import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
-import { abbreviation, groupBy } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+} from "../index.ts";
+import { type OneToOneReferenceImpl } from "../relations/OneToOneReference.ts";
+import { abbreviation, groupBy } from "../utils.ts";
+import { type BatchLoader } from "./BatchLoader.ts";
 
 export const oneToOneLoadOperation = "o2o-load";
 

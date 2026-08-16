@@ -1,15 +1,17 @@
-import { getInstanceData } from "./BaseEntity";
-import { getDefaultDependencies } from "./defaults";
-import { buildWhereClause } from "./drivers/buildUtils";
-import { Entity } from "./Entity";
-import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
-import { getField, setField } from "./fields";
-import { getProperties } from "./getProperties";
-import { New } from "./loadHints";
-import { isAllSqlPaths } from "./loadLens";
-import { FactoryInitialValue } from "./newTestInstance";
-import { partitionHint } from "./preloading/partitionHint";
+import { getInstanceData } from "./BaseEntity.ts";
+import { getDefaultDependencies } from "./defaults.ts";
+import { buildWhereClause } from "./drivers/buildUtils.ts";
+import { type Entity } from "./Entity.ts";
+import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "./EntityManager.ts";
+import { type EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
+import { getField, setField } from "./fields.ts";
+import { getProperties } from "./getProperties.ts";
+import { type New } from "./loadHints.ts";
+import { isAllSqlPaths } from "./loadLens.ts";
+import { FactoryInitialValue } from "./newTestInstance.ts";
+import { partitionHint } from "./preloading/partitionHint.ts";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
 import {
   isAsyncProperty,
   isAsyncReactiveField,
@@ -17,79 +19,77 @@ import {
   isProperty,
   isReactiveField,
   isReactiveGetter,
-} from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { OptsOf } from "./typeMap";
-import { fail } from "./utils";
+} from "./relations/index.ts";
+import { ReactiveFieldImpl } from "./relations/ReactiveField.ts";
+import { type OptsOf } from "./typeMap.ts";
+import { fail } from "./utils.ts";
 
 export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
-export { AliasAssigner } from "./AliasAssigner";
-export * from "./Aliases";
-export { BaseEntity, getInstanceData } from "./BaseEntity";
-export { ConditionBuilder } from "./ConditionBuilder";
-export { Entity, IdType, isEntity } from "./Entity";
-export * from "./EntityFields";
-export * from "./EntityFilter";
-export * from "./EntityGraphQLFilter";
-export * from "./EntityManager";
-export * from "./EntityMetadata";
-export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export { InstanceData } from "./InstanceData";
-export { JoinColumnValue, JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
-export * from "./PendingChanges";
-export { Plugin } from "./PluginManager";
-export * from "./QueryParser";
-export * from "./QueryParser.collectionJoins";
-export { visitConditions } from "./QueryVisitor";
-export * from "./RowData";
-export { JoinRowTodo, Todo } from "./Todo";
-export * from "./changes";
-export { ConfigApi, EntityHook, resetBootFlag } from "./config";
+export { AliasAssigner } from "./AliasAssigner.ts";
+export * from "./Aliases.ts";
+export { BaseEntity, getInstanceData } from "./BaseEntity.ts";
+export { ConditionBuilder } from "./ConditionBuilder.ts";
+export { type Entity, type IdType, isEntity } from "./Entity.ts";
+export type * from "./EntityFields.ts";
+export * from "./EntityFilter.ts";
+export * from "./EntityGraphQLFilter.ts";
+export * from "./EntityManager.ts";
+export * from "./EntityMetadata.ts";
+export type { EnumMetadata } from "./EnumMetadata.ts";
+export type { EntityOrId, HintNode } from "./HintTree.ts";
+export { InstanceData } from "./InstanceData.ts";
+export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
+export type * from "./PendingChanges.ts";
+export { Plugin } from "./PluginManager.ts";
+export * from "./QueryParser.ts";
+export * from "./QueryParser.collectionJoins.ts";
+export { visitConditions } from "./QueryVisitor.ts";
+export * from "./RowData.ts";
+export { type JoinRowTodo, Todo } from "./Todo.ts";
+export * from "./changes.ts";
+export { ConfigApi, type EntityHook, resetBootFlag } from "./config.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,
   getMetadataForTable,
   getMetadataForType,
   maybeGetConstructorFromReference,
-} from "./configure";
-export { driverApi } from "./driverApi";
-export * from "./drivers";
-export { getField, isChangeableField, isFieldSet, setField } from "./fields";
-export * from "./getProperties";
-export * from "./json";
-export * from "./keys";
-export { kq, kqDot, kqStar } from "./keywords";
+} from "./configure.ts";
+export { driverApi } from "./driverApi.ts";
+export * from "./drivers/index.ts";
+export { getField, isChangeableField, isFieldSet, setField } from "./fields.ts";
+export * from "./getProperties.ts";
+export * from "./json.ts";
+export * from "./keys.ts";
+export { kq, kqDot, kqStar } from "./keywords.ts";
 export {
   assertLoaded,
-  DeepNew,
+  type DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
-  Loadable,
-  Loaded,
-  LoadHint,
-  MarkLoaded,
+  type Loadable,
+  type Loaded,
+  type LoadHint,
+  type MarkLoaded,
   maybePopulateThen,
-  NestedLoadHint,
-  New,
-  RelationsIn,
+  type NestedLoadHint,
+  type New,
+  type RelationsIn,
   unsafeLoaded,
-} from "./loadHints";
-export * from "./loadLens";
-export { setFactoryWriter } from "./logging/FactoryLogger";
-export * from "./logging/FieldLogger";
-export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
-export { lazyField } from "./newEntity";
+} from "./loadHints.ts";
+export * from "./loadLens.ts";
+export { setFactoryWriter } from "./logging/FactoryLogger.ts";
+export * from "./logging/FieldLogger.ts";
+export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger.ts";
+export { lazyField } from "./newEntity.ts";
 export {
   defaultValue,
   factories,
-  FactoryEntityOpt,
-  FactoryOpts,
+  type FactoryEntityOpt,
+  type FactoryOpts,
   getTestIndex,
   isFactoryCreation,
   maybeBranchValue,
@@ -99,25 +99,25 @@ export {
   noValue,
   setFactoryLogging,
   testIndex,
-} from "./newTestInstance";
-export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
-export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin";
-export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
-export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
+} from "./newTestInstance.ts";
+export { deepNormalizeHint, normalizeHint } from "./normalizeHints.ts";
+export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin.ts";
+export type { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin.ts";
+export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,
-  Reactable,
-  Reacted,
-  ReactiveHint,
-  ReactiveTarget,
+  type Reactable,
+  type Reacted,
+  type ReactiveHint,
+  type ReactiveTarget,
   reverseReactiveHint,
-} from "./reactiveHints";
-export * from "./relations";
+} from "./reactiveHints.ts";
+export * from "./relations/index.ts";
 export {
   cannotBeChanged,
   cannotBeUpdated,
-  GenericError,
+  type GenericError,
   maxValueRule,
   minValueRule,
   mustBeSubType,
@@ -125,21 +125,21 @@ export {
   newRequiredRule,
   rangeValueRule,
   ValidationCode,
-  ValidationError,
+  type ValidationError,
   ValidationErrors,
-  ValidationRule,
-  ValidationRuleInternal,
-  ValidationRuleResult,
-} from "./rules";
-export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
-export * from "./serde";
-export * from "./scopes";
-export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal";
-export * from "./temporalMappers";
-export { isInTrustedContext, runInTrustedContext } from "./trusted";
-export * from "./typeMap";
-export { buildUnnestCte, ensureRectangularArraySizes } from "./unnest";
-export { DeepPartialOrNull, updatePartial, upsert } from "./upsert";
+  type ValidationRule,
+  type ValidationRuleInternal,
+  type ValidationRuleResult,
+} from "./rules.ts";
+export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig.ts";
+export * from "./serde.ts";
+export * from "./scopes.ts";
+export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal.ts";
+export * from "./temporalMappers.ts";
+export { isInTrustedContext, runInTrustedContext } from "./trusted.ts";
+export type * from "./typeMap.ts";
+export { buildUnnestCte, ensureRectangularArraySizes } from "./unnest.ts";
+export { type DeepPartialOrNull, updatePartial, upsert } from "./upsert.ts";
 export {
   abbreviation,
   asNew,
@@ -151,8 +151,8 @@ export {
   indexBy,
   partition,
   zeroTo,
-} from "./utils";
-export { ensureWithLoaded, StubbedRelation, WithLoaded, withLoaded } from "./withLoaded";
+} from "./utils.ts";
+export { ensureWithLoaded, StubbedRelation, type WithLoaded, withLoaded } from "./withLoaded.ts";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

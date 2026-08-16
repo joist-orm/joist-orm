@@ -1,9 +1,9 @@
-import { BaseEntity } from "./BaseEntity";
-import { type Entity, type IdType, isEntity } from "./Entity";
-import { type EntityConstructor, type IdOf, type TaggedId } from "./EntityManager";
-import { type EntityMetadata, getMetadata } from "./EntityMetadata";
-import { type Reference } from "./relations";
-import { assertNever, fail } from "./utils";
+import { BaseEntity } from "./BaseEntity.ts";
+import { type Entity, type IdType, isEntity } from "./Entity.ts";
+import { type EntityConstructor, type IdOf, type TaggedId } from "./EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
+import { type Reference } from "./relations/index.ts";
+import { assertNever, fail } from "./utils.ts";
 
 let tagDelimiter: string | undefined = ":";
 
@@ -99,7 +99,7 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
 }
 
 const validSlugId = /^([a-z]+)(\d+)$/i;
-const uuidIshId = /[0-9a-z\-]+/i;
+const uuidIshId = /[0-9a-z-]+/i;
 
 /** Returns whether `id` is tagged and a probably-correct value. */
 export function isTaggedId(id: string | number): boolean;

@@ -1,10 +1,10 @@
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 
-import { runMigrationsIfNeeded } from "./migrate";
+import { runMigrationsIfNeeded } from "./migrate.ts";
 
-export * from "./migrate";
-export * from "./utils";
+export * from "./migrate.ts";
+export * from "./utils.ts";
 
 export async function joistMigrate(): Promise<void> {
   const client = new Client(newPgConnectionConfig());

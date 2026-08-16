@@ -4,7 +4,7 @@ import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
 import { z } from "zod";
 
-import { config } from "./config";
+import { config } from "./config.ts";
 
 const jsonFormatter = createFromBuffer(readFileSync(getPath()));
 

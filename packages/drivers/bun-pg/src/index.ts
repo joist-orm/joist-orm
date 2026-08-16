@@ -1,1 +1,1 @@
-export * from "./BunPgDriver";
+export * from "./BunPgDriver.ts";

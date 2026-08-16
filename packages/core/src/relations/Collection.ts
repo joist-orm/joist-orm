@@ -1,13 +1,13 @@
-import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
+import { type Entity } from "../Entity.ts";
+import { type IdOf } from "../EntityManager.ts";
 import {
   CustomCollection,
   ManyToManyCollection,
   OneToManyCollection,
   ReactiveManyToManyImpl,
   ReactiveManyToManyOtherSideImpl,
-  Relation,
-} from "./index";
+  type Relation,
+} from "./index.ts";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {

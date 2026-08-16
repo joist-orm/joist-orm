@@ -1,7 +1,7 @@
-import { Entity } from "../Entity";
-import { lazyField } from "../newEntity";
-import { Reacted, ShallowReactiveHint } from "../reactiveHints";
-import { PropertyT } from "./hasProperty";
+import { type Entity } from "../Entity.ts";
+import { lazyField } from "../newEntity.ts";
+import { type Reacted, type ShallowReactiveHint } from "../reactiveHints.ts";
+import { PropertyT } from "./PropertySymbols.ts";
 
 /**
  * A `ReactiveGetter` is a getter that declares what primitive fields it depends on.

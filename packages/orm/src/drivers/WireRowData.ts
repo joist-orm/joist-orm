@@ -1,12 +1,16 @@
-import { RowData } from "joist-core";
+import { createRequire } from "node:module";
+
+import { type RowData } from "joist-core";
 import pg from "pg";
 
-import { getBinaryTypeParser } from "./binaryParsers";
+import { getBinaryTypeParser } from "./binaryParsers.ts";
+
+const runtimeRequire = createRequire(import.meta.url);
 
 // pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
 // submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const PgQuery: any = require("pg/lib/query");
+const PgQuery: any = runtimeRequire("pg/lib/query");
 
 /** One column's RowDescription-derived metadata, resolved once per query. */
 type WireColumn = {

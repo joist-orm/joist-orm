@@ -1,5 +1,5 @@
-export { CursorPageInfo, paginateCursor } from "./cursorPagination";
-export { entityResolver } from "./entityResolver";
-export { convertInfoToLoadHint } from "./hint";
-export { LimitPageInfo, paginateLimit } from "./limitPagination";
-export { saveEntities, saveEntity } from "./saveEntity";
+export { CursorPageInfo, paginateCursor } from "./cursorPagination.ts";
+export { entityResolver } from "./entityResolver.ts";
+export { convertInfoToLoadHint } from "./hint.ts";
+export { LimitPageInfo, paginateLimit } from "./limitPagination.ts";
+export { saveEntities, saveEntity } from "./saveEntity.ts";

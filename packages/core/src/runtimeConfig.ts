@@ -1,4 +1,4 @@
-import { fail } from "./utils";
+import { fail } from "./utils.ts";
 
 let runtimeConfig: RuntimeConfig | undefined = undefined;
 

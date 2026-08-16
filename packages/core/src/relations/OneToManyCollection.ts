@@ -1,11 +1,11 @@
-import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader";
-import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
+import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader.ts";
+import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader.ts";
 import {
-  Collection,
-  Entity,
-  EntityMetadata,
-  IdOf,
-  OneToManyField,
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type IdOf,
+  type OneToManyField,
   appendStack,
   ensureNotDeleted,
   getEmInternalApi,
@@ -14,13 +14,13 @@ import {
   getMetadataForField,
   maybeResolveReferenceToId,
   sameEntity,
-} from "../index";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { compareValues } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { ManyToOneReferenceImpl } from "./ManyToOneReference";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import { lazyField } from "../newEntity.ts";
+import { compareValues } from "../utils.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { type ManyToOneReferenceImpl } from "./ManyToOneReference.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> {
@@ -466,7 +466,7 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
     // Push added entities on the end to better match the db order of "newer things come last"
-    const loaded = new Set([...dbEntities]);
+    const loaded = new Set(dbEntities);
     for (const e of this.#added) loaded.add(e);
     for (const e of this.#removed) loaded.delete(e);
     return new O2MLoadedState<T, U>(this.#o2m, [...loaded], false, [...this.#added], [...this.#removed]);

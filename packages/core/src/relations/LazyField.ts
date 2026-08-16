@@ -1,17 +1,18 @@
-import { getInstanceData } from "../BaseEntity";
-import { BatchLoader } from "../batchloaders/BatchLoader";
-import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
-import { EntityMetadata, PrimitiveField, getMetadata } from "../EntityMetadata";
-import { setField } from "../fields";
-import { keyToNumber, tagId } from "../keys";
-import { kqDot } from "../keywords";
-import { lazyField } from "../newEntity";
-import { ParsedFindQuery } from "../QueryParser";
-import { PojoRowData } from "../RowData";
-import { abbreviation } from "../utils";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { LoadedProperty, Property, PropertyT } from "./hasProperty";
+import { getInstanceData } from "../BaseEntity.ts";
+import { type BatchLoader } from "../batchloaders/BatchLoader.ts";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager } from "../EntityManager.ts";
+import { type EntityMetadata, type PrimitiveField, getMetadata } from "../EntityMetadata.ts";
+import { setField } from "../fields.ts";
+import { keyToNumber, tagId } from "../keys.ts";
+import { kqDot } from "../keywords.ts";
+import { lazyField } from "../newEntity.ts";
+import { type ParsedFindQuery } from "../QueryParser.ts";
+import { PojoRowData } from "../RowData.ts";
+import { abbreviation } from "../utils.ts";
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
+import { type LoadedProperty, type Property } from "./hasProperty.ts";
+import { PropertyT } from "./PropertySymbols.ts";
 
 export const lazyColumnLoadOperation = "lazy-column-load";
 

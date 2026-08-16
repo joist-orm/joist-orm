@@ -1,20 +1,20 @@
 import {
-  DeleteOp,
-  Driver,
-  EntityManager,
-  IdAssigner,
-  InsertOp,
+  type DeleteOp,
+  type Driver,
+  type EntityManager,
+  type IdAssigner,
+  type InsertOp,
   JoinRowOperation,
-  JoinRowTodo,
-  OpColumn,
-  ParsedFindQuery,
+  type JoinRowTodo,
+  type OpColumn,
+  type ParsedFindQuery,
   PojoRowData,
-  PreloadPlugin,
-  RowData,
-  RuntimeConfig,
+  type PreloadPlugin,
+  type RowData,
+  type RuntimeConfig,
   SequenceIdAssigner,
-  Todo,
-  UpdateOp,
+  type Todo,
+  type UpdateOp,
   buildRawQuery,
   cleanSql,
   driverAfterBegin,
@@ -33,9 +33,9 @@ import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 
-import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers";
-import { ensureLazyDataRows } from "./patchPgProtocol";
-import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData";
+import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers.ts";
+import { ensureLazyDataRows } from "./patchPgProtocol.ts";
+import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData.ts";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;

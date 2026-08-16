@@ -2,9 +2,9 @@ import { mkdtemp, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
-import { config } from "./config";
-import { makeEntity } from "./EntityDbMetadata";
-import { findAllEntityScopes } from "./findEntityScopes";
+import { config } from "./config.ts";
+import { makeEntity } from "./EntityDbMetadata.ts";
+import { findAllEntityScopes } from "./findEntityScopes.ts";
 
 describe("findAllEntityScopes", () => {
   it("finds static scope properties with explicit and inferred types", async () => {

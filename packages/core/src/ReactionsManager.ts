@@ -1,10 +1,10 @@
-import { type Reactable } from "./config";
-import { Entity } from "./Entity";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { EntityManager, NoIdError, getEmInternalApi } from "./index";
-import { ReactionLogger, globalLogger, noopReactionLogger } from "./logging/ReactionLogger";
-import { followReverseHint } from "./reactiveHints";
-import { runInTrustedContext } from "./trusted";
+import { type Reactable } from "./config.ts";
+import { type Entity } from "./Entity.ts";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
+import { type EntityManager, NoIdError, getEmInternalApi } from "./index.ts";
+import { type ReactionLogger, globalLogger, noopReactionLogger } from "./logging/ReactionLogger.ts";
+import { followReverseHint } from "./reactiveHints.ts";
+import { runInTrustedContext } from "./trusted.ts";
 
 export type ReactiveAction = { r: Reactable; entity: Entity };
 /**

@@ -1,25 +1,26 @@
 import {
-  IdOf,
-  LoadedReference,
-  OneToOneField,
-  TaggedId,
+  type IdOf,
+  type LoadedReference,
+  type OneToOneField,
+  type TaggedId,
   appendStack,
   deTagId,
   ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
-} from "../";
-import { oneToOneBatchLoader } from "../batchloaders/oneToOneBatchLoader";
-import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
-import { setField } from "../fields";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { ManyToOneReference, failIfNewEntity, failNoId } from "./ManyToOneReference";
-import { isReactiveReference } from "./ReactiveReference";
-import { Reference, ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "..//index.ts";
+import { oneToOneBatchLoader } from "../batchloaders/oneToOneBatchLoader.ts";
+import { type Entity } from "../Entity.ts";
+import { type EntityMetadata } from "../EntityMetadata.ts";
+import { setField } from "../fields.ts";
+import { lazyField } from "../newEntity.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { type ManyToOneReference, failIfNewEntity, failNoId } from "./ManyToOneReference.ts";
+import { isReactiveReference } from "./ReactiveReference.ts";
+import { type Reference } from "./Reference.ts";
+import { ReferenceN } from "./ReferenceSymbols.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 const OneToOne = Symbol();
 

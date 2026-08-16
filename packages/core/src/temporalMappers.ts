@@ -1,8 +1,6 @@
-import type { Temporal } from "temporal-polyfill";
-
-import { CustomSerde } from "./serde";
-import { maybeRequireTemporal } from "./temporal";
-import { fail } from "./utils";
+import { type CustomSerde } from "./serde.ts";
+import { type Temporal, maybeRequireTemporal } from "./temporal.ts";
+import { fail } from "./utils.ts";
 
 const { Temporal: t } = maybeRequireTemporal() ?? {};
 const temporalNotAvailable = {

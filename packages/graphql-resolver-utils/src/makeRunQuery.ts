@@ -1,4 +1,4 @@
-import { ResolverArgs, ResolverResult, RunFn } from "./typeUtils";
+import { type ResolverArgs, type ResolverResult, type RunFn } from "./typeUtils.ts";
 
 /**
  * Creates a `makeRunQuery` function for each project's `testUtils` file.

@@ -1,6 +1,6 @@
 import { type Transform } from "jscodeshift";
 
-import { JscodeshiftMod } from "./JscodeshiftMod";
+import { JscodeshiftMod } from "./JscodeshiftMod.ts";
 
 export const codemod_0002_rename_async_query_fields = new JscodeshiftMod(
   2,

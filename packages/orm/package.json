@@ -2,6 +2,7 @@
   "name": "joist-orm",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -10,68 +11,189 @@
   "engines": {
     "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/index.cjs",
+  "module": "build/index.js",
+  "types": "build/index.d.mts",
   "typesVersions": {
     "*": {
       "pg": [
-        "build/pg-export.d.ts"
+        "build/pg-export.d.mts"
       ],
       "codegen": [
-        "build/codegen.d.ts"
+        "build/codegen.d.mts"
       ],
       "pg-migrate": [
-        "build/pg-migrate.d.ts"
+        "build/pg-migrate.d.mts"
       ],
       "graphql": [
-        "build/graphql-export.d.ts"
+        "build/graphql-export.d.mts"
       ],
       "graphql-codegen": [
-        "build/graphql-codegen-export.d.ts"
+        "build/graphql-codegen-export.d.mts"
       ],
       "tests": [
-        "build/tests-export.d.ts"
+        "build/tests-export.d.mts"
       ],
       "knex": [
-        "build/knex-export.d.ts"
+        "build/knex-export.d.mts"
       ]
     }
   },
   "bin": {
-    "joist-codegen": "./build/codegen.js",
-    "joist-pg-migrate": "./build/pg-migrate.js"
+    "joist-codegen": "./build/codegen.cjs",
+    "joist-pg-migrate": "./build/pg-migrate.cjs"
   },
   "exports": {
     ".": {
-      "types": "./build/index.d.ts",
+      "bun": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "module-sync": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      },
       "default": "./build/index.js"
     },
     "./codegen": {
-      "types": "./build/codegen.d.ts",
+      "bun": {
+        "types": "./build/codegen.d.mts",
+        "default": "./build/codegen.js"
+      },
+      "module-sync": {
+        "types": "./build/codegen.d.mts",
+        "default": "./build/codegen.js"
+      },
+      "import": {
+        "types": "./build/codegen.d.mts",
+        "default": "./build/codegen.js"
+      },
+      "require": {
+        "types": "./build/codegen.d.cts",
+        "default": "./build/codegen.cjs"
+      },
       "default": "./build/codegen.js"
     },
     "./pg-migrate": {
-      "types": "./build/pg-migrate.d.ts",
+      "bun": {
+        "types": "./build/pg-migrate.d.mts",
+        "default": "./build/pg-migrate.js"
+      },
+      "module-sync": {
+        "types": "./build/pg-migrate.d.mts",
+        "default": "./build/pg-migrate.js"
+      },
+      "import": {
+        "types": "./build/pg-migrate.d.mts",
+        "default": "./build/pg-migrate.js"
+      },
+      "require": {
+        "types": "./build/pg-migrate.d.cts",
+        "default": "./build/pg-migrate.cjs"
+      },
       "default": "./build/pg-migrate.js"
     },
     "./graphql": {
-      "types": "./build/graphql-export.d.ts",
+      "bun": {
+        "types": "./build/graphql-export.d.mts",
+        "default": "./build/graphql-export.js"
+      },
+      "module-sync": {
+        "types": "./build/graphql-export.d.mts",
+        "default": "./build/graphql-export.js"
+      },
+      "import": {
+        "types": "./build/graphql-export.d.mts",
+        "default": "./build/graphql-export.js"
+      },
+      "require": {
+        "types": "./build/graphql-export.d.cts",
+        "default": "./build/graphql-export.cjs"
+      },
       "default": "./build/graphql-export.js"
     },
     "./graphql-codegen": {
-      "types": "./build/graphql-codegen-export.d.ts",
+      "bun": {
+        "types": "./build/graphql-codegen-export.d.mts",
+        "default": "./build/graphql-codegen-export.js"
+      },
+      "module-sync": {
+        "types": "./build/graphql-codegen-export.d.mts",
+        "default": "./build/graphql-codegen-export.js"
+      },
+      "import": {
+        "types": "./build/graphql-codegen-export.d.mts",
+        "default": "./build/graphql-codegen-export.js"
+      },
+      "require": {
+        "types": "./build/graphql-codegen-export.d.cts",
+        "default": "./build/graphql-codegen-export.cjs"
+      },
       "default": "./build/graphql-codegen-export.js"
     },
     "./tests": {
-      "types": "./build/tests-export.d.ts",
+      "bun": {
+        "types": "./build/tests-export.d.mts",
+        "default": "./build/tests-export.js"
+      },
+      "module-sync": {
+        "types": "./build/tests-export.d.mts",
+        "default": "./build/tests-export.js"
+      },
+      "import": {
+        "types": "./build/tests-export.d.mts",
+        "default": "./build/tests-export.js"
+      },
+      "require": {
+        "types": "./build/tests-export.d.cts",
+        "default": "./build/tests-export.cjs"
+      },
       "default": "./build/tests-export.js"
     },
     "./knex": {
-      "types": "./build/knex-export.d.ts",
+      "bun": {
+        "types": "./build/knex-export.d.mts",
+        "default": "./build/knex-export.js"
+      },
+      "module-sync": {
+        "types": "./build/knex-export.d.mts",
+        "default": "./build/knex-export.js"
+      },
+      "import": {
+        "types": "./build/knex-export.d.mts",
+        "default": "./build/knex-export.js"
+      },
+      "require": {
+        "types": "./build/knex-export.d.cts",
+        "default": "./build/knex-export.cjs"
+      },
       "default": "./build/knex-export.js"
     },
     "./pg": {
-      "types": "./build/pg-export.d.ts",
+      "bun": {
+        "types": "./build/pg-export.d.mts",
+        "default": "./build/pg-export.js"
+      },
+      "module-sync": {
+        "types": "./build/pg-export.d.mts",
+        "default": "./build/pg-export.js"
+      },
+      "import": {
+        "types": "./build/pg-export.d.mts",
+        "default": "./build/pg-export.js"
+      },
+      "require": {
+        "types": "./build/pg-export.d.cts",
+        "default": "./build/pg-export.cjs"
+      },
       "default": "./build/pg-export.js"
     }
   },

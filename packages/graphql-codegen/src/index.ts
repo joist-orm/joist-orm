@@ -1,17 +1,17 @@
-import { Config, DbMetadata } from "joist-codegen";
-import { CodegenFile } from "ts-poet";
+import { type Config, type DbMetadata } from "joist-codegen";
+import { type CodegenFile } from "ts-poet";
 
-import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
-import { generateEnumsGraphql } from "./generateEnumsGraphql";
-import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
-import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
-import { generateObjectResolvers } from "./generateObjectResolvers";
-import { generateQueryPageResolvers } from "./generateQueryPageResolvers";
-import { generateQueryResolvers } from "./generateQueryResolvers";
-import { generateResolverUtils } from "./generateResolverUtils";
-import { generateSaveResolvers } from "./generateSaveResolvers";
-import { loadHistory, writeHistory } from "./history";
-import { Fs, getImportExtension, newFsImpl } from "./utils";
+import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers.ts";
+import { generateEnumsGraphql } from "./generateEnumsGraphql.ts";
+import { generateGraphqlCodegen } from "./generateGraphqlCodegen.ts";
+import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles.ts";
+import { generateObjectResolvers } from "./generateObjectResolvers.ts";
+import { generateQueryPageResolvers } from "./generateQueryPageResolvers.ts";
+import { generateQueryResolvers } from "./generateQueryResolvers.ts";
+import { generateResolverUtils } from "./generateResolverUtils.ts";
+import { generateSaveResolvers } from "./generateSaveResolvers.ts";
+import { loadHistory, writeHistory } from "./history.ts";
+import { type Fs, getImportExtension, newFsImpl } from "./utils.ts";
 
 export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const fs = newFsImpl("./schema");

@@ -2,6 +2,7 @@
   "name": "joist-core",
   "version": "2.0.3",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -10,8 +11,30 @@
   "engines": {
     "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/index.cjs",
+  "module": "build/index.js",
+  "types": "build/index.d.mts",
+  "exports": {
+    ".": {
+      "bun": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "module-sync": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      },
+      "default": "./build/index.js"
+    }
+  },
   "scripts": {
     "test": "jest"
   },
@@ -23,7 +46,8 @@
   },
   "dependencies": {
     "ansis": "^4.3.1",
-    "dataloader": "^2.2.3"
+    "dataloader": "^2.2.3",
+    "temporal-spec": "^0.3.1"
   },
   "devDependencies": {
     "@swc/core": "^1.15.47",

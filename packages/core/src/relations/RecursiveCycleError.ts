@@ -1,4 +1,4 @@
-import { Entity } from "../Entity";
+import { type Entity } from "../Entity.ts";
 
 interface RecursiveCycleRelation {
   entity: Entity;

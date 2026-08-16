@@ -1,7 +1,7 @@
-import { Alias } from "./Aliases";
-import { Entity } from "./Entity";
-import { EntityFilter, ExpressionFilter } from "./EntityFilter";
-import { GraphQLFilterOf, OrderOf } from "./typeMap";
+import { type Alias } from "./Aliases.ts";
+import { type Entity } from "./Entity.ts";
+import { type EntityFilter, type ExpressionFilter } from "./EntityFilter.ts";
+import { type GraphQLFilterOf, type OrderOf } from "./typeMap.ts";
 
 export type GraphQLFilterWithAlias<T extends Entity> = { as?: Alias<T> } & GraphQLFilterOf<T>;
 

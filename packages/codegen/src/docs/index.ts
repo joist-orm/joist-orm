@@ -1,12 +1,12 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 
-import { DocsCache, getMtime } from "./cache";
-import { type ParsedDoc, getMarkdownFilePath, maybeReadMarkdownFile, updateMarkdownDoc } from "./markdown";
-import { applyEdits, buildJSDocEdit, generatedTag, parseEntityJSDocs } from "./parsing";
-export { generateMetadataDocsFile } from "./generate-metadata-docs";
-export { type ParsedDoc } from "./markdown";
-export { buildJSDocBlock, generatedTag } from "./parsing";
+import { DocsCache, getMtime } from "./cache.ts";
+import { type ParsedDoc, getMarkdownFilePath, maybeReadMarkdownFile, updateMarkdownDoc } from "./markdown.ts";
+import { applyEdits, buildJSDocEdit, generatedTag, parseEntityJSDocs } from "./parsing.ts";
+export { generateMetadataDocsFile } from "./generate-metadata-docs.ts";
+export { type ParsedDoc } from "./markdown.ts";
+export { buildJSDocBlock, generatedTag } from "./parsing.ts";
 
 /** Loads each entity's parsed `.md` doc, i.e. for injecting into codegen JSDocs & runtime metadata. */
 export async function loadEntityDocs(entitiesDir: string, entityNames: string[]): Promise<Record<string, ParsedDoc>> {

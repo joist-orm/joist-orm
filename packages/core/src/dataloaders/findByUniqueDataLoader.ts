@@ -1,16 +1,16 @@
-import DataLoader from "dataloader";
+import type DataLoader from "dataloader";
 
-import { Entity } from "../Entity";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { Field, getMetadata } from "../EntityMetadata";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor } from "../EntityManager.ts";
+import { type Field, getMetadata } from "../EntityMetadata.ts";
 import {
-  ColumnCondition,
-  ParsedFindQuery,
+  type ColumnCondition,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   maybeAddNotSoftDeleted,
-} from "../QueryParser";
-import { Column } from "../serde";
-import { abbreviation, groupBy } from "../utils";
+} from "../QueryParser.ts";
+import { type Column } from "../serde.ts";
+import { abbreviation, groupBy } from "../utils.ts";
 
 export const findByUniqueOperation = "find-by-unique";
 

@@ -1,46 +1,46 @@
-import { getInstanceData } from "./BaseEntity";
-import { Changes } from "./changes";
-import { Entity, isEntity } from "./Entity";
-import { MaybeAbstractEntityConstructor, getEmInternalApi, isId } from "./EntityManager";
+import { getInstanceData } from "./BaseEntity.ts";
+import { type Changes } from "./changes.ts";
+import { type Entity, isEntity } from "./Entity.ts";
+import { type MaybeAbstractEntityConstructor, getEmInternalApi, isId } from "./EntityManager.ts";
 import {
-  EntityMetadata,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicFieldComponent,
+  type EntityMetadata,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
   getMetadata,
-} from "./EntityMetadata";
-import { getProperties } from "./getProperties";
-import { LoadHint, Loadable, Loaded } from "./loadHints";
-import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
+} from "./EntityMetadata.ts";
+import { getProperties } from "./getProperties.ts";
+import { type LoadHint, type Loadable, type Loaded } from "./loadHints.ts";
+import { type NormalizeHint, type SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints.ts";
 import {
-  Collection,
-  EnumCollection,
-  LoadedCollection,
-  LoadedEnumCollection,
-  LoadedProperty,
-  LoadedReadOnlyCollection,
-  LoadedReference,
-  ManyToManyCollection,
-  OneToOneReference,
-  PolymorphicReference,
-  Property,
+  type Collection,
+  type EnumCollection,
+  type LoadedCollection,
+  type LoadedEnumCollection,
+  type LoadedProperty,
+  type LoadedReadOnlyCollection,
+  type LoadedReference,
+  type ManyToManyCollection,
+  type OneToOneReference,
+  type PolymorphicReference,
+  type Property,
   PropertyImpl,
-  ReactiveGetter,
-  ReadOnlyCollection,
-  Reference,
-} from "./relations";
-import { LoadedOneToOneReference } from "./relations/OneToOneReference";
-import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
+  type ReactiveGetter,
+  type ReadOnlyCollection,
+  type Reference,
+} from "./relations/index.ts";
+import { type LoadedOneToOneReference } from "./relations/OneToOneReference.ts";
+import { ReactiveGetterImpl } from "./relations/ReactiveGetter.ts";
 import {
   RecursiveChildrenCollectionImpl,
   RecursiveM2mCollectionImpl,
   RecursiveParentsCollectionImpl,
-} from "./relations/RecursiveCollection";
-import { FieldsOf, RelationsOf } from "./typeMap";
-import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
+} from "./relations/RecursiveCollection.ts";
+import { type FieldsOf, type RelationsOf } from "./typeMap.ts";
+import { fail, flatAndUnique, mergeNormalizedHints } from "./utils.ts";
 
 /** The keys in `T` that rules & hooks can react to. */
 export type Reactable<T extends Entity> =

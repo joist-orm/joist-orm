@@ -10,6 +10,6 @@ export {
   registerDatabaseBinaryParsers,
   setBinaryTypeParser,
   setSessionTimeZone,
-} from "./drivers/binaryParsers.js";
-export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.js";
-export { seed } from "./seed.js";
+} from "./drivers/binaryParsers.ts";
+export { PostgresDriver, type PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.ts";
+export { seed } from "./seed.ts";

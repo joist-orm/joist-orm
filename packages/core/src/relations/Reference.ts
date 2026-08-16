@@ -1,16 +1,16 @@
-import { Entity } from "../Entity";
-import { IdOf, TaggedId } from "../EntityManager";
+import { type Entity } from "../Entity.ts";
+import { type IdOf, type TaggedId } from "../EntityManager.ts";
 import {
   CustomReference,
   ManyToOneReferenceImpl,
   OneToOneReferenceImpl,
   PolymorphicReferenceImpl,
   ReactiveReferenceImpl,
-  Relation,
-} from "./index";
+  type Relation,
+} from "./index.ts";
+import { ReferenceN } from "./ReferenceSymbols.ts";
 
-// Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
-export const ReferenceN = Symbol();
+export { ReferenceN };
 
 /**
  * A many-to-one / foreign key from `T` to `U`, i.e. book to author.

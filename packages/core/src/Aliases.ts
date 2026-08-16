@@ -1,21 +1,33 @@
 import { groupBy } from "joist-utils";
 
-import { getMetadataForTable } from "./configure";
-import { Entity, IdType } from "./Entity";
-import { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
+import { getMetadataForTable } from "./configure.ts";
+import { type Entity, type IdType } from "./Entity.ts";
+import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
 import {
-  EntityMetadata,
-  Field,
-  PolymorphicField,
-  PolymorphicFieldComponent,
+  type EntityMetadata,
+  type Field,
+  type PolymorphicField,
+  type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
   getMetadata,
-} from "./EntityMetadata";
-import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
-import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
-import { Column } from "./serde";
-import { FieldsOf } from "./typeMap";
-import { fail } from "./utils";
+} from "./EntityMetadata.ts";
+import {
+  type ExpressionCondition,
+  type ExpressionFilter,
+  getConstructorFromTaggedId,
+  maybeResolveReferenceToId,
+} from "./index.ts";
+import {
+  type ColumnCondition,
+  type ParsedValueFilter,
+  type RawCondition,
+  makeLike,
+  mapToDb,
+  skipCondition,
+} from "./QueryParser.ts";
+import { type Column } from "./serde.ts";
+import { type FieldsOf } from "./typeMap.ts";
+import { fail } from "./utils.ts";
 
 /** Creates an alias for complex filtering against `T`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {

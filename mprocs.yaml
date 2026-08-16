@@ -2,4 +2,6 @@ procs:
   db:
     shell: "yarn db"
   build:
-    shell: "yarn build -w"
+    shell: "yarn build:watch"
+  typecheck:
+    shell: "yarn typecheck:watch"

@@ -1,20 +1,20 @@
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
 import {
-  Entity,
-  EntityMetadata,
-  ManyToManyField,
-  ReadOnlyCollection,
+  type Entity,
+  type EntityMetadata,
+  type ManyToManyField,
+  type ReadOnlyCollection,
   ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-} from "..";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { ManyToManyLike } from "../JoinRows";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import { type ManyToManyLike } from "../JoinRows.ts";
+import { lazyField } from "../newEntity.ts";
+import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 /**
  * A read-only collection representing the "other side" of a ReactiveManyToMany.

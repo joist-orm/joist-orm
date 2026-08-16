@@ -1,23 +1,23 @@
 import { groupBy, isPlainObject } from "joist-utils";
 
-import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases";
-import { getMetadataForTable } from "./configure";
-import { Entity, isEntity } from "./Entity";
-import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
-import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata";
+import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
+import { getMetadataForTable } from "./configure.ts";
+import { type Entity, isEntity } from "./Entity.ts";
+import { type ExpressionFilter, type OrderBy, type ValueFilter } from "./EntityFilter.ts";
+import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata.ts";
 import {
-  Column,
+  type Column,
   ConditionBuilder,
   getConstructorFromTaggedId,
   isDefined,
   keyToNumber,
   maybeResolveReferenceToId,
-} from "./index";
-import { kq, kqDot } from "./keywords";
-import { pruneUnusedJoins } from "./QueryParser.pruning";
-import { visitConditions } from "./QueryVisitor";
-import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "./scopes";
-import { abbreviation, assertNever, fail } from "./utils";
+} from "./index.ts";
+import { kq, kqDot } from "./keywords.ts";
+import { pruneUnusedJoins } from "./QueryParser.pruning.ts";
+import { visitConditions } from "./QueryVisitor.ts";
+import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "./scopes.ts";
+import { abbreviation, assertNever, fail } from "./utils.ts";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -234,13 +234,7 @@ export function parseFindQuery(
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query: ParsedFindQuery = { selects, tables, orderBys };
-  const {
-    orderBy = undefined,
-    conditions: optsExpression = undefined,
-    softDeletes = "exclude",
-    pruneJoins = false,
-    keepAliases = [],
-  } = opts;
+  const { orderBy, conditions: optsExpression, softDeletes = "exclude", pruneJoins = false, keepAliases = [] } = opts;
   const cb = new ConditionBuilder();
 
   const aliases: Record<string, number> = {};

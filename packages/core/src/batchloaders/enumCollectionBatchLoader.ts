@@ -1,7 +1,7 @@
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { ManyToManyLike, ParsedFindQuery, keyToNumber } from "../index";
-import { abbreviation } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { type ManyToManyLike, type ParsedFindQuery, keyToNumber } from "../index.ts";
+import { abbreviation } from "../utils.ts";
+import { type BatchLoader } from "./BatchLoader.ts";
 
 export const enumCollectionLoadOperation = "enum-collection-load";
 

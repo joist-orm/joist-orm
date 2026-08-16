@@ -1,16 +1,16 @@
-import { ExpressionFilter } from "./EntityFilter";
-import { isDefined } from "./EntityManager";
+import { type ExpressionFilter } from "./EntityFilter.ts";
+import { isDefined } from "./EntityManager.ts";
 import {
-  ColumnCondition,
-  ParsedExpressionCondition,
-  ParsedExpressionFilter,
-  ParsedValueFilter,
-  RawCondition,
+  type ColumnCondition,
+  type ParsedExpressionCondition,
+  type ParsedExpressionFilter,
+  type ParsedValueFilter,
+  type RawCondition,
   mapToDb,
   skipCondition,
-} from "./QueryParser";
-import { Column } from "./serde";
-import { fail, partition } from "./utils";
+} from "./QueryParser.ts";
+import { type Column } from "./serde.ts";
+import { fail, partition } from "./utils.ts";
 
 type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 

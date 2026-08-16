@@ -1,5 +1,11 @@
-import { DeepPartialOrNull, Entity, EntityConstructor, OptsOf, failIfAnyRejected } from "joist-core";
-import { Context } from "joist-test-utils";
+import {
+  type DeepPartialOrNull,
+  type Entity,
+  type EntityConstructor,
+  type OptsOf,
+  failIfAnyRejected,
+} from "joist-core";
+import { type Context } from "joist-test-utils";
 
 /** Given an GraphQL input, creates-or-updates an entity of `type`. */
 export async function saveEntity<T extends Entity>(

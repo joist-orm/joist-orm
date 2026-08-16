@@ -7,11 +7,11 @@ import { groupBy } from "joist-utils";
 import { type ParseError, parse } from "jsonc-parser";
 import { z } from "zod";
 
-import { getLatestCodemodVersion } from "./codemods";
-import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
-import { getStiEntities } from "./inheritance";
-import { logger } from "./logger";
-import { fail, sortKeys, trueIfResolved } from "./utils";
+import { getLatestCodemodVersion } from "./codemods/index.ts";
+import { type DbMetadata, type Entity, type EntityDbMetadata } from "./EntityDbMetadata.ts";
+import { getStiEntities } from "./inheritance.ts";
+import { logger } from "./logger.ts";
+import { fail, sortKeys, trueIfResolved } from "./utils.ts";
 
 const jsonFormatter = createFromBuffer(readFileSync(getPath()));
 

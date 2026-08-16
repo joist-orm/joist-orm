@@ -1,5 +1,5 @@
 import {
-  Property,
+  type Property,
   hasProperty,
   hasReactiveProperty,
   isProperty,

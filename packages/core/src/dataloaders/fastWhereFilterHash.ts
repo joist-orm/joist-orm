@@ -1,8 +1,8 @@
-import { isAlias } from "../Aliases";
-import { isEntity } from "../Entity";
-import { isReference } from "../relations";
-import { maybeRequireTemporal } from "../temporal";
-import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
+import { isAlias } from "../Aliases.ts";
+import { isEntity } from "../Entity.ts";
+import { isReference } from "../relations/index.ts";
+import { maybeRequireTemporal } from "../temporal.ts";
+import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers.ts";
 
 const Temporal = maybeRequireTemporal()?.Temporal;
 

@@ -1,15 +1,14 @@
-import { ParsedFindQuery, ParsedTable, internals, kq, kqDot } from "joist-core";
-import { Knex } from "knex";
+import { type ParsedFindQuery, type ParsedTable, internals, kq, kqDot } from "joist-core";
+import { type Knex } from "knex";
 
-import { assertNever } from "./utils";
-import QueryBuilder = Knex.QueryBuilder;
+import { assertNever } from "./utils.ts";
 
 /** Transforms Joist's internal `ParsedFindQuery` AST into a Knex query builder. */
 export function buildKnexQuery(
   knex: Knex,
   parsed: ParsedFindQuery,
   settings: { limit?: number; offset?: number },
-): QueryBuilder<{}, unknown[]> {
+): Knex.QueryBuilder<{}, unknown[]> {
   const { limit, offset } = settings;
 
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates

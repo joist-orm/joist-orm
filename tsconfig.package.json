@@ -3,7 +3,11 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "sourceMap": true
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rewriteRelativeImportExtensions": true,
+    "sourceMap": true,
+    "verbatimModuleSyntax": true
   },
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/__testfixtures__/**"]
 }

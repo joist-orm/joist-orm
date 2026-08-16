@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 
-import { type Config, type FieldConfig, config, isFieldIgnored, loadConfig, writeConfig } from "./config";
-import { makeEntity } from "./EntityDbMetadata";
+import { type Config, type FieldConfig, config, isFieldIgnored, loadConfig, writeConfig } from "./config.ts";
+import { makeEntity } from "./EntityDbMetadata.ts";
 
 describe("config", () => {
   it("defaults existing configs to codemod version 0", () => {

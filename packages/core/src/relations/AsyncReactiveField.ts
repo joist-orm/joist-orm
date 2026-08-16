@@ -1,12 +1,12 @@
-import { Entity } from "../Entity";
-import { getMetadata } from "../EntityMetadata";
-import { getField, isFieldSet, setField } from "../fields";
-import { ReactiveField, deepNormalizeHint, isLoaded } from "../index";
-import { lazyField } from "../newEntity";
-import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { mergeNormalizedHints } from "../utils";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { PropertyT } from "./hasProperty";
+import { type Entity } from "../Entity.ts";
+import { getMetadata } from "../EntityMetadata.ts";
+import { getField, isFieldSet, setField } from "../fields.ts";
+import { type ReactiveField, deepNormalizeHint, isLoaded } from "../index.ts";
+import { lazyField } from "../newEntity.ts";
+import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
+import { mergeNormalizedHints } from "../utils.ts";
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
+import { PropertyT } from "./PropertySymbols.ts";
 
 /**
  * An `AsyncReactiveField` is a value that is derived from a SQL query, similar to

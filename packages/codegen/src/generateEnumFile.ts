@@ -1,10 +1,10 @@
 import { pascalCase } from "change-case";
 import pluralize from "pluralize";
-import { Code, code } from "ts-poet";
+import { type Code, code } from "ts-poet";
 
-import { Config } from "./config";
-import { EnumTableData } from "./index";
-import { EnumMetadata } from "./symbols";
+import { type Config } from "./config.ts";
+import { type EnumTableData } from "./index.ts";
+import { EnumMetadata } from "./symbols.ts";
 
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;

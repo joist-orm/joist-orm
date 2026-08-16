@@ -1,9 +1,15 @@
-import DataLoader from "dataloader";
+import type DataLoader from "dataloader";
 
-import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
-import { ManyToManyCollection, ManyToManyLargeCollection, ParsedFindQuery, keyToNumber, tagId } from "../index";
-import { abbreviation } from "../utils";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager } from "../EntityManager.ts";
+import {
+  type ManyToManyCollection,
+  type ManyToManyLargeCollection,
+  type ParsedFindQuery,
+  keyToNumber,
+  tagId,
+} from "../index.ts";
+import { abbreviation } from "../utils.ts";
 
 export const manyToManyFindOperation = "m2m-find";
 

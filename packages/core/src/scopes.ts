@@ -1,17 +1,17 @@
-import { type Alias } from "./Aliases";
-import { maybeGetMetadataForType } from "./configure";
-import type { Entity } from "./Entity";
+import { type Alias } from "./Aliases.ts";
+import { maybeGetMetadataForType } from "./configure.ts";
+import type { Entity } from "./Entity.ts";
 import type {
   ExpressionCondition,
   ExpressionFilter,
   FilterAndSettings,
   FilterWithAlias,
   FindFilter,
-} from "./EntityFilter";
-import type { GraphQLFilterWithAlias } from "./EntityGraphQLFilter";
-import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
-import type { LoadHint, Loaded } from "./loadHints";
-import type { OrderOf } from "./typeMap";
+} from "./EntityFilter.ts";
+import type { GraphQLFilterWithAlias } from "./EntityGraphQLFilter.ts";
+import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager.ts";
+import type { LoadHint, Loaded } from "./loadHints.ts";
+import type { OrderOf } from "./typeMap.ts";
 
 /**
  * A scope fragment that introduces its own join aliases: a join tree plus conditions

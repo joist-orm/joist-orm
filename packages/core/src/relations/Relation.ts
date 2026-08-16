@@ -1,8 +1,8 @@
-import { Entity } from "../Entity";
-import { isCollection, isReference } from "./index";
+import { type Entity } from "../Entity.ts";
+import { isCollection, isReference } from "./index.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
-export const RelationT = Symbol();
-export const RelationU = Symbol();
+export { RelationT, RelationU };
 
 /** A relationship from `T` to `U`, could be any of many-to-one, one-to-many, or many-to-many. */
 export interface Relation<T extends Entity, U extends Entity> {

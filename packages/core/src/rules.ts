@@ -1,11 +1,11 @@
-import { Changes, EntityChanges } from "./changes";
-import { Entity } from "./Entity";
-import { getEmInternalApi } from "./EntityManager";
-import { getField } from "./fields";
-import { ReactiveHint } from "./reactiveHints";
-import { ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "./relations";
-import { FieldsOf } from "./typeMap";
-import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
+import { type Changes, type EntityChanges } from "./changes.ts";
+import { type Entity } from "./Entity.ts";
+import { getEmInternalApi } from "./EntityManager.ts";
+import { getField } from "./fields.ts";
+import { type ReactiveHint } from "./reactiveHints.ts";
+import { type ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "./relations/index.ts";
+import { type FieldsOf } from "./typeMap.ts";
+import { type MaybePromise, groupBy, maybePromiseThen } from "./utils.ts";
 
 export enum ValidationCode {
   required = "required",

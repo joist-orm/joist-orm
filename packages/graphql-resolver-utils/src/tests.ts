@@ -1,5 +1,5 @@
-export { MakeRunInputMutation, makeMakeRunInputMutation } from "./makeRunInputMutation";
-export { MakeRunObjectField, makeMakeRunObjectField } from "./makeRunObjectField";
-export { MakeRunObjectFields, makeMakeRunObjectFields } from "./makeRunObjectFields";
-export { MakeRunQuery, makeMakeRunQuery } from "./makeRunQuery";
-export * from "./typeUtils";
+export { type MakeRunInputMutation, makeMakeRunInputMutation } from "./makeRunInputMutation.ts";
+export { type MakeRunObjectField, makeMakeRunObjectField } from "./makeRunObjectField.ts";
+export { type MakeRunObjectFields, makeMakeRunObjectFields } from "./makeRunObjectFields.ts";
+export { type MakeRunQuery, makeMakeRunQuery } from "./makeRunQuery.ts";
+export type * from "./typeUtils.ts";

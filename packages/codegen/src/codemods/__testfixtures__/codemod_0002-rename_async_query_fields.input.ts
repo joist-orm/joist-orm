@@ -1,6 +1,6 @@
 import {
-  AsyncQueryProperty,
-  ReactiveField,
+  type AsyncQueryProperty,
+  type ReactiveField,
   hasAsyncQueryProperty,
   hasReactiveQueryField,
   isAsyncQueryProperty,

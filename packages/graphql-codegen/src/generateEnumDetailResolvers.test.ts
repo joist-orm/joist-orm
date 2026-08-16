@@ -1,7 +1,7 @@
-import { Config } from "joist-codegen";
+import { type Config } from "joist-codegen";
 
-import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
-import { renderCodegenFile } from "./testUtils";
+import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers.ts";
+import { renderCodegenFile } from "./testUtils.ts";
 
 describe("generateEnumDetailResolvers", () => {
   it.each([

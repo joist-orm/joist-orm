@@ -5,8 +5,8 @@ import { type namedTypes } from "ast-types";
 import { camelCase } from "change-case";
 import jscodeshift from "jscodeshift";
 
-import { type Config } from "./config";
-import { type Entity } from "./EntityDbMetadata";
+import { type Config } from "./config.ts";
+import { type Entity } from "./EntityDbMetadata.ts";
 
 const j = jscodeshift.withParser("ts");
 

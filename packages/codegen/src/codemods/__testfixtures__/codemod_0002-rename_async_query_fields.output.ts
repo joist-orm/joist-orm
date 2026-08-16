@@ -1,6 +1,6 @@
 import {
-  Property,
-  ReactiveField,
+  type Property,
+  type ReactiveField,
   hasAsyncProperty,
   hasAsyncReactiveField,
   isAsyncProperty,

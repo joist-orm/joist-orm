@@ -1,4 +1,3 @@
-import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
 import { CursorPageInfo } from "joist-graphql-resolver-utils/index.js";
 import type { Context } from "src/context.js";

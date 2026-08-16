@@ -1,5 +1,5 @@
-import { Config } from "joist-codegen";
-import { CodegenFile, code, imp } from "ts-poet";
+import { type Config } from "joist-codegen";
+import { type CodegenFile, code, imp } from "ts-poet";
 
 /** Generates project-level resolver utility exports. */
 export function generateResolverUtils(config: Config): CodegenFile[] {

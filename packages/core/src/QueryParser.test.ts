@@ -1,4 +1,4 @@
-import { parseValueFilter } from "./QueryParser";
+import { parseValueFilter } from "./QueryParser.ts";
 
 describe("QueryParser", () => {
   describe("parseValueFilter", () => {

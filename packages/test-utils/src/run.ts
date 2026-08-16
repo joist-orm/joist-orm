@@ -1,8 +1,8 @@
 import { EntityManager, isEntity } from "joist-core";
 import { fail } from "joist-utils";
 
-import { Context } from "./context";
-import { RunPlugin } from "./RunPlugin";
+import { type Context } from "./context.ts";
+import { RunPlugin } from "./RunPlugin.ts";
 
 type MaybePromise<T> = T | Promise<T>;
 

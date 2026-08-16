@@ -1,28 +1,34 @@
 import { isPlainObject } from "joist-utils";
 
-import { getInstanceData } from "./BaseEntity";
-import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
-import { Entity, isEntity } from "./Entity";
-import { EntityConstructor, EntityManager, IdOf, MaybeAbstractEntityConstructor, isId } from "./EntityManager";
+import { getInstanceData } from "./BaseEntity.ts";
+import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults.ts";
+import { type Entity, isEntity } from "./Entity.ts";
 import {
-  EntityMetadata,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimitiveField,
+  type EntityConstructor,
+  type EntityManager,
+  type IdOf,
+  type MaybeAbstractEntityConstructor,
+  isId,
+} from "./EntityManager.ts";
+import {
+  type EntityMetadata,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
   isManyToOneField,
   isOneToOneField,
-} from "./EntityMetadata";
-import { DeepNew, FactoryExtrasOf, New } from "./index";
-import { FactoryLogger } from "./logging/FactoryLogger";
-import { maybeRequireTemporal } from "./temporal";
-import { ActualFactoryOpts, OptsOf } from "./typeMap";
-import { assertNever } from "./utils";
+} from "./EntityMetadata.ts";
+import { type DeepNew, type FactoryExtrasOf, type New } from "./index.ts";
+import { FactoryLogger } from "./logging/FactoryLogger.ts";
+import { maybeRequireTemporal } from "./temporal.ts";
+import { type ActualFactoryOpts, type OptsOf } from "./typeMap.ts";
+import { assertNever } from "./utils.ts";
 
 let logger: FactoryLogger | undefined = undefined;
 

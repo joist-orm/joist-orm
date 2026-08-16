@@ -1,6 +1,6 @@
-import { Client } from "pg";
+import { type Client } from "pg";
 
-import { DbMetadata } from "./EntityDbMetadata";
+import { type DbMetadata } from "./EntityDbMetadata.ts";
 
 /** Creates a `flush_database` stored procedure to truncate all the tables between tests. */
 export async function createFlushFunction(client: Client, db: DbMetadata): Promise<void> {

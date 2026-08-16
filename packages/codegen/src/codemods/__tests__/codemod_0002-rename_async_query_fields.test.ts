@@ -1,4 +1,4 @@
-import { defineTest } from "jscodeshift/src/testUtils";
+import { defineTest } from "jscodeshift/src/testUtils.js";
 
 describe("codemod_0002-rename_async_query_fields", () => {
   defineTest(__dirname, "codemod_0002-rename_async_query_fields", null, "codemod_0002-rename_async_query_fields", {

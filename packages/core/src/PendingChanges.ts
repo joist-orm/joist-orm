@@ -1,4 +1,4 @@
-import { Entity } from "./Entity";
+import { type Entity } from "./Entity.ts";
 
 /** A new entity that hasn't been flushed yet. */
 export interface PendingCreate {

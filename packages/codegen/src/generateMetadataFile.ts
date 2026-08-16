@@ -1,7 +1,12 @@
-import { Code, Import, code, imp } from "ts-poet";
+import { type Code, type Import, code, imp } from "ts-poet";
 
-import { Config } from "./config";
-import { DatabaseColumnType, DbMetadata, EntityDbMetadata, OneToManyField } from "./EntityDbMetadata";
+import { type Config } from "./config.ts";
+import {
+  type DatabaseColumnType,
+  type DbMetadata,
+  type EntityDbMetadata,
+  type OneToManyField,
+} from "./EntityDbMetadata.ts";
 import {
   BigIntSerde,
   CustomSerdeAdapter,
@@ -20,8 +25,8 @@ import {
   SuperstructSerde,
   ZodSerde,
   ZonedDateTimeSerde,
-} from "./symbols";
-import { mapSimpleDbTypeToTypescriptType, q } from "./utils";
+} from "./symbols.ts";
+import { mapSimpleDbTypeToTypescriptType, q } from "./utils.ts";
 
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, createdAt, updatedAt, deletedAt } = meta;

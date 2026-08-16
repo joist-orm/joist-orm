@@ -1,7 +1,7 @@
-import { type Reactable, setAfterMetadataLocked, setBooted } from "./config";
-import { AsyncDefault } from "./defaults";
-import { type Entity } from "./Entity";
-import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager";
+import { type Reactable, setAfterMetadataLocked, setBooted } from "./config.ts";
+import { AsyncDefault } from "./defaults.ts";
+import { type Entity } from "./Entity.ts";
+import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
 import {
   type EntityMetadata,
   type EnumField,
@@ -10,17 +10,17 @@ import {
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "./EntityMetadata";
-import { getProperties } from "./getProperties";
-import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys";
-import { reverseReactiveHint } from "./reactiveHints";
-import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { isCannotBeUpdatedRule } from "./rules";
-import { maybeGetRuntimeConfig } from "./runtimeConfig";
-import { KeySerde } from "./serde";
-import { defineLazyGetter, fail } from "./utils";
+} from "./EntityMetadata.ts";
+import { getProperties } from "./getProperties.ts";
+import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys.ts";
+import { reverseReactiveHint } from "./reactiveHints.ts";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
+import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "./relations/index.ts";
+import { type ReactiveFieldImpl } from "./relations/ReactiveField.ts";
+import { isCannotBeUpdatedRule } from "./rules.ts";
+import { maybeGetRuntimeConfig } from "./runtimeConfig.ts";
+import { KeySerde } from "./serde.ts";
+import { defineLazyGetter, fail } from "./utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();

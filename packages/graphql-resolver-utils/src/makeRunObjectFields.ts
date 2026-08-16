@@ -1,6 +1,6 @@
 import { isEntity } from "joist-core";
 
-import { ResolverResult, ResolverRoot, RunFn } from "./typeUtils";
+import { type ResolverResult, type ResolverRoot, type RunFn } from "./typeUtils.ts";
 
 /**
  * Creates a `makeRunObjectFields` function for each project's `testUtils` file.

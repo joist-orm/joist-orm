@@ -2,7 +2,8 @@
   "version": "2.0.3",
   "name": "joist",
   "scripts": {
-    "build": "tsc --build",
+    "build": "yarn clean && tsdown && yarn typecheck:packages && yarn typecheck:consumers && node scripts/test-module-sync.mjs",
+    "build:watch": "tsdown --watch --no-clean",
     "clean": "rm -rf build && find packages -type d -name build -prune -exec rm -rf '{}' + && find packages -name '*.tsbuildinfo' -delete",
     "semantic-release": "semantic-release",
     "publish-next": "./scripts/publish-next.sh",
@@ -13,6 +14,9 @@
     "format:check": "oxlint packages && oxfmt --check 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "start": "yarn mprocs",
     "test": "yarn workspaces foreach --all run test",
+    "typecheck:packages": "yarn workspaces foreach --all --include 'joist-*' --exclude 'joist-tests-*' --exclude joist-docs exec tsc --project tsconfig.json --noEmit --composite false",
+    "typecheck:consumers": "tsc --project tsconfig.unit-tests.json --composite false && yarn workspaces foreach --all --include 'joist-tests-*' exec tsc --project tsconfig.json --composite false",
+    "typecheck:watch": "tsc --build --watch --emitDeclarationOnly --preserveWatchOutput",
     "docker": "docker-compose build",
     "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
     "psql": "docker compose exec db ./console.sh"
@@ -57,6 +61,7 @@
     "oxfmt": "0.62.0",
     "oxlint": "1.77.0",
     "semantic-release": "^25.0.9",
+    "tsdown": "0.22.14",
     "typescript": "7.0.2"
   },
   "resolutions": {

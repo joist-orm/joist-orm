@@ -1,22 +1,22 @@
-import { GraphQLResolveInfo } from "graphql/type";
+import { type GraphQLResolveInfo } from "graphql/type";
 import {
-  Collection,
-  Entity,
-  EntityMetadata,
-  Field,
-  IdOf,
-  LoadHint,
-  ManyToManyField,
-  ManyToOneField,
-  MaybeAbstractEntityConstructor,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimaryKeyField,
-  Property,
-  ReactiveGetter,
-  ReadOnlyCollection,
-  Reference,
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type Field,
+  type IdOf,
+  type LoadHint,
+  type ManyToManyField,
+  type ManyToOneField,
+  type MaybeAbstractEntityConstructor,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimaryKeyField,
+  type Property,
+  type ReactiveGetter,
+  type ReadOnlyCollection,
+  type Reference,
   getMetadata,
   getProperties,
   isAsyncProperty,
@@ -35,8 +35,8 @@ import {
   isReference,
 } from "joist-core";
 
-import { Resolver } from "./context";
-import { convertInfoToLoadHint } from "./hint";
+import { type Resolver } from "./context.ts";
+import { convertInfoToLoadHint } from "./hint.ts";
 
 type GraphQLPrimitive = string | Date | boolean | number | bigint | null | undefined;
 
@@ -78,7 +78,7 @@ export type EntityResolver<T extends Entity> = {
 /**
  * Creates field resolvers for each of the fields on our entity.
  */
-export function entityResolver<T extends Entity, A extends Record<string, keyof T> = Record<string, any>>(
+export function entityResolver<T extends Entity, A extends Record<string, keyof T> = {}>(
   entity: MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {

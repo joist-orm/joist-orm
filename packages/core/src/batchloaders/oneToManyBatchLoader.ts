@@ -1,17 +1,17 @@
-import { Entity } from "../Entity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { getField } from "../fields";
+import { type Entity } from "../Entity.ts";
+import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { getField } from "../fields.ts";
 import {
-  OneToManyCollection,
-  OneToManyField,
-  ParsedFindQuery,
+  type OneToManyCollection,
+  type OneToManyField,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-} from "../index";
-import { abbreviation, groupBy } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+} from "../index.ts";
+import { abbreviation, groupBy } from "../utils.ts";
+import { type BatchLoader } from "./BatchLoader.ts";
 
 export const oneToManyLoadOperation = "o2m-load";
 

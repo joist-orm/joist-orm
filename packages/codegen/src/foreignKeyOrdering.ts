@@ -1,10 +1,10 @@
 import { promises as fs } from "fs";
 
-import { ManyToOneField, PolymorphicFieldComponent } from "./EntityDbMetadata";
-import { Config, EntityDbMetadata } from "./index";
-import { logger } from "./logger";
-import { sortByNonDeferredForeignKeys } from "./sortForeignKeys";
-import { assertNever } from "./utils";
+import { type ManyToOneField, type PolymorphicFieldComponent } from "./EntityDbMetadata.ts";
+import { type Config, type EntityDbMetadata } from "./index.ts";
+import { logger } from "./logger.ts";
+import { sortByNonDeferredForeignKeys } from "./sortForeignKeys.ts";
+import { assertNever } from "./utils.ts";
 
 export async function maybeSetForeignKeyOrdering(config: Config, entities: EntityDbMetadata[]): Promise<void> {
   // Hopefully all FKs are deferred, but if not...

@@ -1,5 +1,5 @@
-import "dotenv/config";
-import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
+import "dotenv/config.js";
+import { type Driver, EntityManager, newPgConnectionConfig } from "joist-core";
 import pg from "pg";
 
 export interface SeedConfig {

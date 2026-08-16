@@ -1,8 +1,8 @@
-import { Collection, isLoaded } from "../";
-import { Entity } from "../Entity";
-import { LoadHint, Loaded } from "../loadHints";
-import { lazyField } from "../newEntity";
-import { CustomCollection } from "./CustomCollection";
+import { type Collection, isLoaded } from "..//index.ts";
+import { type Entity } from "../Entity.ts";
+import { type LoadHint, type Loaded } from "../loadHints.ts";
+import { lazyField } from "../newEntity.ts";
+import { CustomCollection } from "./CustomCollection.ts";
 
 type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T>> = {
   load?: (entity: T, opts: { forceReload?: boolean }) => Promise<any>;

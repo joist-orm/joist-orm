@@ -1,6 +1,6 @@
 import { type Transform } from "jscodeshift";
 
-import { JscodeshiftMod } from "./JscodeshiftMod";
+import { JscodeshiftMod } from "./JscodeshiftMod.ts";
 
 export const codemod_0003_rename_find_paginated = new JscodeshiftMod(
   3,

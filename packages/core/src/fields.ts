@@ -1,10 +1,10 @@
-import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { getEmInternalApi } from "./EntityManager";
-import { type Field, getMetadata } from "./EntityMetadata";
-import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
-import { maybeRequireTemporal } from "./temporal";
-import { fail } from "./utils";
+import { getInstanceData } from "./BaseEntity.ts";
+import { type Entity, isEntity } from "./Entity.ts";
+import { getEmInternalApi } from "./EntityManager.ts";
+import { type Field, getMetadata } from "./EntityMetadata.ts";
+import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index.ts";
+import { maybeRequireTemporal } from "./temporal.ts";
+import { fail } from "./utils.ts";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should

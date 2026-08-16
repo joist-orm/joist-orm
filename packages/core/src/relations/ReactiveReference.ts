@@ -1,7 +1,10 @@
+import { type Entity } from "../Entity.ts";
+import { type IdOf } from "../EntityManager.ts";
+import { getField, setField } from "../fields.ts";
 import {
-  EntityMetadata,
-  ManyToOneField,
-  TaggedId,
+  type EntityMetadata,
+  type ManyToOneField,
+  type TaggedId,
   deTagId,
   ensureNotDeleted,
   fail,
@@ -13,17 +16,15 @@ import {
   maybeResolveReferenceToId,
   sameEntity,
   toIdOf,
-} from "..";
-import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
-import { getField, setField } from "../fields";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId } from "./ManyToOneReference";
-import { Reference, ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "../index.ts";
+import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import { lazyField } from "../newEntity.ts";
+import { type MaybeReactedEntity, type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { failIfNewEntity, failNoId } from "./ManyToOneReference.ts";
+import { type Reference } from "./Reference.ts";
+import { ReferenceN } from "./ReferenceSymbols.ts";
+import { RelationT, RelationU } from "./RelationSymbols.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
   T,

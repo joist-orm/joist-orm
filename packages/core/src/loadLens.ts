@@ -1,19 +1,19 @@
-import { lensDataLoader } from "./dataloaders/lensDataLoader";
-import { Entity, isEntity } from "./Entity";
-import { appendStack } from "./EntityManager";
+import { lensDataLoader } from "./dataloaders/lensDataLoader.ts";
+import { type Entity, isEntity } from "./Entity.ts";
+import { appendStack } from "./EntityManager.ts";
 import {
-  EntityMetadata,
-  Field,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PrimitiveField,
+  type EntityMetadata,
+  type Field,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PrimitiveField,
   getMetadata,
-} from "./EntityMetadata";
-import { LoadHint } from "./loadHints";
-import { isProperty } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+} from "./EntityMetadata.ts";
+import { type LoadHint } from "./loadHints.ts";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
+import { isProperty } from "./relations/index.ts";
 
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };

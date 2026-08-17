@@ -81,6 +81,7 @@ export function insertBook(row: {
   author_id: number | null;
   reviewer_id?: number | null;
   prequel_id?: number | null;
+  random_comment_id?: number | null;
   deleted_at?: Date;
   order?: number;
 }) {

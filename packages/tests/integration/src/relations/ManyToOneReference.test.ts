@@ -1,6 +1,6 @@
 import { expect } from "@jest/globals";
 import { NoIdError } from "joist-orm";
-import { insertAuthor, insertBook, insertPublisher, select, update } from "src/entities/inserts";
+import { insertAuthor, insertBook, insertComment, insertPublisher, select, update } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 import { Author, Book, newAuthor, newBook, newPublisher, newUser } from "../entities";
@@ -195,5 +195,46 @@ describe("ManyToOneReference", () => {
     const em = newEntityManager();
     const book = newBook(em);
     expect(() => book.author.idIfSet).toThrow(new NoIdError("Reference Book#1.author is assigned to a new entity"));
+  });
+
+  it("can cascade delete when set in this em", async () => {
+    const em = newEntityManager();
+    // Given a book that was pointed at its comment by `set`, so `data.randomComment` holds the entity
+    const b1 = newBook(em, { randomComment: {} });
+    await em.flush();
+    em.delete(b1);
+    await em.flush();
+    // Then the comment is cascade deleted
+    expect(await select("comments")).toHaveLength(0);
+  });
+
+  it("can cascade delete when loaded from the database", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertComment({ text: "c1" });
+    await insertBook({ title: "b1", author_id: 1, random_comment_id: 1 });
+    const em = newEntityManager();
+    // Given a book whose m2o came from the db, so `data.randomComment` is the tagged id `comment:1`,
+    // and we've explicitly populated the relation before deleting
+    const b1 = await em.load(Book, "b:1", "randomComment");
+    expect(b1.randomComment.get).toBeDefined();
+    em.delete(b1);
+    await em.flush();
+    // Then the comment is still cascade deleted
+    expect(await select("comments")).toHaveLength(0);
+  });
+
+  it("can cascade delete when not loaded until the flush", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertComment({ text: "c1" });
+    await insertBook({ title: "b1", author_id: 1, random_comment_id: 1 });
+    const em = newEntityManager();
+    // Given the m2o is still an unloaded foreign key when we delete, so `flushDeletes` is the
+    // one that has to `load()` it before cascading
+    const b1 = await em.load(Book, "b:1");
+    expect(b1.randomComment.isLoaded).toBe(false);
+    em.delete(b1);
+    await em.flush();
+    // Then the comment is still cascade deleted
+    expect(await select("comments")).toHaveLength(0);
   });
 });

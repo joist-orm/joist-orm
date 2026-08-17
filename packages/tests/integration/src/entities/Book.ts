@@ -163,4 +163,7 @@ config.afterCommit((book) => {
   }
 });
 
+// For testing cascadeDelete on a m2o
+config.cascadeDelete("randomComment");
+
 function noop(_: any): void {}

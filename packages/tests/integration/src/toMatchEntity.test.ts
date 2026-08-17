@@ -1,3 +1,4 @@
+import { expect as jestExpect } from "@jest/globals";
 import { DeepNew, getInstanceData } from "joist-orm";
 import { alignedAnsiStyleSerializer } from "src/alignedAnsiStyleSerializer";
 import { Author, Book, newAuthor, newBook, newPublisher } from "src/entities";
@@ -7,6 +8,29 @@ import { newEntityManager } from "src/testEm";
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 
 describe("toMatchEntity", () => {
+  it("reads Jest's matchers when invoked", () => {
+    const matcherSymbol = Symbol.for("$$jest-matchers-object");
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, matcherSymbol);
+    if (!descriptor) throw new Error("Expected Jest to initialize its matcher state");
+
+    Reflect.deleteProperty(globalThis, matcherSymbol);
+    let toMatchLateEntity: typeof import("joist-test-utils").toMatchEntity;
+    try {
+      jest.isolateModules(() => {
+        toMatchLateEntity = jest.requireActual<typeof import("joist-test-utils")>("joist-test-utils").toMatchEntity;
+      });
+    } finally {
+      Object.defineProperty(globalThis, matcherSymbol, descriptor);
+    }
+
+    jestExpect.extend({ toMatchLateEntity: toMatchLateEntity! });
+    jestExpect.addEqualityTesters([areLateComparableValuesEqual]);
+    const matcher = jestExpect({ value: new LateComparableValue(1) }) as unknown as {
+      toMatchLateEntity(expected: unknown): void;
+    };
+    matcher.toMatchLateEntity({ value: new LateComparableValue(2) });
+  });
+
   it("can match primitive fields", async () => {
     const em = newEntityManager();
     const p1 = newAuthor(em, { firstName: "Author 1" });
@@ -410,3 +434,13 @@ describe("toMatchEntity", () => {
     `);
   });
 });
+
+class LateComparableValue {
+  constructor(readonly value: number) {}
+}
+
+/** Equates the two intentionally different values used by the lazy matcher regression test. */
+function areLateComparableValuesEqual(a: unknown, b: unknown): boolean | undefined {
+  if (a instanceof LateComparableValue && b instanceof LateComparableValue) return a.value + 1 === b.value;
+  return undefined;
+}

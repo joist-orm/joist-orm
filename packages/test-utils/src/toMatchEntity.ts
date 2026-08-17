@@ -17,14 +17,11 @@ import { isPlainObject } from "joist-utils";
 
 import { type CustomMatcherResult } from "./index.ts";
 
-// This might be undefined if running outside of jest
-const jestMatchers = (globalThis as any)[Symbol.for("$$jest-matchers-object")];
 // Vitest also populates the `$$jest-matchers-object` symbol, but the matchers it stores there are
 // chai-based and assume `this` is a chai Assertion (with a `this.assert` method), which our custom
 // matcher's `this` context is not--so calling them throws `this.assert is not a function`. Only take
 // the Jest fast-path under actual Jest, and route Vitest through the `this.equals` path below (like Bun).
 const isVitest = typeof process !== "undefined" && process.env?.VITEST === "true";
-const matchers = isVitest ? undefined : jestMatchers?.matchers;
 
 /**
  * Provides convenient `toMatchObject`-style matching for Joist entities.
@@ -37,6 +34,8 @@ const matchers = isVitest ? undefined : jestMatchers?.matchers;
  *   recursively crawling into connection pools or other misc non-useful things in the diffs
  */
 export function toMatchEntity<T>(this: any, actual: unknown, expected: MatchedEntity<T>): CustomMatcherResult {
+  // This module can load before Jest initializes its matcher state, so read the global when invoked.
+  const matchers = isVitest ? undefined : (globalThis as any)[Symbol.for("$$jest-matchers-object")]?.matchers;
   // We're given expected, which is an object literal of what the user wants to match
   // against (some intermixed POJOs & entities) and actual (which similarly could be
   // intermixed POJOs & entities, but will likely be more sprawling because it's the

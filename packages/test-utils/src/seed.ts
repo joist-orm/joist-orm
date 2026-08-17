@@ -1,4 +1,4 @@
-import "dotenv/config.js";
+import "dotenv/config";
 import { type Driver, EntityManager, newPgConnectionConfig } from "joist-core";
 import pg from "pg";
 

@@ -25,7 +25,7 @@
     "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "tsx": "^4.23.11",
+    "tsx": "^4.23.12",
     "typescript": "7.0.2"
   }
 }

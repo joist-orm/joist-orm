@@ -18,13 +18,13 @@
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^8.0.4",
-    "temporal-polyfill": "^0.3.2"
+    "temporal-polyfill": "^1.0.4"
   },
   "devDependencies": {
     "@graphql-codegen/add": "^7.1.0",
     "@graphql-codegen/cli": "^7.2.0",
     "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
-    "@swc/core": "^1.15.47",
+    "@swc/core": "^1.16.0",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",

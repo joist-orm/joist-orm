@@ -58,8 +58,8 @@
     "env-cmd": "^11.0.0",
     "expect-type": "^1.4.0",
     "mprocs": "^0.9.6",
-    "oxfmt": "0.62.0",
-    "oxlint": "1.77.0",
+    "oxfmt": "0.63.0",
+    "oxlint": "1.78.0",
     "semantic-release": "^25.0.9",
     "tsdown": "0.22.14",
     "typescript": "7.0.2"

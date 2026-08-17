@@ -65,6 +65,9 @@ jobs:
       - run:
           name: Run codegen
           command: yarn codegen
+      - run:
+          name: Clone integration databases
+          command: yarn db:clone
 
       # For all Node targets, run everything -- except tests/bun (run in a separate job)
       - when:

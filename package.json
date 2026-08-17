@@ -10,6 +10,7 @@
     "trust-npm-circleci": "node ./scripts/trust-npm-circleci.mjs",
     "migrate": "yarn workspaces foreach --all run migrate",
     "codegen": "yarn workspaces foreach --all run codegen",
+    "db:clone": "bash scripts/clone-integration-dbs.sh",
     "format": "oxlint --fix packages && oxfmt --write 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "format:check": "oxlint packages && oxfmt --check 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "start": "yarn mprocs",
@@ -18,7 +19,7 @@
     "typecheck:consumers": "tsc --project tsconfig.unit-tests.json --composite false && yarn workspaces foreach --all --include 'joist-tests-*' exec tsc --project tsconfig.json --composite false",
     "typecheck:watch": "tsc --build --watch --emitDeclarationOnly --preserveWatchOutput",
     "docker": "docker-compose build",
-    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
+    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen && yarn db:clone",
     "psql": "docker compose exec db ./console.sh"
   },
   "private": true,

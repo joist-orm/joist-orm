@@ -19,7 +19,7 @@ To run tests in this project:
    yarn jest --runInBand -- [test-file-pattern]
    ```
 
-4. DB-backed integration tests share the same test database, so never run multiple Jest processes in parallel. Run one `jest --runInBand` command with all target files, or run commands sequentially with `&&`.
+4. Each `test-*` variant has a dedicated database and the variants can run in parallel. Keep tests within each variant in one `jest --runInBand` process because its test files share that variant's database.
 
 ## Project Structure
 

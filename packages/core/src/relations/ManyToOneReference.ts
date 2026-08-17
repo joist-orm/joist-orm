@@ -250,8 +250,15 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
-      if (current !== undefined && typeof current !== "string") {
-        this.entity.em.delete(current as U);
+      if (current !== undefined) {
+        if (typeof current === "string") {
+          // We're invoked twice, once sync on em.delete, and again in em.flush when we're loaded;
+          // but even when loaded, current might still be the tagged id, but we can find the entity in the EM
+          const other = this.entity.em.getEntity(current);
+          if (other) this.entity.em.delete(other as U);
+        } else {
+          this.entity.em.delete(current as U);
+        }
       }
     }
   }

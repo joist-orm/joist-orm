@@ -10,16 +10,16 @@
   },
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/temporal node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
-    "test": "jest --runInBand --logHeapUsage",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage",
     "codegen": "node ../../codegen"
   },
   "dependencies": {
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^8.0.4",
-    "temporal-polyfill": "^0.3.2"
+    "temporal-polyfill": "^1.0.4"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.47",
+    "@swc/core": "^1.16.0",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",

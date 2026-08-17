@@ -30,6 +30,9 @@
   "files": [
     "build"
   ],
+  "dependencies": {
+    "dotenv": "^17.2.1"
+  },
   "peerDependencies": {
     "joist-core": "workspace:*",
     "joist-utils": "workspace:*",

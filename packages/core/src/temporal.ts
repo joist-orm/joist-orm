@@ -4,23 +4,9 @@ import { createRequire } from "node:module";
 
 const runtimeRequire = createRequire(import.meta.url);
 
-type RequireTemporal = {
-  Temporal: typeof globalThis.Temporal;
-  toTemporalInstant: typeof Date.prototype.toTemporalInstant;
-  Intl: typeof globalThis.Intl;
-};
-type TemporalConstructor<T> = { [Symbol.hasInstance](value: unknown): value is T };
-type TemporalGlobal = typeof globalThis.Temporal & {
-  Instant: typeof globalThis.Temporal.Instant & TemporalConstructor<globalThis.Temporal.Instant>;
-  ZonedDateTime: typeof globalThis.Temporal.ZonedDateTime & TemporalConstructor<globalThis.Temporal.ZonedDateTime>;
-  PlainDate: typeof globalThis.Temporal.PlainDate & TemporalConstructor<globalThis.Temporal.PlainDate>;
-  PlainTime: typeof globalThis.Temporal.PlainTime & TemporalConstructor<globalThis.Temporal.PlainTime>;
-  PlainDateTime: typeof globalThis.Temporal.PlainDateTime & TemporalConstructor<globalThis.Temporal.PlainDateTime>;
-  PlainYearMonth: typeof globalThis.Temporal.PlainYearMonth & TemporalConstructor<globalThis.Temporal.PlainYearMonth>;
-  PlainMonthDay: typeof globalThis.Temporal.PlainMonthDay & TemporalConstructor<globalThis.Temporal.PlainMonthDay>;
-  Duration: typeof globalThis.Temporal.Duration & TemporalConstructor<globalThis.Temporal.Duration>;
-};
-let temporal: RequireTemporal | undefined | false;
+// Native Temporal and both supported polyfills expose this shape; use the shared spec types instead of duplicating it.
+type TemporalModule = typeof import("temporal-spec");
+let temporal: TemporalModule | undefined | false;
 
 /**
  * Lazily exposes Joist's native-first / polyfill-fallback Temporal detection.
@@ -41,7 +27,7 @@ export const Temporal = new Proxy(
       return Reflect.get(requireTemporal().Temporal, property, receiver);
     },
   },
-) as TemporalGlobal;
+) as typeof globalThis.Temporal;
 
 /**
  * A type-only `Temporal` namespace that merges with the `const Temporal` above.
@@ -67,7 +53,7 @@ export declare namespace Temporal {
  * We want to avoid directly importing/requiring `temporal-polyfill` because
  * it will introduce the dependency to all users of Joist.
  */
-export function maybeRequireTemporal(): RequireTemporal | undefined {
+export function maybeRequireTemporal(): TemporalModule | undefined {
   // if we've already failed to find a temporal implementation before, early exit
   if (temporal === false) return undefined;
   // if we already required temporal, just return that
@@ -84,19 +70,19 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
   // preferentially try to use temporal-polyfill
   try {
     temporal = runtimeRequire("temporal-polyfill");
-    return temporal as RequireTemporal;
+    return temporal as TemporalModule;
   } catch (e) {}
   // last resort, try to use @js-temporal/polyfill
   try {
     temporal = runtimeRequire("@js-temporal/polyfill");
-    return temporal as RequireTemporal;
+    return temporal as TemporalModule;
   } catch (e) {}
   // don't try to load temporal again
   temporal = false;
   return undefined;
 }
 
-export function requireTemporal(): RequireTemporal {
+export function requireTemporal(): TemporalModule {
   const temporal = maybeRequireTemporal();
   if (!temporal) throw new Error("Unable to find a Temporal implementation");
   return temporal;

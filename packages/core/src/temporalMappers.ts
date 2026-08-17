@@ -62,7 +62,7 @@ export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = 
       // Produce a ZDT from a PG output like "2021-01-01 12:00:00-05:00"; binary-decoded
       // instances (lazy queries construct ZonedDateTimes directly) pass through
       fromDb: (value: string | Temporal.ZonedDateTime) => {
-        if (value instanceof t.ZonedDateTime) return value;
+        if (typeof value !== "string") return value;
         const [offset] = value.match(/([+-]\d{2}(?::?\d{2})?)$/) ?? [];
         return t.ZonedDateTime.from(`${value}[${!offset || /^\+00(:?00)?$/.test(offset) ? "UTC" : offset}]`);
       },

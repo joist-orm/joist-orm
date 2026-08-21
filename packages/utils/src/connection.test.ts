@@ -10,6 +10,7 @@ describe("connection", () => {
       port: 5432,
       user: "joist",
       ssl: false,
+      pipeline: true,
     });
   });
 
@@ -29,6 +30,7 @@ describe("connection", () => {
       port: 5432,
       ssl: true,
       user: "joist",
+      pipeline: true,
     });
   });
 
@@ -41,6 +43,7 @@ describe("connection", () => {
       port: 5432,
       user: "joist",
       ssl: true,
+      pipeline: true,
     });
   });
 });

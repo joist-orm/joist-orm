@@ -25,6 +25,7 @@ export type ConnectionConfig = {
   host?: string;
   port?: number;
   ssl?: boolean;
+  pipeline?: boolean;
 };
 
 /**
@@ -35,6 +36,8 @@ export type ConnectionConfig = {
  * - A single `DATABASE_URL` variable
  * - Multiple `DB_USER`, `DB_PASSWORD`, `DB_DATABASE`, `DB_HOST`, `DB_PORT` variables
  * The value can be either:
+ *
+ * Query pipelining is enabled by default. Set `pipeline: false` on the returned config to opt out.
  *
  * Note that users using a library for typed / validated environment variables, i.e.
  * ts-app-env, you can pass in a specific `env` variable.
@@ -52,6 +55,7 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
       host: host ?? undefined,
       port: port ? Number(port) : undefined,
       ssl: options.ssl === true,
+      pipeline: true,
     };
   } else if (process.env.DB_DATABASE || (env && "DB_DATABASE" in env)) {
     const e = process.env.DB_DATABASE ? process.env : (env as DbSettingsEnv);
@@ -62,6 +66,7 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
       host: e.DB_HOST,
       port: e.DB_PORT ? Number(e.DB_PORT) : undefined,
       ssl: e.DB_SSL === "1" || e.DB_SSL === "true",
+      pipeline: true,
     };
   } else {
     throw new Error("No DATABASE_URL or DB_DATABASE/etc. environment variable found");

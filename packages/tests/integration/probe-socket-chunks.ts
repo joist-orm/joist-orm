@@ -12,6 +12,7 @@ import pg from "pg";
 async function main(): Promise<void> {
   const client = new pg.Client({
     connectionString: process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist",
+    pipeline: true,
   });
   await client.connect();
   const stream = (client as any).connection.stream;

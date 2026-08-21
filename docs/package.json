@@ -14,7 +14,7 @@
     "@astrojs/starlight": "0.41.7",
     "@astrojs/starlight-tailwind": "5.0.0",
     "astro": "^7.2.0",
-    "sharp": "^0.35.2",
+    "sharp": "^0.35.3",
     "starlight-blog": "^0.28.0"
   },
   "devDependencies": {

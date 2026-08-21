@@ -24,7 +24,7 @@
     "@graphql-codegen/add": "^7.1.0",
     "@graphql-codegen/cli": "^7.2.0",
     "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
-    "@swc/core": "^1.16.0",
+    "@swc/core": "^1.16.1",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",

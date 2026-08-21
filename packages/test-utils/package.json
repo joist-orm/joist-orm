@@ -36,10 +36,10 @@
   "peerDependencies": {
     "joist-core": "workspace:*",
     "joist-utils": "workspace:*",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.0",
+    "@swc/core": "^1.16.1",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "jest": "30.4.2",

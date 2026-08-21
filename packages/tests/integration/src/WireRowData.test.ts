@@ -21,7 +21,7 @@ describe("WireRowData", () => {
 
   beforeAll(() => {
     expect(ensureLazyDataRows()).toBe(true);
-    pool = new pg.Pool({ connectionString });
+    pool = new pg.Pool({ connectionString, pipeline: true });
   });
 
   afterAll(async () => {
@@ -75,6 +75,7 @@ describe("WireRowData", () => {
       // decode exclusively through joist's own registry (see setBinaryTypeParser)
       const customPool = new pg.Pool({
         connectionString,
+        pipeline: true,
         types: {
           getTypeParser: (oid: number, format?: any) =>
             oid === pg.types.builtins.INT4 ? (value: string) => `custom:${value}` : pg.types.getTypeParser(oid, format),

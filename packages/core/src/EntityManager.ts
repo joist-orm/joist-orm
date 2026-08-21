@@ -93,6 +93,7 @@ import {
 } from "./loadHints.ts";
 import { type WriteFn } from "./logging/FactoryLogger.ts";
 import { noopFieldLogger } from "./logging/FieldLogger.ts";
+import { type ReactionWalk } from "./logging/ReactionLogger.ts";
 import { newEntity } from "./newEntity.ts";
 import { resetFactoryCreated } from "./newTestInstance.ts";
 import { type PendingChange } from "./PendingChanges.ts";
@@ -3008,6 +3009,8 @@ async function validateReactiveRules(
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
   const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
+  // Concurrent walks finish in query-timing order, so the logger sorts them before writing deterministic output.
+  const walks: ReactionWalk[] = [];
 
   // From the given triggered entities, follow the entity's ReactiveRule back
   // to the reactive rules that need ran, and queue them in the `fn` map
@@ -3021,7 +3024,7 @@ async function validateReactiveRules(
       entities = new Set();
       fns.set(rule.fn, entities);
     }
-    logger.logWalked(triggered, rule, found, "validate");
+    walks.push({ todo: triggered, r: rule, entities: found });
     found.forEach((entity) => {
       entities.add(entity);
     });
@@ -3078,6 +3081,7 @@ async function validateReactiveRules(
   });
 
   failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
+  logger.logWalks(walks, "validate");
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>

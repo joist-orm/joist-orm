@@ -1,10 +1,30 @@
 import { getMetadata, setField } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
+import pg from "pg";
 import { Author, Book, Tag, newBook, newTag } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
 import { newEntityManager, testDriver } from "src/testEm";
 
 // This will test whatever driver the test suite is currently being run against
 describe("Driver", () => {
+  it("enables pipelining for consumer pools", async () => {
+    const pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist",
+    });
+    try {
+      new PostgresDriver(pool);
+      expect(pool.options.pipeline).toBe(true);
+      const client = await pool.connect();
+      try {
+        expect(client.pipeline).toBe(true);
+      } finally {
+        client.release();
+      }
+    } finally {
+      await pool.end();
+    }
+  });
+
   describe("flush", () => {
     it("can insert", async () => {
       const em = newEntityManager();

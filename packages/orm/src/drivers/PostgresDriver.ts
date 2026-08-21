@@ -87,6 +87,9 @@ type OnQuery = ((sql: string) => void) | undefined;
  * avoid issues with ordering issues (cannot bulk insert A w/o knowing the id of B).
  *
  * - We use a pg-specific bulk update syntax.
+ *
+ * Query pipelining is enabled for clients created after driver construction unless the pool was
+ * configured with `pipeline: false`.
  */
 export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #idAssigner: IdAssigner;
@@ -101,6 +104,8 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     readonly pool: pg.Pool,
     opts?: PostgresDriverOpts,
   ) {
+    // Set the option before pg creates clients, but preserve an explicit consumer opt-out.
+    pool.options.pipeline ??= true;
     this.#idAssigner =
       opts?.idAssigner ??
       new SequenceIdAssigner(async (sql: string) => {

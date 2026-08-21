@@ -155,20 +155,19 @@ export class ReactionsManager {
       const seen: Map<string, Set<Entity>> = new Map();
       const actions: ReactiveAction[] = [];
 
-      await Promise.all(
+      const walks = await Promise.all(
         [...this.pendingReactables.entries()].map(async ([r, pending]) => {
           // Skip reactive queries until post-flush
-          if (kind === "reactables" && r.kind === "query") return [];
-          if (kind === "reactiveQueries" && (r.kind === "populate" || r.kind === "reaction")) return [];
+          if (kind === "reactables" && r.kind === "query") return undefined;
+          if (kind === "reactiveQueries" && (r.kind === "populate" || r.kind === "reaction")) return undefined;
           // Copy pending and clear it
           const todo = [...pending.todo];
-          if (todo.length === 0) return [];
+          if (todo.length === 0) return undefined;
           pending.todo.clear();
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream entities
           const entities = r.path.length === 0 ? todo : await followReverseHint(r.name, todo, r.path);
           const actionableEntities = entities.filter((entity) => !entity.isDeletedEntity && entity instanceof r.cstr);
-          this.logger.logWalked(todo, r, actionableEntities, "recalc");
           let seenEntities = seen.get(r.name);
           if (!seenEntities) seen.set(r.name, (seenEntities = new Set()));
           const processed = r.runOnce ? this.processedActions.get(r.name) : undefined;
@@ -181,8 +180,10 @@ export class ReactionsManager {
             seenEntities.add(entity);
             actions.push({ r, entity });
           }
+          return { r, todo, entities: actionableEntities };
         }),
       );
+      this.logger.logWalks(walks, "recalc");
       this.logger.logLoadingStart(this.em, actions);
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.

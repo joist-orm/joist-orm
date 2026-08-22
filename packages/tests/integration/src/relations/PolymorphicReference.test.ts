@@ -14,6 +14,7 @@ import {
   newBook,
   newComment,
   newSmallPublisher,
+  newTaskOld,
 } from "../entities";
 
 describe("PolymorphicReference", () => {
@@ -114,6 +115,14 @@ describe("PolymorphicReference", () => {
     expect(row.parent_task_id).toEqual(1);
   });
 
+  it("can save a foreign key pointing to a new sub type", async () => {
+    const em = newEntityManager();
+    newComment(em, { parent: newTaskOld(em) });
+    await em.flush();
+
+    expect(await select("comments")).toMatchObject([{ parent_task_id: 1 }]);
+  });
+
   it("throws when trying to set an entity of the wrong type", async () => {
     const em = newEntityManager();
     const c1 = em.createPartial(Comment, {});
@@ -178,6 +187,29 @@ describe("PolymorphicReference", () => {
 
     // Then the favorite publisher is set
     expect(await adminUser.favoritePublisher.load()).toEqual(smallPublisher);
+  });
+
+  it("can persist a polymorphic reference to an existing subtype", async () => {
+    const em = newEntityManager();
+    const smallPublisher = newSmallPublisher(em);
+    await em.flush();
+
+    const adminUser = newAdminUser(em);
+    adminUser.favoritePublisher.set(smallPublisher);
+    await em.flush();
+
+    expect(await select("users")).toMatchObject([
+      { favorite_publisher_large_id: null, favorite_publisher_small_id: 1 },
+    ]);
+  });
+
+  it("rejects an ambiguous subtype id", () => {
+    const em = newEntityManager();
+    const adminUser = newAdminUser(em);
+
+    expect(() => adminUser.favoritePublisher.set("p:1" as any)).toThrow(
+      "p:1 cannot be set as 'favoritePublisher' on AdminUser#1",
+    );
   });
 
   it("throws NoIdError from id", () => {

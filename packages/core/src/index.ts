@@ -105,6 +105,12 @@ export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader.ts";
 export {
+  ExactColumnsPlugin,
+  type ExactColumnsPluginOpts,
+  type ExactColumnsReport,
+  StaleColumnUsageError,
+} from "./plugins/ExactColumnsPlugin.ts";
+export {
   convertToLoadHint,
   isTypeOrSubType,
   type Reactable,

@@ -9,6 +9,8 @@ import { abbreviation } from "../utils.ts";
 import { type BatchLoader } from "./BatchLoader.ts";
 
 export const loadOperation = "load";
+/** The `em.refresh` variant of `load`, i.e. so plugins never narrow a refresh's re-fetched columns. */
+export const refreshLoadOperation = "refresh-load";
 
 /**
  * Batches em.load-style fetches, writing to identity map (via hydrate) instead of returning values.
@@ -41,7 +43,7 @@ export function loadBatchLoader(
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
+    const rowData = await em["executeFindRowData"](meta, overwriteExisting ? refreshLoadOperation : loadOperation, query, {});
     em["hydrateAndFinalize"](meta.cstr, rowData, {
       overwriteExisting,
       sidecars: (entities) => {

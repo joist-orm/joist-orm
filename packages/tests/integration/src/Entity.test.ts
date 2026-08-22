@@ -138,6 +138,13 @@ describe("Entity", () => {
       }).toThrow("Invalid argument, cannot set over latestComments PropertyImpl");
     });
 
+    it("cannot set over a Property in em.create", () => {
+      const em = newEntityManager();
+      expect(() => {
+        em.create(Author, { firstName: "a1", latestComments: [] });
+      }).toThrow("Invalid argument, cannot set over latestComments PropertyImpl");
+    });
+
     it("cannot set over an hasOneDerived relation", async () => {
       const em = newEntityManager();
       const a1 = em.create(Author, { firstName: "a1" });
@@ -152,6 +159,45 @@ describe("Entity", () => {
       expect(() => {
         a1.set({ numberOfPublicReviews: 2 } as any);
       }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
+    });
+
+    it("cannot set over a ReactiveField in em.create", () => {
+      const em = newEntityManager();
+      expect(() => {
+        em.create(Author, { firstName: "a1", numberOfPublicReviews: 2 });
+      }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
+    });
+
+    it("cannot set over a ReactiveField in em.createPartial", () => {
+      const em = newEntityManager();
+      expect(() => {
+        // @ts-expect-error
+        em.createPartial(Author, { numberOfPublicReviews: 2 });
+      }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
+    });
+
+    it("cannot set over a ReactiveReference in set", () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      expect(() => {
+        // @ts-expect-error
+        a1.set({ favoriteBook: undefined });
+      }).toThrow("Cannot set Author#1.favoriteBook ReactiveReference directly.");
+    });
+
+    it("cannot set over a ReactiveReference in em.create", () => {
+      const em = newEntityManager();
+      expect(() => {
+        em.create(Author, { firstName: "a1", favoriteBook: 123 });
+      }).toThrow("ReactiveReference Author#1.favoriteBook cannot be set via opts");
+    });
+
+    it("cannot set over a ReactiveReference in em.createPartial", () => {
+      const em = newEntityManager();
+      expect(() => {
+        // @ts-expect-error
+        em.createPartial(Author, { favoriteBook: 123 });
+      }).toThrow("ReactiveReference Author#1.favoriteBook cannot be set via opts");
     });
 
     it("ignores sets of the same value", async () => {

@@ -7,6 +7,8 @@ import {
   type LoadedReadOnlyCollection,
   type LoadedReference,
   type PolymorphicReference,
+  type Property,
+  type Relation,
   isAsyncReactiveField,
   isLoadedCollection,
   isLoadedProperty,
@@ -20,8 +22,10 @@ import { type MaybePromise, fail, maybePromiseThen } from "./utils.ts";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.
-export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>> = T & {
-  [K in keyof L]: L[K] extends PolymorphicReference<T, infer U, infer N>
+export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>> = {
+  [
+    K in keyof L as L[K] extends { get: unknown } ? K : L[K] extends Relation<any, any> | Property<any, any> ? never : K
+  ]: L[K] extends PolymorphicReference<T, infer U, infer N>
     ? L[K] extends LoadedReference<T, U, N>
       ? U | N
       : L[K]

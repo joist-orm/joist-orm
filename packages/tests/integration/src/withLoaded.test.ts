@@ -47,14 +47,32 @@ describe("withLoaded", () => {
     expect(publisher?.name).toEqual("LargePublisher 1");
   });
 
-  it("with an unloaded m2o", async () => {
+  it("rejects destructuring an unloaded m2o and fails at runtime", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(() => {
-      const { author } = withLoaded(book as any);
+      // @ts-expect-error author is not loaded
+      const { author } = withLoaded(book);
     }).toThrow("Book:1.author is not loaded");
+  });
+
+  it("allows destructuring a loaded m2o", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1", "author");
+    const { author } = withLoaded(book);
+    expect(author.firstName).toBe("a1");
+  });
+
+  it("rejects an invalid key but returns undefined at runtime", async () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+    // @ts-expect-error invalidKey is not a Book property
+    const { invalidKey } = withLoaded(book);
+    expect(invalidKey).toBeUndefined();
   });
 
   it("with a m2o and primitive", async () => {

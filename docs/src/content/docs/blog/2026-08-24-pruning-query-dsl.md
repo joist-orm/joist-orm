@@ -1,7 +1,7 @@
 ---
-title: Query Pruning for the Win
-slug: blog/pruning
-date: 2025-05-20
+title: Pruning in Joist's Query DSL
+slug: blog/pruning-query-dsl
+date: 2026-08-24
 authors: shaberman
 tags: []
 _excerpt: ...
@@ -9,7 +9,7 @@ _excerpt: ...
 
 ## Short Intro
 
-This post explains the generally novel "pruning" feature of Joist's `em.find` query DSL.
+This post explains the generally novel "pruning" feature of Joist's (an [entity-based](/modeling/why-entities/) ORM for TypeScript) `em.find` query DSL.
 
 Specifically, we show how extremely ergonomic it is for "semi-dynamic" queries like endpoints that return the same basic data for each request (i.e. `GET /authors`), but use slightly different filters / joins / `WHERE` clauses based on the endpoint's params (sometimes `?firstName=a1`, sometimes `?publisherId=p1`).
 
@@ -20,8 +20,8 @@ A quick example of Joist's query DSL for a `GET /authors` is:
 // - `GET /authors?firstName=a1
 // - `GET /authors?publisherId=1`
 // - `GET /authors?publisherName=p1`
-async function getAuthors(params: AuthorsQueryString): Promise<Author[]> {
-  // Each of these will be `string | undefined`, depending on what is sent
+async function getAuthors(params: AuthorsParams): Promise<Author[]> {
+  // Each variable is `string | undefined`, depending on what is sent
   const { firstName, publisherId, publisherName  } = params;
   // We pass all 3 into `em.find` and it "just works"
   return em.find(Author, {
@@ -85,16 +85,13 @@ That disclaimer aside, we'll make the case for Joist's claims to idiomacity, at 
 
 Where by "shape" we mean "what columns are queried" and "what tables are joined".
 
--- afterthought
--- Often query DSLs are documented and evaluated by looking at static examples, like a low-complexity query like "find authors for publisher with id & name, at least one book that is published, and one book review is highly rated".
-
 ## Static Queries
 
-For our purposes, a static query is one that always uses exactly the same tables & conditions.
+A static query is one that always uses exactly the same tables & conditions.
 
 An example would be a `GET /oldBooks?authorId=1` endpoint that, for a given author, returns all books older than 10 years.
 
-Although the `authorId` param might change, fundamentally the structure (tables and conditions) of the query we need to make will not.
+Although the `authorId` param might change, fundamentally the structure (tables and conditions) of the query will not.
 
 We'll use this template of an endpoint implementation:
 
@@ -185,7 +182,7 @@ The example use case we'll use is a `GET /authors` endpoint, which always "retur
 We'll use this example typing of what the `getAuthors` query params might be, notice how each key is optional, denoting that clients may/may not set them:
 
 ```typescript
-type AuthorsQueryString = {
+type AuthorsParams = {
   /** Return authors that match this name. */
   name?: string;
   /** Return authors who published with publishers of this name. */
@@ -206,7 +203,7 @@ For this new endpoint, let's again see how we'd implement this query, across eac
 Note that the biggest difference is that we'll now have to integrate this "conditional shape of the query" into each ORM's query syntax.
 
 ```ts title="postgres.js"
-async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
+async function getAuthors(filter: AuthorsParams): Promise<Author[]> {
   const { name, publisherName, publisherStatus, bookStatus, highRating } = filter;
   return await sql<Author[]>`
     SELECT DISTINCT a.*
@@ -234,14 +231,14 @@ A few notes:
 
 * We include a dummy `1 = 1` so that all our conditional predicates can always use an `AND` prefix.
 
-  Without this hack, we'd have to dynamically track "what is the 1st predicate that needs `AND` added", which would be even more tedious (this ack was ChatGTP's idea :-)).
+  Without this hack, we'd have to dynamically track "what is the 1st predicate that needs `AND` added", which would be even more tedious (disclaimer: this hack was ChatGTP's idea 😅).
 
 * Each conditional join check needs to know not just "are filters from my table in use" (i.e. if `bookStatus` is used, include `books`), but also "are filters from any tables *downstream of me* in use" (i.e. if `highRating` is used, include `books` so that the `book_reviews` join works).
 
-Now lets look as Knex, which should be representative method-chaining style query builders:
+Now Knex, which should be representative method-chaining style query builders:
 
 ```ts title="Knex"
-async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
+async function getAuthors(filter: AuthorsParams): Promise<Author[]> {
   const { name, publisherName, publisherStatus, bookStatus, highRating } = filter;
   // Start building the query
   const query = knex<Author>('authors as a').distinct('a.*');
@@ -268,7 +265,7 @@ async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
 Now Prisma, using its typed relation filters:
 
 ```ts title="Prisma"
-async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
+async function getAuthors(filter: AuthorsParams): Promise<Author[]> {
   const { name, publisherName, publisherStatus, bookStatus, highRating } = filter;
   const where: Prisma.AuthorWhereInput = {};
   if (name !== undefined) {
@@ -292,12 +289,12 @@ async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
 }
 ```
 
-MikroORM also uses a typed conditions object. By default, it treats `undefined` as `null`, so we conditionally build the `FilterQuery` instead of passing the optional values directly:
+MikroORM also uses a typed conditions object, which needs conditionally flushed out:
 
 ```ts title="MikroORM"
 import { type FilterQuery } from '@mikro-orm/core';
 
-async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
+async function getAuthors(filter: AuthorsParams): Promise<Author[]> {
   const { name, publisherName, publisherStatus, bookStatus, highRating } = filter;
   const where: FilterQuery<Author> = {};
   if (name !== undefined) {
@@ -323,14 +320,18 @@ async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
 
 :::tip
 
-Applications configured with MikroORM's `ignoreUndefinedInQuery: true` (see their [docs](https://mikro-orm.io/docs/configuration#ignoring-undefined-values-in-find-queries)) option can use a stable object shape that is closer to Joist's example below.
+I discovered while writing this post that, by default, MikroORM treats `undefined` as `null` so this snippet above is necessary for the building `where` clause correctly.
+
+However, they also have a `ignoreUndefinedInQuery: true` (see their [docs](https://mikro-orm.io/docs/configuration#ignoring-undefined-values-in-find-queries)) configuration flag that enables the same "pruning" capability we'll see in Joist's example below.
+
+Joist & Mikro often share/swap innovations, so I'm not sure who "built this first" 😅 but it's great to see--my only nudge would be to flip the behavior to be the default, breaking changes be damned. 🙈
 
 :::
 
-Finally, here's the dynamic version:
+Finally, here's Joist's dynamic version, which is noticeably simpler:
 
 ```ts title="Joist"
-async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
+async function getAuthors(filter: AuthorsParams): Promise<Author[]> {
   const { name, publisherName, publisherStatus, bookStatus, highRating } = filter;
   return await em.find(Author, {
     name,
@@ -345,7 +346,7 @@ async function getAuthors(filter: AuthorsQueryString): Promise<Author[]> {
 }
 ```
 
-I know that we've seen a ton of code scoll by, but **stop and see how few conditionals are in the Joist snippet** compared to the other ORMs. 🎉
+I know that we've seen a ton of code scroll by, but **stop and see how few conditionals are in the Joist snippet** compared to the other ORMs. 🎉
 
 This is more pruning feature at work. Let's look at how it works.
 
@@ -357,7 +358,7 @@ Most query DSLs cannot "turn on/off" parts of the query, making our own code han
 
 With Joist, it does the opposite, and figures out which joins & conditions to "turn on/off" based on tracking the "usage" of each join & conditional.
 
-To do that, we ironically we leverage one of JavaScript's core [wat](https://www.destroyallsoftware.com/talks/wat)-isms of having "both `null` and `undefined`":
+To do that, we leverage one of JavaScript's core [wat](https://www.destroyallsoftware.com/talks/wat)-isms of having "oh no, both `null` and `undefined`?!? 😱", where for `em.find`:
 
 - any condition with `null` (like `firstName: null`) is `IS NULL`
 - any condition with `undefined` (like `firstName: undefined`) is "unused"
@@ -392,24 +393,29 @@ This ends up working out really well with most web frameworks, GraphQL mutations
 
 ## Complex Conditions
 
-So far we've looked at how Joist prunes `em.find` "inline conditions", which are predicates inlined directly in joins hash passed to `em.find`, all of which become top-level `AND`s in the query.
+So far we've looked at how Joist prunes its `em.find` "inline conditions", which are predicates contained directly in object literal passed to `em.find`, all of which become top-level `AND`s in the query.
 
-If we need complex ANDs/ORs, Joist has a `conditions` property that accepts `{ and: [...] }` and `{ or: [...] }` data structures:
+If we need complex `AND`s and `OR`s, Joist has a `conditions` property that accepts `{ and: [...] }` and `{ or: [...] }` data structures, and these also support pruning:
 
 ```ts title="Joist"
 const [a, b] = aliases(Author, Book);
+// Find authors with an OR across a.lastName/b.title
 await em.find(
   Author,
-  // This 2nd arg is the "joins hash" that defines the structure of joins
+  // This 2nd arg is the "joins literal" that defines
+ // the structure of all joins, rooted from the `authors` table
   {
-    // `as` binds the `authors` table to our `a` const for later usage in the ANDs/ORs
+    // `as` binds the `authors` table to our `a` const defined
+    // above for later usage in the ANDs/ORs
     as: a,
     // These are inline conditions that become top-level ANDs
     firstName: { eq: "bob" }, // not pruned
-    // This joins into books, and may/may not be pruned based on conditions
-    books: { as: b }, // not pruned b/c b.title is used below
+    // This joins into books, and may/may not be pruned
+    // based on the `conditions` param below -- in this example,
+    // `b.title` is always used below, so `books` is always joined
+    books: { as: b },
   },
-  // This 3rd arg includes the `conditions` for complex ANDs/ORs conditions
+  // This 3rd arg has `conditions` for complex ANDs/ORs conditions
   {
     conditions: {
       or: [
@@ -419,19 +425,45 @@ await em.find(
     },
   },
 );
+
+// That got long, here's the same query, without inline comments
+await em.find(
+  Author,
+  { as: a, firstName: { eq: "bob" }, books: { as: b } },
+  { conditions: { or: [a.lastName.eq(undefined), b.title.eq("foo")] } },
+);
 ```
 
-As indicated by the comments, any `.eq` or `.in` or `.gt` is passed `undefined` will be pruned.
+As indicated by the comments in the snippet, any `.eq` or `.in` or `.gt` method call on a column alias like `a.lastName` or `b.title` that receives `undefined` will be pruned.
 
-If an `{ or: [...] }` or `{ and: [...] }` list is empty (because all conditions within the list have been pruned), the `OR`/`AND` clause itself will also be pruned. 
+If an `{ or: [...] }` or `{ and: [...] }` list is empty (because all conditions within the list have themselves been pruned), the `OR` / `AND` clause will also be pruned. 
 
-This setup of a stable "joins hash" (the 2nd arg) and either "simple inline" or "complex AND/OR conditions" that all work together, to "turn off" unused conditions & joins **without creating boilerplate in your code** delivers surprisingly succinct, pleasant queries.
+Putting it all together:
 
-## Production Examples
+* The 2nd `em.find` arg is a "join literal" that declares "the maximal query structure"--all joins and conditions that might potentially be used.
+* The join literal can have "simple inline" conditions
+* The `conditions` param can have "complex" conditions
+* Any condition/join clause that is passed unused is pruned
 
-To show how succinct Joist queries are in practice, here are two queries copy/pasted from our production codebase:
+And that's it.
 
-The first is for a GraphQL query, `query { items }` that accepts a filter:
+This setup lets Joist drive the "turn on/off" logic that previously our own code had to do, with repetitive/boilerplate language-level constructs.
+
+:::tip
+
+Today, Joist's `em.find` knowingly only supports "finding entities" and not arbitrary SQL statements.
+
+In theory the same pruning concept should be applicable to low-level SQL queries, which we're tracking in [#188](https://github.com/joist-orm/joist-orm/issues/188), but lacking this has not been a major pain point to our day-to-day feature development, so we've not prioritized it yet.
+
+:::
+
+## Production Query Examples
+
+To show how succinct Joist queries are in practice, here are two queries copy/pasted from our production codebase.
+
+As a disclaimer, these are both from GraphQL query resolvers, b/c our primary codebase is a GraphQL monolith, but the patterns apply equally to REST endpoints or gRPC etc.
+
+The first is for a `query { items }` that accepts a filter, where the `ItemFilter` defines 5 optional keys that the client can use in any combination:
 
 ```graphql title="GraphQL"
 # I.e. `query { items(filter: { version: 2 }) { name } }
@@ -501,34 +533,46 @@ export const costCodes: Pick<QueryResolvers, "costCodes"> = {
 };
 ```
 
-This query is not "a 1-liner", *but* hopefully we can still envision how relatively clean it is, in terms of setting up the "static structure" in the join hash, and then letting the `or: [...]` on `tradePartnerIds` drive the conditionality without cluttering up our code.
+This query is not "a 1-liner", *but* hopefully we can still envision how relatively clean it is, in terms of setting up the "static structure" in the join literal, and then letting the `or: [...]` on `tradePartnerIds` drive the conditionality without cluttering up our code.
 
 It's also worth calling out the easy-to-miss `...others`, which pass "the rest of the filters" that map 1:1 between the GraphQL filter and the database, on into Joist for default handling.
 
 This highlights a key principle of Joist: 80-90% of your API (whether a REST endpoint, gRPC service, or GraphQL type) is usually 80-90% 1:1 with the database, and so:
 
-- The 80-90% 1:1 cases should be as succinct/boilerplate-free as possible, but
-- The 10-20% one-off cases should still be handled easily without "fighting" against the framework.
+- The 80-90% 1:1 cases should be as succinct/boilerplate-free as possible,
+- The 10-20% one-off cases should be doable without "fighting the framework".
 
 ## Disclaimer
 
-Joist's `em.find` DSL has one large disclaimer: it only supports fetching entire entities (i.e. `Author`s or `Book`s), and does not support truly arbitrary SQL with aggregates like `SUM`s, group bys that return arbitrary [POJO](https://masteringjs.io/tutorials/fundamentals/pojo)s of data.
+We quickly noted this earlier, but Joist's `em.find` DSL does have one large disclaimer: it only supports fetching entire entities (i.e. `Author`s or `Book`s).
 
-This has been solely a pragmatic decision--given Joist's heavy focus on entities, we have not yet prioritized a low-level SQL builder (see [this issue](https://github.com/joist-orm/joist-orm/issues/188) tracking it), as `em.find` "fetching entities" is what 95% of our codebase's queries want to do anyway.
+Currently, we do not support truly arbitrary SQL with aggregates like `SUM`s, `GROUP BY`s, etc that return arbitrary [POJO](https://masteringjs.io/tutorials/fundamentals/pojo)s of data.
+
+This doesn't mean "your app can't use those SQL keywords"--our apps ofc have queries that need these SQL features--it just means that we use a lower-level query builder like Knex.
+
+This has been solely a pragmatic decision--given Joist's focus on entities, we have not yet prioritized a low-level SQL builder (see [issue #188](https://github.com/joist-orm/joist-orm/issues/188) tracking it), as `em.find` "fetching entities" is what 95% of our codebase's queries want to do anyway.
 
 Currently, for the 5% of our SQL queries that need SUMs/aggregates/group bys, we just drop down to Knex, albeit usually after using Joist's `buildKnexQuery` utility to take the `em.find`-style joins/conditions and bootstrap an initial Knex `QueryBuilder`, which we then mutate as needed.
 
 That said, the core idea of "usage tracking" and "condition & join pruning" can apply to low-level queries as well, and will definitely be used in Joist's low-level SQL builder, when it shows up. And we anticipate this leading to the same best-in-class, idiomatic queries that we have with `em.find` today.
 
+## Conclusion
 
+This wraps up the post.
 
----
+Personally, I feel like "building _dynamic_ queries" is often overlooked by ORM authors when creating query DSLs--almost like an afterthought.
 
+My evidence for this is:
 
-Personally, I've found these dynamic use cases are an often-overlooked important wrinkle that can make or break whether a DSL is still "pleasant" or "infuriating" to work with.**
+1. Just how painful dynamic queries can be in some ORMs. 
 
----
+   We saw in the postgres.js, Knex, Prisma, and MikroORM examples above, how this "blows up" the query creation code with boilerplate, particularly with joins.
 
-As you can see from the postgres.js, Knex, Prisma, and MikroORM examples above, this often "blows up" the query creation code with boilerplate, particularly with joins. A conditional added to a join often means there are now _two_ duplicative checks: add the conditional itself (yes/no add the `publisher.name` condition) *and* whether the join (yes/no whether to add the `publisher` join to the query).
+   To me, this is a tell the scenario wasn't considered as a first-class problem to solve when designing the DSL.
 
-Except for Joist (and now Mikro 😅)--Joist is smart enough to track "which conditions are actually used", and then "prunes" any unused conditions & _and unused joins_ from the query.
+2. ORM tutorials & overviews often don't include examples on "how do I conditionally add ~3-4 joins to this query", and relegate it to FAQs or users figuring it out on their own.
+
+Joist might have gotten lucky, in that idiomatic GraphQL queries have "optional filters" all the time, so this was an acute pain point for us to solve.
+
+But we also took our time in designing the `em.find` API, and really took several years of "building day-to-day features" to drive & curate the `em.find` API, to end up where we're at.
+

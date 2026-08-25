@@ -177,13 +177,13 @@ async function getOldBooks(params: OldBookParams): Promise<Book[]> {
 
 MikroORM and Joist take a fundamentally different approach: the query condition is a POJO literal. This is more succinct but also more limited because their `em.find` APIs return entities rather than arbitrary projected row shapes.
 
-For these initial static-query examples, the queries are all fairly standard and could each be considered idiomatic in their own way.
+For these initial static-query examples, in my opinion the queries are all fairly simple/standard and could each be considered idiomatic in their own way.
 
 ## Dynamic Queries
 
 Let's move on to dynamic queries, whose relationship paths and conditions vary according to endpoint parameters or other business logic.
 
-The example is a `GET /authors` endpoint that always returns authors but can filter them by attributes of their publisher, books, or book reviews.
+The example here is a `GET /authors` endpoint that always returns authors but can filter them by attributes of their publisher, books, or book reviews.
 
 We'll use the following type for the `getAuthors` query parameters. Each property is optional, indicating that clients may omit it:
 
@@ -391,7 +391,7 @@ This is the pruning feature at work. Let's look at how it works.
 
 Joist's insight is that, for most dynamic-query use cases, the _maximal structure_ of the query remains essentially static, just like the static queries in the previous section, and then _individual parts within that structure_ are turned on or off according to the input.
 
-Several query DSLs can omit individual "leaf" predicates that are `undefined` (Drizzle supports `undefined` conditions, Prisma omits them by default or uses `Prisma.skip`, and MikroORM can opt into similar behavior). However, these DSLs generally do not remove both unused conditions _and now-unused relationship paths_ from one stable nested query shape, so application code still handles that boilerplate with `if` statements, ternaries, or conditional method chaining.
+Several of the other query DSLs can omit individual "leaf" predicates that are `undefined` (Drizzle supports `undefined` conditions, Prisma omits them by default or uses `Prisma.skip`, and MikroORM can opt into similar behavior). However, these DSLs generally do not remove both unused conditions _and now-unused relationship paths_ from one stable nested query shape, so application code still handles that boilerplate with `if` statements, ternaries, or conditional method chaining.
 
 Joist instead determines which conditions and relationship paths to retain by tracking the usage of each one.
 
@@ -401,7 +401,7 @@ To do that, Joist leverages one of JavaScript's core [wat](https://www.destroyal
 - Any condition with `undefined`, such as `firstName: undefined`, is unused.
 - Any relationship path referenced only by unused conditions is also unused.
 
-After dropping all unused conditions and relationship paths, Joist generates SQL that contains only the necessary predicates and traversals. Depending on the query, a collection traversal may become a correlated `EXISTS` subquery rather than a SQL `JOIN`.
+After dropping all unused conditions and relationship paths, Joist generates SQL that contains only the necessary predicates and traversals.
 
 Here are some conditions that are pruned or retained based on their runtime values:
 
@@ -422,9 +422,11 @@ await em.find(Author, {
 
 :::tip[Info]
 
-Joist also leverages `null` vs. `undefined` for [partial-update APIs](/features/partial-update-apis/), where calling `createOrUpdatePartial` with `{ lastName: undefined }` means "leave the `lastName` field alone," while `{ lastName: null }` means "unset it."
+Speaking of this "wat", Joist also leverages `null` vs. `undefined` for [partial-update APIs](/features/partial-update-apis/), where `{ lastName: undefined }` means "leave the `lastName` field alone," while `{ lastName: null }` means "unset it."
 
-This works well with web frameworks and GraphQL mutation inputs: when a `SaveAuthor` command is deserialized, `lastName: undefined` means "the caller did not send this field."
+This works well with web frameworks and GraphQL mutation inputs: when a `SaveAuthor` command is deserialized, `lastName: undefined` means "the caller did not send this field" and `lastName: null` means "they really want it unset".
+
+Ngl I've grown to really liking `null` vs. `undefined` as a tool to use when designing JavaScript/TypeScript libraries, and would miss when moving to other languages. 
 
 :::
 
@@ -490,7 +492,7 @@ To show how succinct Joist queries are in practice, here are two queries copied 
 
 Both are GraphQL query resolvers because our primary codebase is a GraphQL monolith, but the patterns apply equally to REST endpoints, gRPC services, and other APIs.
 
-The first resolver implements `query { items }` with a filter. `ItemFilter` defines five optional fields that clients can combine freely:
+The first resolver implements `query { items }` with a filter; `ItemFilter` defines five optional fields that clients can combine freely:
 
 ```graphql title="GraphQL"
 # E.g., `query { items(filter: { version: 2 }) { name } }`
@@ -503,7 +505,7 @@ input ItemFilter {
 }
 ```
 
-Its `em.findGql` call is a **one-liner**:
+Its `em.findGql` call is a **one-liner** 🎉:
 
 ```ts title="Joist"
 export const items: Pick<QueryResolvers, "items"> = {
@@ -519,8 +521,7 @@ The second example is a similar query for the `CostCode` entity, but it uses an 
 ```ts title="Joist"
 export const costCodes: Pick<QueryResolvers, "costCodes"> = {
   costCodes(root, { filter }, { em }) {
-    const { tradePartnerIds: tradePartnerIdsOrNull, version = [1], ...others } = filter ?? {};
-    const tradePartnerIds = tradePartnerIdsOrNull ?? undefined;
+    const { tradePartnerIds, version = [1], ...others } = filter ?? {};
     const [c, cco, bc] = aliases(Commitment, Commitment, BidContract);
     return em.findGql(
       CostCode,
@@ -528,10 +529,9 @@ export const costCodes: Pick<QueryResolvers, "costCodes"> = {
         // Pass along most of our filters 1:1
         ...others,
         version,
-        // The WHERE for tradePartnerIds requires several relationship paths. Declare
-        // them here and let Joist prune them when tradePartnerIds is not provided.
-        // Trades have Purchase Orders (Commitments) and Bids, each with cost codes.
-        // These paths limit the results to cost codes relevant to the selected trade partners.
+        // The WHERE for tradePartnerIds returns "cost codes relevant to the
+        // given trade partners". This requires several relationships/joins,
+        // which we declare and then rely on Joist to prune if not provided.
         items: {
           projectItems: {
             commitmentLineItems: {
@@ -560,7 +560,7 @@ export const costCodes: Pick<QueryResolvers, "costCodes"> = {
 };
 ```
 
-This query is not a one-liner, but it is still relatively clean: the join literal defines the static structure, and the `or: [...]` expression makes `tradePartnerIds` conditional without cluttering the code.
+This query is not a one-liner 😅, but it is still relatively clean: the join literal defines the static structure, and the `or: [...]` expression makes `tradePartnerIds` conditional without cluttering the code.
 
 It is also worth calling out the easy-to-miss `...others` spread, which sends the remaining directly mapped GraphQL filters to Joist for default handling.
 
@@ -575,7 +575,9 @@ Joist's `em.find` DSL has one major limitation: it always returns entities, such
 
 This means it does not currently support arbitrary SQL queries that use features such as `SUM` and `GROUP BY` to return arbitrary [POJOs](https://masteringjs.io/tutorials/fundamentals/pojo).
 
-This does not mean that applications cannot use those SQL features--we ofc have a small percentage queries that need them, and currently we just use a lower-level query builder such as Knex for those queries. We're not dogmatic about "Joist _must do everything_" (but maybe someday 😅).
+This does not mean that applications cannot use those SQL features--we of course have a small percentage queries that need them, and currently we just use a lower-level query builder such as Knex for those queries.
+
+I.e. we're not dogmatic about "Joist _must do everything_" (...but maybe someday 😅🤞).
 
 Historically, this has just been a pragmatic/ROI decision: because of Joist's focus on entities, literally 95% of our codebase's queries are all `em.find`s (yes we counted 🤣), and so we've not yet prioritized a low-level SQL builder.
 
@@ -585,16 +587,16 @@ See [Issue #188](https://github.com/joist-orm/joist-orm/issues/188) for tracking
 
 Personally, I feel like "building _dynamic_ queries" is often overlooked when ORM authors design query DSLs, almost as if they were an afterthought.
 
-My evidence for this is:
+My admittedly anecdotal evidence for this is:
 
 1. Dynamic queries can be painful in some ORMs.
 
-   The postgres.js, Knex, Drizzle, Prisma, and MikroORM examples show how dynamic queries can expand query-construction code with boilerplate, particularly around relationship paths.
+   The postgres.js, Knex, Drizzle, Prisma, and MikroORM examples all show how dynamic queries can expand query-construction code with boilerplate, particularly around conditional relationship paths/joins.
 
    To me, this is a tell that the scenario was not treated as a first-class problem when the DSL was designed.
 
 2. ORM tutorials and overviews often omit examples of how to add three or four relationship paths conditionally, relegating the topic to FAQs or leaving users to work it out themselves.
 
-Joist might have gotten lucky because idiomatic GraphQL queries often have optional filters, making this an acute pain point for us to solve.
+Granted, Joist might have gotten lucky in knowing "this is a problem to solve" because idiomatic GraphQL queries frequently have optional filters, which made this an acute pain point for us while developing our primary codebase.
 
-But we also took our time designing the `em.find` API, refining it over several years of day-to-day feature, before ending up at its current form.
+But we also took our time designing the `em.find` API, refining it over several years of day-to-day/in-the-weeds feature development, before ending up at its current form.

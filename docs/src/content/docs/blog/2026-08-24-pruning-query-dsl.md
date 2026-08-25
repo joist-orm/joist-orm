@@ -589,7 +589,7 @@ Personally, I feel like "building _dynamic_ queries" is often overlooked when OR
 
 My admittedly anecdotal evidence for this is:
 
-1. Dynamic queries can be painful in some ORMs.
+1. Dynamic queries are at best boilerplately in most ORMs, and downright painful in a few.
 
    The postgres.js, Knex, Drizzle, Prisma, and MikroORM examples all show how dynamic queries can expand query-construction code with boilerplate, particularly around conditional relationship paths/joins.
 
@@ -599,4 +599,4 @@ My admittedly anecdotal evidence for this is:
 
 Granted, Joist might have gotten lucky in knowing "this is a problem to solve" because idiomatic GraphQL queries frequently have optional filters, which made this an acute pain point for us while developing our primary codebase.
 
-But we also took our time designing the `em.find` API, refining it over several years of day-to-day/in-the-weeds feature development, before ending up at its current form.
+But we also took our time designing the `em.find` API, refining it over several years of day-to-day/in-the-weeds feature development, before ending up at its current form--which we're quite happy with! 😀

@@ -45,6 +45,7 @@ import {
   type GraphQLFilterWithAlias,
   type InstanceData,
   type Lens,
+  NoIdError,
   OneToManyCollection,
   type ParsedFindQuery,
   type PartialOrNull,
@@ -2374,7 +2375,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public recalc(entity: EntityW, reactionName: string): Promise<void>;
   public recalc(entities: EntityW[], reactionName: string): Promise<void>;
   public async recalc(entityOrEntities: EntityW | EntityW[], reactionName?: string): Promise<void> {
-    const entities = toArray(entityOrEntities);
+    const entities = toArray(entityOrEntities).filter((entity) => !entity.isDeletedEntity);
     if (reactionName !== undefined) {
       // Resolve every reaction before invoking any of them so a mixed list cannot partially run.
       const reactions = entities.map((entity) => {
@@ -2397,7 +2398,32 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         .map((field) => (entity as any)[field.fieldName]),
     );
     // Use forceReload: true to tell ReactiveReferences to recalc against their full graph
-    await Promise.all(relations.map((r: any) => r.load({ forceReload: true })));
+    // This intentionally mirrors ReactionsManager.recalcPendingReactables's NoIdError retry. These direct relations
+    // are not ReactiveActions, and all failures except NoIdError are returned directly to the caller.
+    const results = await Promise.allSettled(relations.map((r: any) => r.load({ forceReload: true })));
+    const relationsPendingAssignedIds: any[] = [];
+    const failures: any[] = [];
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        if (result.reason instanceof NoIdError) {
+          relationsPendingAssignedIds.push(relations[i]);
+        } else {
+          failures.push(result.reason);
+        }
+      }
+    });
+    if (relationsPendingAssignedIds.length > 0) {
+      await this.assignNewIds();
+      const retryResults = await Promise.allSettled(
+        relationsPendingAssignedIds.map((r: any) => r.load({ forceReload: true })),
+      );
+      retryResults.forEach((result) => {
+        if (result.status === "rejected") {
+          failures.push(result.reason);
+        }
+      });
+    }
+    if (failures.length > 0) throw failures[0];
 
     // And also sync reactive fields
     entities.flatMap((entity) =>

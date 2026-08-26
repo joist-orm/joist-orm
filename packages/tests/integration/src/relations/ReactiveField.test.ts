@@ -285,6 +285,32 @@ describe("ReactiveField", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
+  it("can recalc RFs without assigned ids", async () => {
+    const em = newEntityManager();
+    // When we have a new author
+    const a1 = newAuthor(em, { firstName: "a1" });
+    // And Author.search accesses `a.id` before it is assigned
+    await em.recalc(a1);
+    // Then the id is assigned and Author.search is recalculated
+    expect(a1.search.get).toBe("a:1 a1");
+  });
+
+  it("throws when recalculating RFs that use deleted entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const b = await em.load(Book, "b:1");
+    // When we delete author, which will eventually percolate to the Book
+    em.delete(a);
+    // Then recalcing the Book still surfaces the TypeError
+    await expect(em.recalc(b)).rejects.toThrow(TypeError);
+    // And a subsequent flush finishes the pending cascade cleanly
+    await em.flush();
+    expect(a.isDeletedEntity).toBe(true);
+    expect(b.isDeletedEntity).toBe(true);
+  });
+
   it("ignores type errors in downstream reactions on recalc", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -549,6 +575,15 @@ describe("ReactiveField", () => {
     const b1 = newBook(em);
     b1.transientFields.throwNpeInSearch = true;
     await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
+  });
+
+  it("still throws valid NPEs during em.recalc", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1");
+    b1.transientFields.throwNpeInSearch = true;
+    await expect(em.recalc(b1)).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
   });
 
   it("cache invalidates transitive RFs", async () => {

@@ -30,6 +30,7 @@ async function getAuthors(params: {
   // We pass all 3 into `em.find` and it "just works"
   return em.find(Author, {
     firstName,
+    // This join, and any other joins, are only added if needed
     publisher: { id: publisherId, name: publisherName },
   });
 }

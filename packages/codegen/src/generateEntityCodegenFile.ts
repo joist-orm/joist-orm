@@ -87,6 +87,7 @@ import {
   newRequiredLazyFieldRule,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   setField,
   setOpts,
   toIdOf,
@@ -149,10 +150,15 @@ export function generateEntityCodegenFile(
       : code`return ${toIdOf}(${metadata}, this.idTaggedMaybe);`;
   const idType = getIdType(config);
 
-  const maybeIsSoftDeleted = meta.deletedAt
+  const maybeSoftDeleteMethods = meta.deletedAt
     ? code`
     get isSoftDeletedEntity(): boolean {
       return this.${meta.deletedAt.fieldName} !== undefined;
+    }
+
+    softDelete(): void {
+      if (this.isSoftDeletedEntity) return;
+      this.${meta.deletedAt.fieldName} = ${nowUTCCall(config, meta.deletedAt)};
     }
   `
     : "";
@@ -340,7 +346,7 @@ export function generateEntityCodegenFile(
         return ${newChangesProxy}(this) as any;
       }
 
-      ${maybeIsSoftDeleted}
+      ${maybeSoftDeleteMethods}
 
       ${tsdocComments.entity.load}
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
@@ -1230,6 +1236,21 @@ function undefinedOrNever(notNull: boolean): string {
 
 function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : "null";
+}
+
+/** Returns the nowUTC call for the deleted-at field's generated timestamp type. */
+function nowUTCCall(config: Config, field: PrimitiveField): Code {
+  if (!config.temporal) return code`${nowUTC}()`;
+  switch (field.columnType) {
+    case "date":
+      return code`${nowUTC}("plainDate")`;
+    case "timestamp without time zone":
+      return code`${nowUTC}("plainDateTime")`;
+    case "timestamp with time zone":
+      return code`${nowUTC}("zonedDateTime")`;
+    default:
+      return fail(`Unsupported deleted-at column type ${field.columnType}`);
+  }
 }
 
 /** Prefixes the comment with a newline, so it gets its own line. */

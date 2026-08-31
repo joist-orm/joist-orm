@@ -1,10 +1,22 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag, update } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
-import { Author, Book, Publisher, Tag } from "./entities";
+import { Author, Book, Publisher, Tag, newBook } from "./entities";
 import { jan1 } from "./testDates";
 
 describe("EntityManager.softDeletes", () => {
+  it("softDelete sets deletedAt once", () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+
+    book.softDelete();
+    const deletedAt = book.deletedAt;
+    book.softDelete();
+
+    expect(deletedAt).toBeInstanceOf(Date);
+    expect(book.deletedAt).toBe(deletedAt);
+  });
+
   it("o2m.get skips soft deleted entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ author_id: 1, title: "b1", deleted_at: jan1 });

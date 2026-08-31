@@ -22,6 +22,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -65,6 +66,7 @@ export interface BookFields {
   };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
@@ -73,6 +75,7 @@ export interface BookOpts {
   publishedAt: Temporal.ZonedDateTime;
   timestampTzs: Temporal.ZonedDateTime[];
   maybeTimestampTzs?: Temporal.ZonedDateTime[] | null;
+  deletedAt?: Temporal.ZonedDateTime | null;
   author: Author | AuthorId;
 }
 
@@ -88,6 +91,7 @@ export interface BookFilter {
   maybeTimestampTzs?: ValueFilter<Temporal.ZonedDateTime[], null>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  deletedAt?: ValueFilter<Temporal.ZonedDateTime, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
 
@@ -99,6 +103,7 @@ export interface BookGraphQLFilter {
   maybeTimestampTzs?: ValueGraphQLFilter<Temporal.ZonedDateTime[]>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  deletedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   authorId?: ValueGraphQLFilter<AuthorId>;
 }
@@ -111,6 +116,7 @@ export interface BookOrder {
   maybeTimestampTzs?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  deletedAt?: OrderBy;
   author?: AuthorOrder;
 }
 
@@ -213,6 +219,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "updatedAt");
   }
 
+  get deletedAt(): Temporal.ZonedDateTime | undefined {
+    return getField(this, "deletedAt");
+  }
+
+  set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {
+    setField(this, "deletedAt", deletedAt);
+  }
+
   /**
    * Partial update taking any subset of the entities fields.
    *
@@ -290,6 +304,17 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
    */
   get changes(): Changes<Book> {
     return newChangesProxy(this) as any;
+  }
+
+  get isSoftDeletedEntity(): boolean {
+    return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC("zonedDateTime");
   }
 
   /**

@@ -29,6 +29,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -389,6 +390,13 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

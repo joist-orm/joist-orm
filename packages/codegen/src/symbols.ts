@@ -75,6 +75,7 @@ export const mustBeSubType = imp("mustBeSubType@joist-orm");
 export const cleanStringValue = imp("cleanStringValue@joist-orm");
 export const Changes = imp("t:Changes@joist-orm");
 export const newChangesProxy = imp("newChangesProxy@joist-orm");
+export const nowUTC = imp("nowUTC@joist-orm");
 export const LoadHint = imp("t:LoadHint@joist-orm");
 export const Loaded = imp("t:Loaded@joist-orm");
 export const isLoaded = imp("isLoaded@joist-orm");

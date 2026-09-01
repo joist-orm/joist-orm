@@ -3,10 +3,13 @@ import {
   type Alias,
   type AliasBrand,
   type AliasMgmt,
+  JoinTableHandle,
+  type M2mJoinTable,
   aliasMgmt,
   getAliasMetadata,
   getAliasMgmt,
   isAlias,
+  m2mJoinTable,
 } from "./Aliases.ts";
 import { ConditionBuilder } from "./ConditionBuilder.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
@@ -19,6 +22,8 @@ import {
   type ExprBrand,
   type ExprContext,
   type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
   RefExpr,
   type SqlFragment,
   TemplateExpr,
@@ -86,29 +91,10 @@ export type QuerySource =
   | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
 
 /**
- * A join entry: the join kind is the key, the alias is the value, plus `on`. `inner?: never` /
- * `left?: never` keep an entry to one kind (the `ExpressionFilter` `and`/`or` trick).
- *
- * `on` is required. A join is pruned when nothing references it anymore, not by an `undefined` ON;
- * `keep: true` pins a join that would otherwise prune, i.e. an inner join used as an existence filter,
- * the way em.find's `keepAliases` does. It is a boolean so callers can pass a flag.
- *
- * Joins to a subquery are always this expanded form: a subquery has no FK metadata.
+ * A join entry (see `InnerJoin`/`LeftJoin` in `Expr.ts`): the expanded `{ inner: b, on }` form, or the
+ * entry a relation join factory returns (`a.books.as(b)`); joins to a subquery are always the expanded
+ * form, since a subquery has no FK metadata.
  */
-export interface InnerJoin<A extends QuerySource> {
-  readonly inner: A;
-  readonly left?: never;
-  readonly on: ExpressionCondition;
-  readonly keep?: boolean;
-}
-
-export interface LeftJoin<A extends QuerySource> {
-  readonly left: A;
-  readonly inner?: never;
-  readonly on: ExpressionCondition;
-  readonly keep?: boolean;
-}
-
 export type QueryJoin = InnerJoin<QuerySource> | LeftJoin<QuerySource>;
 export type QueryJoins = readonly (QueryJoin | undefined)[];
 
@@ -595,12 +581,13 @@ class Ctx implements ExprContext {
 
 function describeHandle(handle: object): string {
   if (handle instanceof SubqueryHandle) return `Subquery ${handle.describe()}`;
+  if (handle instanceof JoinTableHandle) return `Join table ${handle.joinTableName}`;
   if ("tableName" in handle) return `Alias for ${(handle as AliasMgmt).tableName}`;
   return "Alias";
 }
 
 interface ParsedSource {
-  handle: AliasMgmt | SubqueryHandle;
+  handle: AliasMgmt | SubqueryHandle | JoinTableHandle;
   alias: string;
   /** `table AS alias` or `(SELECT ...) AS alias`. */
   sql: string;
@@ -658,10 +645,15 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
 
   // 1. Assign and bind every alias before generating any SQL, so ON conditions can reference any source.
   const fromThunk = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedAlias);
-  const joinThunks = joinEntries.map((j) => {
+  const joinThunks = joinEntries.flatMap((j) => {
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
     const alias = kind === "inner" ? j.inner : j.left;
-    return { kind, keep: j.keep ?? false, on: j.on, source: registerSource(alias, ctx, assigner, false) };
+    const keep = j.keep ?? false;
+    const target = { kind, keep, on: j.on, source: registerSource(alias, ctx, assigner, false) };
+    // A sugar m2m join (`a.tags.as(t)`) carries a hidden join-table join; emit it first, with the same kind
+    const m2m: M2mJoinTable | undefined = (j as any)[m2mJoinTable];
+    if (!m2m) return [target];
+    return [{ kind, keep, on: m2m.on, source: registerJoinTable(m2m.handle, ctx, assigner) }, target];
   });
 
   // 2. Generate SQL.
@@ -712,8 +704,16 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   if (q.limit !== undefined) out.push({ sql: ` LIMIT ?`, bindings: [q.limit], refs: [] });
   if (q.offset !== undefined) out.push({ sql: ` OFFSET ?`, bindings: [q.offset], refs: [] });
 
+  const sqlText = out.map((o) => o.sql).join("");
+  // `unsetN.` is a deferred-binding placeholder that only survives when a condition references an alias
+  // that is not in this query's from/join, i.e. its `setAlias` callbacks never fired
+  const unset = sqlText.match(/\bunset\d*\./);
+  if (unset) {
+    fail(`A condition references an alias that is not in this query's from/join (rendered as '${unset[0]}')`);
+  }
+
   return {
-    sql: out.map((o) => o.sql).join(""),
+    sql: sqlText,
     bindings: out.flatMap((o) => o.bindings),
     outerRefs: [...ctx.outerRefs],
     decodeRows,
@@ -770,6 +770,22 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
       };
     };
   }
+}
+
+/** Registers a sugar m2m join table, i.e. `authors_to_tags`: a raw table with no entity metadata. */
+function registerJoinTable(handle: JoinTableHandle, ctx: Ctx, assigner: AliasAssigner): () => ParsedSource {
+  const alias = assigner.getAlias(handle.joinTableName);
+  ctx.register(handle, alias);
+  return () => ({
+    handle,
+    alias,
+    sql: `${kq(handle.joinTableName)} AS ${kq(alias)}`,
+    bindings: [],
+    refs: [],
+    extraJoins: [],
+    entitySelects: [],
+    meta: undefined,
+  });
 }
 
 /** Generates the `select` clause SQL and returns how to decode the resulting rows. */

@@ -90,6 +90,19 @@ async function typeAssertions() {
   em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "ASC NULLS LAST" } });
   em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
 
+  // Relationship join sugar: the relation is the join factory, and the join kind follows nullability,
+  // so a collection or nullable reference is LEFT (columns pick up `| null`) and a required one is INNER
+  const sugar = em.query({
+    from: a,
+    join: [a.books.as(b), a.publisher.as(p)],
+    select: { name: a.firstName, title: b.title, publisher: p.name },
+  });
+  type _sugar = Expect<Equal<Rows<typeof sugar>, { name: string; title: string | null; publisher: string | null }>>;
+  const requiredInner = em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
+  type _ri = Expect<Equal<Rows<typeof requiredInner>, { title: string; author: string }>>;
+  const withBooks = em.query({ from: a, join: [a.books.inner(b)], select: { title: b.title } });
+  type _wb = Expect<Equal<Rows<typeof withBooks>, { title: string }>>;
+
   // Mistakes that must not compile
   // @ts-expect-error: an AuthorId column cannot be compared to a BookId column
   bookStats.authorId.eq(b.id);
@@ -111,6 +124,10 @@ async function typeAssertions() {
   a.firstName.sum();
   // @ts-expect-error: a top-level query has no `as`
   em.query({ from: a, select: { name: a.firstName }, as: "x" });
+  // @ts-expect-error: `books` joins an Alias<Book>, not an Alias<Publisher>
+  a.books.as(p);
+  // @ts-expect-error: a collection has no expression methods, so it cannot be selected
+  em.query({ from: a, select: { books: a.books } });
 }
 
 describe("EntityManager.rawQueries.types", () => {

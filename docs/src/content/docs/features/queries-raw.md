@@ -98,27 +98,53 @@ const rows = await em.query({
 ```
 
 Conditions are also type-checked against the query's scope: selecting or comparing a column from an alias that is neither `from` nor in `join` is a compile error that names the missing alias.
-
 ## Joins
 
-Joins take any alias or subquery on either side and any condition in `on`:
+### Relationship joins
+
+For FK-backed joins, prefer the relation itself as the join factory — `.as(b)` binds the joined alias, the same way `em.find`'s `{ books: { as: b } }` does, and returns the same join entry the expanded form writes, with the `on` condition built from Joist's metadata:
+
+```ts
+const [a, b, p, t] = aliases(Author, Book, Publisher, Tag);
+
+join: [
+  a.books.as(b),      // LEFT JOIN books b ON b.author_id = a.id (a collection may be empty)
+  a.publisher.as(p),  // LEFT JOIN publishers p ON a.publisher_id = p.id (nullable reference)
+  b.author.as(a),     // JOIN authors a ON b.author_id = a.id (required reference: INNER)
+  a.tags.as(t),       // m2m: joins authors_to_tags and tags; the pair prunes together
+]
+```
+
+The default join kind follows nullability, the same rule `em.find` uses: a required reference is INNER; a nullable reference and every collection are LEFT — and the row types reflect it, so `p.name` is `string | null` with no annotation. Override with `.inner(x)` / `.left(x)`, i.e. `a.books.inner(b)` to keep only authors with books.
+
+The argument is type-checked against the relation — `a.books.as(p)` is a compile error — and polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, which the expanded form cannot express. Self-joins pass a named alias: `a.mentor.as(alias(Author, "m"))`.
+
+:::tip[Tip]
+
+Joining a collection fans rows out — one row per book, not per author. To *filter* by a collection without duplicates, use a subquery instead: `a.id.in(query({ from: b, select: b.author }))`.
+
+:::
+
+### Explicit joins
+
+The expanded form takes any alias or subquery on either side and any condition in `on` — the only form for subqueries (no FK metadata) and non-FK conditions:
 
 ```ts
 join: [
   { inner: b, on: b.author.eq(a.id) },
   { left: bookStats, on: bookStats.authorId.eq(a.id) },
   { left: c, on: { and: [c.parent.eq(a.id), c.text.ne(null)] } },
-];
+]
 ```
 
-Self-joins name their second alias, the same way `em.find` aliases do:
+Both forms mix freely in one `join` array, and columns compare across aliases, i.e. a self-join filter:
 
 ```ts
 const [a] = aliases(Author);
 const m = alias(Author, "m");
 const rows = await em.query({
   from: a,
-  join: [{ inner: m, on: a.mentor.eq(m.id) }],
+  join: [a.mentor.inner(m)],
   where: { and: [m.age.gt(a.age)] },
   select: { mentee: a.firstName, mentor: m.firstName },
 });
@@ -267,4 +293,3 @@ Interpolated expressions and conditions render with the alias Joist assigned and
 - User-authored CTEs (`WITH ...`) — subqueries render as inline derived tables
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) alias
-- Relationship join sugar (`a.books(b)`) — joins are always written with an explicit `on`

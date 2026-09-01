@@ -9,14 +9,17 @@ import {
   Publisher,
   PublisherSize,
   SmallPublisher,
+  Tag,
 } from "src/entities";
 import {
   insertAuthor,
+  insertAuthorToTag,
   insertBook,
   insertBookReview,
   insertComment,
   insertLargePublisher,
   insertPublisher,
+  insertTag,
 } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
@@ -151,6 +154,153 @@ describe("EntityManager.rawQueries", () => {
         select: { mentee: a.firstName, mentor: m.firstName },
       });
       expect(rows).toEqual([{ mentee: "mentee", mentor: "mentor" }]);
+    });
+  });
+
+  describe("relationship join sugar", () => {
+    it("joins a collection as a left join by default", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b)],
+        select: { author: a.firstName, title: b.title },
+        orderBy: { author: "ASC" },
+      });
+      expect(rows).toEqual([
+        { author: "a1", title: "b1" },
+        { author: "a2", title: null },
+      ]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id ORDER BY author ASC",
+      ]);
+    });
+
+    it("can inner join a collection to filter", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const rows = await em.query({
+        from: a,
+        join: [a.books.inner(b)],
+        select: { author: a.firstName, title: b.title },
+      });
+      expect(rows).toEqual([{ author: "a1", title: "b1" }]);
+    });
+
+    it("joins a required reference as an inner join", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const rows = await em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
+      expect(rows).toEqual([{ title: "b1", author: "a1" }]);
+      expect(queries).toEqual([
+        "SELECT b.title AS title, a.first_name AS author FROM books AS b JOIN authors AS a ON b.author_id = a.id",
+      ]);
+    });
+
+    it("joins a nullable reference as a left join, with a named self-join alias", async () => {
+      await insertAuthor({ first_name: "mentor" });
+      await insertAuthor({ first_name: "mentee", mentor_id: 1 });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      const m = alias(Author, "m");
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.mentor.as(m)],
+        select: { name: a.firstName, mentor: m.firstName },
+        orderBy: { name: "ASC" },
+      });
+      expect(rows).toEqual([
+        { name: "mentee", mentor: "mentor" },
+        { name: "mentor", mentor: null },
+      ]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS name, a1.first_name AS mentor FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id ORDER BY name ASC",
+      ]);
+    });
+
+    it("joins a many-to-many through its join table", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      const em = newEntityManager();
+      const [a, t] = aliases(Author, Tag);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.tags.as(t)],
+        select: { author: a.firstName, tag: t.name },
+        orderBy: { author: "ASC" },
+      });
+      expect(rows).toEqual([
+        { author: "a1", tag: "t1" },
+        { author: "a2", tag: null },
+      ]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS author, t.name AS tag FROM authors AS a LEFT OUTER JOIN authors_to_tags AS att ON att.author_id = a.id LEFT OUTER JOIN tags AS t ON t.id = att.tag_id ORDER BY author ASC",
+      ]);
+    });
+
+    it("joins a polymorphic reference by the argument's component", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertComment({ text: "c1", parent_author_id: 1 });
+      const em = newEntityManager();
+      const [c, a] = aliases(Comment, Author);
+      resetQueryCount();
+      const rows = await em.query({ from: c, join: [c.parent.as(a)], select: { text: c.text, author: a.firstName } });
+      expect(rows).toEqual([{ text: "c1", author: "a1" }]);
+      expect(queries).toEqual([
+        "SELECT c.text AS text, a.first_name AS author FROM comments AS c JOIN authors AS a ON c.parent_author_id = a.id",
+      ]);
+    });
+
+    it("prunes sugar joins nothing references, m2m join tables included", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const [a, b, t] = aliases(Author, Book, Tag);
+      const filter: string | undefined = undefined;
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b), a.tags.as(t)],
+        where: { and: [b.title.eq(filter), t.name.eq(filter)] },
+        select: { name: a.firstName },
+      });
+      expect(rows).toEqual([{ name: "a1" }]);
+      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a"]);
+    });
+
+    it("mixes sugar and expanded joins in one array", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ rating: 5, book_id: 1 });
+      const em = newEntityManager();
+      const [a, b, br] = aliases(Author, Book, BookReview);
+      const rows = await em.query({
+        from: a,
+        join: [a.books.inner(b), { left: br, on: br.book.eq(b.id) }],
+        select: { title: b.title, rating: br.rating },
+      });
+      expect(rows).toEqual([{ title: "b1", rating: 5 }]);
+    });
+
+    it("rejects a sugar join whose receiver is not in the query", async () => {
+      const em = newEntityManager();
+      const [a, b, t] = aliases(Author, Book, Tag);
+      await expect(em.query({ from: b, join: [a.tags.as(t)], select: { tag: t.name } })).rejects.toThrow(
+        "is not in this query's from/join",
+      );
     });
   });
 

@@ -83,7 +83,6 @@ export interface Expr<R, Src extends string = string> {
   coalesce(fallback: NonNullable<R>): Expr<NonNullable<R>, never>;
 }
 
-/** SQL plus its `?` bindings plus the SQL aliases it references, i.e. for join pruning. */
 /**
  * A marker condition that `eq`/`in`/etc. return for an `undefined` value, so the condition prunes away.
  *
@@ -100,6 +99,32 @@ export const skipCondition: ColumnCondition = {
   cond: undefined as any,
 };
 
+/**
+ * A join entry: the join kind is the key, the joined source is the value, plus `on`. `inner?: never` /
+ * `left?: never` keep an entry to one kind (the `ExpressionFilter` `and`/`or` trick).
+ *
+ * `on` is required. A join is pruned when nothing references it anymore, not by an `undefined` ON;
+ * `keep: true` pins a join that would otherwise prune, i.e. an inner join used as an existence filter,
+ * the way em.find's `keepAliases` does. It is a boolean so callers can pass a flag.
+ *
+ * Declared here (not `query.ts`) so the relation join factories in `Aliases.ts` (i.e. `a.books.as(b)`) can
+ * return them without importing `query.ts`; `query.ts` re-constrains `A` to its `QuerySource`.
+ */
+export interface InnerJoin<A> {
+  readonly inner: A;
+  readonly left?: never;
+  readonly on: ExpressionCondition;
+  readonly keep?: boolean;
+}
+
+export interface LeftJoin<A> {
+  readonly left: A;
+  readonly inner?: never;
+  readonly on: ExpressionCondition;
+  readonly keep?: boolean;
+}
+
+/** SQL plus its `?` bindings plus the SQL aliases it references, i.e. for join pruning. */
 export interface SqlFragment {
   sql: string;
   bindings: any[];

@@ -6,6 +6,7 @@ import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from ".
 import {
   type EntityMetadata,
   type Field,
+  type ManyToManyField,
   type PolymorphicField,
   type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
@@ -16,7 +17,10 @@ import {
   type Expr,
   type ExprContext,
   type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
   type SqlFragment,
+  deferredCondition,
   isExpr,
   skipCondition,
 } from "./Expr.ts";
@@ -82,12 +86,62 @@ export type Alias<T extends Entity, Name extends string = RootTypeNameOf<T>> = {
     ? EntityAlias<T, never, Name>
     : FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
       ? PrimitiveAlias<V, N extends undefined ? null : never, Name>
-      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U; nullable: infer N }
-        ? EntityAlias<U, N extends undefined ? null : never, Name>
-        : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
-          ? PolyReferenceAlias<U>
-          : never;
+      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U extends Entity; nullable: infer N }
+        ? ReferenceAlias<U, N extends undefined ? null : never, Name>
+        : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity; nullable: infer N }
+          ? PolyAlias<U, N extends undefined ? null : never>
+          : FieldsOf<T>[P] extends { kind: "o2m" | "m2m" | "o2o"; type: infer U extends Entity }
+            ? CollectionAlias<U>
+            : never;
 };
+
+/** Any alias whose entity is (a subtype of) `U`, i.e. what a relation join factory accepts. */
+export type AliasFor<U> = { readonly [aliasMgmt]: AliasBrand<U, string> };
+
+/**
+ * A collection relation (o2m/o2o/m2m) as a join factory: `a.books.as(b)` returns the same
+ * `{ left: b, on: ... }` entry the expanded form writes, with the FK condition built from metadata, so
+ * join-list inference, nullability, scope checking, and pruning are unchanged and both forms mix freely.
+ *
+ * `as` binds the joined alias, the same way em.find's `{ books: { as: b } }` does. The default is LEFT
+ * (a collection may be empty, and a LEFT join never filters rows, so pruning it is always safe);
+ * `.inner(b)` opts into filtering. An m2m entry carries a hidden second join through the join table,
+ * which the parser expands; the pair prunes together.
+ */
+export interface CollectionAlias<U extends Entity> {
+  as<A extends AliasFor<U>>(other: A): LeftJoin<A>;
+  inner<A extends AliasFor<U>>(other: A): InnerJoin<A>;
+  left<A extends AliasFor<U>>(other: A): LeftJoin<A>;
+}
+
+/**
+ * An m2o relation: the FK column expression (`b.author` selects/compares the FK) plus a join factory
+ * (`b.author.as(a)` joins). The default join kind follows the field's nullability, em.find's rule:
+ * a required reference is INNER, a nullable one is LEFT, and the row type reflects it.
+ */
+export interface ReferenceAlias<U extends Entity, N extends null | never, Src extends string> extends EntityAlias<
+  U,
+  N,
+  Src
+> {
+  as<A extends AliasFor<U>>(other: A): [N] extends [never] ? InnerJoin<A> : LeftJoin<A>;
+  inner<A extends AliasFor<U>>(other: A): InnerJoin<A>;
+  left<A extends AliasFor<U>>(other: A): LeftJoin<A>;
+}
+
+/**
+ * A polymorphic reference: condition methods (each resolving the component column from the value), plus
+ * a join factory that picks the component from the argument's entity, i.e. `c.parent.as(a)` joins
+ * through `parent_author_id`, which the expanded form cannot express.
+ */
+export interface PolyAlias<U extends Entity, N extends null | never> {
+  as<A extends AliasFor<U>>(other: A): [N] extends [never] ? InnerJoin<A> : LeftJoin<A>;
+  inner<A extends AliasFor<U>>(other: A): InnerJoin<A>;
+  left<A extends AliasFor<U>>(other: A): LeftJoin<A>;
+  eq(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
+  ne(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
+  in(values: Array<U | TaggedId> | undefined): ExpressionFilter | ColumnCondition;
+}
 
 export interface PrimitiveAlias<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
   eq(value: V | N | undefined | ExprLike<V | N>): ExpressionCondition;
@@ -195,8 +249,8 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       callbacks.push(callback);
     },
   };
-  return new Proxy(cstr, {
-    /** Create a column alias for the given field. */
+  const proxy: any = new Proxy(cstr, {
+    /** Create a column alias, or a relation join factory, for the given field. */
     get(_, key: PropertyKey): any {
       if (key === aliasMgmt) {
         return mgmt;
@@ -207,10 +261,20 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primitive":
         case "enum":
           return new PrimitiveAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
-        case "m2o":
-          return new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
-        case "poly":
-          return new PolyReferenceAlias(meta, callbacks, field);
+        case "m2o": {
+          const column = new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
+          return addJoinMethods(column, field.required ? "inner" : "left", (other) => column.eq(idColumnOf(other)));
+        }
+        case "poly": {
+          const impl = new PolyReferenceAlias(meta, callbacks, field);
+          return addJoinMethods(impl, field.required ? "inner" : "left", (other) => impl.eq(idColumnOf(other)));
+        }
+        case "o2m":
+        case "o2o":
+          // The ON is the other side's FK (an m2o or a poly component) back to this alias's id
+          return addJoinMethods({}, "left", (other) => (other as any)[field.otherFieldName].eq(proxy.id));
+        case "m2m":
+          return addJoinMethods({}, "left", (other) => undefined!, newM2mEntry(proxy, field));
         default:
           throw new Error(`Unsupported alias field kind ${field.kind}`);
       }
@@ -219,7 +283,8 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
     has(_, key) {
       return key === aliasMgmt || key in meta.allFields;
     },
-  }) as any;
+  });
+  return proxy;
 }
 
 export function isAlias(obj: any): obj is Alias<any, any> & { [aliasMgmt]: AliasMgmt } {
@@ -659,4 +724,82 @@ export function getMaybeCtiAlias(
     if (fieldIsFromBase) return `${newAlias}_b0`;
   }
   return `${newAlias}${field.aliasSuffix}`;
+}
+
+/** Marks a sugar m2m join entry (`a.tags.as(t)`) with its hidden join-table join; `parseQuery` expands it. */
+export const m2mJoinTable: unique symbol = Symbol("joist.m2mJoinTable");
+
+export interface M2mJoinTable {
+  handle: JoinTableHandle;
+  on: ExpressionCondition;
+}
+
+/** The runtime identity of an m2m join table in a query, i.e. `authors_to_tags`; it has no entity. */
+export class JoinTableHandle {
+  constructor(readonly joinTableName: string) {}
+}
+
+type JoinKind = "inner" | "left";
+
+/**
+ * Adds the `as`/`inner`/`left` join-factory methods to a relation member: `a.books.as(b)` joins with
+ * the relation's default kind, `.inner`/`.left` override. For an m2o/poly, `target` is the column/impl
+ * itself, so `b.author` stays a plain expression that also carries the three methods; for a collection,
+ * `target` is a bare object. `makeEntry` overrides how the entry is built (the m2m two-join case).
+ */
+function addJoinMethods<T extends object>(
+  target: T,
+  defaultKind: JoinKind,
+  buildOn: (other: object) => ExpressionCondition,
+  makeEntry?: (kind: JoinKind, other: object) => object,
+): T {
+  function make(kind: JoinKind, other: object): object {
+    if (!isAlias(other)) return fail(`Expected an alias to join, got ${other}`);
+    if (makeEntry) return makeEntry(kind, other);
+    return { [kind]: other, on: buildOn(other) };
+  }
+  return Object.assign(target, {
+    as(other: object): object {
+      return make(defaultKind, other);
+    },
+    inner(other: object): object {
+      return make("inner", other);
+    },
+    left(other: object): object {
+      return make("left", other);
+    },
+  });
+}
+
+/**
+ * Builds the m2m join entry, i.e. `a.tags.as(t)`.
+ *
+ * The entry's own ON is `t.id = att.tag_id`, and the hidden `[m2mJoinTable]` half is
+ * `att.author_id = a.id`; only the target's ON references the join table, so reference pruning keeps
+ * or drops the pair together. Both are deferred conditions: the join table has no entity metadata, so
+ * its alias only exists once the parser registers it.
+ */
+function newM2mEntry(proxy: any, field: ManyToManyField): (kind: JoinKind, other: object) => object {
+  const [ourColumn, otherColumn] = field.columnNames;
+  return function makeM2mEntry(kind: JoinKind, other: object): object {
+    const jt = new JoinTableHandle(field.joinTableName);
+    const ourId = proxy.id as AbstractAliasColumn<any>;
+    const otherId = idColumnOf(other);
+    const jtOn = deferredCondition((ctx) => {
+      const jtAlias = ctx.aliasFor(jt);
+      const id = ourId.toSql(ctx);
+      return { sql: `${kqDot(jtAlias, ourColumn)} = ${id.sql}`, bindings: id.bindings, refs: id.refs };
+    });
+    const on = deferredCondition((ctx) => {
+      const jtAlias = ctx.aliasFor(jt);
+      const id = otherId.toSql(ctx);
+      return { sql: `${id.sql} = ${kqDot(jtAlias, otherColumn)}`, bindings: id.bindings, refs: [...id.refs, jtAlias] };
+    });
+    return { [kind]: other, on, [m2mJoinTable]: { handle: jt, on: jtOn } satisfies M2mJoinTable };
+  };
+}
+
+/** The id column of a joined alias, for building sugar ON conditions. */
+function idColumnOf(other: object): AbstractAliasColumn<any> {
+  return (other as any).id;
 }

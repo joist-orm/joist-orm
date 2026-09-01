@@ -5,16 +5,11 @@ Carried over from the `em-query-plan.md` design doc (deleted when `em.query` shi
 
 ## Features
 
-- [ ] **Relationship join sugar**: `join: [a.books(b), b.author(a), a.tags(t)]` — the relation itself
-      is the join factory. Each call *returns* the existing `LeftJoin`/`InnerJoin` entry, so `J`
-      inference, nullability, scope checking, and pruning are unchanged, and the two forms mix in one
-      `join` array. Default join kind follows nullability (`em.find`'s rule): required m2o → INNER;
-      nullable m2o and every collection → LEFT (prune-safe by construction); `.inner(x)`/`.left(x)`
-      override. Unlocks m2m join tables (`a.tags(t)` emits both joins; reference pruning drops them
-      together) and poly component resolution from the argument alias (`c.parent(a)` vs `c.parent(p)`).
-      Open decisions: mapped-type factories vs codegen'd `AuthorAlias` interfaces (start mapped);
-      m2o members become callable-plus-`Expr` (`b.author` selects the FK, `b.author(a)` joins);
-      whether o2m sugar should warn about fan-out without `distinct`/`groupBy`.
+- [ ] **Relationship join sugar follow-ups** (the sugar itself shipped: `a.books.as(b)`, `b.author.as(a)`,
+      `a.tags.as(t)`, `c.parent.as(a)`, with `.inner`/`.left` overrides): codegen'd `AuthorAlias` interfaces
+      for named hovers and cheaper instantiation (today the factories come from the `Alias<T>` mapped
+      type); typed o2o factories need codegen to emit `o2o` entries in `*Fields` (the runtime already
+      supports them via `allFields`); consider warning on o2m fan-out without `distinct`/`groupBy`.
 - [ ] **Soft-delete injection**: inject `deleted_at IS NULL` for joined soft-deletable entities the
       way `em.find` does, as pruneable conditions in the join's `on`.
 - [ ] **CTE hoisting**: subqueries always render as inline derived tables; hoist named/repeated

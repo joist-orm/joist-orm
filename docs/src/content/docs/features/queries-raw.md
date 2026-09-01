@@ -5,9 +5,11 @@ sidebar:
   order: 3.2
 ---
 
-Raw queries are Joist's API for SQL-level `SELECT`s: group bys, aggregates, subqueries, and arbitrary joins, returning either entities or plain, strongly-typed POJOs.
+Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, and arbitrary joins, returning either entities or plain, strongly-typed POJOs.
 
-Like [find queries](./queries-find), they are plain object literals — there is no fluent builder to chain — and the object reads in [SQL evaluation order](https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/):
+Like [find queries](./queries-find), the `em.query` DSL is "just a POJO" of data--no fluent builders to chain 🎉, but thanks to TypeScript's mapped types, still sufficiently type-safe to catch most common errors/typos 💪.
+
+Here's an example of getting the count of books per author:
 
 ```ts
 const [a, b] = aliases(Author, Book);
@@ -24,13 +26,21 @@ const rows = await em.query({
 // rows is { name: string; bookCount: number }[]
 ```
 
-The only imports a query needs are `alias`/`aliases`, `query` (for subqueries), and `sql` (the escape hatch). Everything else is in the literal: join kinds and sort directions are keys (`{ left: b, on }`, `{ desc: x }`), SQL functions are methods on expressions (`b.id.count()`, `b.title.max()`), and conditions are methods (`a.age.gte(18)`).
+:::tip[Info]
+
+Note that we put `select` in "a weird spot": after the `groupBy`, instead of first, where it always appears in SQL.
+
+This is because we're ordering the object keys in [SQL evaluation order](https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/).
+
+This is solely a preference for potentially easier reasoning of the query--the order of the `from`, `join`, etc. keys does not actually affect runtime behavior, so you're free to use whatever key order you like.
+
+:::
 
 :::tip[Info]
 
 Prefer [find queries](./queries-find) for the ~80-90% of queries that are plain entity `SELECT`s — they have join literals, batching, and preloading. `em.query` is the next level down, for the queries `em.find` can't express.
 
-Unlike `em.find`, `em.query` is not batched: each call executes one SQL statement.
+**Unlike `em.find`, `em.query` is not batched: each call executes one SQL statement.**
 
 :::
 
@@ -57,7 +67,7 @@ The `select` key decides the row type:
   });
   ```
 
-  (Postgres allows selecting all of `a`'s columns when grouping by `a.id`, because the primary key determines every other column. Entities can only be selected from the `from` alias, not from a joined alias.)
+  (Currently entities can only be selected using the same alias as the `from` key, not from a joined alias.)
 
 - **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`.
 
@@ -98,11 +108,32 @@ const rows = await em.query({
 ```
 
 Conditions are also type-checked against the query's scope: selecting or comparing a column from an alias that is neither `from` nor in `join` is a compile error that names the missing alias.
+
+
 ## Joins
+
+### Explicit joins
+
+Joins are expressed as an object literal of:
+
+* Either `inner` or `left` key set to the alias (table) to join
+* An `on` key describing the expression to join on
+
+Examples are:
+
+```ts
+join: [
+  { inner: b, on: b.author.eq(a.id) },
+  { left: bookStats, on: bookStats.authorId.eq(a.id) },
+  { left: c, on: { and: [c.parent.eq(a.id), c.text.ne(null)] } },
+]
+```
 
 ### Relationship joins
 
-For FK-backed joins, prefer the relation itself as the join factory — `.as(b)` binds the joined alias, the same way `em.find`'s `{ books: { as: b } }` does, and returns the same join entry the expanded form writes, with the `on` condition built from Joist's metadata:
+Given that adding joins for relationship traversal (i.e. `JOIN books b ON b.author_id = a.id` for the `books` relation) is very common, Joist provides syntax sugar for easily creating them.
+
+Each relation is available as a key on the entity's alias, i.e. an `Author` alias `a` has `a.books`, which then has an `as` method to create the `{ left: b, on: b.author.eq(a.id) }` join literal.
 
 ```ts
 const [a, b, p, t] = aliases(Author, Book, Publisher, Tag);
@@ -115,29 +146,14 @@ join: [
 ]
 ```
 
-The default join kind follows nullability, the same rule `em.find` uses: a required reference is INNER; a nullable reference and every collection are LEFT — and the row types reflect it, so `p.name` is `string | null` with no annotation. Override with `.inner(x)` / `.left(x)`, i.e. `a.books.inner(b)` to keep only authors with books.
+Whether `as` returns an `INNER` join or `LEFT` follows the relation's nullability:
 
-The argument is type-checked against the relation — `a.books.as(p)` is a compile error — and polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, which the expanded form cannot express. Self-joins pass a named alias: `a.mentor.as(alias(Author, "m"))`.
+- a required reference (i.e. `book.author`, a required m2o) is `INNER`,
+- a nullable reference and every collection (i.e. `author.books`) are `LEFT`.
 
-:::tip[Tip]
+The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (passing an incorrect `Publisher` alias to the `books` relation) is a compile error.
 
-Joining a collection fans rows out — one row per book, not per author. To *filter* by a collection without duplicates, use a subquery instead: `a.id.in(query({ from: b, select: b.author }))`.
-
-:::
-
-### Explicit joins
-
-The expanded form takes any alias or subquery on either side and any condition in `on` — the only form for subqueries (no FK metadata) and non-FK conditions:
-
-```ts
-join: [
-  { inner: b, on: b.author.eq(a.id) },
-  { left: bookStats, on: bookStats.authorId.eq(a.id) },
-  { left: c, on: { and: [c.parent.eq(a.id), c.text.ne(null)] } },
-]
-```
-
-Both forms mix freely in one `join` array, and columns compare across aliases, i.e. a self-join filter:
+Self-joins (joining back into an existing table) are supported with named aliases, i.e. `alias(Author, "m")`:
 
 ```ts
 const [a] = aliases(Author);
@@ -150,9 +166,18 @@ const rows = await em.query({
 });
 ```
 
+Polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, which the expanded form cannot express.
+
+:::tip[Tip]
+
+Joining a collection fans rows out — one row per book, not per author. To *filter* by a collection without duplicates, use a subquery instead: `a.id.in(query({ from: b, select: b.author }))`.
+
+:::
+
+
 ## Condition & Join Pruning
 
-`em.query` prunes exactly like [find queries](./queries-find#condition--join-pruning): a condition given `undefined` drops out, and a join that nothing references anymore drops with it. Declare every join once, and let the conditions that need them decide:
+`em.query` prunes exactly like [find queries](./queries-find#condition--join-pruning): a condition given `undefined` drops out, and a join that nothing references anymore drops with it.
 
 ```ts
 const { nameFilter, titleFilter } = req.filter; // either may be undefined
@@ -193,7 +218,7 @@ const rows = await em.query({
 The **array form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — for ordering by anything you didn't select, with `{ asc: expr }` / `{ desc: expr }` entries and an optional `nulls: "first" | "last"`:
 
 ```ts
-orderBy: [{ desc: b.id.count() }, { asc: a.firstName, nulls: "last" }];
+orderBy: [{ desc: b.id.count() }, { asc: a.firstName, nulls: "last" }]
 ```
 
 Both forms allow `undefined` (entries or directions) so conditional spreads work.
@@ -243,7 +268,7 @@ And a single-column subquery works as an `in` target:
 
 ```ts
 where: {
-  and: [a.id.in(query({ from: b, select: b.author }))];
+  and: [a.id.in(query({ from: b, select: b.author }))]
 }
 ```
 
@@ -273,7 +298,7 @@ sql<number>`${bli.amountInCents.sum()} - ${b.amountPaidInCents}`;
 
 // A condition, i.e. full-text search against an unmodeled column
 where: {
-  and: [sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${words})`];
+  and: [sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${words})`]
 }
 
 // CASE expressions, window functions, FILTER, EXISTS...
@@ -281,7 +306,7 @@ sql<boolean>`CASE WHEN ${b.order.in([1, 2])} THEN true ELSE false END`;
 sql<number>`row_number() OVER (PARTITION BY ${b.author} ORDER BY ${b.title})::int`;
 sql<number>`count(*) FILTER (WHERE ${br.rating.gte(4)})::int`;
 where: {
-  and: [sql.condition`EXISTS ${query({ from: b, where: { and: [b.author.eq(a.id)] }, select: b.id })}`];
+  and: [sql.condition`EXISTS ${query({ from: b, where: { and: [b.author.eq(a.id)] }, select: b.id })}`]
 }
 ```
 

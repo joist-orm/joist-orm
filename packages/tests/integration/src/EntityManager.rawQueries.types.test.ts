@@ -113,6 +113,9 @@ async function typeAssertions() {
   // In entity mode the keys are the entity's sortable fields instead
   em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
 
+  // === Soft deletes: `softDeletes` takes em.find's two modes, defaulting to "exclude"
+  em.query({ from: a, select: a, softDeletes: "include" });
+
   // === Relationship join sugar: the relation is the join factory, and the join kind follows the
   // === relation's nullability, so the row types come out right with no annotations
   // A collection (`books`) and a nullable reference (`publisher`) default to LEFT: their columns gain `| null`
@@ -158,6 +161,8 @@ async function typeAssertions() {
   a.books.as(p);
   // @ts-expect-error: a collection has no expression methods, so it cannot be selected
   em.query({ from: a, select: { books: a.books } });
+  // @ts-expect-error: softDeletes only accepts em.find's "include" | "exclude"
+  em.query({ from: a, select: a, softDeletes: "only" });
 }
 
 describe("EntityManager.rawQueries.types", () => {

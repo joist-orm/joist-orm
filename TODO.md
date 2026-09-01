@@ -5,14 +5,6 @@ Carried over from the `em-query-plan.md` design doc (deleted when `em.query` shi
 
 ## Features
 
-- [ ] **Alias hover docs**: per-relation JSDoc on `a.books` requires doc comments on the codegen'd
-      `*Fields` entries (mapped types propagate key docs from their source type). Decided *against*
-      codegen'd `AuthorAlias` interfaces: the `Alias<T>` mapped type is cached per entity, measured
-      cheap on tsc 7 (~2.4ms per realistic query), auto-updates when core's alias/factory types
-      change, and threads the self-join `Name` parameter naturally; revisit only if a real app's
-      `tsc --generateTrace` shows `Alias` instantiations hot.
-- [ ] **Soft-delete injection**: inject `deleted_at IS NULL` for joined soft-deletable entities the
-      way `em.find` does, as pruneable conditions in the join's `on`.
 - [ ] **CTE hoisting**: subqueries always render as inline derived tables; hoist named/repeated
       subqueries into `WITH` (dedupe by identity, dependency-ordered). Cosmetic until a subquery is
       used twice, since PG 12+ inlines single-use CTEs.

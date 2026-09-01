@@ -15,7 +15,7 @@ import { ConditionBuilder } from "./ConditionBuilder.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
 import { type ExpressionCondition, type ExpressionFilter } from "./EntityFilter.ts";
-import { type EntityMetadata } from "./EntityMetadata.ts";
+import { type EntityMetadata, getBaseMeta } from "./EntityMetadata.ts";
 import {
   BaseExpr,
   type Expr,
@@ -35,7 +35,13 @@ import {
 } from "./Expr.ts";
 import { kq, kqDot, kqStar } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
-import { type ParsedExpressionFilter, type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "./QueryParser.ts";
+import {
+  type ColumnCondition,
+  type ParsedExpressionFilter,
+  type ParsedFindQuery,
+  addTablePerClassJoinsAndClassTag,
+  filterSoftDeletes,
+} from "./QueryParser.ts";
 import { fail } from "./utils.ts";
 
 /**
@@ -155,6 +161,13 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   distinct?: boolean;
   /** Defaults to true. `false` keeps every join, em.find's opt-out. */
   pruneJoins?: boolean;
+  /**
+   * Defaults to `"exclude"`, em.find's rule: a soft-deletable entity in `from` gains a
+   * `deleted_at IS NULL` condition in WHERE, and a joined one gains it in its join's ON (so a LEFT
+   * join nulls its columns out instead of dropping rows). `"include"` turns the injection off for
+   * this query; subqueries read their own key.
+   */
+  softDeletes?: "include" | "exclude";
 }
 
 /** A whole query: `Clauses` plus its source. `query(q)` turns it into a value; `em.query(q)` runs it. */
@@ -604,7 +617,10 @@ interface ParsedSource {
 interface ParsedJoin {
   kind: "inner" | "left";
   source: ParsedSource;
+  /** The user's ON alone; `undefined` means it pruned away entirely. */
   on: SqlFragment | undefined;
+  /** The ON to emit: the user's ON plus any injected soft-delete condition. */
+  onWithSoftDelete: SqlFragment | undefined;
   keep: boolean;
 }
 
@@ -657,15 +673,19 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   });
 
   // 2. Generate SQL.
+  const softDeletes = q.softDeletes ?? "exclude";
   const from = fromThunk();
-  const joins: ParsedJoin[] = joinThunks.map((j) => ({
-    kind: j.kind,
-    keep: j.keep,
-    source: j.source(),
-    on: conditionToSql(j.on, ctx, true),
-  }));
+  const joins: ParsedJoin[] = joinThunks.map((j) => {
+    const source = j.source();
+    // `on` stays the user's ON alone, so the collapsed-ON check below is not fooled by the injection
+    const on = conditionToSql(j.on, ctx, true);
+    const softDelete = softDeleteCondition(source, softDeletes);
+    const onWithSoftDelete = on && softDelete ? conditionToSql({ and: [j.on, softDelete] }, ctx, true) : on;
+    return { kind: j.kind, keep: j.keep, source, on, onWithSoftDelete };
+  });
   const { selects, decodeRows } = selectsToSql(q, ctx, from);
-  const where = conditionToSql(q.where, ctx, true);
+  const fromSoftDelete = softDeleteCondition(from, softDeletes);
+  const where = conditionToSql(fromSoftDelete ? { and: [q.where, fromSoftDelete] } : q.where, ctx, true);
   const having = conditionToSql(q.having, ctx, true);
   const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
   const orderBys = orderBysToSql(q, ctx);
@@ -689,8 +709,8 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   for (const j of kept) {
     const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
     out.push({
-      sql: ` ${keyword} ${j.source.sql} ON ${j.on!.sql}`,
-      bindings: [...j.source.bindings, ...j.on!.bindings],
+      sql: ` ${keyword} ${j.source.sql} ON ${j.onWithSoftDelete!.sql}`,
+      bindings: [...j.source.bindings, ...j.onWithSoftDelete!.bindings],
       refs: [],
     });
     for (const extra of j.source.extraJoins) out.push({ sql: ` ${extra}`, bindings: [], refs: [] });
@@ -770,6 +790,28 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
       };
     };
   }
+}
+
+/**
+ * em.find's soft-delete injection for one source: `alias.deleted_at IS NULL` when the source is a
+ * soft-deletable entity (CTI subtypes are skipped, like em.find; see `filterSoftDeletes`).
+ *
+ * The condition carries no `aliases` on purpose: an injected condition must never keep an otherwise
+ * unreferenced join alive, which is what `pruneable: true` means on em.find's side.
+ */
+function softDeleteCondition(source: ParsedSource, softDeletes: "include" | "exclude"): ColumnCondition | undefined {
+  const { meta } = source;
+  if (!meta || !filterSoftDeletes(meta, softDeletes)) return undefined;
+  const field = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!];
+  const column = field.serde!.columns[0];
+  return {
+    kind: "column",
+    alias: `${source.alias}${field.aliasSuffix}`,
+    column: column.columnName,
+    dbType: column.dbType,
+    cond: { kind: "is-null" },
+    pruneable: true,
+  };
 }
 
 /** Registers a sugar m2m join table, i.e. `authors_to_tags`: a raw table with no entity metadata. */

@@ -198,6 +198,18 @@ Two things to know:
 
 `pruneJoins: false` on the query turns join pruning off, and `undefined` entries in the `join` and `orderBy` arrays are allowed so conditional spreads still work.
 
+## Soft Deletes
+
+`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a joined one gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row. The injected conditions never keep an otherwise-pruned join alive, and subqueries apply their own injection.
+
+Opt out per query with `softDeletes: "include"`:
+
+```ts
+const rows = await em.query({ from: a, select: { name: a.firstName }, softDeletes: "include" });
+```
+
+Like `em.find`, filtering is skipped for CTI subtypes.
+
 ## Ordering and Paging
 
 `orderBy` has two forms; prefer the keyed form whenever what you're ordering by is already in `select`.

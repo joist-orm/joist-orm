@@ -39,7 +39,7 @@ describe("EntityManager.rawQueries", () => {
       resetQueryCount();
       const authors = await em.query({ from: a, where: { and: [a.firstName.eq("a1")] }, select: a });
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual(["SELECT a.* FROM authors AS a WHERE a.first_name = $1"]);
+      expect(queries).toEqual(["SELECT a.* FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL"]);
     });
 
     it("returns entities through the identity map", async () => {
@@ -135,7 +135,7 @@ describe("EntityManager.rawQueries", () => {
         { author: "a2", title: null },
       ]);
       expect(queries).toEqual([
-        "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id ORDER BY a.first_name ASC",
+        "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
       ]);
     });
 
@@ -176,7 +176,7 @@ describe("EntityManager.rawQueries", () => {
         { author: "a2", title: null },
       ]);
       expect(queries).toEqual([
-        "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id ORDER BY author ASC",
+        "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY author ASC",
       ]);
     });
 
@@ -203,7 +203,7 @@ describe("EntityManager.rawQueries", () => {
       const rows = await em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
       expect(rows).toEqual([{ title: "b1", author: "a1" }]);
       expect(queries).toEqual([
-        "SELECT b.title AS title, a.first_name AS author FROM books AS b JOIN authors AS a ON b.author_id = a.id",
+        "SELECT b.title AS title, a.first_name AS author FROM books AS b JOIN authors AS a ON b.author_id = a.id AND a.deleted_at IS NULL WHERE b.deleted_at IS NULL",
       ]);
     });
 
@@ -225,7 +225,7 @@ describe("EntityManager.rawQueries", () => {
         { name: "mentor", mentor: null },
       ]);
       expect(queries).toEqual([
-        "SELECT a.first_name AS name, a1.first_name AS mentor FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id ORDER BY name ASC",
+        "SELECT a.first_name AS name, a1.first_name AS mentor FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id AND a1.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY name ASC",
       ]);
     });
 
@@ -248,7 +248,7 @@ describe("EntityManager.rawQueries", () => {
         { title: "b2", sequel: null },
       ]);
       expect(queries).toEqual([
-        "SELECT b.title AS title, b1.title AS sequel FROM books AS b LEFT OUTER JOIN books AS b1 ON b1.prequel_id = b.id ORDER BY title ASC",
+        "SELECT b.title AS title, b1.title AS sequel FROM books AS b LEFT OUTER JOIN books AS b1 ON b1.prequel_id = b.id AND b1.deleted_at IS NULL WHERE b.deleted_at IS NULL ORDER BY title ASC",
       ]);
     });
 
@@ -271,7 +271,7 @@ describe("EntityManager.rawQueries", () => {
         { author: "a2", tag: null },
       ]);
       expect(queries).toEqual([
-        "SELECT a.first_name AS author, t.name AS tag FROM authors AS a LEFT OUTER JOIN authors_to_tags AS att ON att.author_id = a.id LEFT OUTER JOIN tags AS t ON t.id = att.tag_id ORDER BY author ASC",
+        "SELECT a.first_name AS author, t.name AS tag FROM authors AS a LEFT OUTER JOIN authors_to_tags AS att ON att.author_id = a.id LEFT OUTER JOIN tags AS t ON t.id = att.tag_id WHERE a.deleted_at IS NULL ORDER BY author ASC",
       ]);
     });
 
@@ -284,7 +284,7 @@ describe("EntityManager.rawQueries", () => {
       const rows = await em.query({ from: c, join: [c.parent.as(a)], select: { text: c.text, author: a.firstName } });
       expect(rows).toEqual([{ text: "c1", author: "a1" }]);
       expect(queries).toEqual([
-        "SELECT c.text AS text, a.first_name AS author FROM comments AS c JOIN authors AS a ON c.parent_author_id = a.id",
+        "SELECT c.text AS text, a.first_name AS author FROM comments AS c JOIN authors AS a ON c.parent_author_id = a.id AND a.deleted_at IS NULL",
       ]);
     });
 
@@ -301,7 +301,7 @@ describe("EntityManager.rawQueries", () => {
         select: { name: a.firstName },
       });
       expect(rows).toEqual([{ name: "a1" }]);
-      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a"]);
+      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL"]);
     });
 
     it("mixes sugar and expanded joins in one array", async () => {
@@ -343,7 +343,7 @@ describe("EntityManager.rawQueries", () => {
       });
       expect(rows).toEqual([{ name: "a1", bookCount: 2 }]);
       expect(queries).toEqual([
-        'SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id GROUP BY a.first_name',
+        'SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL GROUP BY a.first_name',
       ]);
     });
 
@@ -455,7 +455,9 @@ describe("EntityManager.rawQueries", () => {
         orderBy: [{ asc: a.firstName }],
       });
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
-      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a ORDER BY a.first_name ASC"]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
+      ]);
     });
 
     it("prunes joins that nothing references anymore", async () => {
@@ -476,7 +478,9 @@ describe("EntityManager.rawQueries", () => {
       });
       // a2 has no books, so an un-pruned inner join would have dropped it
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
-      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a ORDER BY a.first_name ASC"]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
+      ]);
       // ...and with a value, the condition and its join both survive
       resetQueryCount();
       const filtered = await em.query({
@@ -487,7 +491,7 @@ describe("EntityManager.rawQueries", () => {
       });
       expect(filtered).toEqual([{ name: "a1" }]);
       expect(queries).toEqual([
-        "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id WHERE b.title = $1",
+        "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE (b.title = $1) AND a.deleted_at IS NULL",
       ]);
     });
 
@@ -556,7 +560,7 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "a1" }]);
       // `c` pruned with its condition; `br` kept, and `b` kept because `br`'s ON needs it
       expect(queries).toEqual([
-        "SELECT DISTINCT a.first_name AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id LEFT OUTER JOIN book_reviews AS br ON br.book_id = b.id WHERE br.rating >= $1",
+        "SELECT DISTINCT a.first_name AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL LEFT OUTER JOIN book_reviews AS br ON br.book_id = b.id WHERE (br.rating >= $1) AND a.deleted_at IS NULL",
       ]);
     });
   });
@@ -583,7 +587,7 @@ describe("EntityManager.rawQueries", () => {
         { name: "a2", bookCount: 1 },
       ]);
       expect(queries).toEqual([
-        `SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id GROUP BY a.first_name ORDER BY "bookCount" DESC, name ASC NULLS LAST`,
+        `SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL GROUP BY a.first_name ORDER BY "bookCount" DESC, name ASC NULLS LAST`,
       ]);
     });
 
@@ -609,7 +613,9 @@ describe("EntityManager.rawQueries", () => {
         orderBy: { age: byAge, name: "ASC" },
       });
       expect(rows).toMatchObject([{ name: "a1" }, { name: "a2" }]);
-      expect(queries).toEqual(["SELECT a.first_name AS name, a.age AS age FROM authors AS a ORDER BY name ASC"]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS name, a.age AS age FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY name ASC",
+      ]);
     });
 
     it("rejects an orderBy key not in select", async () => {
@@ -702,7 +708,7 @@ describe("EntityManager.rawQueries", () => {
         { name: "a2", bookCount: 0, lastTitle: null },
       ]);
       expect(queries).toEqual([
-        'SELECT a.first_name AS name, coalesce(book_stats."bookCount", $1) AS "bookCount", book_stats."lastTitle" AS "lastTitle" FROM authors AS a LEFT OUTER JOIN (SELECT b.author_id AS "authorId", count(b.id)::int AS "bookCount", max(b.title) AS "lastTitle" FROM books AS b GROUP BY b.author_id) AS book_stats ON book_stats."authorId" = a.id ORDER BY a.first_name ASC',
+        'SELECT a.first_name AS name, coalesce(book_stats."bookCount", $1) AS "bookCount", book_stats."lastTitle" AS "lastTitle" FROM authors AS a LEFT OUTER JOIN (SELECT b.author_id AS "authorId", count(b.id)::int AS "bookCount", max(b.title) AS "lastTitle" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id) AS book_stats ON book_stats."authorId" = a.id WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC',
       ]);
     });
 
@@ -788,6 +794,68 @@ describe("EntityManager.rawQueries", () => {
       const [a] = aliases(Author);
       const q = { from: a, select: { name: a.firstName } } satisfies Query;
       expect(await em.query(query(q))).toEqual(await em.query(q));
+    });
+  });
+
+  describe("soft deletes", () => {
+    it("excludes soft-deleted rows from the from table by default", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", deleted_at: new Date() });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      resetQueryCount();
+      const rows = await em.query({ from: a, select: { name: a.firstName } });
+      expect(rows).toEqual([{ name: "a1" }]);
+      expect(queries).toEqual(["SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL"]);
+    });
+
+    it("includes soft-deleted rows with softDeletes include", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", deleted_at: new Date() });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      const rows = await em.query({
+        from: a,
+        select: { name: a.firstName },
+        orderBy: { name: "ASC" },
+        softDeletes: "include",
+      });
+      expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
+    });
+
+    it("nulls out a left-joined soft-deleted entity instead of dropping the row", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1, deleted_at: new Date() });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      // The injected condition lives in the join's ON, so the LEFT join keeps a1 with a null title
+      const rows = await em.query({ from: a, join: [a.books.as(b)], select: { name: a.firstName, title: b.title } });
+      expect(rows).toEqual([{ name: "a1", title: null }]);
+    });
+
+    it("drops rows of an inner-joined soft-deleted entity", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2, deleted_at: new Date() });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const rows = await em.query({ from: a, join: [a.books.inner(b)], select: { title: b.title } });
+      expect(rows).toEqual([{ title: "b1" }]);
+    });
+
+    it("does not inject into non-soft-deletable tables or CTI subtypes", async () => {
+      await insertLargePublisher({ id: 1, name: "lp1" });
+      const em = newEntityManager();
+      const [t, lp] = aliases(Tag, LargePublisher);
+      resetQueryCount();
+      // Tag has no deleted_at, and LargePublisher is a CTI subtype (unsupported, like em.find)
+      await em.query({ from: t, select: { name: t.name } });
+      await em.query({ from: lp, select: { name: lp.name } });
+      expect(queries).toEqual([
+        "SELECT t.name AS name FROM tags AS t",
+        "SELECT lp_b0.name AS name FROM large_publishers AS lp LEFT OUTER JOIN publishers AS lp_b0 ON lp.id = lp_b0.id",
+      ]);
     });
   });
 

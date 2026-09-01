@@ -328,14 +328,21 @@ function isAggregateSelect(select: string): boolean {
 function buildGroupBys(selects: ParsedSelect[]): ParsedGroupBy[] {
   const sqlSelects = selects.map(selectSqlForGroupBy);
   const wholeRowAliases = new Set(
-    sqlSelects
-      .filter((select) => !isAggregateSelect(select) && stripSelectAlias(select).endsWith(".*"))
-      .map(parseAlias),
+    sqlSelects.filter((select) => !isAggregateSelect(select) && isGroupableByPrimaryKey(select)).map(parseAlias),
   );
-  return sqlSelects
-    .filter((select) => !isAggregateSelect(select))
-    .filter((select) => !isCoveredByWholeRowGroupBy(select, wholeRowAliases))
-    .map((select) => groupBySelect(select));
+  const seen = new Set<string>();
+  const groupBys: ParsedGroupBy[] = [];
+  for (const select of sqlSelects) {
+    if (isAggregateSelect(select) || isCoveredByWholeRowGroupBy(select, wholeRowAliases)) continue;
+    const groupBy = groupBySelect(select);
+    // Dedupe, i.e. CTI queries select both `p.*` and `p.id as id`, which both group by `p.id`
+    const key = "expression" in groupBy ? groupBy.expression : `${groupBy.alias}.${groupBy.column}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      groupBys.push(groupBy);
+    }
+  }
+  return groupBys;
 }
 
 /** Returns a SQL string for group-by analysis, until we support bindings in ParsedGroupBy. */
@@ -349,10 +356,20 @@ function selectSqlForGroupBy(select: ParsedSelect): string {
 /** Builds a GROUP BY for a selected value so `array_agg(_find.tag)` can coexist with plugin-rewritten selects. */
 function groupBySelect(select: string): ParsedGroupBy {
   const expression = stripSelectAlias(select);
-  if (expression.endsWith(".*")) {
+  if (isGroupableByPrimaryKey(expression)) {
     return { alias: parseAlias(expression), column: "id" };
   }
   return { expression };
+}
+
+/**
+ * Returns true for selects whose alias can be grouped by primary key, i.e. `a.*` whole-row selects
+ * and plain `a.id` / `"a".id` selects (from plugin-narrowed column lists); Postgres's functional
+ * dependency on the pk then lets the alias's other selected columns stay out of the GROUP BY.
+ */
+function isGroupableByPrimaryKey(select: string): boolean {
+  const expression = stripSelectAlias(select);
+  return expression.endsWith(".*") || /^("?)[a-zA-Z_]\w*\1\.id$/.test(expression);
 }
 
 /** Removes a trailing SQL alias from a select expression, i.e. `(a.id) as id` -> `(a.id)`. */
@@ -364,7 +381,8 @@ function stripSelectAlias(select: string): string {
 /** Returns true when an expression is functionally covered by an already-grouped whole-row alias. */
 function isCoveredByWholeRowGroupBy(select: string, wholeRowAliases: Set<string>): boolean {
   const expression = stripSelectAlias(select);
-  if (expression.endsWith(".*")) {
+  // Keep the pk-grouped selects themselves, i.e. `a.*` and `a.id`, so their alias stays grouped
+  if (isGroupableByPrimaryKey(expression)) {
     return false;
   }
   const aliases = findSelectedAliases(expression);

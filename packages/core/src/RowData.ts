@@ -24,6 +24,11 @@ export interface RowData {
   readonly rowCount: number;
   /** Returns the driver-level column value for a row, i.e. `rowData.get(0, "first_name")`. */
   get(rowIndex: number, columnName: string): any;
+  /**
+   * Returns whether the query actually selected `columnName`, i.e. so partial-select features
+   * can tell "column not fetched" apart from "column was SQL NULL".
+   */
+  has(rowIndex: number, columnName: string): boolean;
   /** Materializes one row as a classic POJO, i.e. for debugging and differential tests. */
   toRow(rowIndex: number): any;
   /** Materializes classic POJO rows, i.e. for `afterFind` observation or debugging. */
@@ -49,6 +54,10 @@ export class PojoRowData implements RowData {
     return this.rows[rowIndex][columnName];
   }
 
+  has(rowIndex: number, columnName: string): boolean {
+    return columnName in this.rows[rowIndex];
+  }
+
   toRow(rowIndex: number): any {
     return this.rows[rowIndex];
   }
@@ -63,6 +72,10 @@ export const emptyRowData: RowData = {
   rowCount: 0,
   get() {
     return undefined;
+  },
+  // No select pruned anything, so "missing" columns are legitimately-undefined values, not stale reads
+  has() {
+    return true;
   },
   toRow() {
     return {};

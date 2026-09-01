@@ -143,6 +143,7 @@ const ignoredKeys = new Set([
   "setDeepPartial",
   "changes",
   "isSoftDeletedEntity",
+  "softDelete",
   "load",
   "populate",
   "isLoaded",

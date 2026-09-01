@@ -229,6 +229,29 @@ describe("EntityManager.rawQueries", () => {
       ]);
     });
 
+    it("joins a one-to-one as a left join", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      const em = newEntityManager();
+      const [b] = aliases(Book);
+      const s = alias(Book, "s");
+      resetQueryCount();
+      const rows = await em.query({
+        from: b,
+        join: [b.sequel.as(s)],
+        select: { title: b.title, sequel: s.title },
+        orderBy: { title: "ASC" },
+      });
+      expect(rows).toEqual([
+        { title: "b1", sequel: "b2" },
+        { title: "b2", sequel: null },
+      ]);
+      expect(queries).toEqual([
+        "SELECT b.title AS title, b1.title AS sequel FROM books AS b LEFT OUTER JOIN books AS b1 ON b1.prequel_id = b.id ORDER BY title ASC",
+      ]);
+    });
+
     it("joins a many-to-many through its join table", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

@@ -149,7 +149,7 @@ join: [
 Whether `as` returns an `INNER` join or `LEFT` follows the relation's nullability:
 
 - a required reference (i.e. `book.author`, a required m2o) is `INNER`,
-- a nullable reference and every collection (i.e. `author.books`) are `LEFT`.
+- a nullable reference, every collection (i.e. `author.books`), and one-to-ones are `LEFT`.
 
 The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (passing an incorrect `Publisher` alias to the `books` relation) is a compile error.
 

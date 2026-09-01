@@ -150,6 +150,8 @@ export interface AuthorFields {
   comments: { kind: "o2m"; type: Comment };
   spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   tasks: { kind: "o2m"; type: TaskNew };
+  image: { kind: "o2o"; type: Image };
+  userOneToOne: { kind: "o2o"; type: User };
 }
 
 export interface AuthorOpts {

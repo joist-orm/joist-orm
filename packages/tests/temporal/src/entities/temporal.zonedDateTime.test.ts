@@ -12,6 +12,20 @@ describe("zonedDateTime", () => {
     expect((getMetadata(Book).fields["publishedAt"] as PrimitiveField).type).toBe(Temporal.ZonedDateTime);
   });
 
+  it("soft deletes with a zoned date time", async () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+
+    book.softDelete();
+    await em.flush();
+
+    expect(book.deletedAt).toBeInstanceOf(Temporal.ZonedDateTime);
+    expect(book.deletedAt?.timeZoneId).toBe("UTC");
+    expect(await knex.select(knex.raw("deleted_at is not null as soft_deleted")).from("book")).toMatchObject([
+      { soft_deleted: true },
+    ]);
+  });
+
   it("can create with a zoned date time", async () => {
     const em = newEntityManager();
     const book = newBook(em, { publishedAt: jan1DateTime, timestampTzs: [jan1DateTime, jan2DateTime] });

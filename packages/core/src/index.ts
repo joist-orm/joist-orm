@@ -132,6 +132,7 @@ export {
   type ValidationRuleResult,
 } from "./rules.ts";
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig.ts";
+export { nowUTC } from "./nowUTC.ts";
 export * from "./serde.ts";
 export * from "./scopes.ts";
 export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal.ts";

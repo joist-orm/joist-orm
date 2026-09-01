@@ -28,6 +28,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -551,6 +552,13 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

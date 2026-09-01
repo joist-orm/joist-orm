@@ -28,6 +28,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -415,6 +416,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

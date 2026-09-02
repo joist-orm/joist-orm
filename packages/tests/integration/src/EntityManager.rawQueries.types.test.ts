@@ -113,6 +113,9 @@ async function typeAssertions() {
   // In entity mode the keys are the entity's sortable fields instead
   em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
 
+  // === A single bare condition works for where/having, no `{ and: [...] }` wrapper needed
+  em.query({ from: a, where: a.age.gte(18), select: a });
+
   // === Soft deletes: `softDeletes` takes em.find's two modes, defaulting to "exclude"
   em.query({ from: a, select: a, softDeletes: "include" });
 

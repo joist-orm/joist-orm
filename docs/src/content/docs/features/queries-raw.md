@@ -95,7 +95,7 @@ They also carry SQL functions as methods, so aggregates need no imports:
 - `arrayAgg()`, `stringAgg(delimiter)`
 - `coalesce(fallback)`
 
-The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions, and `having` sees aggregates:
+The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:
 
 ```ts
 const rows = await em.query({

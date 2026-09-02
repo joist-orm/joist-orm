@@ -151,9 +151,10 @@ export type QuerySelect = QuerySource | ExprLike<any> | Record<string, ExprLike<
  */
 export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins> {
   join?: J;
-  where?: ExpressionFilter;
+  /** An `{ and: [...] }` / `{ or: [...] }` filter, or a single bare condition, i.e. `where: a.age.gte(18)`. */
+  where?: ExpressionCondition;
   groupBy?: readonly ExprLike<any>[];
-  having?: ExpressionFilter;
+  having?: ExpressionCondition;
   select: S;
   orderBy?: readonly (QueryOrderBy | undefined)[] | OrderByKeys<S>;
   limit?: number;

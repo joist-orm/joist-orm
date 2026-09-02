@@ -441,6 +441,37 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("pruning", () => {
+    it("accepts a single bare condition for where and having", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertAuthor({ first_name: "a2", age: 40 });
+      await insertBook({ title: "b1", author_id: 2 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      // No `{ and: [...] }` wrapper needed for a single condition, in `where` or `having`
+      const rows = await em.query({
+        from: a,
+        join: [a.books.inner(b)],
+        where: a.age.gte(30),
+        groupBy: [a.firstName],
+        having: b.id.count().gt(0),
+        select: { name: a.firstName },
+      });
+      expect(rows).toEqual([{ name: "a2" }]);
+      expect(queries).toEqual([
+        "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.age >= $1 AND a.deleted_at IS NULL GROUP BY a.first_name HAVING count(b.id)::int > $2",
+      ]);
+    });
+
+    it("prunes a bare where condition given undefined", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      const nameFilter: string | undefined = undefined;
+      const rows = await em.query({ from: a, where: a.firstName.eq(nameFilter), select: { name: a.firstName } });
+      expect(rows).toEqual([{ name: "a1" }]);
+    });
+
     it("prunes undefined conditions", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

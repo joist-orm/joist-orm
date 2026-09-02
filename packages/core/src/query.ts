@@ -381,21 +381,19 @@ export function query<
  *   sql.condition`${sql.ref(p, "ts_search")} @@ plainto_tsquery(${term})`
  *   sql.ref<string>(a, "ts_search")   // an unmodeled column; untracked at the type level
  */
-export const sql = Object.assign(
-  function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
-    return new TemplateExpr(strings, values) as any;
-  },
-  {
-    /** A raw condition for `where`, `having`, or `on`. */
-    condition(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {
-      return deferredCondition((ctx) => new TemplateExpr(strings, values).toSql(ctx));
-    },
-    /** A column Joist does not model, on a source that is in the query. */
-    ref<R = unknown>(source: QuerySource, column: string): Expr<R, string> {
-      return new RefExpr(handleOf(source), column) as any;
-    },
-  },
-);
+export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
+  return new TemplateExpr(strings, values) as any;
+}
+
+/** A raw condition for `where`, `having`, or `on`. */
+sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {
+  return deferredCondition((ctx) => new TemplateExpr(strings, values).toSql(ctx));
+};
+
+/** A column Joist does not model, on a source that is in the query. */
+sql.ref = function ref<R = unknown>(source: QuerySource, column: string): Expr<R, string> {
+  return new RefExpr(handleOf(source), column) as any;
+};
 
 // =====================================================================================================
 // Runtime: handles, subquery expressions, the proxy

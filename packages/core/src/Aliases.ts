@@ -390,55 +390,56 @@ class AbstractAliasColumn<V> extends BaseExpr {
   }
 
   /**
-   * Compares against another alias column via the `em.find` deferred-binding path, or against any other
-   * expression (an aggregate, a subquery column) via `em.query`'s SQL-generation path.
+   * Compares this column to another expression.
+   *
+   * Another alias column takes the `em.find` deferred-binding path (`unset1.col = unset2.col`, bound by
+   * callbacks), which also works inside `em.find`'s complex conditions; every other expression (an
+   * aggregate, a subquery column, a `sql` template) only exists in `em.query`, so it takes the deferred
+   * `ExprContext` path, which only the `em.query` parser resolves.
    */
-  protected crossCompare(op: string, value: unknown): ExpressionCondition | undefined {
+  protected compareToExpr(op: string, value: ExprLike<any>): ExpressionCondition {
     if (value instanceof AbstractAliasColumn) return this.addCrossColumnRawCondition(value, op);
-    if (isExpr(value)) return this.compare(op, value);
-    return undefined;
+    return this.compare(op, value);
   }
 }
 
 class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<V> implements PrimitiveAlias<V, N> {
   eq(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      return this.addCondition({ kind: "is-null" });
-    } else {
-      return this.crossCompare("=", value) ?? this.addCondition({ kind: "eq", value: value as any });
-    }
+    if (value === undefined) return skipCondition;
+    if (value === null) return this.addCondition({ kind: "is-null" });
+    if (isExpr(value)) return this.compareToExpr("=", value);
+    return this.addCondition({ kind: "eq", value: value as any });
   }
 
   ne(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      return this.addCondition({ kind: "not-null" });
-    } else {
-      return this.crossCompare("!=", value) ?? this.addCondition({ kind: "ne", value: value as any });
-    }
+    if (value === undefined) return skipCondition;
+    if (value === null) return this.addCondition({ kind: "not-null" });
+    if (isExpr(value)) return this.compareToExpr("!=", value);
+    return this.addCondition({ kind: "ne", value: value as any });
   }
 
   gt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
-    return this.crossCompare(">", value) ?? this.addCondition({ kind: "gt", value: value as any });
+    if (isExpr(value)) return this.compareToExpr(">", value);
+    return this.addCondition({ kind: "gt", value: value as any });
   }
 
   gte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
-    return this.crossCompare(">=", value) ?? this.addCondition({ kind: "gte", value: value as any });
+    if (isExpr(value)) return this.compareToExpr(">=", value);
+    return this.addCondition({ kind: "gte", value: value as any });
   }
 
   lt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
-    return this.crossCompare("<", value) ?? this.addCondition({ kind: "lt", value: value as any });
+    if (isExpr(value)) return this.compareToExpr("<", value);
+    return this.addCondition({ kind: "lt", value: value as any });
   }
 
   lte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
-    return this.crossCompare("<=", value) ?? this.addCondition({ kind: "lte", value: value as any });
+    if (isExpr(value)) return this.compareToExpr("<=", value);
+    return this.addCondition({ kind: "lte", value: value as any });
   }
 
   between(v1: V | undefined, v2: V | undefined): ColumnCondition {
@@ -521,23 +522,17 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
 
 class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      return this.addCondition({ kind: "is-null" });
-    } else {
-      return this.crossCompare("=", value) ?? this.addCondition({ kind: "eq", value: value as any });
-    }
+    if (value === undefined) return skipCondition;
+    if (value === null) return this.addCondition({ kind: "is-null" });
+    if (isExpr(value)) return this.compareToExpr("=", value);
+    return this.addCondition({ kind: "eq", value: value as any });
   }
 
   ne(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      return this.addCondition({ kind: "not-null" });
-    } else {
-      return this.crossCompare("!=", value) ?? this.addCondition({ kind: "ne", value: value as any });
-    }
+    if (value === undefined) return skipCondition;
+    if (value === null) return this.addCondition({ kind: "not-null" });
+    if (isExpr(value)) return this.compareToExpr("!=", value);
+    return this.addCondition({ kind: "ne", value: value as any });
   }
 
   in(values: readonly (T | IdOf<T> | null)[] | undefined | null | ExprLike<IdOf<T> | null>): ExpressionCondition {
@@ -608,13 +603,10 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
   }
 
   private compareId(op: string, kind: "gt" | "gte" | "lt" | "lte", value: unknown): ExpressionCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      throw new Error("Unsupported");
-    } else {
-      return this.crossCompare(op, value) ?? this.addCondition({ kind, value: value as any });
-    }
+    if (value === undefined) return skipCondition;
+    if (value === null) throw new Error("Unsupported");
+    if (isExpr(value)) return this.compareToExpr(op, value);
+    return this.addCondition({ kind, value: value as any });
   }
 }
 

@@ -295,9 +295,11 @@ export function isAlias(obj: any): obj is Alias<any, any> & { [aliasMgmt]: Alias
  * A single column of an alias.
  *
  * For `em.find`, its methods create `ColumnCondition`s whose alias is filled in later, when the
- * parser binds the alias to a join-tree location (`setAlias`). For `em.query`, it is also an `Expr`:
- * it becomes `alias."column"`, decodes result values through the field's serde, and inherits the
- * aggregate methods from `BaseExpr`.
+ * parser binds the alias to a join-tree location (`setAlias`).
+ *
+ * For `em.query`, the same methods also an `Expr`: they becomes `alias."column"` in raw SQL queries,
+ * now how to decode result values through the field's serde, and also inherit/provide the aggregate
+ * methods from `BaseExpr`.
  */
 class AbstractAliasColumn<V> extends BaseExpr {
   public constructor(

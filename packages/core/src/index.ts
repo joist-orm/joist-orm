@@ -38,7 +38,18 @@ export * from "./EntityGraphQLFilter.ts";
 export * from "./EntityManager.ts";
 export * from "./EntityMetadata.ts";
 export type { EnumMetadata } from "./EnumMetadata.ts";
-export * from "./Expr.ts";
+// `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
+// (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
+// joist-core, so `toSql`/`decode`/`encode` never show up as something a user could call.
+export {
+  type Expr,
+  type ExprBrand,
+  exprBrand,
+  type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
+  skipCondition,
+} from "./Expr.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
@@ -105,7 +116,32 @@ export { deepNormalizeHint, normalizeHint } from "./normalizeHints.ts";
 export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader.ts";
-export * from "./query.ts";
+// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseUserQuery, Plan) stays internal
+export {
+  type CheckScope,
+  type Clauses,
+  type EntityQuery,
+  entityQueryBrand,
+  type MaybeNull,
+  type NameOf,
+  type NotWidened,
+  type OrderByDirection,
+  type OrderByKeys,
+  type Query,
+  type QueryArg,
+  type QueryJoin,
+  type QueryJoins,
+  type QueryOrderBy,
+  type QueryRow,
+  type QuerySelect,
+  type QuerySource,
+  type QueryValue,
+  query,
+  sql,
+  type Subquery,
+  type SubqueryBrand,
+  subqueryBrand,
+} from "./query.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,

@@ -276,7 +276,7 @@ const rows = await em.query({
 });
 ```
 
-And a single-column subquery works as an `in` target:
+And a single-column subquery works as an `in` target — including for polymorphic references, where the subquery's select column picks the component, i.e. `c.parent.in(query({ from: a, select: a.id }))` filters on `parent_author_id`:
 
 ```ts
 where: {

@@ -1,5 +1,5 @@
 import { Expr, ExprBrand, Query, Subquery, alias, aliases, exprBrand, query } from "joist-orm";
-import { Author, AuthorId, Book, Publisher, PublisherId } from "src/entities";
+import { Author, AuthorId, Book, Comment, Publisher, PublisherId } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
 /**
@@ -116,6 +116,11 @@ async function typeAssertions() {
   // === Soft deletes: `softDeletes` takes em.find's two modes, defaulting to "exclude"
   em.query({ from: a, select: a, softDeletes: "include" });
 
+  // === Polymorphic references accept an id subquery in `in`; the select column picks the component
+  const [c] = aliases(Comment);
+  c.parent.in(query({ from: a, select: a.id }));
+  c.parent.in(query({ from: b, select: b.author }));
+
   // === Relationship join sugar: the relation is the join factory, and the join kind follows the
   // === relation's nullability, so the row types come out right with no annotations
   // A collection (`books`) and a nullable reference (`publisher`) default to LEFT: their columns gain `| null`
@@ -163,6 +168,9 @@ async function typeAssertions() {
   em.query({ from: a, select: { books: a.books } });
   // @ts-expect-error: softDeletes only accepts em.find's "include" | "exclude"
   em.query({ from: a, select: a, softDeletes: "only" });
+  // @ts-expect-error: the subquery selects numbers, not ids of Comment.parent's component entities
+  // (a *string* column cannot be rejected: Joist ids are flavored strings, so `string` stays assignable)
+  c.parent.in(query({ from: b, select: b.order }));
 }
 
 describe("EntityManager.rawQueries.types", () => {

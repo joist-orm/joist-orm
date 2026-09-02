@@ -20,6 +20,7 @@ import {
   type InnerJoin,
   type LeftJoin,
   type SqlFragment,
+  asNode,
   deferredCondition,
   isExpr,
   skipCondition,
@@ -140,7 +141,7 @@ export interface PolyAlias<U extends Entity, N extends null | never> {
   left<A extends AliasFor<U>>(other: A): LeftJoin<A>;
   eq(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
   ne(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
-  in(values: Array<U | TaggedId> | undefined): ExpressionFilter | ColumnCondition;
+  in(values: Array<U | TaggedId> | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
 }
 
 export interface PrimitiveAlias<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
@@ -617,8 +618,9 @@ class PolyReferenceAlias<T extends Entity> {
   }
 
   // We required tagged ids for polys
-  in(values: Array<T | TaggedId> | undefined): ExpressionFilter | ColumnCondition {
+  in(values: Array<T | TaggedId> | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
     if (values === undefined) return skipCondition;
+    if (isExpr(values)) return this.inSubquery(values);
     // Split up the ids by constructor
     const idsByConstructor = groupBy(values, (id) => getConstructorFromTaggedId(maybeResolveReferenceToId(id)!).name);
     // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
@@ -630,6 +632,39 @@ class PolyReferenceAlias<T extends Entity> {
         return this.addCondition(comp, { kind: "in", value: ids });
       }),
     };
+  }
+
+  /**
+   * i.e. `c.parent.in(query({ from: a, ..., select: a.id }))`: like `eq` against an alias column, the
+   * subquery's select column picks the component, i.e. authors pick `parent_author_id`.
+   */
+  private inSubquery(values: ExprLike<any>): ExpressionCondition {
+    // Reach into the subquery for its select column; `handle` is `query.ts`'s SubqueryHandle, accessed
+    // dynamically so this module does not import `query.ts` back
+    const select = (values as any).handle?.q?.select;
+    if (!(select instanceof AbstractAliasColumn)) {
+      return fail(`${this.field.fieldName} is polymorphic, so \`in\` needs a subquery selecting an id or FK column`);
+    }
+    // The column's target entity picks the component: an id column is its own meta, an FK its other side
+    const otherMeta =
+      select.field.kind === "primaryKey"
+        ? select.meta
+        : select.field.kind === "m2o"
+          ? select.field.otherMetadata()
+          : fail(`${this.field.fieldName} \`in\` needs an id or FK column, got ${select.field.fieldName}`);
+    const comp =
+      this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
+      fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
+    // Like `addCrossColumnRawCondition`, learn our SQL alias from the deferred-binding callback (it fires
+    // in the parser's step 1, before conditions are turned into SQL in step 2)
+    let alias = "unset1";
+    this.callbacks.push((newMeta, newAlias) => {
+      alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    });
+    return deferredCondition((ctx) => {
+      const sub = asNode(values).toSqlBare(ctx);
+      return { sql: `${alias}.${comp.columnName} IN (${sub.sql})`, bindings: sub.bindings, refs: [alias, ...sub.refs] };
+    });
   }
 
   private addEqOrNe(kind: "eq" | "ne", value: unknown): ExpressionCondition {

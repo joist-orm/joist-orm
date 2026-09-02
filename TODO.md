@@ -9,16 +9,19 @@ Carried over from the `em-query-plan.md` design doc (deleted when `em.query` shi
       subqueries into `WITH` (dedupe by identity, dependency-ordered). Cosmetic until a subquery is
       used twice, since PG 12+ inlines single-use CTEs.
 - [ ] **Entity mode for joined aliases**: `select: a` only works for the `from` alias.
-- [ ] **Poly components as `in` targets**: `c.parent.in(query({ ..., select: a.id }))` needs the
-      component chosen from the subquery's element type (the `eq`/join case works via alias columns).
 - [ ] Explicitly deferred (documented under "Not (Yet) Supported"): UNION/INTERSECT/EXCEPT,
       user-authored and recursive CTEs, DISTINCT ON, first-class window functions and
       `FILTER (WHERE ...)` (all reachable via `sql` today), entity mode plus extra computed columns.
 
 ## Type-level
 
-- [ ] **Scope-check coverage**: the "alias 'x' is not in from/join" check covers the POJO `select`
-      only; extending it to `where`/`having`/`orderBy` needs a `Src` parameter on `ExpressionCondition`.
+- [ ] **Scope-check coverage** — decided against extending it: the "alias 'x' is not in from/join"
+      check stays on the POJO `select` only. A `where`/`having`/`orderBy` version was built and
+      reverted (see e51a37ca): it needed a phantom `Condition<Src>` brand on every condition method
+      plus three inferred generics on `QueryArg`, and array best-common-type reduction absorbs a
+      nested `{ and: [...] }` group that sits beside a sibling condition, so its coverage was
+      confusingly leaky - while the runtime already fails fast with a named alias on every path.
+      Revisit only if the runtime error proves insufficient in practice.
 - [ ] **Scalar subquery nullability**: always `R | null` today, but an ungrouped aggregate never
       returns no row, so `.coalesce(0)` is a little noisy. A type-level special case may not be worth it.
 - [ ] **`Src` conflates scope and nullability**: `coalesce` wants to keep the scope identity and drop

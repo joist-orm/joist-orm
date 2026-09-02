@@ -797,6 +797,53 @@ describe("EntityManager.rawQueries", () => {
     });
   });
 
+  describe("polymorphic references", () => {
+    it("can use a subquery of ids as an in target", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertComment({ text: "on a1", parent_author_id: 1 });
+      await insertComment({ text: "on a2", parent_author_id: 2 });
+      await insertComment({ text: "on b1", parent_book_id: 1 });
+      const em = newEntityManager();
+      const [c, a] = aliases(Comment, Author);
+      resetQueryCount();
+      // The subquery's select column (Author's id) picks the parent_author_id component
+      const rows = await em.query({
+        from: c,
+        where: { and: [c.parent.in(query({ from: a, where: { and: [a.firstName.eq("a1")] }, select: a.id }))] },
+        select: { text: c.text },
+      });
+      expect(rows).toEqual([{ text: "on a1" }]);
+      expect(queries).toEqual([
+        "SELECT c.text AS text FROM comments AS c WHERE c.parent_author_id IN (SELECT a.id AS value FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL)",
+      ]);
+    });
+
+    it("can use a subquery of FK columns as an in target", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertComment({ text: "on a1", parent_author_id: 1 });
+      await insertComment({ text: "on a2", parent_author_id: 2 });
+      const em = newEntityManager();
+      const [c, b] = aliases(Comment, Book);
+      // The FK's other side (Author) picks the component: comments on authors who have a book
+      const rows = await em.query({
+        from: c,
+        where: { and: [c.parent.in(query({ from: b, select: b.author }))] },
+        select: { text: c.text },
+      });
+      expect(rows).toEqual([{ text: "on a1" }]);
+    });
+
+    it("rejects an in subquery that does not select an id or FK column", () => {
+      const [c, b] = aliases(Comment, Book);
+      // The check runs eagerly, when the condition is built, not when the query runs
+      expect(() => c.parent.in(query({ from: b, select: b.title }) as any)).toThrow("`in` needs an id or FK column");
+    });
+  });
+
   describe("soft deletes", () => {
     it("excludes soft-deleted rows from the from table by default", async () => {
       await insertAuthor({ first_name: "a1" });

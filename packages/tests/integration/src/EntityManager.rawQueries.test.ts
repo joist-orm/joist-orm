@@ -657,6 +657,14 @@ describe("EntityManager.rawQueries", () => {
       ).rejects.toThrow("orderBy key 'lastName' is not a key of select");
     });
 
+    it("rejects an invalid orderBy nulls", async () => {
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      await expect(
+        em.query({ from: a, select: { name: a.firstName }, orderBy: [{ asc: a.firstName, nulls: "last;--" as any }] }),
+      ).rejects.toThrow("Invalid orderBy nulls");
+    });
+
     it("rejects an invalid orderBy direction", async () => {
       const em = newEntityManager();
       const [a] = aliases(Author);

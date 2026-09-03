@@ -912,6 +912,10 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
 function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
   const [expr, direction] = "asc" in o && o.asc ? [o.asc, "ASC"] : [o.desc, "DESC"];
   const fragment = asExpr(expr, "orderBy").toSql(ctx);
+  // `nulls` is interpolated into the SQL, so never trust it, i.e. it might cross an `any` boundary
+  if (o.nulls !== undefined && o.nulls !== "first" && o.nulls !== "last") {
+    return fail(`Invalid orderBy nulls '${o.nulls}'`);
+  }
   const nulls = o.nulls ? ` NULLS ${o.nulls.toUpperCase()}` : "";
   return { ...fragment, sql: `${fragment.sql} ${direction}${nulls}` };
 }

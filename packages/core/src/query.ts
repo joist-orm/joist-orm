@@ -41,6 +41,7 @@ import {
   type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   filterSoftDeletes,
+  stiSubtypeFilter,
 } from "./QueryParser.ts";
 import { fail } from "./utils.ts";
 
@@ -616,10 +617,10 @@ interface ParsedSource {
 interface ParsedJoin {
   kind: "inner" | "left";
   source: ParsedSource;
-  /** The user's ON alone; `undefined` means it pruned away entirely. */
-  on: SqlFragment | undefined;
-  /** The ON to emit: the user's ON plus any injected soft-delete condition. */
-  onWithSoftDelete: SqlFragment | undefined;
+  /** The user's ON alone; `undefined` means it pruned away entirely, an error if the join is kept. */
+  userOn: SqlFragment | undefined;
+  /** The ON to emit: the user's ON plus any injected soft-delete/STI-discriminator conditions. */
+  fullOn: SqlFragment | undefined;
   keep: boolean;
 }
 
@@ -676,15 +677,15 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   const from = fromThunk();
   const joins: ParsedJoin[] = joinThunks.map((j) => {
     const source = j.source();
-    // `on` stays the user's ON alone, so the collapsed-ON check below is not fooled by the injection
-    const on = conditionToSql(j.on, ctx, true);
-    const softDelete = softDeleteCondition(source, softDeletes);
-    const onWithSoftDelete = on && softDelete ? conditionToSql({ and: [j.on, softDelete] }, ctx, true) : on;
-    return { kind: j.kind, keep: j.keep, source, on, onWithSoftDelete };
+    // `userOn` is the user's ON alone, so the collapsed-ON check below is not fooled by injections
+    const userOn = conditionToSql(j.on, ctx, true);
+    const injected = injectedConditions(source, softDeletes);
+    const fullOn = userOn && injected.length > 0 ? conditionToSql({ and: [j.on, ...injected] }, ctx, true) : userOn;
+    return { kind: j.kind, keep: j.keep, source, userOn, fullOn };
   });
   const { selects, decodeRows } = selectsToSql(q, ctx, from);
-  const fromSoftDelete = softDeleteCondition(from, softDeletes);
-  const where = conditionToSql(fromSoftDelete ? { and: [q.where, fromSoftDelete] } : q.where, ctx, true);
+  const fromInjected = injectedConditions(from, softDeletes);
+  const where = conditionToSql(fromInjected.length > 0 ? { and: [q.where, ...fromInjected] } : q.where, ctx, true);
   const having = conditionToSql(q.having, ctx, true);
   const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
   const orderBys = orderBysToSql(q, ctx);
@@ -692,7 +693,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   // 3. Prune.
   const kept = pruneJoins(q, from, joins, [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined));
   for (const j of kept) {
-    if (!j.on) {
+    if (!j.userOn) {
       fail(
         `Join ${describeHandle(j.source.handle)} has no ON condition left (they all pruned), but the query still references it`,
       );
@@ -708,8 +709,8 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   for (const j of kept) {
     const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
     out.push({
-      sql: ` ${keyword} ${j.source.sql} ON ${j.onWithSoftDelete!.sql}`,
-      bindings: [...j.source.bindings, ...j.onWithSoftDelete!.bindings],
+      sql: ` ${keyword} ${j.source.sql} ON ${j.fullOn!.sql}`,
+      bindings: [...j.source.bindings, ...j.fullOn!.bindings],
       refs: [],
     });
     for (const extra of j.source.extraJoins) out.push({ sql: ` ${extra}`, bindings: [], refs: [] });
@@ -792,25 +793,33 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
 }
 
 /**
- * em.find's soft-delete injection for one source: `alias.deleted_at IS NULL` when the source is a
- * soft-deletable entity (CTI subtypes are skipped, like em.find; see `filterSoftDeletes`).
+ * em.find's per-source injections: `alias.deleted_at IS NULL` for a soft-deletable entity (CTI
+ * subtypes are skipped, like em.find; see `filterSoftDeletes`), and the `type_id = X` discriminator
+ * for an STI subtype, so `from: alias(TaskNew)` only sees (and a joined subtype only matches)
+ * TaskNew rows.
  *
- * The condition carries no `aliases` on purpose: an injected condition must never keep an otherwise
- * unreferenced join alive, which is what `pruneable: true` means on em.find's side.
+ * The conditions go into the from's WHERE or the join's ON, and never keep an otherwise unreferenced
+ * join alive, which is what `pruneable: true` means on em.find's side.
  */
-function softDeleteCondition(source: ParsedSource, softDeletes: "include" | "exclude"): ColumnCondition | undefined {
+function injectedConditions(source: ParsedSource, softDeletes: "include" | "exclude"): ColumnCondition[] {
   const { meta } = source;
-  if (!meta || !filterSoftDeletes(meta, softDeletes)) return undefined;
-  const field = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!];
-  const column = field.serde!.columns[0];
-  return {
-    kind: "column",
-    alias: `${source.alias}${field.aliasSuffix}`,
-    column: column.columnName,
-    dbType: column.dbType,
-    cond: { kind: "is-null" },
-    pruneable: true,
-  };
+  if (!meta) return [];
+  const conditions: ColumnCondition[] = [];
+  if (filterSoftDeletes(meta, softDeletes)) {
+    const field = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!];
+    const column = field.serde!.columns[0];
+    conditions.push({
+      kind: "column",
+      alias: `${source.alias}${field.aliasSuffix}`,
+      column: column.columnName,
+      dbType: column.dbType,
+      cond: { kind: "is-null" },
+      pruneable: true,
+    });
+  }
+  const sti = stiSubtypeFilter(meta, source.alias);
+  if (sti) conditions.push(sti);
+  return conditions;
 }
 
 /** Registers a sugar m2m join table, i.e. `authors_to_tags`: a raw table with no entity metadata. */
@@ -977,7 +986,7 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
   if (q.pruneJoins === false) return joins;
   const deps = new Map<string, string[]>();
   for (const j of joins) {
-    const refs = [...(j.on?.refs ?? []), ...j.source.refs].map(baseAlias).filter((r) => r !== j.source.alias);
+    const refs = [...(j.userOn?.refs ?? []), ...j.source.refs].map(baseAlias).filter((r) => r !== j.source.alias);
     deps.set(j.source.alias, refs);
   }
   const required = new Set<string>();

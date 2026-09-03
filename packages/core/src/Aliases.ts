@@ -1,6 +1,8 @@
 import { groupBy } from "joist-utils";
 
-import { getMetadataForTable } from "./configure.ts";
+// Load-order only: without this, the built cjs/esm module graph evaluates relations/* before their
+// base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
+import "./configure.ts";
 import { type Entity, type IdType } from "./Entity.ts";
 import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
 import {
@@ -224,6 +226,15 @@ export function getAliasMgmt(alias: Alias<any, any>): AliasMgmt {
 /** Management interface for `QueryParser` to set Alias's canonical alias. */
 export interface AliasMgmt {
   tableName: string;
+  /**
+   * The metadata this alias was created with, i.e. `alias(TaskNew)` keeps `taskNewMeta`.
+   *
+   * It cannot be re-derived from `tableName`: STI subtypes share their base's table (`Task`, `TaskNew`,
+   * and `TaskOld` are all `tasks`), so a `getMetadataForTable("tasks")` lookup can only return the base
+   * `Task`, and the alias would lose its subtype identity (its discriminator filter and its constructor
+   * for entity-mode hydration).
+   */
+  meta: EntityMetadata;
   setAlias(meta: EntityMetadata, alias: string): void;
   onBind(callback: BindCallback): void;
 }
@@ -233,8 +244,8 @@ type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
 
 /** Returns the metadata for the entity that `alias` is bound to. */
 export function getAliasMetadata<T extends Entity>(alias: Alias<T, any>): EntityMetadata<T> {
-  const mgmt = (alias as any)[aliasMgmt];
-  return getMetadataForTable(mgmt.tableName);
+  const mgmt: AliasMgmt = (alias as any)[aliasMgmt];
+  return mgmt.meta as EntityMetadata<T>;
 }
 
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
@@ -246,6 +257,7 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
     tableName: meta.tableName,
+    meta,
     setAlias(newMeta: EntityMetadata, newAlias: string) {
       for (const callback of callbacks) callback(newMeta, newAlias);
     },

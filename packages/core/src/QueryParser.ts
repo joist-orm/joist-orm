@@ -1264,16 +1264,23 @@ function needsStiDiscriminator(meta: EntityMetadata): boolean {
 }
 
 function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, alias: string): void {
-  const baseMeta = getBaseMeta(subtypeMeta);
+  const cond = stiSubtypeFilter(subtypeMeta, alias);
+  if (cond) cb.addSimpleCondition(cond);
+}
+
+/** The `type_id = X` discriminator condition for an STI subtype, shared by em.find and em.query. */
+export function stiSubtypeFilter(meta: EntityMetadata, alias: string): ColumnCondition | undefined {
+  if (meta.inheritanceType !== "sti" || meta.stiDiscriminatorValue === undefined) return undefined;
+  const baseMeta = getBaseMeta(meta);
   const column = baseMeta.fields[baseMeta.stiDiscriminatorField!].serde?.columns[0]!;
-  cb.addSimpleCondition({
+  return {
     kind: "column",
     alias,
     column: column.columnName,
     dbType: column.dbType,
-    cond: { kind: "eq", value: subtypeMeta.stiDiscriminatorValue },
+    cond: { kind: "eq", value: meta.stiDiscriminatorValue },
     pruneable: true,
-  });
+  };
 }
 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */

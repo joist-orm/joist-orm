@@ -10,6 +10,10 @@ import {
   PublisherSize,
   SmallPublisher,
   Tag,
+  Task,
+  TaskItem,
+  TaskNew,
+  TaskOld,
 } from "src/entities";
 import {
   insertAuthor,
@@ -20,6 +24,8 @@ import {
   insertLargePublisher,
   insertPublisher,
   insertTag,
+  insertTask,
+  insertTaskItem,
 } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
@@ -890,6 +896,55 @@ describe("EntityManager.rawQueries", () => {
       const [c, b] = aliases(Comment, Book);
       // The check runs eagerly, when the condition is built, not when the query runs
       expect(() => c.parent.in(query({ from: b, select: b.title }) as any)).toThrow("`in` needs an id or FK column");
+    });
+  });
+
+  describe("single table inheritance", () => {
+    it("filters an STI subtype from to its discriminator", async () => {
+      await insertTask({ type: "NEW", special_new_field: 1 });
+      await insertTask({ type: "OLD", special_old_field: 2 });
+      const em = newEntityManager();
+      const tn = alias(TaskNew);
+      resetQueryCount();
+      const tasks = await em.query({ from: tn, select: tn });
+      expect(tasks).toMatchEntity([{ specialNewField: 1 }]);
+      expect(tasks[0]).toBeInstanceOf(TaskNew);
+      expect(queries).toEqual(["SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL AND t.type_id = $1"]);
+    });
+
+    it("filters a joined STI subtype in its join ON", async () => {
+      await insertTask({ id: 1, type: "NEW" });
+      await insertTaskItem({ new_task_id: 1 } as any);
+      await insertTaskItem({});
+      const em = newEntityManager();
+      const [ti, tn] = aliases(TaskItem, TaskNew);
+      resetQueryCount();
+      const rows = await em.query({
+        from: ti,
+        join: [ti.newTask.as(tn)],
+        select: { item: ti.id, task: tn.id },
+        orderBy: { item: "ASC" },
+      });
+      expect(rows).toEqual([
+        { item: "ti:1", task: "task:1" },
+        { item: "ti:2", task: null },
+      ]);
+      expect(queries).toEqual([
+        "SELECT ti.id AS item, t.id AS task FROM task_items AS ti LEFT OUTER JOIN tasks AS t ON ti.new_task_id = t.id AND t.deleted_at IS NULL AND t.type_id = $1 ORDER BY item ASC",
+      ]);
+    });
+
+    it("returns mixed subtypes for a base STI from", async () => {
+      await insertTask({ type: "NEW" });
+      await insertTask({ type: "OLD" });
+      const em = newEntityManager();
+      const t = alias(Task);
+      resetQueryCount();
+      const tasks = await em.query({ from: t, select: t, orderBy: { id: "ASC" } });
+      expect(tasks[0]).toBeInstanceOf(TaskNew);
+      expect(tasks[1]).toBeInstanceOf(TaskOld);
+      // The base type has no discriminator value, so no type_id filter is injected
+      expect(queries).toEqual(["SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL ORDER BY t.id ASC"]);
     });
   });
 

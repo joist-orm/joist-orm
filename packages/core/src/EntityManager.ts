@@ -1078,6 +1078,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
 
     // 2. Clone each found entity
+    const deferredRelations: [Entity, string, Entity][] = [];
     const clones = [...todo].map((entity) => {
       const skip = skipMap.get(entity) ?? [];
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
@@ -1095,15 +1096,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                 } else {
                   return undefined;
                 }
-              case "m2o":
               case "enum":
                 if (f.derived) {
                   return undefined;
                 } else {
                   return [f.fieldName, getField(entity, f.fieldName)];
                 }
-              case "poly":
-                return [f.fieldName, getField(entity, f.fieldName)];
+              case "m2o":
+              case "poly": {
+                if (f.kind === "m2o" && f.derived) return undefined;
+                const existingIdOrEntity = getField(entity, f.fieldName);
+                const target = (
+                  isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
+                ) as Entity | undefined;
+                // Defer relations within the cloned subgraph because setting a clone field before remapping can update
+                // its other side, and that update is not fixed up later.
+                if (target && todo.has(target)) {
+                  deferredRelations.push([entity, f.fieldName, target]);
+                  return [f.fieldName, undefined];
+                } else {
+                  return [f.fieldName, existingIdOrEntity];
+                }
+              }
               case "primaryKey":
               case "o2m":
               case "m2m":
@@ -1146,6 +1160,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
         }
       });
+    });
+
+    deferredRelations.forEach(([source, fieldName, target]) => {
+      const clone = entityToClone.get(source)!;
+      ((clone as any)[fieldName] as any).set(entityToClone.get(target)!);
     });
 
     if (postClone) {

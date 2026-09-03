@@ -84,6 +84,30 @@ describe("EntityManager.clone", () => {
     expect(em.getEntities(Author)).toMatchEntity([a1, {}]);
   });
 
+  it("does not steal a unique same-table m2o when both twins are cloned", async () => {
+    const em = newEntityManager();
+    // Given two books paired by the unique Book.prequel / Book.sequel o2o
+    const a1 = newAuthor(em);
+    const b1 = newBook(em, { author: a1, title: "b1" });
+    const b2 = newBook(em, { author: a1, title: "b2", prequel: b1 });
+    await em.flush();
+
+    // And b1.sequel is loaded
+    await b1.sequel.load();
+    expect(b1.sequel.get).toBe(b2);
+
+    // When we clone both twins in one call
+    const [b3, b4] = await em.clone([b1, b2]);
+
+    // Then the source pairing is still intact in-memory
+    expect(b2.prequel.get).toBe(b1);
+    expect(b1.sequel.get).toBe(b2);
+    // And the clones are remapped to each other
+    expect(b4.prequel.get).toBe(b3);
+    expect(b3.sequel.get).toBe(b4);
+    await em.flush();
+  });
+
   it("can clone entities and referenced entities", async () => {
     // Given an entity with a reference to another entity
     {

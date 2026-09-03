@@ -1,5 +1,5 @@
 import type { ExpressionCondition } from "./EntityFilter.ts";
-import { kqDot } from "./keywords.ts";
+import { kq, safeKq } from "./keywords.ts";
 import type { ColumnCondition, RawCondition } from "./QueryParser.ts";
 
 /**
@@ -424,7 +424,7 @@ export class RefExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
-    return { sql: kqDot(alias, this.column), bindings: [], refs: [alias] };
+    return { sql: `${kq(alias)}.${safeKq(this.column)}`, bindings: [], refs: [alias] };
   }
 }
 

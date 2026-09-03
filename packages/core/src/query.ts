@@ -33,7 +33,7 @@ import {
   isExpr,
   resolveDeferredConditions,
 } from "./Expr.ts";
-import { kq, kqDot, kqStar } from "./keywords.ts";
+import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
 import {
   type ColumnCondition,
@@ -449,7 +449,7 @@ class SubqueryColumnExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
-    return { sql: kqDot(alias, this.key), bindings: [], refs: [alias] };
+    return { sql: `${kq(alias)}.${safeKq(this.key)}`, bindings: [], refs: [alias] };
   }
 
   decode(value: unknown): unknown {
@@ -756,7 +756,7 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
       return {
         handle,
         alias,
-        sql: `(${inner.sql}) AS ${kq(alias)}`,
+        sql: `(${inner.sql}) AS ${safeKq(alias)}`,
         bindings: inner.bindings,
         refs: inner.outerRefs,
         extraJoins: [],
@@ -848,7 +848,11 @@ function selectsToSql(
     const handle = select[subqueryBrand];
     const alias = ctx.aliasFor(handle);
     const keys = handle.columnKeys();
-    const selects = keys.map((k) => ({ sql: `${kqDot(alias, k)} AS ${kq(k)}`, bindings: [], refs: [alias] }));
+    const selects = keys.map((k) => ({
+      sql: `${kq(alias)}.${safeKq(k)} AS ${safeKq(k)}`,
+      bindings: [],
+      refs: [alias],
+    }));
     const decoders = keys.map((k) => [k, handle.columnExpr(k)] as const);
     return { selects, decodeRows: (_, rows) => rows.map((row) => decodeRow(row, decoders)) };
   } else if (isExpr(select)) {
@@ -861,7 +865,7 @@ function selectsToSql(
     const entries = Object.entries(select).map(([key, expr]) => [key, asExpr(expr, `select.${key}`)] as const);
     const selects = entries.map(([key, expr]) => {
       const fragment = expr.toSql(ctx);
-      return { ...fragment, sql: `${fragment.sql} AS ${kq(key)}` };
+      return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
     });
     return { selects, decodeRows: (_, rows) => rows.map((row) => decodeRow(row, entries)) };
   }
@@ -905,7 +909,7 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
     if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
     const keys = isSubqueryValue(select) ? select[subqueryBrand].columnKeys() : Object.keys(select as object);
     if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
-    return [{ sql: `${kq(key)} ${dir}`, bindings: [], refs: [] }];
+    return [{ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] }];
   });
 }
 

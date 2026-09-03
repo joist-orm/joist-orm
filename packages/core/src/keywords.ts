@@ -105,11 +105,25 @@ const keywords = [
 const escapeMapped = new Map(keywords.map((k) => [k, `"${k}"`]));
 const allLower = /^[a-z0-9_]+$/;
 
-/** Conditionally quotes `identifier` if it's a SQL keyword or not snake cased. */
+/** Conditionally quotes `identifier` if it's a SQL keyword or not snake cased; for trusted idents only. */
 export function kq(ident: string): string {
   // All camel-cased identifiers/column names need to be quoted
   if (!allLower.test(ident)) return `"${ident}"`;
   return escapeMapped.get(ident) ?? ident;
+}
+
+/**
+ * Quotes a possibly-untrusted identifier, i.e. an em.query select key, subquery `as` name, or
+ * `sql.ref` column.
+ *
+ * `kq`'s inputs are trusted metadata (codegen'd table/column names), and its quoting assumes that;
+ * these idents are user strings, so reject anything but word characters instead. Also reject names
+ * longer than PG's 63-byte identifier limit, which PG would silently truncate and break row decoding.
+ */
+export function safeKq(ident: string): string {
+  if (!/^\w+$/.test(ident)) throw new Error(`Invalid identifier '${ident}'`);
+  if (ident.length > 63) throw new Error(`Identifier '${ident}' is longer than PG's 63-byte limit`);
+  return kq(ident);
 }
 
 export function kqDot(alias: string, column: string): string {

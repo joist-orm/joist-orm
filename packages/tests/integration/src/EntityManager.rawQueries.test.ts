@@ -95,6 +95,16 @@ describe("EntityManager.rawQueries", () => {
       const rows = await em.query({ from: sp, where: { and: [sp.name.eq("p2")] }, select: { name: sp.name } });
       expect(rows).toEqual([{ name: "p2" }]);
     });
+
+    it("rejects non-identifier select keys and as names", async () => {
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      // A key that crossed an `any` boundary must not reach the SQL; kq is for trusted metadata only
+      const key = 'name" FROM authors; --';
+      await expect(em.query({ from: a, select: { [key]: a.firstName } } as any)).rejects.toThrow("Invalid identifier");
+      const sub = query({ from: a, select: { name: a.firstName }, as: 'x" --' as any });
+      await expect(em.query({ from: sub, select: sub })).rejects.toThrow("Invalid identifier");
+    });
   });
 
   describe("joins", () => {

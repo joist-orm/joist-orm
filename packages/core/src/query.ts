@@ -314,19 +314,27 @@ type InScope<F, J extends QueryJoins> = NameOf<F> | JoinedName<J[number]>;
  */
 export type CheckScope<S, F, J extends QueryJoins> = [S] extends [never]
   ? unknown
-  : [S] extends [Record<string, ExprLike<any>>]
-    ? {
-        select: {
-          [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<any, infer Src> }
-            ? string extends Src
-              ? unknown
-              : [Exclude<Src, InScope<F, J>>] extends [never]
+  : // A source-shaped select (`select: a`, `select: bookStats`) must be the `from`: a joined source's
+    // rows would need left-join nullability (and entity hydration) that source-shaped selects don't
+    // model. Two same-named sources (unnamed aliases of one entity, anonymous subqueries) pass this
+    // check and are caught at runtime instead.
+    [S] extends [QuerySource]
+    ? NameOf<S> extends NameOf<F>
+      ? unknown
+      : { select: `'${NameOf<S> & string}' is a joined source, not the from; select its columns individually` }
+    : [S] extends [Record<string, ExprLike<any>>]
+      ? {
+          select: {
+            [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<any, infer Src> }
+              ? string extends Src
                 ? unknown
-                : `alias '${Exclude<Src, InScope<F, J>> & string}' is not in from/join`
-            : unknown;
-        };
-      }
-    : unknown;
+                : [Exclude<Src, InScope<F, J>>] extends [never]
+                  ? unknown
+                  : `alias '${Exclude<Src, InScope<F, J>> & string}' is not in from/join`
+              : unknown;
+          };
+        }
+      : unknown;
 
 /** The one argument type `query()` and `em.query()` share: a `Query` POJO plus its source, name, and checks. */
 export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends QueryJoins, Name extends string> = Query<
@@ -882,15 +890,24 @@ function selectsToSql(
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"] } {
   const { select } = q;
   if (isAlias(select)) {
-    // Entity mode: `a.*` (plus CTI columns), hydrated through the identity map
+    // Entity mode: `a.*` (plus CTI columns), hydrated through the identity map. Only the from is
+    // hydratable: a joined alias would need null-row skipping and left-join nullability (see TODO.md)
+    if (from.handle !== getAliasMgmt(select)) {
+      fail("Selecting a joined alias is not supported yet; select the from alias, or select its columns individually");
+    }
     const alias = ctx.aliasFor(getAliasMgmt(select));
     const meta = getAliasMetadata(select);
-    const source = from.handle === getAliasMgmt(select) ? from : undefined;
-    const selects = (source?.entitySelects ?? [kqStar(alias)]).map((s) => ({ sql: s, bindings: [], refs: [alias] }));
+    const selects = from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
     return { selects, decodeRows: (em, rows) => em.hydrate(meta.cstr as any, rows) };
   } else if (isSubqueryValue(select)) {
-    // `select: <subquery>` is `select *` for that table
+    // `select: <subquery>` is `select *` for that table; like entity mode, only for the from, since a
+    // left-joined subquery's unmatched rows would decode null fields the row type calls non-null
     const handle = select[subqueryBrand];
+    if (from.handle !== handle) {
+      fail(
+        "Selecting a joined subquery is not supported; select the from subquery, or select its columns individually",
+      );
+    }
     const alias = ctx.aliasFor(handle);
     const keys = handle.columnKeys();
     const selects = keys.map((k) => ({

@@ -120,6 +120,28 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "p2" }]);
     });
 
+    it("rejects selecting a joined alias or subquery", async () => {
+      const em = newEntityManager();
+      // Same-entity aliases share the type-level name "Author", so these compile (the call-site
+      // check cannot tell them apart); the runtime check compares handles and is exact
+      const [a, a2] = aliases(Author, Author);
+      await expect(em.query({ from: a, join: [{ left: a2, on: a2.mentor.eq(a.id) }], select: a2 })).rejects.toThrow(
+        new Error(
+          "Selecting a joined alias is not supported yet; select the from alias, or select its columns individually",
+        ),
+      );
+      // Anonymous subqueries likewise share the name "?"
+      const sub1 = query({ from: a, select: { id: a.id } });
+      const sub2 = query({ from: a, select: { id: a.id } });
+      await expect(
+        em.query({ from: sub1, join: [{ inner: sub2, on: sub2.id.eq(sub1.id) }], select: sub2 }),
+      ).rejects.toThrow(
+        new Error(
+          "Selecting a joined subquery is not supported; select the from subquery, or select its columns individually",
+        ),
+      );
+    });
+
     it("escapes quotes in subquery as names, in declarations and references", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
@@ -252,7 +274,7 @@ describe("EntityManager.rawQueries", () => {
       const rows = await em.query({ from: pg, join: [pg.critics.as(c)], select: { group: pg.name, critic: c.name } });
       expect(rows).toEqual([{ group: "pg1", critic: "c1" }]);
       expect(queries).toEqual([
-        "SELECT pg.name AS \"group\", c.name AS critic FROM publisher_groups AS pg LEFT OUTER JOIN critics AS c ON c.group_id = pg.id",
+        'SELECT pg.name AS "group", c.name AS critic FROM publisher_groups AS pg LEFT OUTER JOIN critics AS c ON c.group_id = pg.id',
       ]);
     });
 

@@ -151,6 +151,10 @@ async function typeAssertions() {
   a.id.in(query({ from: b, select: b.id }));
   // @ts-expect-error: alias 'book_stats' is not in from/join (the scope check names the missing alias)
   em.query({ from: a, select: { bookCount: bookStats.bookCount } });
+  // @ts-expect-error: a source-shaped select must be the from; 'Book' is a joined source
+  em.query({ from: a, join: [{ left: b, on: b.author.eq(a.id) }], select: b });
+  // @ts-expect-error: a joined subquery cannot be selected either; select its columns individually
+  em.query({ from: a, join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }], select: bookStats });
   // @ts-expect-error: select was typed too generically; use `satisfies Query` instead of `: Query`
   em.query({ from: a, select: { name: a.firstName } } as Query);
   // @ts-expect-error: `inner` and `left` are mutually exclusive within one join entry

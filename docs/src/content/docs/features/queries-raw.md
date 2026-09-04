@@ -69,7 +69,7 @@ The `select` key decides the row type:
 
   (Currently entities can only be selected using the same alias as the `from` key, not from a joined alias.)
 
-- **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`.
+- **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`. Like entity mode, the selected subquery must be the `from`, not a joined source; select a joined subquery's columns individually.
 
 ### Left joins and `null`
 

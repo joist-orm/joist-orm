@@ -102,14 +102,19 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "p2" }]);
     });
 
-    it("rejects non-identifier select keys and as names", async () => {
+    it("escapes quotes in select keys, so display-name keys work", async () => {
+      await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const [a] = aliases(Author);
-      // A key that crossed an `any` boundary must not reach the SQL; kq is for trusted metadata only
-      const key = 'name" FROM authors; --';
-      await expect(em.query({ from: a, select: { [key]: a.firstName } } as any)).rejects.toThrow("Invalid identifier");
-      const sub = query({ from: a, select: { name: a.firstName }, as: 'x" --' as any });
-      await expect(em.query({ from: sub, select: sub })).rejects.toThrow("Invalid identifier");
+      // Display-name keys are legal (i.e. direct-to-CSV headers), and a key that crossed an `any`
+      // boundary stays one (quoted) identifier instead of becoming SQL
+      const evil = 'name" FROM authors; --';
+      const rows = await em.query({ from: a, select: { "Book Count": a.age, [evil]: a.firstName } } as any);
+      expect(rows).toEqual([{ "Book Count": null, [evil]: "a1" }]);
+      // PG silently truncates identifiers over 63 bytes, which would break decoding, so those fail fast
+      await expect(em.query({ from: a, select: { ["x".repeat(64)]: a.firstName } } as any)).rejects.toThrow(
+        "longer than PG's 63-byte limit",
+      );
     });
   });
 

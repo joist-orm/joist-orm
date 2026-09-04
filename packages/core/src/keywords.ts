@@ -117,13 +117,14 @@ export function kq(ident: string): string {
  * `sql.ref` column.
  *
  * `kq`'s inputs are trusted metadata (codegen'd table/column names), and its quoting assumes that;
- * these idents are user strings, so reject anything but word characters instead. Also reject names
- * longer than PG's 63-byte identifier limit, which PG would silently truncate and break row decoding.
+ * these idents are user strings, so embedded quotes are escaped like PG's own quote_ident, which
+ * keeps display-name keys (`select: { "Book Count": ... }`) working. Names longer than PG's 63-byte
+ * identifier limit are still rejected: PG would silently truncate them and break row decoding.
  */
 export function safeKq(ident: string): string {
-  if (!/^\w+$/.test(ident)) throw new Error(`Invalid identifier '${ident}'`);
   if (ident.length > 63) throw new Error(`Identifier '${ident}' is longer than PG's 63-byte limit`);
-  return kq(ident);
+  if (!ident.includes('"')) return kq(ident);
+  return `"${ident.replaceAll('"', '""')}"`;
 }
 
 export function kqDot(alias: string, column: string): string {

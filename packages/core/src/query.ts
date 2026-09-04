@@ -700,10 +700,21 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
 
   // 3. Prune.
   const kept = pruneJoins(q, from, joins, [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined));
+  // Joins emit in declaration order, so an ON may only reference sources declared before it; a forward
+  // reference would reach PG as invalid SQL ("missing FROM-clause entry"). Reordering is not offered:
+  // it is not semantics-preserving once INNER and LEFT joins mix, and the caller's fix is trivial.
+  const laterAliases = new Set(kept.map((j) => j.source.alias));
   for (const j of kept) {
     if (!j.userOn) {
       fail(
         `Join ${describeHandle(j.source.handle)} has no ON condition left (they all pruned), but the query still references it`,
+      );
+    }
+    laterAliases.delete(j.source.alias);
+    const forward = j.fullOn!.refs.map(baseAlias).find((r) => laterAliases.has(r));
+    if (forward) {
+      fail(
+        `Join ${describeHandle(j.source.handle)} references '${forward}', which is joined later; move that join earlier in the join array`,
       );
     }
   }

@@ -627,6 +627,21 @@ describe("EntityManager.rawQueries", () => {
       ).rejects.toThrow("has no ON condition left");
     });
 
+    it("rejects a join whose ON references a later join", async () => {
+      const em = newEntityManager();
+      const [a, b, br] = aliases(Author, Book, BookReview);
+      await expect(
+        em.query({
+          from: a,
+          join: [
+            { left: br, on: br.book.eq(b.id) },
+            { left: b, on: b.author.eq(a.id) },
+          ],
+          select: { rating: br.rating },
+        }),
+      ).rejects.toThrow("is joined later; move that join earlier");
+    });
+
     // From em-query-cnage-requests.ts: the original grew its joins imperatively (`if (x) query.leftJoin(...)`);
     // here every join is declared once and only the referenced ones survive
     it("declares many optional joins once and keeps only the referenced ones", async () => {

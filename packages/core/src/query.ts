@@ -715,12 +715,14 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   for (const extra of from.extraJoins) out.push({ sql: ` ${extra}`, bindings: [], refs: [] });
   for (const j of kept) {
     const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
+    // A CTI subtype's physical base-table joins go *inside* a parenthesized join item: the ON can
+    // reference the base alias (i.e. `sp.id` renders as `sp_b0.id`), so the subtree must join first
+    const source = j.source.extraJoins.length > 0 ? `(${j.source.sql} ${j.source.extraJoins.join(" ")})` : j.source.sql;
     out.push({
-      sql: ` ${keyword} ${j.source.sql} ON ${j.fullOn!.sql}`,
+      sql: ` ${keyword} ${source} ON ${j.fullOn!.sql}`,
       bindings: [...j.source.bindings, ...j.fullOn!.bindings],
       refs: [],
     });
-    for (const extra of j.source.extraJoins) out.push({ sql: ` ${extra}`, bindings: [], refs: [] });
   }
   if (where) out.push({ sql: ` WHERE ${where.sql}`, bindings: where.bindings, refs: [] });
   if (groupBys.length > 0)

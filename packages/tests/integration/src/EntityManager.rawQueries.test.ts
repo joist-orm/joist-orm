@@ -119,6 +119,33 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("joins", () => {
+    it("adds CTI physical-table joins only as needed", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      const em = newEntityManager();
+      const [a, p] = aliases(Author, Publisher);
+      const sp = alias(SmallPublisher);
+      resetQueryCount();
+      // Joining the CTI base adds no subtype joins; those only serve entity-mode hydration of a `from`
+      const viaBase = await em.query({
+        from: a,
+        join: [{ inner: p, on: a.publisher.eq(p.id) }],
+        select: { name: p.name },
+      });
+      expect(viaBase).toEqual([{ name: "p1" }]);
+      // Joining a CTI subtype adds just its base-table join, so base-declared columns (name) resolve
+      const viaSubtype = await em.query({
+        from: a,
+        join: [{ inner: sp, on: a.publisher.eq(sp.id) }],
+        select: { name: sp.name },
+      });
+      expect(viaSubtype).toEqual([{ name: "p1" }]);
+      expect(queries).toEqual([
+        "SELECT p.name AS name FROM authors AS a JOIN publishers AS p ON a.publisher_id = p.id WHERE a.deleted_at IS NULL",
+        "SELECT sp_b0.name AS name FROM authors AS a JOIN (small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id) ON a.publisher_id = sp_b0.id WHERE a.deleted_at IS NULL",
+      ]);
+    });
+
     it("can inner join with an on condition, in either direction", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });

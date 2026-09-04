@@ -6,6 +6,7 @@ import {
   JoinTableHandle,
   type M2mJoinTable,
   aliasMgmt,
+  collectionJoin,
   getAliasMetadata,
   getAliasMgmt,
   isAlias,
@@ -665,11 +666,17 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
     const alias = kind === "inner" ? j.inner : j.left;
     const keep = j.keep ?? false;
-    const target = { kind, keep, on: j.on, source: registerSource(alias, ctx, assigner, false) };
+    // Only collection sugar joins (o2m/m2m) filter soft-deletes, em.find's relation semantics:
+    // references (m2o/o2o/poly) resolve soft-deleted entities, and explicit joins are the user's own
+    const softDeletes = (j as any)[collectionJoin] === true;
+    const target = { kind, keep, on: j.on, softDeletes, source: registerSource(alias, ctx, assigner, false) };
     // A sugar m2m join (`a.tags.as(t)`) carries a hidden join-table join; emit it first, with the same kind
     const m2m: M2mJoinTable | undefined = (j as any)[m2mJoinTable];
     if (!m2m) return [target];
-    return [{ kind, keep, on: m2m.on, source: registerJoinTable(m2m.handle, ctx, assigner) }, target];
+    return [
+      { kind, keep, on: m2m.on, softDeletes: false, source: registerJoinTable(m2m.handle, ctx, assigner) },
+      target,
+    ];
   });
 
   // 2. Generate SQL.
@@ -679,7 +686,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
     const source = j.source();
     // `userOn` is the user's ON alone, so the collapsed-ON check below is not fooled by injections
     const userOn = conditionToSql(j.on, ctx, true);
-    const injected = injectedConditions(source, softDeletes);
+    const injected = injectedConditions(source, j.softDeletes ? softDeletes : "include");
     const fullOn = userOn && injected.length > 0 ? conditionToSql({ and: [j.on, ...injected] }, ctx, true) : userOn;
     return { kind: j.kind, keep: j.keep, source, userOn, fullOn };
   });

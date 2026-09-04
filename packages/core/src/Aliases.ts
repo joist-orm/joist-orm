@@ -799,6 +799,13 @@ export function getMaybeCtiAlias(
   return `${newAlias}${field.aliasSuffix}`;
 }
 
+/**
+ * Marks a sugar join entry whose target is a *collection* (o2m/m2m), which filter soft-deletes like
+ * em.find's "collections filter out soft-deletes, but m2o/o2o references still return them"; see
+ * `QueryParser.addSoftDeleteCondition`'s call site. Reference joins and explicit joins are unmarked.
+ */
+export const collectionJoin: unique symbol = Symbol("joist.collectionJoin");
+
 /** Marks a sugar m2m join entry (`a.tags.as(t)`) with its hidden join-table join; `parseQuery` expands it. */
 export const m2mJoinTable: unique symbol = Symbol("joist.m2mJoinTable");
 
@@ -846,7 +853,11 @@ class OneToManyAliasImpl extends AbstractCollectionAlias {
   }
 
   protected joinEntry(kind: JoinKind, other: Alias<any>): object {
-    return { [kind]: other, on: (other as any)[this.field.otherFieldName].eq(this.proxy.id) };
+    const { field } = this;
+    const on = (other as any)[field.otherFieldName].eq(this.proxy.id);
+    // o2m collections filter soft-deletes like em.find; o2o references resolve them
+    const filtered = field.kind === "o2m" && field.softDeletes !== "include";
+    return { [kind]: other, on, [collectionJoin]: filtered };
   }
 }
 
@@ -882,7 +893,13 @@ class ManyToManyAliasImpl extends AbstractCollectionAlias {
       const id = otherId.toSql(ctx);
       return { sql: `${id.sql} = ${kqDot(jtAlias, otherColumn)}`, bindings: id.bindings, refs: [...id.refs, jtAlias] };
     });
-    return { [kind]: other, on, [m2mJoinTable]: { handle: jt, on: jtOn } satisfies M2mJoinTable };
+    const filtered = this.field.softDeletes !== "include";
+    return {
+      [kind]: other,
+      on,
+      [collectionJoin]: filtered,
+      [m2mJoinTable]: { handle: jt, on: jtOn } satisfies M2mJoinTable,
+    };
   }
 }
 

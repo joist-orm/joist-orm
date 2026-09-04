@@ -200,7 +200,7 @@ Two things to know:
 
 ## Soft Deletes
 
-`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a joined one gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row. The injected conditions never keep an otherwise-pruned join alive, and subqueries apply their own injection.
+`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a *collection* sugar join (o2m/m2m, unless the relation is configured `softDeletes: "include"`) gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row. Reference sugar joins (m2o/o2o/poly) and explicit joins are **not** filtered, matching `em.find`'s relation semantics: `book.author.get` resolves a soft-deleted author, so joining through one should not drop the book — add a `deletedAt` condition to the `on` yourself if you want one. The injected conditions never keep an otherwise-pruned join alive, and subqueries apply their own injection.
 
 Opt out per query with `softDeletes: "include"`:
 

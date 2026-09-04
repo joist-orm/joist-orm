@@ -127,7 +127,7 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ "Book Count": null, [evil]: "a1" }]);
       // PG silently truncates identifiers over 63 bytes, which would break decoding, so those fail fast
       await expect(em.query({ from: a, select: { ["x".repeat(64)]: a.firstName } } as any)).rejects.toThrow(
-        "longer than PG's 63-byte limit",
+        new Error(`Identifier '${"x".repeat(64)}' is longer than PG's 63-byte limit`),
       );
     });
   });
@@ -384,7 +384,7 @@ describe("EntityManager.rawQueries", () => {
       const em = newEntityManager();
       const [a, b, t] = aliases(Author, Book, Tag);
       await expect(em.query({ from: b, join: [a.tags.as(t)], select: { tag: t.name } })).rejects.toThrow(
-        "is not in this query's from/join",
+        new Error("Alias for authors is not in this query's from/join"),
       );
     });
   });
@@ -624,7 +624,9 @@ describe("EntityManager.rawQueries", () => {
       const authorId: string | undefined = undefined;
       await expect(
         em.query({ from: a, join: [{ inner: b, on: b.author.eq(authorId) }], select: { title: b.title } }),
-      ).rejects.toThrow("has no ON condition left");
+      ).rejects.toThrow(
+        new Error("Join Alias for books has no ON condition left (they all pruned), but the query still references it"),
+      );
     });
 
     it("rejects a join whose ON references a later join", async () => {
@@ -639,7 +641,11 @@ describe("EntityManager.rawQueries", () => {
           ],
           select: { rating: br.rating },
         }),
-      ).rejects.toThrow("is joined later; move that join earlier");
+      ).rejects.toThrow(
+        new Error(
+          "Join Alias for book_reviews references 'b', which is joined later; move that join earlier in the join array",
+        ),
+      );
     });
 
     // From em-query-cnage-requests.ts: the original grew its joins imperatively (`if (x) query.leftJoin(...)`);
@@ -731,7 +737,7 @@ describe("EntityManager.rawQueries", () => {
       const [a] = aliases(Author);
       await expect(
         em.query({ from: a, select: { name: a.firstName }, orderBy: { lastName: "ASC" } as any }),
-      ).rejects.toThrow("orderBy key 'lastName' is not a key of select");
+      ).rejects.toThrow(new Error("orderBy key 'lastName' is not a key of select"));
     });
 
     it("rejects an invalid orderBy nulls", async () => {
@@ -739,7 +745,7 @@ describe("EntityManager.rawQueries", () => {
       const [a] = aliases(Author);
       await expect(
         em.query({ from: a, select: { name: a.firstName }, orderBy: [{ asc: a.firstName, nulls: "last;--" as any }] }),
-      ).rejects.toThrow("Invalid orderBy nulls");
+      ).rejects.toThrow(new Error("Invalid orderBy nulls 'last;--'"));
     });
 
     it("rejects an invalid orderBy direction", async () => {
@@ -747,7 +753,7 @@ describe("EntityManager.rawQueries", () => {
       const [a] = aliases(Author);
       await expect(
         em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "ASC; DROP TABLE" as any } }),
-      ).rejects.toThrow("Invalid orderBy direction");
+      ).rejects.toThrow(new Error("Invalid orderBy direction 'ASC; DROP TABLE'"));
     });
 
     it("can order with nulls last, limit, and offset", async () => {
@@ -956,7 +962,9 @@ describe("EntityManager.rawQueries", () => {
     it("rejects an in subquery that does not select an id or FK column", () => {
       const [c, b] = aliases(Comment, Book);
       // The check runs eagerly, when the condition is built, not when the query runs
-      expect(() => c.parent.in(query({ from: b, select: b.title }) as any)).toThrow("`in` needs an id or FK column");
+      expect(() => c.parent.in(query({ from: b, select: b.title }) as any)).toThrow(
+        new Error("parent `in` needs an id or FK column, got title"),
+      );
     });
   });
 

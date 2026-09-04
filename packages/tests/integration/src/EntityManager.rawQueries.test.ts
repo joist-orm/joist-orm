@@ -606,6 +606,21 @@ describe("EntityManager.rawQueries", () => {
       ]);
     });
 
+    it("does not mistake a subquery named like a CTI alias for one", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      // Physical CTI aliases (sp_b0) are tracked explicitly, not recognized by shape, so this
+      // join must survive pruning instead of having its refs credited to a phantom "book" alias
+      const sub = query({ from: a, select: { id: a.id, name: a.firstName }, as: "book_b0" });
+      const rows = await em.query({
+        from: a,
+        join: [{ inner: sub, on: sub.id.eq(a.id) }],
+        select: { name: sub.name },
+      });
+      expect(rows).toEqual([{ name: "a1" }]);
+    });
+
     it("keeps a join pinned with keep", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

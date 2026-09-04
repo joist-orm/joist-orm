@@ -568,11 +568,15 @@ function toQuery(arg: unknown): AnyQuery {
 class Ctx implements ExprContext {
   private aliases = new Map<object, string>();
   readonly outerRefs = new Set<string>();
+  /** Physical CTI table aliases (`sp_b0`) to their source alias (`sp`), shared across the whole parse. */
+  readonly ctiAliases: Map<string, string>;
 
   constructor(
     readonly assigner: AliasAssigner,
     private parent: Ctx | undefined,
-  ) {}
+  ) {
+    this.ctiAliases = parent?.ctiAliases ?? new Map();
+  }
 
   register(handle: object, alias: string): void {
     this.aliases.set(handle, alias);
@@ -712,7 +716,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
       );
     }
     laterAliases.delete(j.source.alias);
-    const forward = j.fullOn!.refs.map(baseAlias).find((r) => laterAliases.has(r));
+    const forward = j.fullOn!.refs.find((r) => laterAliases.has(r));
     if (forward) {
       fail(
         `Join ${describeHandle(j.source.handle)} references '${forward}', which is joined later; move that join earlier in the join array`,
@@ -792,6 +796,12 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
     const alias = assigner.getAlias(meta.tableName);
     handle.setAlias(meta, alias);
     ctx.register(handle, alias);
+    // Record the physical CTI table aliases this source emits (i.e. `sp_b0`), so `refsOf` can credit
+    // their refs to this alias exactly; a user subquery named `book_b0` must not be mistaken for one
+    if (meta.inheritanceType === "cti") {
+      meta.baseTypes.forEach((_, i) => ctx.ctiAliases.set(`${alias}_b${i}`, alias));
+      if (isPrimary) meta.subTypes.forEach((_, i) => ctx.ctiAliases.set(`${alias}_s${i}`, alias));
+    }
     return () => {
       const cti: ParsedFindQuery = { selects: [], tables: [], orderBys: [] };
       addTablePerClassJoinsAndClassTag(cti, meta, alias, isPrimary);
@@ -975,23 +985,18 @@ function conditionToSql(cond: ExpressionCondition | undefined, ctx: Ctx, topLeve
   if (!parsed) return undefined;
   const where = buildWhereClause(parsed, topLevel);
   if (!where) return undefined;
-  return { sql: where[0], bindings: where[1], refs: refsOf(parsed) };
+  return { sql: where[0], bindings: where[1], refs: refsOf(parsed, ctx) };
 }
 
 function isFilter(cond: ExpressionCondition): cond is ExpressionFilter {
   return ("and" in cond && cond.and !== undefined) || ("or" in cond && cond.or !== undefined);
 }
 
-/** The aliases a parsed condition tree references, normalized to their base (non-CTI-suffixed) alias. */
-function refsOf(parsed: ParsedExpressionFilter): string[] {
+/** The aliases a parsed condition tree references, with physical CTI aliases credited to their source. */
+function refsOf(parsed: ParsedExpressionFilter, ctx: Ctx): string[] {
   return deepFindConditions(parsed, false)
     .flatMap((c) => (c.kind === "column" ? [c.alias] : c.kind === "raw" ? c.aliases : c.outerAliases))
-    .map(baseAlias);
-}
-
-/** `a_b0` (a CTI base table) and `a_s1` (a CTI sub table) both belong to alias `a`. */
-function baseAlias(alias: string): string {
-  return alias.replace(/_[bs]\d+$/, "");
+    .map((a) => ctx.ctiAliases.get(a) ?? a);
 }
 
 /**
@@ -1012,7 +1017,7 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
   if (q.pruneJoins === false) return joins;
   const deps = new Map<string, string[]>();
   for (const j of joins) {
-    const refs = [...(j.userOn?.refs ?? []), ...j.source.refs].map(baseAlias).filter((r) => r !== j.source.alias);
+    const refs = [...(j.userOn?.refs ?? []), ...j.source.refs].filter((r) => r !== j.source.alias);
     deps.set(j.source.alias, refs);
   }
   const required = new Set<string>();
@@ -1022,7 +1027,7 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
     for (const dep of deps.get(alias) ?? []) markRequired(dep);
   }
   markRequired(from.alias);
-  for (const r of used.flatMap((u) => u.refs)) markRequired(baseAlias(r));
+  for (const r of used.flatMap((u) => u.refs)) markRequired(r);
   for (const j of joins) if (j.keep) markRequired(j.source.alias);
   return joins.filter((j) => required.has(j.source.alias));
 }

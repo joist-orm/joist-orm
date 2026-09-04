@@ -452,7 +452,8 @@ class SubqueryColumnExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
-    return { sql: `${kq(alias)}.${safeKq(this.key)}`, bindings: [], refs: [alias] };
+    // safeKq for the alias too: a subquery's canonical alias is its user-provided `as` name
+    return { sql: `${safeKq(alias)}.${safeKq(this.key)}`, bindings: [], refs: [alias] };
   }
 
   decode(value: unknown): unknown {
@@ -883,7 +884,7 @@ function selectsToSql(
     const alias = ctx.aliasFor(handle);
     const keys = handle.columnKeys();
     const selects = keys.map((k) => ({
-      sql: `${kq(alias)}.${safeKq(k)} AS ${safeKq(k)}`,
+      sql: `${safeKq(alias)}.${safeKq(k)} AS ${safeKq(k)}`,
       bindings: [],
       refs: [alias],
     }));

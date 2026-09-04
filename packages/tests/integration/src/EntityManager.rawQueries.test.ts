@@ -116,6 +116,24 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "p2" }]);
     });
 
+    it("escapes quotes in subquery as names, in declarations and references", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      // A quoted `as` name must stay one identifier at its declaration *and* every reference
+      // (column refs, select-star), not break out into new SQL
+      const evil = query({ from: a, select: { name: a.firstName }, as: 'x" --' });
+      resetQueryCount();
+      const star = await em.query({ from: evil, select: evil });
+      const column = await em.query({ from: evil, select: { n: evil.name }, orderBy: [{ asc: evil.name }] });
+      expect(star).toEqual([{ name: "a1" }]);
+      expect(column).toEqual([{ n: "a1" }]);
+      expect(queries).toEqual([
+        'SELECT "x"" --".name AS name FROM (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) AS "x"" --"',
+        'SELECT "x"" --".name AS n FROM (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) AS "x"" --" ORDER BY "x"" --".name ASC',
+      ]);
+    });
+
     it("escapes quotes in select keys, so display-name keys work", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();

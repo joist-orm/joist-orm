@@ -564,6 +564,39 @@ describe("ReactiveField", () => {
     }
   });
 
+  it("reacts to soft deletion and resurrection through recursive relations", async () => {
+    // Given three Authors in a mentor chain with current persisted reactive fields
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    // And a2 is both a mentee of a1 and a mentor of a3
+    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 });
+    // And a3 observes both ancestors through mentorsRecursive
+    newAuthor(em, { firstName: "a3", mentor: a2 });
+    await em.flush();
+
+    // When the middle Author is soft-deleted without changing its name or mentor
+    a2.softDelete();
+    await em.flush();
+
+    // Then a1 loses the branch, while a3 still sees a1 through its soft-deleted mentor
+    expect(await select("authors")).toMatchObject([
+      { id: 1, mentee_names: null },
+      { id: 2, mentor_names: "a1", mentee_names: "a3" },
+      { id: 3, mentor_names: "a1" },
+    ]);
+
+    // When the middle Author is resurrected
+    a2.deletedAt = undefined;
+    await em.flush();
+
+    // Then both recursive directions have their original membership
+    expect(await select("authors")).toMatchObject([
+      { id: 1, mentee_names: "a2, a3" },
+      { id: 2, mentor_names: "a1", mentee_names: "a3" },
+      { id: 3, mentor_names: "a2, a1" },
+    ]);
+  });
+
   it("throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
     const em = newEntityManager();
     newBook(em, { author: noValue() });

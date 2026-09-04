@@ -1,8 +1,31 @@
-import { insertAuthor, insertBook, insertComment, insertPublisher, insertTag } from "src/entities/inserts";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertLargePublisher,
+  insertPublisher,
+  insertPublisherGroup,
+  insertTag,
+  select,
+  update,
+} from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 import { zeroTo } from "src/utils";
 
-import { Author, Book, Comment, Publisher, Tag, newAuthor, newBook, newPublisher, newTag } from "./entities";
+import {
+  Author,
+  Book,
+  Comment,
+  LargePublisher,
+  Publisher,
+  PublisherGroup,
+  Tag,
+  newAuthor,
+  newBook,
+  newPublisher,
+  newTag,
+} from "./entities";
 import { jan1 } from "./testDates";
 
 describe("EntityManager.findOrCreate", () => {
@@ -127,6 +150,71 @@ describe("EntityManager.findOrCreate", () => {
 
     const rows = await em.find(Author, { ssn: "123" }, { softDeletes: "include" });
     expect(rows).toMatchEntity([{ id: "a:1", deletedAt: undefined }]);
+  });
+
+  it("recalculates rootMentor when resurrecting an Author", async () => {
+    // Given a soft-deleted mentor
+    await insertAuthor({ id: 1, first_name: "a1", ssn: "123", deleted_at: jan1 });
+    // And a mentee whose rootMentor is unset because its only ancestor is soft-deleted
+    await insertAuthor({ id: 2, first_name: "a2", mentor_id: 1 });
+    const em = newEntityManager();
+
+    // When resurrection also updates graduated, which does not independently trigger rootMentor
+    const mentor = await em.findOrCreate(Author, { ssn: "123" }, { firstName: "a1" }, { graduated: jan1 });
+    await em.flush();
+
+    // Then the simultaneous graduated update is applied to the resurrected mentor
+    expect(mentor).toMatchEntity({ id: "a:1", graduated: jan1, deletedAt: undefined });
+
+    // Then the mentee's rootMentor is the resurrected Author
+    expect(await select("authors")).toMatchObject([
+      { id: 1, graduated: jan1, deleted_at: null },
+      { id: 2, root_mentor_id: 1 },
+    ]);
+  });
+
+  it("recalculates the old PublisherGroup when resurrecting and moving a LargePublisher", async () => {
+    // Given the original PublisherGroup pg1
+    await insertPublisherGroup({ id: 1, name: "pg1" });
+    // And an empty destination PublisherGroup pg2
+    await insertPublisherGroup({ id: 2, name: "pg2" });
+    // And pg1's stored count includes the review below even while its publisher is soft-deleted,
+    // because the query uses m2o joins
+    await update("publisher_groups", { id: 1, number_of_book_reviews_formatted: "count=1" });
+    // And an Author to satisfy LargePublisher's required spotlightAuthor
+    await insertAuthor({ id: 1, first_name: "a1" });
+    // And a LargePublisher whose inherited group relation points to pg1
+    await insertLargePublisher({ id: 1, name: "lp1", group_id: 1, spotlight_author_id: 1 });
+    // And the Author belongs to that LargePublisher
+    await update("authors", { id: 1, publisher_id: 1 });
+    // And the Author has a Book
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    // And the Book has the review counted by pg1
+    await insertBookReview({ id: 1, book_id: 1, rating: 5 });
+    // And the LargePublisher is soft-deleted without changing its group
+    await update("publishers", { id: 1, deleted_at: jan1 });
+    // And the spotlight Author and destination PublisherGroup are loaded, but the original group is not
+    const em = newEntityManager();
+    const spotlightAuthor = await em.load(Author, "a:1");
+    const newGroup = await em.load(PublisherGroup, "pg:2");
+
+    // When findOrCreate resurrects the LargePublisher and moves it to pg2 in the same call
+    const publisher = await em.findOrCreate(
+      LargePublisher,
+      { name: "lp1" },
+      { rating: 5, spotlightAuthor },
+      { group: newGroup },
+    );
+    await em.flush();
+
+    // Then the LargePublisher is active and belongs to pg2
+    expect(publisher).toMatchEntity({ id: "p:1", group: newGroup, deletedAt: undefined });
+
+    // Then both PublisherGroups recalculate, removing the review from pg1's count and adding it to pg2's
+    expect(await select("publisher_groups")).toMatchObject([
+      { id: 1, number_of_book_reviews_formatted: "count=0" },
+      { id: 2, number_of_book_reviews_formatted: "count=1" },
+    ]);
   });
 
   it("findOrCreate doesn't compile if required field is missing", async () => {

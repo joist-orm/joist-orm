@@ -28,7 +28,26 @@ export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner.ts";
-export * from "./Aliases.ts";
+// Named exports only: Aliases.ts also exports em.query runtime internals (join-entry symbols,
+// JoinTableHandle) that must not become accidental semver commitments
+export {
+  alias,
+  aliases,
+  getAliasMetadata,
+  getAliasMgmt,
+  getMaybeCtiAlias,
+  isAlias,
+  newAliasProxy,
+  type Alias,
+  type AliasBrand,
+  type AliasFor,
+  type AliasMgmt,
+  type CollectionAlias,
+  type EntityAlias,
+  type PolyAlias,
+  type PrimitiveAlias,
+  type ReferenceAlias,
+} from "./Aliases.ts";
 export { BaseEntity, getInstanceData } from "./BaseEntity.ts";
 export { ConditionBuilder } from "./ConditionBuilder.ts";
 export { type Entity, type IdType, isEntity } from "./Entity.ts";

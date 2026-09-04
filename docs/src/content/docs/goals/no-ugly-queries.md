@@ -55,14 +55,12 @@ Granted, we don't want to undersell our `em.find` API (it is great), but nor hav
 
 That is just not Joist's strength--our strength is ergonomically representing complicated business domains, and enforcing complicated business constraints, and that is a hard enough problem as it is. :-) 
 
-Instead, we encourage you to use lower-level libraries like Knex for your app's custom queries.
+Instead, Joist provides [Raw Queries](../features/queries-raw) (`em.query`) for your app's custom queries.
 
 :::tip[Info]
 
-Obviously having multiple full-fledged libraries, i.e. Joist for the domain model and Kysley for low-level queries, is not a great solution, and probably overkill.
+`em.query` is deliberately a completely separate API from `em.find` — SQL-shaped object literals with group bys, aggregates, and subqueries — to avoid any slippery slopes to `em.find` becoming a leaky abstraction and creating "ugly queries".
 
-Personally, we use Knex for our low-level custom queries (those 5%), because it's lightweight and sufficiently ergonomic.
-
-Joist may eventually provide a "raw SQL" query builder, that is Knex-ish, but it will be a completely separate API from `em.find`, to avoid any slippery slopes to `em.find` becoming a leaky abstraction and creating "ugly queries".
+For anything it does not cover (i.e. `UNION`s), lower-level libraries like Knex remain a fine escape hatch.
 
 :::

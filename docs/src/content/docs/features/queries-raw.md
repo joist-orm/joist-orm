@@ -107,7 +107,7 @@ const rows = await em.query({
 });
 ```
 
-Conditions are also type-checked against the query's scope: selecting or comparing a column from an alias that is neither `from` nor in `join` is a compile error that names the missing alias.
+A POJO `select` is also type-checked against the query's scope: selecting a column from an alias that is neither `from` nor in `join` is a compile error that names the missing alias. (Conditions in `where`/`having`/`orderBy` are not scope-checked at compile time; an out-of-scope alias there fails at runtime, with the same message.)
 
 
 ## Joins

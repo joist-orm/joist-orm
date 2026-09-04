@@ -42,6 +42,7 @@ import {
   type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   filterSoftDeletes,
+  lazyExcludedSelects,
   stiSubtypeFilter,
 } from "./QueryParser.ts";
 import { fail } from "./utils.ts";
@@ -786,7 +787,11 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
         if (t.join !== "outer") return fail(`Unexpected ${t.join} join for CTI`);
         return `LEFT OUTER JOIN ${kq(t.table)} AS ${kq(t.alias)} ON ${t.col1} = ${t.col2}`;
       });
-      const entitySelects = cti.selects.length > 0 ? (cti.selects as string[]) : [kqStar(alias)];
+      // Entity mode starts with the primary table's own columns (excluding lazy ones, like em.find)
+      // and *appends* the CTI base/sub-table columns and the __class tag; the CTI selects alone would
+      // drop the selected table's own fields, i.e. a Publisher would hydrate with an undefined name
+      const primarySelects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
+      const entitySelects = [...primarySelects, ...(cti.selects as string[])];
       return {
         handle,
         alias,

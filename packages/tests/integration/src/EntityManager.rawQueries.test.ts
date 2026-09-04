@@ -85,12 +85,26 @@ describe("EntityManager.rawQueries", () => {
 
     it("hydrates CTI subtypes in entity mode", async () => {
       await insertPublisher({ id: 1, name: "small" });
-      await insertLargePublisher({ id: 2, name: "large" });
+      await insertLargePublisher({ id: 2, name: "large", country: "us" });
       const em = newEntityManager();
       const [p] = aliases(Publisher);
       const publishers = await em.query({ from: p, select: p, orderBy: [{ asc: p.id }] });
       expect(publishers[0]).toBeInstanceOf(SmallPublisher);
       expect(publishers[1]).toBeInstanceOf(LargePublisher);
+      // The base table's own columns must be selected too, not just the sub-table columns + __class
+      expect(publishers[0].name).toBe("small");
+      expect((publishers[1] as LargePublisher).country).toBe("us");
+    });
+
+    it("hydrates a CTI subtype from with its own and base fields", async () => {
+      await insertPublisher({ id: 1, name: "p1", city: "sf" });
+      const em = newEntityManager();
+      const sp = alias(SmallPublisher);
+      const [publisher] = await em.query({ from: sp, select: sp });
+      expect(publisher).toBeInstanceOf(SmallPublisher);
+      // `name` lives on the base publishers table, `city` on small_publishers; both must hydrate
+      expect(publisher.name).toBe("p1");
+      expect(publisher.city).toBe("sf");
     });
 
     it("can filter a CTI subtype alias on a base-table field", async () => {

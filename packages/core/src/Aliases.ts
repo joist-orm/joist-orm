@@ -10,6 +10,7 @@ import {
   type Field,
   type ManyToManyField,
   type ManyToOneField,
+  type LargeOneToManyField,
   type OneToManyField,
   type OneToOneField,
   type PolymorphicField,
@@ -283,6 +284,7 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
           return new PolyReferenceAlias(meta, callbacks, field);
         case "o2m":
         case "o2o":
+        case "lo2m":
           return new OneToManyAliasImpl(proxy, field);
         case "m2m":
           return new ManyToManyAliasImpl(proxy, field);
@@ -843,11 +845,11 @@ abstract class AbstractCollectionAlias {
   protected abstract joinEntry(kind: JoinKind, other: Alias<any>): object;
 }
 
-/** An o2m/o2o relation: the ON is the other side's FK (an m2o or a poly component) back to our id. */
+/** An o2m/lo2m/o2o relation: the ON is the other side's FK (an m2o or a poly component) back to our id. */
 class OneToManyAliasImpl extends AbstractCollectionAlias {
   constructor(
     private proxy: any,
-    private field: OneToManyField | OneToOneField,
+    private field: OneToManyField | LargeOneToManyField | OneToOneField,
   ) {
     super();
   }
@@ -855,8 +857,8 @@ class OneToManyAliasImpl extends AbstractCollectionAlias {
   protected joinEntry(kind: JoinKind, other: Alias<any>): object {
     const { field } = this;
     const on = (other as any)[field.otherFieldName].eq(this.proxy.id);
-    // o2m collections filter soft-deletes like em.find; o2o references resolve them
-    const filtered = field.kind === "o2m" && field.softDeletes !== "include";
+    // Collections (o2m/lo2m) filter soft-deletes like em.find; o2o references resolve them
+    const filtered = field.kind === "o2m" ? field.softDeletes !== "include" : field.kind === "lo2m";
     return { [kind]: other, on, [collectionJoin]: filtered };
   }
 }

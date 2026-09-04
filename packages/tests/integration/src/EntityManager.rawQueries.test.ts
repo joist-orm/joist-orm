@@ -5,8 +5,10 @@ import {
   BookRange,
   BookReview,
   Comment,
+  Critic,
   LargePublisher,
   Publisher,
+  PublisherGroup,
   PublisherSize,
   SmallPublisher,
   Tag,
@@ -21,8 +23,10 @@ import {
   insertBook,
   insertBookReview,
   insertComment,
+  insertCritic,
   insertLargePublisher,
   insertPublisher,
+  insertPublisherGroup,
   insertTag,
   insertTask,
   insertTaskItem,
@@ -238,6 +242,20 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("relationship join sugar", () => {
+    it("joins a large collection like any o2m", async () => {
+      await insertPublisherGroup({ name: "pg1" });
+      await insertCritic({ name: "c1", group_id: 1 });
+      const em = newEntityManager();
+      const [pg, c] = aliases(PublisherGroup, Critic);
+      resetQueryCount();
+      // A large o2m only restricts the in-memory collection (no full .load); its SQL join is a plain o2m
+      const rows = await em.query({ from: pg, join: [pg.critics.as(c)], select: { group: pg.name, critic: c.name } });
+      expect(rows).toEqual([{ group: "pg1", critic: "c1" }]);
+      expect(queries).toEqual([
+        "SELECT pg.name AS \"group\", c.name AS critic FROM publisher_groups AS pg LEFT OUTER JOIN critics AS c ON c.group_id = pg.id",
+      ]);
+    });
+
     it("joins a collection as a left join by default", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

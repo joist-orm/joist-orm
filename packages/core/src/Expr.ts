@@ -466,8 +466,13 @@ export class RefExpr extends BaseExpr {
 /**
  * A `sql` tagged template.
  *
- * Interpolated expressions use the alias Joist assigned, conditions become SQL, and every
- * other value becomes a `?` binding, so users never write `"a.age * 2"` and hope `a` is the SQL alias.
+ * For an Author alias `a` assigned the SQL alias `a1`:
+ *
+ * ```ts
+ * sql`${a.age} * 2`     // Expression: a1.age * 2
+ * sql`${a.age.gte(18)}` // Condition: (a1.age >= ?), bindings [18]
+ * sql`${"Alice"}`      // Value: ?, bindings ["Alice"]
+ * ```
  */
 export class TemplateExpr extends BaseExpr {
   constructor(

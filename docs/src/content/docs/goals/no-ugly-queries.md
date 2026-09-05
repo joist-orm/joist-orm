@@ -53,7 +53,7 @@ Specifically, today `em.find` does not support:
 
 Granted, we don't want to undersell our `em.find` API (it is great), but nor have we set out to "build a DSL to create every SQL query ever".
 
-That is just not `em.find`'s job--Joist's strength is ergonomically representing complicated business domains, and enforcing complicated business constraints, and that is a hard enough problem as it is. :-) 
+That is just not `em.find`'s job--Joist's strength is ergonomically representing complicated business domains, and enforcing complicated business constraints, and that is a hard enough problem as it is. :-)
 
 Instead, Joist provides [Raw Queries](../features/queries-raw) (`em.query`) for your app's custom queries.
 

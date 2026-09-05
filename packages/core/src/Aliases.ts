@@ -8,9 +8,9 @@ import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from ".
 import {
   type EntityMetadata,
   type Field,
+  type LargeOneToManyField,
   type ManyToManyField,
   type ManyToOneField,
-  type LargeOneToManyField,
   type OneToManyField,
   type OneToOneField,
   type PolymorphicField,
@@ -28,9 +28,9 @@ import {
   type SqlFragment,
   asNode,
   deferredCondition,
-  withDeferredAlias,
   isExpr,
   skipCondition,
+  withDeferredAlias,
 } from "./Expr.ts";
 import {
   type ExpressionCondition,

@@ -23,6 +23,7 @@ import {
   type ExprBrand,
   type ExprContext,
   type ExprLike,
+  type ExprOutputType,
   type InnerJoin,
   type LeftJoin,
   RefExpr,
@@ -183,9 +184,234 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
 }
 
 /** A whole query: `Clauses` plus its source. `query(q)` turns it into a value; `em.query(q)` runs it. */
-export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins> extends Clauses<S, J> {
+export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins>
+  extends Clauses<S, J>, Partial<Record<SetOperation, never>> {
   from: QuerySource;
 }
+
+/**
+ * The six PostgreSQL set operations. Each compound root has exactly one operation.
+ *
+ * I.e. `union` removes duplicate projected Author names; `unionAll` keeps every copy.
+ */
+export type SetOperation = "union" | "unionAll" | "intersect" | "intersectAll" | "except" | "exceptAll";
+
+/**
+ * For set operations like UNION, this is one read operand with named POJO columns: an ordinary query,
+ * a reusable query value, or another compound.
+ * Scalar queries, expressions, and entity hydration are excluded.
+ *
+ * I.e. `{ from: a, select: { id: a.id } }` and its `query(...)` value can contribute Author IDs to a
+ * union. `{ from: a, select: a.id }` cannot: even one-column set operands must give that column a name.
+ */
+export type SetOperand =
+  | Query<Record<string, ExprLike<unknown>> | Subquery<unknown, string>>
+  | Subquery<unknown, string>
+  | SetQuery<readonly SetOperand[]>;
+
+/**
+ * SQL-shaped compound input; use `satisfies SetQuery` to retain the operands' literal row types.
+ *
+ * I.e. for Author alias `a` and Book alias `b`:
+ * ```ts
+ * const names = {
+ *   union: [
+ *     { from: a, select: { name: a.firstName } },
+ *     { from: b, select: { name: b.title } },
+ *   ],
+ *   orderBy: { name: "ASC" },
+ * } satisfies SetQuery;
+ * ```
+ *
+ * The default operand tuple requires at least two reads. `query` and `em.query` also infer dynamically
+ * sized arrays; `CheckSetQuery` validates their row types, and runtime validation checks their length.
+ * This input shape checks direction values; `CheckSetQuery` checks the inferred output keys in orderBy.
+ */
+export type SetQuery<Operands extends readonly SetOperand[] = readonly [SetOperand, SetOperand, ...SetOperand[]]> = {
+  // Each K creates one alternative, i.e. required `union` with the other five operation keys forbidden.
+  [K in SetOperation]: { readonly [P in K]: Operands } & { readonly [P in Exclude<SetOperation, K>]?: never };
+}[SetOperation] & {
+  // These clauses belong to the combined rows, not to an implicit first SELECT.
+  readonly orderBy?:
+    | Readonly<Record<string, OrderByDirection | undefined>>
+    | readonly (Readonly<Record<string, OrderByDirection | undefined>> | undefined)[];
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly as?: string;
+} & {
+  // SELECT clauses and branch policies must stay inside operands or an ordinary outer query.
+  readonly [
+    K in "from" | "select" | "join" | "where" | "groupBy" | "having" | "distinct" | "softDeletes" | "pruneJoins"
+  ]?: never;
+};
+
+/**
+ * Extracts the operand collection from each possible compound root, ignoring pagination and ordering.
+ *
+ * I.e. for `Q = { union: readonly [typeof authorNames, typeof bookNames]; limit: 10 }`, the result is
+ * `readonly [typeof authorNames, typeof bookNames]`. Distributing over Q also handles a runtime choice
+ * between different operations; Extract discards optional, unused operation keys whose value is undefined.
+ */
+type OperandsOf<Q> = Q extends unknown ? Extract<Q[keyof Q & SetOperation], readonly SetOperand[]> : never;
+
+/**
+ * Gets the left operand, which supplies canonical output keys and the retained row type for EXCEPT/INTERSECT.
+ *
+ * I.e. `FirstOperand<{ except: readonly [typeof authorNames, typeof bookNames] }>` is `typeof authorNames`.
+ * For a dynamic array, the exact first element is unknown, so this is the array's element type instead.
+ */
+type FirstOperand<Q> = OperandsOf<Q>[0];
+
+/**
+ * Resolves the named rows of an ordinary or compound read operand, including its LEFT join nullability.
+ *
+ * I.e. a query from Author `a` with a LEFT-joined Book `b` and `select: { title: b.title }` has row type
+ * `{ title: string | null }`, even though Book.title is required. A reusable `query(...)` value already
+ * stores that row type in its brand; a nested compound combines its own operands recursively.
+ */
+export type ReadQueryRow<Q> = SetOperand extends Q
+  ? // Stop at the general, recursive operand type: its projection is unknown, not an empty POJO.
+    unknown
+  : // Read the brand before inspecting `select`, which could itself be a named column on a query value.
+    Q extends { readonly [subqueryBrand]: { readonly __row: infer R } }
+    ? R
+    : Q extends { select: infer S }
+      ? // A declared Query<S, J> has an optional join property that still carries J's LEFT joins.
+        QueryRow<S, "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoins> : []>
+      : [OperandsOf<Q>] extends [never]
+        ? never
+        : SetQueryRow<Q>;
+
+/**
+ * UNION combines each column's values; INTERSECT and EXCEPT conservatively retain the left row.
+ *
+ * I.e. Author first names projected as `{ name: string }` unioned with LEFT-joined Book titles projected
+ * as `{ name: string | null }` produce `{ name: string | null }`. EXCEPT with those Author names on the
+ * left retains `{ name: string }`; it neither adds the right side's NULL nor promises narrower values.
+ *
+ * The outer conditional distributes over a TypeScript union of alternative queries. I.e. a runtime
+ * choice between an Author-name UNION and a Book-order EXCEPT must retain `{ name: string } | { order: number }`.
+ */
+export type SetQueryRow<Q> = Q extends unknown
+  ? {
+      // The first operand supplies keys; const/readonly input projections do not make result rows readonly.
+      -readonly [K in keyof ReadQueryRow<FirstOperand<Q>>]: ColumnValue<
+        // UNION can return values from any operand; EXCEPT/INTERSECT return values from the left.
+        Q extends { union: readonly SetOperand[] } | { unionAll: readonly SetOperand[] }
+          ? ReadQueryRow<OperandsOf<Q>[number]>
+          : ReadQueryRow<FirstOperand<Q>>,
+        K
+      >;
+    }
+  : never;
+
+/**
+ * Collects column K's value from each row alternative in R, rather than requiring K on every alternative.
+ *
+ * I.e. `ColumnValue<{ name: string } | { name: string | null }, "name">` is `string | null`.
+ * An alternative without K contributes never; `CompatibleRow` separately rejects mismatched operand keys.
+ */
+type ColumnValue<R, K extends PropertyKey> = R extends unknown ? (K extends keyof R ? R[K] : never) : never;
+
+/**
+ * Checks whether either non-null value type is assignable to the other, without requiring equal nullability.
+ *
+ * I.e. `CompatibleValue<number, number | null>` is true, while `CompatibleValue<AuthorId, BookId>` is false.
+ * This is only a TypeScript check: Author.age and Author.age.sum() both pass as numbers, but runtime
+ * output-type checks must still reject their different int4/int8 representations.
+ */
+type CompatibleValue<L, R> = [NonNullable<L>] extends [NonNullable<R>]
+  ? true
+  : [NonNullable<R>] extends [NonNullable<L>]
+    ? true
+    : false;
+
+/**
+ * Requires exactly the same output keys and compatible TypeScript values for every column.
+ *
+ * I.e. `L = { name: string; age: number }` and `R = { age: number | null; name: string }` are compatible despite
+ * key order and nullability. `{ name: string }` and `{ title: string }` are not. SQL representations and
+ * codec domains still need runtime validation; this boolean does not establish decoder compatibility.
+ */
+type CompatibleRow<L, R> = [keyof L] extends [keyof R]
+  ? // Checking both directions rejects missing and extra right-side keys, not just a shared subset.
+    [keyof R] extends [keyof L]
+    ? // Reduce the per-column flags to a union: any false rejects the complete row.
+      false extends { [K in keyof L]: CompatibleValue<L[K], ColumnValue<R, K>> }[keyof L]
+      ? false
+      : true
+    : false
+  : false;
+
+/**
+ * Produces a constraint for Q: unknown leaves a valid operand unchanged, while a message rejects it.
+ *
+ * I.e. First can select Author.firstName as `name` and Q can select Book.title as `name`. Both pass.
+ * Changing Q's key to `title` produces the key/value diagnostic. A nested compound must also pass its own
+ * arity and ordering checks, not merely expose a compatible result row.
+ */
+type CheckOperand<First, Q> =
+  CompatibleRow<ReadQueryRow<First>, ReadQueryRow<Q>> extends true
+    ? // Validate nested roots too, so an otherwise compatible one-operand UNION cannot hide inside Q.
+      Q extends SetQuery<readonly SetOperand[]>
+      ? CheckSetQuery<Q>
+      : unknown
+    : "set operands must have the same keys and compatible column values";
+
+/**
+ * Checks every operand against O[0] while preserving the collection's tuple shape and readonly modifier.
+ *
+ * I.e. compatible operands `O = readonly [typeof authorNames, typeof bookNames]` produce
+ * `readonly [unknown, unknown]` constraints. Mapping O directly preserves length instead of validating
+ * array methods and the length property as though they were additional query operands.
+ */
+type CheckOperands<O extends readonly SetOperand[]> = { readonly [I in keyof O]: CheckOperand<O[0], O[I]> };
+
+/**
+ * Restricts each ordering hash to Keys, including hashes supplied through variables or readonly arrays.
+ *
+ * I.e. with `Keys = "name"`, `{ name: "ASC" }` and `[undefined, { name: "DESC" }]` pass, but a `title`
+ * key receives a diagnostic. SetQuery already restricts direction values; this check does not replace them.
+ */
+type CheckSetOrder<O, Keys> = O extends readonly unknown[]
+  ? // Preserve each array entry so an invalid hash is reported at its own position.
+    { readonly [I in keyof O]: CheckSetOrder<O[I], Keys> }
+  : { readonly [K in keyof O]: K extends Keys ? unknown : "orderBy must name a set output column" };
+
+/**
+ * Validate known tuples and output ordering without widening the inferred operand projections.
+ * Preserve optional keys when TypeScript infers a runtime choice between different operations.
+ *
+ * I.e. `{ union: [authorNames] as const }` fails minimum arity; a `typeof authorNames[]` can pass the
+ * static checks but still needs a runtime length check. If authorNames and bookNames both expose only
+ * `name`, combining them with `orderBy: { title: "ASC" }` fails the output-key check.
+ *
+ * The result is intersected with the inferred input Q. Unknown constraints leave its literal types
+ * intact; error messages make the offending operands or ordering keys incompatible with that input.
+ */
+export type CheckSetQuery<Q extends SetQuery<readonly SetOperand[]>> = Q extends unknown
+  ? // A widened first operand has lost the output keys and values needed to validate the remaining reads.
+    SetOperand extends FirstOperand<Q>
+    ? "set operands were typed too generically; use `satisfies SetQuery` instead"
+    : {
+        // Map Q itself so unused optional operation keys stay optional for UNION-or-EXCEPT input types.
+        readonly [K in keyof Q]: K extends SetOperation
+          ? Q[K] extends readonly SetOperand[]
+            ? // Dynamic arrays retain their row types but defer minimum arity to runtime.
+              number extends Q[K]["length"]
+              ? CheckOperands<Q[K]>
+              : // A known tuple must guarantee two operands before any row comparisons can pass.
+                Q[K] extends readonly [SetOperand, SetOperand, ...SetOperand[]]
+                ? CheckOperands<Q[K]>
+                : "set operations require at least two operands"
+            : never
+          : // Non-operation clauses retain their inferred types; SetQuery already constrains their shapes.
+            unknown;
+      } & {
+        // Only the inferred output keys are legal here; expression ordering needs an outer SELECT.
+        readonly orderBy?: CheckSetOrder<Q["orderBy"], keyof ReadQueryRow<FirstOperand<Q>>>;
+      }
+  : never;
 
 // =====================================================================================================
 // Result-row types
@@ -293,8 +519,8 @@ export type QueryValue<S, J extends QueryJoins, Name extends string> = S extends
   readonly [aliasMgmt]: { readonly __entity: infer T extends Entity };
 }
   ? EntityQuery<T>
-  : S extends { readonly [exprBrand]: ExprBrand<infer R, any> }
-    ? Expr<R | null, never>
+  : S extends { readonly [exprBrand]: ExprBrand<unknown, any> }
+    ? Expr<QueryRow<S, J> | null, never>
     : Subquery<QueryRow<S, J>, Name>;
 
 /** The names of every alias in scope for a query: the source alias plus every joined alias. */
@@ -368,21 +594,25 @@ export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends Que
  * conservative (a left-joined anonymous table nullifies every anonymous table's columns) only among
  * themselves. This is the same collision two bare `alias(Author)` have.
  *
- * One signature, not three overloads: overloads wrapped every clauses-object mistake in "No overload
- * matches this call", hid `as` from completions, and cost 15-28% check time; the one thing they did
- * better, rejecting a `select` widened by a `: Query` annotation, `NotWidened` does with a clearer message.
+ * Ordinary SELECT shapes share one signature: separate scalar/entity/POJO overloads hid `as` from
+ * completions and cost 15-28% check time. The separate compound root has one additional signature;
+ * `NotWidened` still rejects a SELECT widened by a `: Query` annotation.
  */
+export function query<const Q extends SetQuery<readonly SetOperand[]>, Name extends string = "?">(
+  q: Q & CheckSetQuery<Q> & { as?: Name },
+): Subquery<SetQueryRow<Q>, Name>;
 export function query<
   F extends QuerySource,
   S extends QuerySelect = never,
   J extends QueryJoins = [],
   Name extends string = "?",
->(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name> {
-  const handle = new SubqueryHandle(q as AnyQuery);
-  const select = (q as AnyQuery).select;
-  if (isAlias(select)) {
+>(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name>;
+export function query(q: AnyReadQuery): unknown {
+  const handle = new SubqueryHandle(toQuery(q));
+  const output = handle.output();
+  if (output.kind === "entity") {
     return { [entityQueryBrand]: handle } as any;
-  } else if (isExpr(select)) {
+  } else if (output.kind === "scalar") {
     return new SubqueryExpr(handle) as any;
   } else {
     return newSubqueryProxy(handle) as any;
@@ -448,6 +678,8 @@ export interface Plan {
   bindings: any[];
   /** Aliases of enclosing queries this (sub)query referenced. */
   outerRefs: string[];
+  /** Ordered SQL output columns and their existing expression codecs, before JS row decoding. */
+  output: QueryOutput;
   decodeRows(em: EntityHydrator, rows: any[]): any[];
 }
 
@@ -456,10 +688,17 @@ export interface Plan {
 // =====================================================================================================
 
 type AnyQuery = Query<any, any> & { as?: string };
+type AnyReadQuery = AnyQuery | SetQuery<readonly SetOperand[]>;
+
+/** Only POJO outputs can be set operands; ordinary scalar reads also expose an ordered output column. */
+export interface QueryOutput {
+  kind: "entity" | "scalar" | "pojo";
+  columns: readonly (readonly [string, BaseExpr])[];
+}
 
 /** The runtime identity of a `query(...)` value; `Ctx.aliasFor` keys on it, like an alias's `AliasMgmt`. */
 export class SubqueryHandle {
-  constructor(readonly q: AnyQuery) {}
+  constructor(readonly q: AnyReadQuery) {}
 
   get name(): string | undefined {
     return this.q.as;
@@ -467,21 +706,22 @@ export class SubqueryHandle {
 
   /** The select keys, for `select: <subquery>` and for reporting unknown columns. */
   columnKeys(): string[] {
-    const { select } = this.q;
-    if (isPlainSelect(select)) return Object.keys(select);
-    if (isSubqueryValue(select)) return select[subqueryBrand].columnKeys();
+    const output = this.output();
+    if (output.kind === "pojo") return output.columns.map(([key]) => key);
     return fail(`A subquery with an entity or scalar select has no columns`);
   }
 
   /** The inner expression behind `key`, for its decoder/encoder. */
   columnExpr(key: string): BaseExpr {
-    const { select } = this.q;
-    if (isPlainSelect(select)) {
-      return (select[key] as any as BaseExpr) ?? fail(`Subquery ${this.describe()} has no column ${key}`);
-    } else if (isSubqueryValue(select)) {
-      return select[subqueryBrand].columnExpr(key);
-    }
-    return fail(`Subquery ${this.describe()} has no columns`);
+    return (
+      this.output().columns.find(([name]) => name === key)?.[1] ??
+      fail(`Subquery ${this.describe()} has no column ${key}`)
+    );
+  }
+
+  /** Resolve output metadata without parsing SQL or caching aliases from an enclosing query. */
+  output(): QueryOutput {
+    return queryOutput(this.q);
   }
 
   column(key: string): SubqueryColumnExpr {
@@ -516,6 +756,10 @@ class SubqueryColumnExpr extends BaseExpr {
   encode(value: unknown): unknown {
     return this.inner.encode(value);
   }
+
+  get outputType(): ExprOutputType | undefined {
+    return this.inner.outputType;
+  }
 }
 
 /**
@@ -530,7 +774,11 @@ class SubqueryExpr extends BaseExpr {
   }
 
   get subquerySelect(): BaseExpr {
-    return asNode(this.handle.q.select);
+    return this.handle.output().columns[0][1];
+  }
+
+  get outputType(): ExprOutputType | undefined {
+    return this.subquerySelect.outputType;
   }
 
   toSql(ctx: ExprContext): SqlFragment {
@@ -594,12 +842,149 @@ function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
 // Runtime: parse -> prune -> SQL -> decode
 // =====================================================================================================
 
-function toQuery(arg: unknown): AnyQuery {
+function toQuery(arg: unknown): AnyReadQuery {
   if (isSubqueryValue(arg)) return arg[subqueryBrand].q;
   if (isEntityQueryValue(arg)) return arg[entityQueryBrand].q;
   if (arg instanceof SubqueryExpr) return arg.handle.q;
+  if (isSetQuery(arg)) return arg;
   if (typeof arg === "object" && arg !== null && "from" in arg && "select" in arg) return arg as AnyQuery;
   return fail(`em.query expects a { from, select, ... } object or a query(...) value`);
+}
+
+const SET_OPERATIONS: Record<SetOperation, string> = {
+  union: "UNION",
+  unionAll: "UNION ALL",
+  intersect: "INTERSECT",
+  intersectAll: "INTERSECT ALL",
+  except: "EXCEPT",
+  exceptAll: "EXCEPT ALL",
+};
+
+/** Detect operation keys even when their values are invalid, so mixed roots cannot fall through to SELECT. */
+function isSetQuery(value: unknown): value is SetQuery<readonly SetOperand[]> {
+  return typeof value === "object" && value !== null && Object.keys(SET_OPERATIONS).some((key) => key in value);
+}
+
+/** Validate each root independently; no operand, including the left side of EXCEPT, can be pruned. */
+function setOperands(q: SetQuery<readonly SetOperand[]>): [SetOperation, readonly SetOperand[]] {
+  const keys = (Object.keys(SET_OPERATIONS) as SetOperation[]).filter((key) => key in q);
+  if (keys.length !== 1) fail("A set query requires exactly one operation key");
+  for (const key of Object.keys(q)) {
+    if (key !== keys[0] && !["orderBy", "limit", "offset", "as"].includes(key)) {
+      fail(`Set queries do not support '${key}'; put it in an operand or an outer query`);
+    }
+  }
+  const operands = q[keys[0]];
+  if (!Array.isArray(operands) || operands.length < 2) fail("Set operations require at least two operands");
+  return [keys[0], operands];
+}
+
+/**
+ * Resolve ordered output columns without rendering SQL. Set compatibility is deliberately conservative:
+ * every column needs the same known SQL representation, logical domain, and precise ID target.
+ *
+ * I.e. Author.id and Book.author share the Author key codec, but Book.id must never decode as Author.id.
+ * The first branch supplies names and conversions only after every branch passes these checks.
+ */
+function queryOutput(q: AnyReadQuery): QueryOutput {
+  if (isSetQuery(q)) {
+    const [, operands] = setOperands(q);
+    const first = queryOutput(toQuery(operands[0]));
+    for (const operand of operands) {
+      const output = operand === operands[0] ? first : queryOutput(toQuery(operand));
+      if (output.kind !== "pojo") {
+        fail(
+          output.kind === "entity"
+            ? "Set operations do not support entity-mode operands"
+            : "Set operations require POJO operands; wrap scalar expressions in a named select projection",
+        );
+      }
+      if (output.columns.length !== first.columns.length) fail("Set operands must have the same POJO keys");
+      for (const [key, expr] of first.columns) {
+        const other = output.columns.find(([name]) => name === key)?.[1];
+        if (!other) fail(`Set operands must have the same POJO keys; missing '${key}'`);
+        const left = expr.outputType;
+        const right = other.outputType;
+        if (!left || !right)
+          fail(
+            `Set column '${key}' has an unknown or unsupported output codec; sql<R> does not declare a SQL type or codec`,
+          );
+        if (left.dbType !== right.dbType || left.domain !== right.domain || left.idMeta !== right.idMeta) {
+          fail(
+            `Set column '${key}' has incompatible output codecs (${left.dbType} and ${right.dbType}); use matching SQL representations and logical domains`,
+          );
+        }
+      }
+    }
+    setOrderBys(q, first);
+    return first;
+  }
+  const { select } = q;
+  if (isAlias(select)) return { kind: "entity", columns: [] };
+  if (isExpr(select)) return { kind: "scalar", columns: [["value", asNode(select)]] };
+  if (isSubqueryValue(select)) return select[subqueryBrand].output();
+  if (isPlainSelect(select))
+    return {
+      kind: "pojo",
+      columns: Object.entries(select).map(([key, expr]) => [key, asExpr(expr, `select.${key}`)] as const),
+    };
+  return fail(`Unsupported select ${select}`);
+}
+
+/**
+ * Compile siblings in separate local scopes with the same enclosing context. Projection wrappers align
+ * output positions without moving DISTINCT/order/pagination or repeating volatile selected expressions.
+ * Parenthesizing each accumulated left side preserves array association and explicit nested grouping.
+ */
+function parseSetQuery(q: SetQuery<readonly SetOperand[]>, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+  const [operation, operands] = setOperands(q);
+  const output = queryOutput(q);
+  const plans = operands.map((operand) => parseQuery(toQuery(operand), parent, assigner));
+  let sql = "";
+  for (const plan of plans) {
+    let branch = plan.sql;
+    if (output.columns.some(([key], i) => plan.output.columns[i][0] !== key)) {
+      const alias = safeKq(assigner.getLiteralAlias("sq"));
+      branch = `SELECT ${output.columns.map(([key]) => `${alias}.${safeKq(key)} AS ${safeKq(key)}`).join(", ")} FROM (${branch}) AS ${alias}`;
+    }
+    sql = sql ? `(${sql}) ${SET_OPERATIONS[operation]} (${branch})` : branch;
+  }
+  const orderBys = setOrderBys(q, output);
+  if (orderBys.length > 0) sql += ` ORDER BY ${orderBys.join(", ")}`;
+  const bindings = plans.flatMap((plan) => plan.bindings);
+  if (q.limit !== undefined) {
+    sql += " LIMIT ?";
+    bindings.push(q.limit);
+  }
+  if (q.offset !== undefined) {
+    sql += " OFFSET ?";
+    bindings.push(q.offset);
+  }
+  return {
+    sql,
+    bindings,
+    outerRefs: [...new Set(plans.flatMap((plan) => plan.outerRefs))],
+    output,
+    decodeRows: plans[0].decodeRows,
+  };
+}
+
+/** Validate and quote only named set output sorts, including before a reusable value is parsed. */
+function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): string[] {
+  const orderBys: string[] = [];
+  for (const entry of Array.isArray(q.orderBy) ? q.orderBy : q.orderBy ? [q.orderBy] : []) {
+    if (entry === undefined) continue;
+    if (!entry || typeof entry !== "object" || isExpr(entry))
+      fail("Set orderBy requires output-key hashes; use an outer query for expressions");
+    for (const [key, direction] of Object.entries(entry)) {
+      if (direction === undefined) continue;
+      if (!output.columns.some(([name]) => name === key)) fail(`Set orderBy key '${key}' is not a named output column`);
+      if (!ORDER_BY_DIRECTIONS.includes(direction as string))
+        fail("Set orderBy requires output-key directions; use an outer query for expressions");
+      orderBys.push(`${safeKq(key)} ${direction}`);
+    }
+  }
+  return orderBys;
 }
 
 /**
@@ -684,7 +1069,8 @@ interface ParsedJoin {
  * 3. Prune: drop joins nothing references (see below), then reject a kept join whose ON collapsed.
  * 4. Assemble the SQL from the kept fragments, so pruned bindings disappear with their SQL.
  */
-function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+  if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
   const ctx = new Ctx(assigner, parent);
   const selectedAlias = isAlias(q.select) ? getAliasMgmt(q.select) : undefined;
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
@@ -719,7 +1105,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
     const fullOn = userOn && injected.length > 0 ? conditionToSql({ and: [j.on, ...injected] }, ctx, true) : userOn;
     return { kind: j.kind, keep: j.keep, source, userOn, fullOn };
   });
-  const { selects, decodeRows } = selectsToSql(q, ctx, from);
+  const { selects, decodeRows, output } = selectsToSql(q, ctx, from);
   const fromInjected = injectedConditions(from, softDeletes);
   const where = conditionToSql(fromInjected.length > 0 ? { and: [q.where, ...fromInjected] } : q.where, ctx, true);
   const having = conditionToSql(q.having, ctx, true);
@@ -777,6 +1163,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
     sql: out.map((o) => o.sql).join(""),
     bindings: out.flatMap((o) => o.bindings),
     outerRefs: [...ctx.outerRefs],
+    output,
     decodeRows,
   };
 }
@@ -893,7 +1280,7 @@ function selectsToSql(
   q: AnyQuery,
   ctx: Ctx,
   from: ParsedSource,
-): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"] } {
+): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
   if (isAlias(select)) {
     // Entity mode: `a.*` (plus CTI columns), hydrated through the identity map. Only the from is
@@ -904,7 +1291,11 @@ function selectsToSql(
     const alias = ctx.aliasFor(getAliasMgmt(select));
     const meta = getAliasMetadata(select);
     const selects = from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
-    return { selects, decodeRows: (em, rows) => em.hydrate(meta.cstr as any, rows) };
+    return {
+      selects,
+      decodeRows: (em, rows) => em.hydrate(meta.cstr as any, rows),
+      output: { kind: "entity", columns: [] },
+    };
   } else if (isSubqueryValue(select)) {
     // `select: <subquery>` is `select *` for that table; like entity mode, only for the from, since a
     // left-joined subquery's unmatched rows would decode null fields the row type calls non-null
@@ -915,19 +1306,26 @@ function selectsToSql(
       );
     }
     const alias = ctx.aliasFor(handle);
-    const keys = handle.columnKeys();
-    const selects = keys.map((k) => ({
+    const output = handle.output();
+    const selects = output.columns.map(([k]) => ({
       sql: `${safeKq(alias)}.${safeKq(k)} AS ${safeKq(k)}`,
       bindings: [],
       refs: [alias],
     }));
-    const decoders = keys.map((k) => [k, handle.columnExpr(k)] as const);
-    return { selects, decodeRows: (_, rows) => rows.map((row) => decodeRow(row, decoders)) };
+    return {
+      selects,
+      decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
+      output,
+    };
   } else if (isExpr(select)) {
     // Scalar mode: one value per row, used by scalar/IN-list subqueries
     const fragment = asNode(select).toSql(ctx);
     const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
-    return { selects, decodeRows: (_, rows) => rows.map((row) => asNode(select).decode(row.value)) };
+    return {
+      selects,
+      decodeRows: (_, rows) => rows.map((row) => asNode(select).decode(row.value)),
+      output: { kind: "scalar", columns: [["value", asNode(select)]] },
+    };
   } else if (isPlainSelect(select)) {
     // POJO mode
     const entries = Object.entries(select).map(([key, expr]) => [key, asExpr(expr, `select.${key}`)] as const);
@@ -935,7 +1333,11 @@ function selectsToSql(
       const fragment = expr.toSql(ctx);
       return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
     });
-    return { selects, decodeRows: (_, rows) => rows.map((row) => decodeRow(row, entries)) };
+    return {
+      selects,
+      decodeRows: (_, rows) => rows.map((row) => decodeRow(row, entries)),
+      output: { kind: "pojo", columns: entries },
+    };
   }
   return fail(`Unsupported select ${select}`);
 }
@@ -1015,7 +1417,7 @@ function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
  */
 function conditionToSql(cond: ExpressionCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
   if (cond === undefined || cond === null) return undefined;
-  resolveDeferredConditions(cond, ctx);
+  cond = resolveDeferredConditions(cond, ctx)!;
   const filter: ExpressionFilter = isFilter(cond) ? cond : { and: [cond] };
   const cb = new ConditionBuilder();
   cb.maybeAddExpression(filter);

@@ -101,12 +101,16 @@ import { type PendingChange } from "./PendingChanges.ts";
 import { PluginManager } from "./PluginManager.ts";
 import { type PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 import {
+  type CheckSetQuery,
   type EntityQuery,
   type QueryArg,
   type QueryJoins,
   type QueryRow,
   type QuerySelect,
   type QuerySource,
+  type SetOperand,
+  type SetQuery,
+  type SetQueryRow,
   type Subquery,
   parseUserQuery,
 } from "./query.ts";
@@ -548,6 +552,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public query<R>(q: Subquery<R, any>): Promise<R[]>;
   public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
+  public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
   public query<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
     q: QueryArg<F, S, J, never>,
   ): Promise<QueryRow<S, J>[]>;

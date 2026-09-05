@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 
 import { type InsertFixup } from "./drivers/EntityWriter.ts";
 import { type Field, type PolymorphicField, type SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
+import { type ExprOutputType, arrayOutputType, canonicalDbType } from "./Expr.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -64,6 +65,8 @@ export interface TimestampSerde<T> extends FieldSerde {
 export interface Column {
   columnName: string;
   dbType: string;
+  /** Internal compatibility metadata for the column's mapFromDb/mapToDb, absent for unknown codecs. */
+  readonly outputType?: ExprOutputType;
   /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
   /**
@@ -121,6 +124,24 @@ export class CustomSerdeAdapter implements FieldSerde {
   ) {
     if (isArray !== undefined) this.isArray = isArray;
     this.isNullableArray = isNullableArray;
+  }
+
+  /** Only known adapters share their mapper's identity; array filter encoding is not elementwise. */
+  get outputType(): ExprOutputType | undefined {
+    if (
+      this.isArray ||
+      this.dbType.endsWith("[]") ||
+      (this.constructor !== CustomSerdeAdapter &&
+        this.constructor !== PlainDateSerde &&
+        this.constructor !== PlainTimeSerde &&
+        this.constructor !== PlainDateTimeSerde &&
+        this.constructor !== ZonedDateTimeSerde)
+    ) {
+      return undefined;
+    }
+    const dbType = canonicalDbType(this.dbType);
+    // A numeric mapper may require scalar text; classic pg decodes numeric[] elements as numbers.
+    return { dbType, domain: this.mapper, arrayElementSafe: dbType !== "numeric" };
   }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
@@ -183,6 +204,20 @@ export class PrimitiveSerde implements FieldSerde {
     public isNullableArray = false, // only set for nullable arrays
   ) {}
 
+  /** Exact-class checks prevent an unknown subclass's overridden converters from sharing this codec. */
+  get outputType(): ExprOutputType | undefined {
+    if (this.constructor !== PrimitiveSerde) return undefined;
+    const dbType = canonicalDbType(this.dbType);
+    const elementType = dbType.endsWith("[]") ? dbType.slice(0, -2) : dbType;
+    if (this.isArray !== dbType.endsWith("[]")) return undefined;
+    const outputType = {
+      dbType: elementType,
+      domain: primitiveOutputDomain(elementType),
+      arrayElementSafe: elementType !== "numeric",
+    };
+    return this.isArray ? arrayOutputType(outputType) : outputType;
+  }
+
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
@@ -210,6 +245,13 @@ export class PrimitiveSerde implements FieldSerde {
 }
 
 export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
+  /** Date bindings use ISO strings; mapToDb does not support physical Date arrays. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === DateSerde && !this.isArray && !this.dbType.endsWith("[]")
+      ? { dbType: canonicalDbType(this.dbType), domain: DateSerde }
+      : undefined;
+  }
+
   /** Accept the caller's date as-is. */
   mapFromNow(now: Date): Date {
     return now;
@@ -286,6 +328,13 @@ export class BigIntSerde implements FieldSerde {
     public columnName: string,
   ) {}
 
+  /** BigInt conversion is distinct from both the driver's int8 value and Number aggregates. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === BigIntSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: BigIntSerde, arrayElementSafe: true }
+      : undefined;
+  }
+
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
@@ -332,6 +381,13 @@ export class DecimalToNumberSerde implements FieldSerde {
     private fieldName: string,
     public columnName: string,
   ) {}
+
+  /** Numeric aggregates use the same Number conversion and identity binding encoder. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === DecimalToNumberSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: Number, arrayElementSafe: true }
+      : undefined;
+  }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
@@ -380,6 +436,13 @@ export class KeySerde implements FieldSerde {
       tagName,
       idDbType: dbType,
     };
+  }
+
+  /** PKs and FKs share a tag and SQL representation; the alias supplies the exact target idMeta. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === KeySerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: `key:${this.meta.tagName}`, arrayElementSafe: true }
+      : undefined;
   }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
@@ -512,6 +575,13 @@ export class EnumFieldSerde implements FieldSerde {
     private enumObject: any,
   ) {}
 
+  /** Separate fields of the same generated enum share its code/id mapping. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === EnumFieldSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: this.enumObject, arrayElementSafe: true }
+      : undefined;
+  }
+
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
@@ -549,6 +619,11 @@ export class EnumArrayFieldSerde implements FieldSerde {
     public isNullableArray: boolean,
     private enumObject: any,
   ) {}
+
+  /** Physical enum arrays reject null elements, unlike scalar enum arrayAgg; leave them unknown. */
+  get outputType(): undefined {
+    return undefined;
+  }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
@@ -593,6 +668,13 @@ export class SuperstructSerde implements FieldSerde {
     private superstruct: any,
   ) {}
 
+  /** JSON schemas describe a jsonb value, even when that value is a JSON array. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === SuperstructSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: this.superstruct, arrayElementSafe: true }
+      : undefined;
+  }
+
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
@@ -634,6 +716,13 @@ export class JsonSerde implements FieldSerde {
     private fieldName: string,
     public columnName: string,
   ) {}
+
+  /** Unvalidated JSON uses its own encoder, not a primitive or schema-specific codec. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === JsonSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: JsonSerde, arrayElementSafe: true }
+      : undefined;
+  }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
@@ -678,6 +767,13 @@ export class ZodSerde implements FieldSerde {
     private zodSchema: any,
   ) {}
 
+  /** Parsing and transformations are compatible only for the same schema object. */
+  get outputType(): ExprOutputType | undefined {
+    return this.constructor === ZodSerde && !this.isArray
+      ? { dbType: canonicalDbType(this.dbType), domain: this.zodSchema, arrayElementSafe: true }
+      : undefined;
+  }
+
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
@@ -706,6 +802,23 @@ export class ZodSerde implements FieldSerde {
 
   mapFromJsonAgg(value: any): any {
     return value === null ? value : value;
+  }
+}
+
+/** Only driver-native numbers agree with Number aggregates; int8/numeric identity values do not. */
+function primitiveOutputDomain(dbType: string): unknown {
+  switch (dbType) {
+    case "int2":
+    case "int4":
+    case "float4":
+    case "float8":
+      return Number;
+    case "text":
+    case "varchar":
+    case "bpchar":
+      return String;
+    default:
+      return PrimitiveSerde;
   }
 }
 

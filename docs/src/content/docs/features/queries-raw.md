@@ -5,7 +5,7 @@ sidebar:
   order: 3.2
 ---
 
-Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, and arbitrary joins, returning either entities or plain, strongly-typed POJOs.
+Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, set operations, and arbitrary joins, returning entities, plain, strongly-typed POJOs, or scalar values.
 
 Like [find queries](./queries-find), the `em.query` DSL is "just a POJO" of data--no fluent builders to chain 🎉, but thanks to TypeScript's mapped types, still sufficiently type-safe to catch most common errors/typos 💪.
 
@@ -70,6 +70,13 @@ The `select` key determines the `rows` return type:
   (Currently entities can only be selected using the same alias as the `from` key, not from a joined alias.)
 
 - **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`. Like entity mode, the selected subquery must be the `from`, not a joined source; select a joined subquery's columns individually.
+
+- **A single expression** in an ordinary `em.query({ from, select: expr })` returns an array of selected values, without the extra `null` from scalar-subquery context:
+
+  ```ts
+  const authorIds = await em.query({ from: a, select: a.id });
+  // AuthorId[]
+  ```
 
 ### Left joins and `null`
 
@@ -218,7 +225,7 @@ Like `em.find`, filtering is skipped for CTI subtypes.
 
 ## Ordering and Paging
 
-`orderBy` accepts an array of keyed or expression entries, or a single keyed object:
+For ordinary queries, `orderBy` accepts an array of keyed or expression entries, or a single keyed object:
 
 The **keyed form** mirrors `em.find`: the keys are any existing keys from the `select` (or the entity's fields in entity mode), each with `"ASC"` or `"DESC"`, optionally suffixed with `NULLS FIRST` / `NULLS LAST`:
 
@@ -247,9 +254,7 @@ Keyed and expression entries can also be mixed:
 orderBy: [{ bookCount: "DESC" }, { asc: a.firstName, nulls: "last" }]
 ```
 
-Both forms allow `undefined` (entries or directions) so conditional spreads work.
-
-; prefer the keyed form whenever what you're ordering by is already in `select`.
+Both forms allow `undefined` (entries or directions) so conditional spreads work. Prefer the keyed form whenever what you're ordering by is already in `select`. [Set operations](#set-operations) only support the keyed form at their root.
 
 ## Composition: `query()`
 
@@ -278,7 +283,7 @@ Subqueries chain — `query({ from: bookStats, ... })` — and `select: bookStat
 
 ### Scalar and list subqueries
 
-A single-expression `select` gives a scalar expression, `number | null` because a subquery can return no row (`.coalesce()` recovers). Scalar subqueries close over outer aliases, so correlation just works:
+A single-expression `select` in an ordinary `query({ from, select: expr })` returns an `Expr<R | null, never>`, where `R` is the selected row type. In scalar-expression context, zero rows produces SQL `NULL` and more than one row is a database error. `.coalesce()` handles the zero-row case, not multiple rows. Scalar subqueries close over outer aliases, so correlation just works:
 
 ```ts
 const rows = await em.query({
@@ -290,7 +295,7 @@ const rows = await em.query({
 });
 ```
 
-And a single-column subquery works as an `in` target — including for polymorphic references, where the subquery's select column picks the component, i.e. `c.parent.in(query({ from: a, select: a.id }))` filters on `parent_author_id`:
+The same single-expression subquery works as an `in` target and can return many rows, without turning an empty result into one `NULL` row. This includes polymorphic references, where the subquery's select column picks the component, i.e. `c.parent.in(query({ from: a, select: a.id }))` filters on `parent_author_id`:
 
 ```ts
 where: {
@@ -313,6 +318,168 @@ const [{ total }] = await em.query({ ...base, select: { total: a.id.count() } })
 Standalone query objects should use `satisfies Query`, not a `: Query` annotation — the annotation widens `select` and loses the per-column types. Joist detects this and reports "select was typed too generically; use `satisfies Query` instead of `: Query`".
 
 :::
+
+## Set Operations
+
+`em.query` supports native PostgreSQL set operations in one SQL statement. A compound query is a separate root shape, not an extra clause on a `{ from, select, ... }` query:
+
+```ts
+const [a, b] = aliases(Author, Book);
+const authorNames = { from: a, select: { name: a.firstName } } satisfies Query;
+const bookNames = { from: b, select: { name: b.title } } satisfies Query;
+
+const rows = await em.query({
+  union: [authorNames, bookNames],
+  orderBy: { name: "ASC" },
+  limit: 50,
+});
+// { name: string }[]
+```
+
+Exactly one operation key is allowed per compound:
+
+| Key | SQL | Result |
+| --- | --- | --- |
+| `union` | `UNION` | Distinct rows from either side |
+| `unionAll` | `UNION ALL` | All rows, adding duplicate counts |
+| `intersect` | `INTERSECT` | Distinct rows present on both sides |
+| `intersectAll` | `INTERSECT ALL` | Shared rows, taking the minimum duplicate count |
+| `except` | `EXCEPT` | Distinct left rows not present on the right |
+| `exceptAll` | `EXCEPT ALL` | Left rows, subtracting right duplicate counts with a floor of zero |
+
+Equality compares complete projected SQL rows, before JavaScript decoding, and treats corresponding SQL `NULL`s as equal. Two different SQL rows can still decode to equal JavaScript values, i.e. if a JSON schema strips fields; that does not make them duplicates in SQL.
+
+Operands can be ordinary read-query POJOs, nested compound POJOs, or compatible `Subquery` values created by `query()`. Every operand and every compound result must have named POJO columns, even for a single column. Scalar-select operands are rejected at compile time and runtime: all-scalar compounds, mixed scalar/POJO operands, reusable scalar `query()` values, and scalar operands inside nested compounds are unsupported. Arbitrary expressions are not set operands either.
+
+Each operation requires **at least two operands**. Known tuples are checked at compile time; every input is checked at runtime, including dynamic arrays. Readonly tuples and arrays are supported. Unlike optional conditions, `undefined`, `null`, and `false` operands are rejected, not omitted: removing the first operand of `EXCEPT` would change its meaning.
+
+For standalone compound objects, use `satisfies SetQuery` instead of a `: SetQuery` annotation to retain literal row types, just as with `satisfies Query` for ordinary queries. Collections widened to the general operand type lose their known output keys and are rejected at compile time:
+
+```ts
+const combined = { union: [authorNames, bookNames] as const } satisfies SetQuery;
+await em.query(combined);
+```
+
+### Named columns and result types
+
+Every POJO operand must have exactly the same keys. The first operand determines output names and column order, and Joist aligns later operands by key, not their object insertion order. For example, these projections are compatible:
+
+```ts
+const authorSelect = { name: a.firstName, id: a.id };
+const bookSelect = { id: b.author, name: b.title };
+```
+
+Joist uses projection wrappers to reorder output columns without mutating caller-owned objects or query values. Branch `distinct`, ordering, and pagination stay in place, and selected expressions are not repeated merely to reorder them. Missing or extra keys are rejected, including at runtime for untyped inputs.
+
+`union` and `unionAll` combine each column's compatible value types and nullability from every operand, including left-join nullability. I.e. a required `name: string` combined with a left-joined `name: string | null` returns `{ name: string | null }[]`, regardless of operand order. `intersect`, `except`, and their `All` variants conservatively retain the left row type; they do not infer narrower nullability.
+
+### Grouping, scope, and paging
+
+Each object owns its clauses. A compound root accepts `orderBy`, `limit`, and `offset`, plus `as` when constructing a named `query()` value. It does not accept `from`, `select`, `join`, `where`, `groupBy`, `having`, `distinct`, `softDeletes`, or `pruneJoins`; put these in an operand or an ordinary outer query.
+
+```ts
+const rows = await em.query({
+  unionAll: [
+    { ...authorNames, orderBy: { name: "ASC" }, limit: 10 },
+    { ...bookNames, orderBy: { name: "ASC" }, limit: 10, offset: 10 },
+  ],
+  orderBy: { name: "DESC" },
+  limit: 5,
+  offset: 2,
+});
+```
+
+Here each branch contributes its own page; the root orders and pages the combined rows. Branch ordering alone does not promise final output order.
+
+Operand arrays associate **left-to-right**. Joist emits explicit SQL parentheses for operands and the accumulated left side, preserving nested grouping rather than relying on PostgreSQL's higher precedence for `INTERSECT`. For compatible read operands `q1`, `q2`, and `q3`:
+
+```ts
+query({ except: [q1, q2, q3] });
+// (q1 EXCEPT q2) EXCEPT q3
+
+query({ except: [q1, { except: [q2, q3] }] });
+// q1 EXCEPT (q2 EXCEPT q3), not the same as the previous query
+
+query({ intersect: [{ union: [q1, q2] }, q3] });
+// (q1 UNION q2) INTERSECT q3
+```
+
+Each operand has its own alias scope: siblings cannot reference one another's local aliases. When an ordinary scalar/`IN` subquery reads a compound, its branches can use legitimate enclosing correlations. A correlation in any branch, including a non-first branch, keeps the referenced outer join alive. Reused aliases and query values resolve afresh for each execution. Derived-table compounds do not gain implicit `LATERAL` support.
+
+Each branch retains its own soft-delete, STI filtering, and join-pruning behavior; there are no compound-wide policy overrides.
+
+Root `orderBy` accepts **output-key directions only**, as a single object or an array of objects. Directions are `"ASC"` / `"DESC"`, optionally followed by `NULLS FIRST` / `NULLS LAST`; `undefined` entries and directions are pruned. Branch column references and arbitrary expression sorts are rejected at the root.
+
+### Reusable compounds and outer expressions
+
+`query()` turns every compound into a `Subquery` with typed, named columns. Use `as` to name it, execute it directly for POJO rows, or use it as another query's `from` or `join` source and reference its columns in projections or predicates. For expression ordering, use an ordinary outer query:
+
+```ts
+const names = query({
+  union: [authorNames, bookNames],
+  as: "names",
+});
+
+await em.query(names);
+const rows = await em.query({
+  from: names,
+  where: names.name.ne(""),
+  select: names,
+  orderBy: [{ asc: sql<string>`lower(${names.name})` }],
+});
+```
+
+### Scalar subqueries and entity membership
+
+To use a compound in `IN` or a scalar expression, first build named POJO rows, then select one column through an ordinary `query({ from, select: expr })`. The compound itself is a derived table, not a scalar expression or an `IN` target.
+
+Entity-mode operands, including `query({ from: a, select: a })` values, are also excluded from compounds. Ordinary entity reads still work: combine compatible IDs and filter an entity query with `id.in(...)`:
+
+```ts
+const ids = query({
+  union: [
+    { from: a, select: { id: a.id } },
+    { from: b, select: { id: b.author } },
+  ],
+});
+// Subquery<{ id: AuthorId }, "?">
+
+const authors = await em.query({
+  from: a,
+  where: a.id.in(query({ from: ids, select: ids.id })),
+  select: a,
+});
+// Author[]
+```
+
+The outer single-expression subquery can consume many compound rows in `IN`. Used as a scalar expression, it adds the zero-row `NULL` and errors on multiple rows, just like any ordinary scalar subquery. Apply `.coalesce()` to that outer expression, not to the compound. For example, select at most one ID before providing a fallback:
+
+```ts
+const firstAuthorId = query({
+  from: ids,
+  select: ids.id,
+  orderBy: [{ asc: ids.id }],
+  limit: 1,
+}).coalesce("a:1");
+// Expr<AuthorId, never>
+```
+
+The entity membership query does not preserve `ALL` duplicate counts or the compound's ordering. Polymorphic `IN` predicates, i.e. `c.parent.in(query({ from: ids, select: ids.id }))`, use the selected column's agreed ID target, so compatible Author PK/FK operands select the Author component regardless of operand order.
+
+### Output compatibility and codecs
+
+Compatibility is deliberately conservative: every output needs a known codec with the **same SQL representation, logical domain, and exact ID target**. Compatible TypeScript types or PostgreSQL's ability to find a common SQL type are not sufficient. These checks apply to all six operators, including `except` and `intersect` even though their result types retain the left row.
+
+- `a.id` and `b.author` are compatible Author IDs, despite distinct expression/serde instances. Results decode as tagged Author IDs, and combined columns retain their encoders for comparisons such as `.eq("a:1")` and `.coalesce()` fallbacks.
+- `a.id` and `b.id` are rejected: identical integer storage does not make Author IDs and Book IDs the same domain.
+- `a.age` and `a.age.sum()` are rejected in either order: the field is `int4`, while its `SUM` is `int8`, even though both expose TypeScript numbers. Matching `SUM` outputs are supported and decode as numbers. Joist does not silently promote or coerce mismatched outputs.
+- Aggregate compatibility also requires a known PostgreSQL overload. I.e. `MIN`/`MAX` of `varchar` or `name` produce `text`, so their outputs do not share the original field's SQL representation. Unmodeled aggregate overloads remain unsupported as set outputs.
+- Known scalar enums (including native enums), custom types, schema-backed JSON, `Date`, and Temporal values are supported when their SQL representations and domains match. Domain compatibility uses the enum, custom mapper, JSON schema, or date/time conversion, not merely the storage type or the field's TypeScript shape. Different schemas, or a custom type and a primitive with identical storage, are not interchangeable.
+- Physical primitive arrays and `arrayAgg()` outputs are supported only when both the driver array representation and element conversion are known. I.e. `a.nickNames` can combine with `a.firstName.arrayAgg()` when both are `varchar[]`, and `a.id.arrayAgg()` can combine with `b.author.arrayAgg()`. Element encoders and decoders are retained.
+- Physical enum, custom-type, `Date`, and Temporal array columns are rejected, even when both operands select the same field. Native enum/citext arrays, `Date`/Temporal aggregates, primitive numeric arrays, and custom numeric aggregates also remain unsupported because array driver values may differ from scalar values. Nested SQL arrays, including `arrayAgg()` over an array, are unsupported.
+- Outputs from `sql<R>` and `sql.ref` have unknown codecs and are rejected, even if both operands reuse the same expression or produce only SQL `NULL`. A generic annotation or a cast inside raw SQL does not declare a codec. Known nullable field outputs remain supported even when every returned value happens to be `NULL`.
+
+These codecs are internal compatibility information, not a public coercion/decoder API. Raw `sql` expressions remain available in ordinary queries, including an outer query over a compatible compound; they do not bypass set-output validation.
 
 ## Escape Hatches: `sql`
 
@@ -340,7 +507,8 @@ Interpolated expressions and conditions render with the alias Joist assigned and
 
 ## Not (Yet) Supported
 
-- `UNION` / `INTERSECT` / `EXCEPT` — run the queries separately and merge in memory
+- Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
+- `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; mutations are not read operands, even with `RETURNING`
 - User-authored CTEs (`WITH ...`) — subqueries render as inline derived tables
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) alias

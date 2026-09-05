@@ -1821,32 +1821,41 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "a1" }]);
     });
 
-    // UNION is not supported; merge and deduplicate Author ids from separate Book and Comment queries.
-    it("can emulate UNION by merging separate queries", async () => {
+    it("can UNION Author ids from Book and Comment queries in the database", async () => {
       // Given Authors a1, a2, and a3, with a3 left without Books or Comments
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
       await insertAuthor({ first_name: "a3" });
       // And a Book only for a1, contributing its id through the Book query
       await insertBook({ title: "b1", author_id: 1 });
+      // And a second Book for a1, duplicating its id within the Book branch
+      await insertBook({ title: "b2", author_id: 1 });
       // And a Comment only on a2, contributing a different id through the Comment query
       await insertComment({ text: "c1", parent_author_id: 2 });
+      // And a Comment on a1, duplicating its id across the two branches
+      await insertComment({ text: "c2", parent_author_id: 1 });
+      // And an EntityManager to execute the combined read
       const em = newEntityManager();
+      // And Author, Book, and Comment aliases for the independent branch joins
       const [a, b, c] = aliases(Author, Book, Comment);
-      const withBooks = await em.query({
-        from: b,
-        join: [{ inner: a, on: b.author.eq(a.id) }],
-        distinct: true,
-        select: { authorId: a.id },
+      // And query recording isolated from the seed inserts
+      resetQueryCount();
+      // When combining both Author-id projections with native UNION
+      const rows = await em.query({
+        union: [
+          { from: b, join: [{ inner: a, on: b.author.eq(a.id) }], select: { authorId: a.id } },
+          { from: c, join: [{ inner: a, on: c.parent.eq(a.id) }], select: { authorId: a.id } },
+        ],
+        orderBy: { authorId: "ASC" },
       });
-      const withComments = await em.query({
-        from: c,
-        join: [{ inner: a, on: c.parent.eq(a.id) }],
-        distinct: true,
-        select: { authorId: a.id },
-      });
-      const authorIds = [...new Set([...withBooks, ...withComments].map((r) => r.authorId))].sort();
-      expect(authorIds).toEqual(["a:1", "a:2"]);
+      // Then PostgreSQL removes duplicates within and across branches in one query
+      expect(rows).toEqual([{ authorId: "a:1" }, { authorId: "a:2" }]);
+      expect(queries).toHaveLength(1);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "(SELECT a.id AS "authorId" FROM books AS b JOIN authors AS a ON b.author_id = a.id WHERE b.deleted_at IS NULL) UNION (SELECT a1.id AS "authorId" FROM comments AS c JOIN authors AS a1 ON c.parent_author_id = a1.id) ORDER BY "authorId" ASC",
+       ]
+      `);
     });
   });
 

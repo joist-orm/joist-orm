@@ -155,6 +155,7 @@ export {
   type QuerySelect,
   type QuerySource,
   type QueryValue,
+  type SetQuery,
   query,
   sql,
   type Subquery,

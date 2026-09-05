@@ -44,6 +44,34 @@ export interface ExprBrand<R, Src extends string> {
 }
 
 /**
+ * Runtime type information that lets set operations reject outputs that cannot safely share conversions.
+ *
+ * PostgreSQL compares projected SQL rows and chooses a common SQL type before Joist decodes them.
+ * A compound uses one decoder per output column and retains an encoder for later comparisons and
+ * coalesce fallbacks. We must check every operand before reusing the first operand's conversions:
+ * TypeScript result types are erased, and equal SQL storage types do not imply equal logical domains.
+ *
+ * I.e. Author.id and Book.author are compatible Author IDs despite having separate serdes, while
+ * Book.id must not compare or decode as an Author ID just because both use int4. Conversely, Author.age
+ * and Author.age.sum() both expose TypeScript numbers but produce int4 and int8 driver values. Without
+ * their SQL type information, accepting them could make decoding depend on which operand comes first.
+ * Enum, custom-mapper, and JSON-schema domain tokens also prevent unrelated conversions from mixing.
+ *
+ * Compatibility requires exact equality of the canonical SQL `dbType`, the `domain` token, and
+ * `idMeta`. An absent descriptor is unknown, not an identity codec. `idMeta` identifies scalar IDs only;
+ * arrays retain their element domain separately so they cannot select a polymorphic IN component.
+ * Raw `sql<R>` annotations do not supply this runtime information. Encoding and decoding remain on the
+ * expression; this descriptor only holds the information needed for these conservative checks.
+ */
+export interface ExprOutputType {
+  dbType: string;
+  domain: unknown;
+  idMeta?: EntityMetadata;
+  /** Internal conversion proof, consistent for equal dbType/domain/idMeta; not another compatibility key. */
+  arrayElementSafe?: boolean;
+}
+
+/**
  * "Any expression whose result is `R`", checked by brand alone.
  *
  * Method parameters use this instead of `Expr<R>` so that `Expr` stays covariant in `R`: checking
@@ -191,7 +219,7 @@ export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
  * `bookStats.bookCount.gt(1)` or `bs.authorId.eq(a.id)`.
  *
  * It is shaped like a `RawCondition` so it can sit in any `ExpressionFilter`; `resolveDeferredConditions`
- * fills in `condition`, `bindings`, and `aliases` before the filter is parsed. Alias columns compared to
+ * snapshots `condition`, `bindings`, and `aliases` before the filter is parsed. Alias columns compared to
  * literals keep producing `ColumnCondition`s (the `em.find` path), so this is only for comparisons that
  * involve a non-alias expression.
  */
@@ -221,18 +249,27 @@ export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): Deferr
   return cond;
 }
 
-/** Walks an `ExpressionCondition` tree and resolves every deferred condition in place. */
-export function resolveDeferredConditions(cond: ExpressionCondition | undefined, ctx: ExprContext): void {
-  if (cond === undefined || cond === null) return;
+/**
+ * Resolve each condition occurrence and snapshot it before resolving the next one. A nested subquery
+ * may reuse the same condition under another alias; it must not overwrite this occurrence's SQL.
+ */
+export function resolveDeferredConditions(
+  cond: ExpressionCondition | undefined,
+  ctx: ExprContext,
+): ExpressionCondition | undefined {
+  if (cond === undefined || cond === null) return cond;
   if (isDeferredCondition(cond)) {
     cond[deferredSym](ctx);
+    return { ...cond };
   } else if (isDeferredAliasCondition(cond)) {
     cond[deferredAliasSym](ctxResolver(ctx));
+    return { ...cond };
   } else if ("and" in cond && cond.and) {
-    for (const c of cond.and) resolveDeferredConditions(c, ctx);
+    return { ...cond, and: cond.and.map((c) => resolveDeferredConditions(c, ctx)) };
   } else if ("or" in cond && cond.or) {
-    for (const c of cond.or) resolveDeferredConditions(c, ctx);
+    return { ...cond, or: cond.or.map((c) => resolveDeferredConditions(c, ctx)) };
   }
+  return cond;
 }
 
 /** Concatenates SQL fragments with `sep`, keeping bindings and refs in order. */
@@ -256,8 +293,13 @@ export abstract class BaseExpr {
   /** Produces this expression's SQL so it can be embedded in a larger expression, i.e. a subquery gets parens. */
   abstract toSql(ctx: ExprContext): SqlFragment;
 
-  /** The expression selected by a scalar subquery, used to resolve polymorphic IN conditions. */
+  /** Only an actual scalar/IN subquery exposes its selected expression, not an ordinary ID expression. */
   get subquerySelect(): BaseExpr | undefined {
+    return undefined;
+  }
+
+  /** Known SQL representation and logical domain; raw SQL and unmodeled refs remain unknown. */
+  get outputType(): ExprOutputType | undefined {
     return undefined;
   }
 
@@ -309,7 +351,12 @@ export abstract class BaseExpr {
   }
 
   count(): Expr<number, never> {
-    return new FnExpr("count", [this], { suffix: "::int", decode: decodeNumber, encode: identity }) as any;
+    return new FnExpr("count", [this], {
+      suffix: "::int",
+      decode: decodeNumber,
+      encode: identity,
+      outputType: { dbType: "int4", domain: Number, arrayElementSafe: true },
+    }) as any;
   }
 
   countDistinct(): Expr<number, never> {
@@ -318,23 +365,38 @@ export abstract class BaseExpr {
       suffix: "::int",
       decode: decodeNumber,
       encode: identity,
+      outputType: { dbType: "int4", domain: Number, arrayElementSafe: true },
     }) as any;
   }
 
   sum(): Expr<number | null, any> {
-    return new FnExpr("sum", [this], { decode: decodeNumber, encode: identity }) as any;
+    return new FnExpr("sum", [this], {
+      decode: decodeNumber,
+      encode: identity,
+      outputType: numericAggregateOutputType("sum", this.outputType),
+    }) as any;
   }
 
   avg(): Expr<number | null, any> {
-    return new FnExpr("avg", [this], { decode: decodeNumber, encode: identity }) as any;
+    return new FnExpr("avg", [this], {
+      decode: decodeNumber,
+      encode: identity,
+      outputType: numericAggregateOutputType("avg", this.outputType),
+    }) as any;
   }
 
   min(): Expr<any, any> {
-    return new FnExpr("min", [this], { decode: (v) => this.decode(v) }) as any;
+    return new FnExpr("min", [this], {
+      decode: (v) => this.decode(v),
+      outputType: minMaxOutputType(this.outputType),
+    }) as any;
   }
 
   max(): Expr<any, any> {
-    return new FnExpr("max", [this], { decode: (v) => this.decode(v) }) as any;
+    return new FnExpr("max", [this], {
+      decode: (v) => this.decode(v),
+      outputType: minMaxOutputType(this.outputType),
+    }) as any;
   }
 
   arrayAgg(): Expr<any, any> {
@@ -343,16 +405,21 @@ export abstract class BaseExpr {
     return new FnExpr("array_agg", [this], {
       decode: (v) => (Array.isArray(v) ? v.map((e) => this.decode(e)) : v),
       encode: (v) => (Array.isArray(v) ? v.map((e) => this.encode(e)) : v),
+      outputType: arrayOutputType(this.outputType),
     }) as any;
   }
 
   stringAgg(delimiter: string): Expr<string | null, any> {
-    return new FnExpr("string_agg", [this, new BindingExpr(delimiter)], {}) as any;
+    return new FnExpr("string_agg", [this, new BindingExpr(delimiter)], {
+      outputType:
+        this.outputType?.domain === String ? { dbType: "text", domain: String, arrayElementSafe: true } : undefined,
+    }) as any;
   }
 
   coalesce(fallback: unknown): Expr<any, never> {
     return new FnExpr("coalesce", [this, new BindingExpr(this.encode(fallback))], {
       decode: (v) => this.decode(v),
+      outputType: this.outputType,
     }) as any;
   }
 
@@ -401,8 +468,9 @@ export abstract class BaseExpr {
 /**
  * A SQL function applied to expressions, i.e. `count(a."id")::int` or `coalesce(bs."n", ?)`.
  *
- * By default the result decodes/encodes like the first argument (`max(a.id)` is still an id); numeric
- * aggregates pass their own `decode`/`encode`, since `count(a.id)` is a number, not an id.
+ * By default decoding is identity and encoding follows the first argument. Callers explicitly supply
+ * a decoder and output type when needed (`max(a.id)` is still an id); numeric aggregates supply their
+ * own decoder/encoder, since `count(a.id)` is a number, not an id. Unknown functions have no output type.
  */
 export class FnExpr extends BaseExpr {
   constructor(
@@ -413,9 +481,14 @@ export class FnExpr extends BaseExpr {
       suffix?: string;
       decode?: (value: unknown) => unknown;
       encode?: (value: unknown) => unknown;
+      outputType?: ExprOutputType;
     },
   ) {
     super();
+  }
+
+  get outputType(): ExprOutputType | undefined {
+    return this.opts.outputType;
   }
 
   toSql(ctx: ExprContext): SqlFragment {
@@ -508,6 +581,149 @@ export function isConditionLike(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return "and" in v || "or" in v || v.kind === "column" || v.kind === "raw" || v.kind === "exists";
+}
+
+/**
+ * Normalizes known PostgreSQL type synonyms without treating coercible types or user types as equal.
+ * The output compatibility checks compare these names, so normalize only spellings of the same type.
+ *
+ * I.e. `integer` and `int` both mean `int4`; `integer[]` and `int4[]` also describe the same SQL type.
+ * Keeping these spellings distinct would reject compatible outputs just because their serdes use
+ * different names for the same representation.
+ *
+ * I.e. `int4` can be promoted to `int8`, but they are not synonyms: classic pg returns int4 as a number
+ * and int8 as a string. Treating them as equal could admit a compound whose first operand's decoder
+ * cannot handle the common SQL type. This function does not choose or apply a conversion.
+ *
+ * I.e. `citext` must stay distinct from `text`: they disagree on whether 'Alice' and 'alice' are equal,
+ * which matters when a set operation compares rows. A user-defined `app.email` domain over text can
+ * also impose constraints that text does not. Unknown names remain unchanged, including their schema
+ * and quoting; neither coercibility nor a shared base type proves that their outputs are compatible.
+ */
+export function canonicalDbType(dbType: string): string {
+  if (dbType.endsWith("[]")) return `${canonicalDbType(dbType.slice(0, -2))}[]`;
+  switch (dbType) {
+    case "smallint":
+      return "int2";
+    case "int":
+    case "integer":
+      return "int4";
+    case "bigint":
+      return "int8";
+    case "decimal":
+      return "numeric";
+    case "real":
+      return "float4";
+    case "double precision":
+      return "float8";
+    case "boolean":
+      return "bool";
+    case "character varying":
+      return "varchar";
+    case "character":
+      return "bpchar";
+    case "timestamp without time zone":
+      return "timestamp";
+    case "timestamp with time zone":
+      return "timestamptz";
+    case "time without time zone":
+      return "time";
+    case "time with time zone":
+      return "timetz";
+    default:
+      return dbType;
+  }
+}
+
+const arrayDomains = new Map<unknown, Map<EntityMetadata | undefined, symbol>>();
+
+// Both classic pg and lazy binary reads decode these physical arrays, not an unparsed array string.
+const arrayElementDbTypes = new Set([
+  "bool",
+  "bytea",
+  "int2",
+  "int4",
+  "int8",
+  "float4",
+  "float8",
+  "numeric",
+  "text",
+  "varchar",
+  "bpchar",
+  "uuid",
+  "json",
+  "jsonb",
+]);
+
+/**
+ * Describes elementwise conversion only for known physical array parsers and stable domain conversion.
+ *
+ * I.e. `a.id.arrayAgg()` wraps Author's tag and `idMeta` in its domain token, but has no scalar
+ * `idMeta` of its own. Repeated expressions share the token; IDs of subtypes with a shared tag do not.
+ * Native enum/citext, date/time, and nested SQL arrays remain unknown. Numeric elements can be numbers
+ * in classic pg and strings in lazy binary reads, so a scalar string-only mapper is not sufficient.
+ */
+export function arrayOutputType(outputType: ExprOutputType | undefined): ExprOutputType | undefined {
+  if (!outputType?.arrayElementSafe || !arrayElementDbTypes.has(outputType.dbType)) return undefined;
+  let domains = arrayDomains.get(outputType.domain);
+  if (!domains) arrayDomains.set(outputType.domain, (domains = new Map()));
+  let domain = domains.get(outputType.idMeta);
+  if (!domain) domains.set(outputType.idMeta, (domain = Symbol("joist.arrayOutput")));
+  return { dbType: `${outputType.dbType}[]`, domain };
+}
+
+/**
+ * Resolves the SQL result type of supported numeric aggregates; other overloads remain unknown.
+ *
+ * I.e. `a.age.sum()` has `dbType: "int8"` and Number conversion, while `a.age` has `dbType: "int4"`
+ * and identity conversion. Their number domains agree, but SQL types reject a union in either order.
+ */
+function numericAggregateOutputType(
+  name: "sum" | "avg",
+  outputType: ExprOutputType | undefined,
+): ExprOutputType | undefined {
+  switch (outputType?.dbType) {
+    case "int2":
+    case "int4":
+      return { dbType: name === "sum" ? "int8" : "numeric", domain: Number, arrayElementSafe: true };
+    case "int8":
+    case "numeric":
+      return { dbType: "numeric", domain: Number, arrayElementSafe: true };
+    case "float4":
+      return { dbType: name === "sum" ? "float4" : "float8", domain: Number, arrayElementSafe: true };
+    case "float8":
+      return { dbType: "float8", domain: Number, arrayElementSafe: true };
+    default:
+      return undefined;
+  }
+}
+
+/** Only known MIN/MAX overloads have predictable output types; varchar/name use the text overload. */
+function minMaxOutputType(outputType: ExprOutputType | undefined): ExprOutputType | undefined {
+  switch (outputType?.dbType) {
+    case "varchar":
+    case "name":
+      return { ...outputType, dbType: "text" };
+    case "int2":
+    case "int4":
+    case "int8":
+    case "numeric":
+    case "float4":
+    case "float8":
+    case "text":
+    case "bpchar":
+    case "date":
+    case "time":
+    case "timetz":
+    case "timestamp":
+    case "timestamptz":
+    case "interval":
+    case "money":
+    case "inet":
+      return outputType;
+    default:
+      return undefined;
+  }
 }
 
 /** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */

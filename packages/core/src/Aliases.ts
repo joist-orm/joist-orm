@@ -23,6 +23,7 @@ import {
   type Expr,
   type ExprContext,
   type ExprLike,
+  type ExprOutputType,
   type InnerJoin,
   type LeftJoin,
   type SqlFragment,
@@ -40,7 +41,7 @@ import {
 } from "./index.ts";
 import { kqDot } from "./keywords.ts";
 import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
-import { type Column } from "./serde.ts";
+import { type Column, KeySerde } from "./serde.ts";
 import { type FieldsOf, type RootTypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
@@ -304,6 +305,15 @@ class AbstractAliasColumn<V> extends BaseExpr {
     readonly mgmt: AliasMgmt,
   ) {
     super();
+  }
+
+  /** Both Author.id and Book.author contain Author IDs, so both use Author metadata. */
+  get outputType(): ExprOutputType | undefined {
+    const outputType = this.column.outputType;
+    if (!outputType || !(this.column instanceof KeySerde)) return outputType;
+    const idMeta =
+      this.field.kind === "primaryKey" ? this.meta : this.field.kind === "m2o" ? this.field.otherMetadata() : undefined;
+    return idMeta ? { ...outputType, idMeta } : undefined;
   }
 
   toSql(ctx: ExprContext): SqlFragment {
@@ -621,21 +631,31 @@ class PolyReferenceAlias<T extends Entity> {
 
   /**
    * i.e. `c.parent.in(query({ from: a, ..., select: a.id }))`: like `eq` against an alias column, the
-   * subquery's select column picks the component, i.e. authors pick `parent_author_id`.
+   * subquery's agreed ID domain picks the component, i.e. authors pick `parent_author_id`.
    */
   private inSubquery(values: ExprLike<any>): ExpressionCondition {
-    // Read the selected expression without importing query.ts, which would create a load-order cycle.
-    const select = asNode(values).subquerySelect;
-    if (!(select instanceof AbstractAliasColumn)) {
-      return fail(`${this.field.fieldName} is polymorphic, so \`in\` needs a subquery selecting an id or FK column`);
+    // Only actual subqueries expose this getter; importing query.ts would create a load-order cycle.
+    const selected = asNode(values).subquerySelect;
+    const outputType = selected?.outputType;
+    let otherMeta = outputType?.idMeta;
+    if (!otherMeta) {
+      // Ordinary reads can select an unknown key serde. Compounds validate codecs before exposing a select.
+      if (!outputType && selected instanceof AbstractAliasColumn) {
+        otherMeta =
+          selected.field.kind === "primaryKey"
+            ? selected.meta
+            : selected.field.kind === "m2o"
+              ? selected.field.otherMetadata()
+              : undefined;
+      }
+      if (!otherMeta) {
+        return fail(
+          selected instanceof AbstractAliasColumn
+            ? `${this.field.fieldName} \`in\` needs an id or FK column, got ${selected.field.fieldName}`
+            : `${this.field.fieldName} is polymorphic, so \`in\` needs a subquery selecting an id or FK column`,
+        );
+      }
     }
-    // The column's target entity picks the component: an id column is its own meta, an FK its other side
-    const otherMeta =
-      select.field.kind === "primaryKey"
-        ? select.meta
-        : select.field.kind === "m2o"
-          ? select.field.otherMetadata()
-          : fail(`${this.field.fieldName} \`in\` needs an id or FK column, got ${select.field.fieldName}`);
     const comp =
       this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
       fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);

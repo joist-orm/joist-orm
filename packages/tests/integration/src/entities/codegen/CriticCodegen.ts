@@ -71,6 +71,7 @@ export interface CriticFields {
   favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
   bookReviews: { kind: "o2m"; type: BookReview };
+  criticColumn: { kind: "o2o"; type: CriticColumn };
 }
 
 export interface CriticOpts {

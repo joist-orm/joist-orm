@@ -1,10 +1,11 @@
 import { groupBy, isPlainObject } from "joist-utils";
 
-import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
+import { type AliasMgmt, getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
 import { getMetadataForTable } from "./configure.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionFilter, type OrderBy, type ValueFilter } from "./EntityFilter.ts";
 import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata.ts";
+import { deferredAliasSym, isDeferredAliasCondition } from "./Expr.ts";
 import {
   type Column,
   ConditionBuilder,
@@ -66,14 +67,8 @@ export interface ExistsCondition {
   outerAliases: string[];
 }
 
-/** A marker condition for alias methods to indicate they should be skipped/pruned. */
-export const skipCondition: ColumnCondition = {
-  kind: "column",
-  alias: "skip",
-  column: "skip",
-  dbType: "skip",
-  cond: undefined as any,
-};
+// `skipCondition` lives in `Expr.ts` (a runtime leaf) so alias/expression methods can return it
+// without a load-order cycle; `index.ts` re-exports it from there.
 
 export interface PrimaryTable {
   join: "primary";
@@ -236,6 +231,9 @@ export function parseFindQuery(
   const query: ParsedFindQuery = { selects, tables, orderBys };
   const { orderBy, conditions: optsExpression, softDeletes = "exclude", pruneJoins = false, keepAliases = [] } = opts;
   const cb = new ConditionBuilder();
+  // Where each user-created `alias(...)` is bound in this parse's join literal; alias-built conditions
+  // (`a.firstName.eq(...)`) are resolved against it once the whole tree is walked
+  const aliasBindings = new Map<AliasMgmt, { meta: EntityMetadata; alias: string }>();
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -330,9 +328,9 @@ export function parseFindQuery(
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
     if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      getAliasMgmt(filter.as).setAlias(meta, alias);
+      aliasBindings.set(getAliasMgmt(filter.as), { meta, alias });
     } else if (isAlias(filter)) {
-      getAliasMgmt(filter).setAlias(meta, alias);
+      aliasBindings.set(getAliasMgmt(filter), { meta, alias });
     }
 
     addFilterAt(meta, alias, filter, targetCb, ef, join);
@@ -369,7 +367,7 @@ export function parseFindQuery(
       } else {
         const a = newAlias(meta.cstr);
         const result = fragment.fn(a);
-        getAliasMgmt(a).setAlias(meta, tableAlias);
+        aliasBindings.set(getAliasMgmt(a), { meta, alias: tableAlias });
         if (isScopeJoinFilter(result)) {
           // Parse the join tree first so its `as:` bindings re-root the aliases that
           // `conditions` reference, then add the conditions against the now-bound aliases.
@@ -724,6 +722,10 @@ export function parseFindQuery(
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
   });
+
+  // Resolve alias-built conditions against this parse's bindings, before anything reads their
+  // aliases (the id-not-null injection just below, and join pruning)
+  resolveAliasConditions(query, aliasBindings);
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);
@@ -1215,6 +1217,20 @@ export function lazyExcludedSelects(meta: EntityMetadata, alias: string): string
   return selects;
 }
 
+/** Resolves every `DeferredAliasCondition` in `query` against the parse's alias bindings. */
+function resolveAliasConditions(
+  query: ParsedFindQuery,
+  bindings: Map<AliasMgmt, { meta: EntityMetadata; alias: string }>,
+): void {
+  function resolve(handle: AliasMgmt): { meta: EntityMetadata; alias: string } {
+    return bindings.get(handle) ?? fail(`Alias for ${handle.tableName} is not bound to this query's join literal`);
+  }
+  function maybeResolve(c: ColumnCondition | RawCondition): void {
+    if (isDeferredAliasCondition(c)) c[deferredAliasSym](resolve);
+  }
+  visitConditions(query, { visitCond: maybeResolve, visitRaw: maybeResolve });
+}
+
 export function maybeAddNotSoftDeleted(
   conditions: ColumnCondition[],
   meta: EntityMetadata,
@@ -1270,16 +1286,23 @@ function needsStiDiscriminator(meta: EntityMetadata): boolean {
 }
 
 function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, alias: string): void {
-  const baseMeta = getBaseMeta(subtypeMeta);
+  const cond = stiSubtypeFilter(subtypeMeta, alias);
+  if (cond) cb.addSimpleCondition(cond);
+}
+
+/** The `type_id = X` discriminator condition for an STI subtype, shared by em.find and em.query. */
+export function stiSubtypeFilter(meta: EntityMetadata, alias: string): ColumnCondition | undefined {
+  if (meta.inheritanceType !== "sti" || meta.stiDiscriminatorValue === undefined) return undefined;
+  const baseMeta = getBaseMeta(meta);
   const column = baseMeta.fields[baseMeta.stiDiscriminatorField!].serde?.columns[0]!;
-  cb.addSimpleCondition({
+  return {
     kind: "column",
     alias,
     column: column.columnName,
     dbType: column.dbType,
-    cond: { kind: "eq", value: subtypeMeta.stiDiscriminatorValue },
+    cond: { kind: "eq", value: meta.stiDiscriminatorValue },
     pruneable: true,
-  });
+  };
 }
 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */

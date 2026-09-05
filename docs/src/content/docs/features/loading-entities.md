@@ -61,18 +61,15 @@ See [Find Queries](./queries-find) for more documentation and examples.
 * Con: Cannot use domain model-level relations like Joist's `hasOneDerived`, `hasOneThrough`, `AsyncProperties`, etc.
 * Con: Loads only full entities, not cross-table aggregates/group bys/etc.
 
-### 3. Other Query Builders
+### 3. Raw Queries
 
-For queries that grow outside what `em.find` can provide, i.e. **the last ~5% of your application's queries** that are truly custom, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely).
-
-Knex would be a natural choice, because Joist uses Knex as an internal dependency, but Kysely would be fine too.
-
-In particular, any queries that need to:
+For queries that grow outside what `em.find` can provide, i.e. **the last ~5% of your application's queries** that are truly custom, Joist's [`em.query`](./queries-raw) covers SQL-level `SELECT`s as plain object literals, in particular any queries that need to:
 
 * Group bys/aggregates
+* Subqueries and arbitrary joins
 * Select custom fragments of data (not just an entity)
 
-Are best done via Knex or Kysely.
+For anything `em.query` cannot express (i.e. `UNION`s or writes), a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely) still works fine alongside Joist.
 
 #### `buildQuery`
 
@@ -92,7 +89,7 @@ const books = await em.loadFromQuery(Book, query);
 
 These three options all focus on loading *entities*, which your code will then iterate over to perform business/view logic.
 
-If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), that is currently not a feature that Joist provides, so you must use a separate raw query builder, as per the "option 3" in the above list.
+If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), use [Raw Queries](./queries-raw), as per the "option 3" in the above list.
 
 :::
 

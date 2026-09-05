@@ -100,6 +100,16 @@ import { resetFactoryCreated } from "./newTestInstance.ts";
 import { type PendingChange } from "./PendingChanges.ts";
 import { PluginManager } from "./PluginManager.ts";
 import { type PreloadPlugin } from "./plugins/PreloadPlugin.ts";
+import {
+  type EntityQuery,
+  type QueryArg,
+  type QueryJoins,
+  type QueryRow,
+  type QuerySelect,
+  type QuerySource,
+  type Subquery,
+  parseUserQuery,
+} from "./query.ts";
 import { ReactionsManager } from "./ReactionsManager.ts";
 import { followReverseHint } from "./reactiveHints.ts";
 import { type AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
@@ -511,6 +521,46 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  /**
+   * Runs a SQL-shaped query written as an object literal, and returns typed rows.
+   *
+   * ```ts
+   * const [a, b] = aliases(Author, Book);
+   * const rows = await em.query({
+   *   from: a,
+   *   join: [{ left: b, on: b.author.eq(a.id) }],
+   *   where: { and: [a.age.gte(minAge)] },
+   *   groupBy: [a.firstName],
+   *   select: { name: a.firstName, bookCount: b.id.count() },
+   *   orderBy: { bookCount: "DESC" },
+   * });
+   * // → { name: string; bookCount: number }[]
+   * ```
+   *
+   * `select` decides the row type: a bare alias (`select: a`) returns entities through the identity
+   * map, a `{ key: expr }` object returns typed POJOs, and a `query(...)` value returns its rows. Joins
+   * are pruned like `em.find`: an `undefined` condition drops out, and a join nothing references
+   * anymore drops with it. See `query.ts` for the full DSL, and `query()` for composing subqueries.
+   *
+   * This method is not batched: these are custom queries, too unique to batch.
+   */
+  public query<R>(q: Subquery<R, any>): Promise<R[]>;
+  public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
+  public query<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
+    q: QueryArg<F, S, J, never>,
+  ): Promise<QueryRow<S, J>[]>;
+  public query(q: unknown): Promise<any[]> {
+    this.#assertFindAllowed("query");
+    const em = this;
+    return (async function query() {
+      const plan = parseUserQuery(q);
+      const rows = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      return plan.decodeRows(em, rows);
+    })().catch(function query(err) {
+      throw appendStack(err, new Error());
+    });
   }
 
   /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addCommitRule`. */

@@ -28,7 +28,26 @@ export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner.ts";
-export * from "./Aliases.ts";
+// Named exports only: Aliases.ts also exports em.query runtime internals (join-entry symbols,
+// JoinTableHandle) that must not become accidental semver commitments
+export {
+  alias,
+  aliases,
+  getAliasMetadata,
+  getAliasMgmt,
+  getMaybeCtiAlias,
+  isAlias,
+  newAliasProxy,
+  type Alias,
+  type AliasBrand,
+  type AliasFor,
+  type AliasMgmt,
+  type CollectionAlias,
+  type EntityAlias,
+  type PolyAlias,
+  type PrimitiveAlias,
+  type ReferenceAlias,
+} from "./Aliases.ts";
 export { BaseEntity, getInstanceData } from "./BaseEntity.ts";
 export { ConditionBuilder } from "./ConditionBuilder.ts";
 export { type Entity, type IdType, isEntity } from "./Entity.ts";
@@ -38,6 +57,18 @@ export * from "./EntityGraphQLFilter.ts";
 export * from "./EntityManager.ts";
 export * from "./EntityMetadata.ts";
 export type { EnumMetadata } from "./EnumMetadata.ts";
+// `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
+// (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
+// joist-core, so `toSql`/`decode`/`encode` never show up as something a user could call.
+export {
+  type Expr,
+  type ExprBrand,
+  exprBrand,
+  type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
+  skipCondition,
+} from "./Expr.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
@@ -104,6 +135,32 @@ export { deepNormalizeHint, normalizeHint } from "./normalizeHints.ts";
 export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader.ts";
+// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseUserQuery, Plan) stays internal
+export {
+  type CheckScope,
+  type Clauses,
+  type EntityQuery,
+  entityQueryBrand,
+  type MaybeNull,
+  type NameOf,
+  type NotWidened,
+  type OrderByDirection,
+  type OrderByKeys,
+  type Query,
+  type QueryArg,
+  type QueryJoin,
+  type QueryJoins,
+  type QueryOrderBy,
+  type QueryRow,
+  type QuerySelect,
+  type QuerySource,
+  type QueryValue,
+  query,
+  sql,
+  type Subquery,
+  type SubqueryBrand,
+  subqueryBrand,
+} from "./query.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,

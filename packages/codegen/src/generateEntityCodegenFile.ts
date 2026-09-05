@@ -580,10 +580,13 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
+  const o2o = meta.oneToOnes.map((field) => {
+    return code`${field.fieldName}: { kind: "o2o"; type: ${field.otherEntity.type} };`;
+  });
   const lo2m = meta.largeOneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
-  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...lo2m];
+  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...o2o, ...lo2m];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.

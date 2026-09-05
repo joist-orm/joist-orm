@@ -108,15 +108,20 @@ export type QueryJoin = InnerJoin<QuerySource> | LeftJoin<QuerySource>;
 export type QueryJoins = readonly (QueryJoin | undefined)[];
 
 /**
- * One order-by entry: the direction is the key, the expression is the value, mirroring how `em.find`
- * puts the field name as the key and `"ASC" | "DESC"` as the value. `never` on the other key keeps an
+ * An expression order-by entry: the direction is the key and the expression is the value, unlike
+ * the keyed form's field name and `"ASC" | "DESC"` value. `never` on the other key keeps an
  * entry to one direction, the same trick `ExpressionFilter` uses for `and`/`or`. `nulls` is
  * `NULLS FIRST/LAST`.
+ *
+ * When select keys are known, exclude them so a keyed sort cannot be silently ignored inside an
+ * expression entry. An untyped `Query` has no known keys to exclude.
  */
-export type QueryOrderBy = (
+export type QueryOrderBy<S = never> = (
   | { readonly asc: ExprLike<any>; readonly desc?: never }
   | { readonly desc: ExprLike<any>; readonly asc?: never }
-) & { readonly nulls?: "first" | "last" };
+) & { readonly nulls?: "first" | "last" } & (string extends OrderByKey<S>
+    ? unknown
+    : { readonly [K in Exclude<OrderByKey<S>, "asc" | "desc" | "nulls">]?: never });
 
 export type OrderByDirection =
   | "ASC"
@@ -127,12 +132,12 @@ export type OrderByDirection =
   | "DESC NULLS LAST";
 
 /**
- * The keyed `orderBy` form, mirroring `em.find`'s `orderBy: { firstName: "ASC" }`.
+ * A keyed `orderBy` entry, used alone or in an array, like `em.find`'s `orderBy: [{ firstName: "ASC" }]`.
  *
  * The keys are the keys of a POJO/subquery `select` (rendered as SQL output-column names, so ordering
  * by an aggregate does not repeat its expression), or the entity's sortable fields in entity mode.
  * An `undefined` direction prunes the entry, like any other condition. For expressions that are not
- * in `select`, use the array form's `{ asc: expr }` / `{ desc: expr }` entries.
+ * in `select`, mix in `{ asc: expr }` / `{ desc: expr }` entries in the array form.
  */
 export type OrderByKeys<S> = S extends { readonly [aliasMgmt]: { readonly __entity: infer T } }
   ? T extends Entity
@@ -141,6 +146,9 @@ export type OrderByKeys<S> = S extends { readonly [aliasMgmt]: { readonly __enti
   : S extends { readonly [exprBrand]: any }
     ? never
     : { readonly [K in keyof S & string]?: OrderByDirection | undefined };
+
+/** All sortable keys across select variants, not just the keys shared by every variant. */
+type OrderByKey<S> = S extends unknown ? keyof OrderByKeys<S> : never;
 
 /** The three select shapes: entity mode, single-expression mode (scalar/list subqueries), and POJO mode. */
 export type QuerySelect = QuerySource | ExprLike<any> | Record<string, ExprLike<any>>;
@@ -159,7 +167,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   groupBy?: readonly ExprLike<any>[];
   having?: ExpressionCondition;
   select: S;
-  orderBy?: readonly (QueryOrderBy | undefined)[] | OrderByKeys<S>;
+  orderBy?: readonly (QueryOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
   limit?: number;
   offset?: number;
   distinct?: boolean;
@@ -943,27 +951,42 @@ const ORDER_BY_DIRECTIONS: string[] = [
   "DESC NULLS LAST",
 ];
 
-/** SQL for the `orderBy` clause: the array form's expression entries, or the keyed form's `OrderByKeys`. */
+/**
+ * Generates ORDER BY SQL in entry order for keyed/expression arrays or a single keyed object.
+ *
+ * Expression entries retain bindings and alias references for join pruning. Undefined entries and
+ * directions are omitted.
+ */
 function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
   const { orderBy, select } = q;
   if (!orderBy) return [];
-  if (Array.isArray(orderBy)) return orderBy.filter(isDefined).map((o) => orderByToSql(o, ctx));
-  return Object.entries(orderBy).flatMap(([key, dir]) => {
-    if (dir === undefined) return [];
-    // The direction is interpolated into the SQL, so never trust it, i.e. it might be a request param
-    if (!ORDER_BY_DIRECTIONS.includes(dir as string)) return fail(`Invalid orderBy direction '${dir}'`);
-    // Entity mode orders by the alias's column; POJO/subquery selects order by the output column name
-    if (isAlias(select)) {
-      const column = (select as any)[key];
-      if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable field of the entity`);
-      const fragment = asNode(column).toSql(ctx);
-      return [{ ...fragment, sql: `${fragment.sql} ${dir}` }];
+  const result: SqlFragment[] = [];
+  for (const entry of Array.isArray(orderBy) ? orderBy : [orderBy]) {
+    if (entry === undefined) continue;
+    // A select key can also be named asc or desc, so distinguish entries by their values, not their keys.
+    if (isExpr(entry.asc) || isExpr(entry.desc)) {
+      result.push(orderByToSql(entry, ctx));
+      continue;
     }
-    if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
-    const keys = isSubqueryValue(select) ? select[subqueryBrand].columnKeys() : Object.keys(select as object);
-    if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
-    return [{ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] }];
-  });
+    for (const [key, dir] of Object.entries(entry)) {
+      if (dir === undefined) continue;
+      // The direction is interpolated into the SQL, so never trust it, i.e. it might be a request param
+      if (!ORDER_BY_DIRECTIONS.includes(dir as string)) return fail(`Invalid orderBy direction '${dir}'`);
+      // Entity mode orders by the alias's column; POJO/subquery selects order by the output column name
+      if (isAlias(select)) {
+        const column = (select as any)[key];
+        if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable field of the entity`);
+        const fragment = asNode(column).toSql(ctx);
+        result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
+      } else {
+        if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
+        const keys = isSubqueryValue(select) ? select[subqueryBrand].columnKeys() : Object.keys(select as object);
+        if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
+        result.push({ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] });
+      }
+    }
+  }
+  return result;
 }
 
 function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {

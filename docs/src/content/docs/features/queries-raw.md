@@ -46,7 +46,7 @@ Prefer [find queries](./queries-find) for the ~80-90% of queries that are plain 
 
 ## Selecting
 
-The `select` key decides the row type:
+The `select` key determines the `rows` return type:
 
 - **A POJO literal** returns typed rows, one key per column. Values decode exactly like entity fields: ids come back as tagged ids (`"a:1"`), enums as enum values, custom serdes as their domain values.
 
@@ -55,7 +55,7 @@ The `select` key decides the row type:
   // { id: AuthorId; name: string; age: number | null }[]
   ```
 
-- **A bare alias** returns entities, loaded through the `EntityManager`'s identity map like `em.find` — but the query itself can use group bys and aggregates:
+- **An alias** returns that alias's entities, loaded through the `EntityManager`'s identity map like `em.find` — but the query itself can use group bys and aggregates:
 
   ```ts
   const authors = await em.query({
@@ -73,7 +73,9 @@ The `select` key decides the row type:
 
 ### Left joins and `null`
 
-Row types follow the join list: a column from an inner-joined or `from` source keeps its type, and a column from a left-joined source picks up `| null`, because the join may not match. `.coalesce(fallback)` recovers the non-null type:
+Row types follow the join list: a column from an inner-joined or `from` source keeps its type, and a column from a left-joined source picks up `| null`, because the join may not match.
+
+The `.coalesce(fallback)` method creates a `COALESCE` with the default value, and so drops the `| null` type:
 
 ```ts
 const rows = await em.query({
@@ -86,9 +88,11 @@ const rows = await em.query({
 
 ## Conditions and Expressions
 
-Alias columns are typed expressions. They keep all of the condition methods from `em.find`'s [complex conditions](./queries-find#complex-conditions) — `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `like`, `ilike` — and can compare across columns, i.e. `b.author.eq(a.id)` or `m.age.gt(a.age)`.
+Alias columns (i.e. `a.firstName`) are typed expressions that can be used either to `select` the column directly, or use the column in a `where` condition (or other expression location).
 
-They also carry SQL functions as methods, so aggregates need no imports:
+For use in `where` clauses, alias columns keep all of the condition methods from `em.find`'s [complex conditions](./queries-find#complex-conditions) — `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `like`, `ilike` — and can compare across columns, i.e. `b.author.eq(a.id)` or `m.age.gt(a.age)`.
+
+They also have common SQL functions as methods, such as aggregates:
 
 - `count()`, `countDistinct()` — `b.id.count()` is the idiomatic `count(*)`
 - `sum()`, `avg()` (numeric columns only), `min()`, `max()`
@@ -146,12 +150,12 @@ join: [
 ]
 ```
 
-Whether `as` returns an `INNER` join or `LEFT` follows the relation's nullability:
+Whether `as` returns an `INNER` join or `LEFT` join follows the relation's nullability:
 
 - a required reference (i.e. `book.author`, a required m2o) is `INNER`,
 - a nullable reference, every collection (i.e. `author.books`), and one-to-ones are `LEFT`.
 
-The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (passing an incorrect `Publisher` alias to the `books` relation) is a compile error.
+The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (which is passing an incorrect `Publisher` alias to the `books` relation) is a compile error.
 
 Self-joins (joining back into an existing table) are supported with named aliases, i.e. `alias(Author, "m")`:
 
@@ -200,9 +204,11 @@ Two things to know:
 
 ## Soft Deletes
 
-`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a *collection* sugar join (o2m/m2m, unless the relation is configured `softDeletes: "include"`) gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row. Reference sugar joins (m2o/o2o/poly) and explicit joins are **not** filtered, matching `em.find`'s relation semantics: `book.author.get` resolves a soft-deleted author, so joining through one should not drop the book — add a `deletedAt` condition to the `on` yourself if you want one. The injected conditions never keep an otherwise-pruned join alive, and subqueries apply their own injection.
+`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a *collection* sugar join (o2m/m2m, unless the relation is configured `softDeletes: "include"`) gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row.
 
-Opt out per query with `softDeletes: "include"`:
+*Reference* sugar joins (m2o/o2o/poly) and explicit joins are **not** filtered, matching `em.find`'s relation semantics: `book.author.get` resolves a soft-deleted author, so joining through one should not drop the book. If you do want this behavior, you can add a `deletedAt` condition to the `on` manually.
+
+You can opt out of soft-delete filtering with `softDeletes: "include"`:
 
 ```ts
 const rows = await em.query({ from: a, select: { name: a.firstName }, softDeletes: "include" });
@@ -212,9 +218,9 @@ Like `em.find`, filtering is skipped for CTI subtypes.
 
 ## Ordering and Paging
 
-`orderBy` has two forms; prefer the keyed form whenever what you're ordering by is already in `select`.
+`orderBy` accepts an array of keyed or expression entries, or a single keyed object:
 
-The **keyed form** mirrors `em.find`: the keys are keys of `select` (or the entity's fields in entity mode), each with `"ASC"` or `"DESC"`, optionally suffixed with `NULLS FIRST` / `NULLS LAST`. It renders as SQL output-column names, so ordering by an aggregate doesn't repeat the expression, and an `undefined` direction prunes the entry:
+The **keyed form** mirrors `em.find`: the keys are any existing keys from the `select` (or the entity's fields in entity mode), each with `"ASC"` or `"DESC"`, optionally suffixed with `NULLS FIRST` / `NULLS LAST`:
 
 ```ts
 const rows = await em.query({
@@ -222,20 +228,28 @@ const rows = await em.query({
   join: [{ inner: b, on: b.author.eq(a.id) }],
   groupBy: [a.firstName],
   select: { name: a.firstName, bookCount: b.id.count() },
-  orderBy: { bookCount: "DESC", name: "ASC NULLS LAST" },
+  orderBy: [{ bookCount: "DESC" }, { name: "ASC NULLS LAST" }],
 });
 // ... ORDER BY "bookCount" DESC, name ASC NULLS LAST
 ```
 
-The **array form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — for ordering by anything you didn't select, with `{ asc: expr }` / `{ desc: expr }` entries and an optional `nulls: "first" | "last"`:
+Entries are applied in array order. A single keyed object is shorthand, i.e. `orderBy: { bookCount: "DESC", name: "ASC NULLS LAST" }` produces the same ordering.
+
+The **expression form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — including fields you didn't select, with `{ asc: expr }` / `{ desc: expr }` entries and an optional `nulls: "first" | "last"`:
 
 ```ts
 orderBy: [{ desc: b.id.count() }, { asc: a.firstName, nulls: "last" }]
 ```
 
+Keyed and expression entries can also be mixed:
+
+```ts
+orderBy: [{ bookCount: "DESC" }, { asc: a.firstName, nulls: "last" }]
+```
+
 Both forms allow `undefined` (entries or directions) so conditional spreads work.
 
-`limit`, `offset`, and `distinct: true` do what they say.
+; prefer the keyed form whenever what you're ordering by is already in `select`.
 
 ## Composition: `query()`
 

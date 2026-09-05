@@ -888,15 +888,19 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("ordering and paging", () => {
-    it("can order by select keys", async () => {
+    it.each(["object", "array"])("can order by select keys with the %s form", async (form) => {
       // Given Authors a1 and a2 as separate aggregate groups
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
+      // And Author a0 inserted last, whose name sorts before both other Authors
+      await insertAuthor({ first_name: "a0" });
       // And two Books for a1
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1 });
       // And one Book for a2, giving the selected bookCount key distinct values to sort
       await insertBook({ title: "b3", author_id: 2 });
+      // And one Book for a0, tying a2's count so name must break the tie without overriding count
+      await insertBook({ title: "b4", author_id: 3 });
       const em = newEntityManager();
       const [a, b] = aliases(Author, Book);
       resetQueryCount();
@@ -905,10 +909,14 @@ describe("EntityManager.rawQueries", () => {
         join: [{ inner: b, on: b.author.eq(a.id) }],
         groupBy: [a.firstName],
         select: { name: a.firstName, bookCount: b.id.count() },
-        orderBy: { bookCount: "DESC", name: "ASC NULLS LAST" },
+        orderBy:
+          form === "object"
+            ? { bookCount: "DESC", name: "ASC NULLS LAST" }
+            : [{ bookCount: "DESC" }, { name: "ASC NULLS LAST" }],
       });
       expect(rows).toEqual([
         { name: "a1", bookCount: 2 },
+        { name: "a0", bookCount: 1 },
         { name: "a2", bookCount: 1 },
       ]);
       expect(queries).toMatchInlineSnapshot(`
@@ -918,30 +926,38 @@ describe("EntityManager.rawQueries", () => {
       `);
     });
 
-    it("can order entities with the keyed form", async () => {
+    it.each(["object", "array"])("can order entities with the keyed %s form", async (form) => {
+      // Given Authors inserted in ascending name order, opposite to the requested sort
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
       const em = newEntityManager();
       const [a] = aliases(Author);
-      const authors = await em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
+      const authors = await em.query({
+        from: a,
+        select: a,
+        orderBy: form === "object" ? { firstName: "DESC" } : [{ firstName: "DESC" }],
+      });
       expect(authors).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
     });
 
-    it("prunes keyed orderBy entries given undefined", async () => {
+    it.each(["object", "array"])("prunes keyed orderBy entries given undefined in the %s form", async (form) => {
       // Given Authors inserted in reverse name order with null ages
       await insertAuthor({ first_name: "a2" });
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const [a] = aliases(Author);
-      // And an absent age sort, leaving name as the only ordering key
+      // And an absent age sort, with undefined and empty array entries also leaving name as the only ordering key
       const byAge: "ASC" | undefined = undefined;
       resetQueryCount();
       const rows = await em.query({
         from: a,
         select: { name: a.firstName, age: a.age },
-        orderBy: { age: byAge, name: "ASC" },
+        orderBy: form === "object" ? { age: byAge, name: "ASC" } : [undefined, {}, { age: byAge }, { name: "ASC" }],
       });
-      expect(rows).toMatchObject([{ name: "a1" }, { name: "a2" }]);
+      expect(rows).toEqual([
+        { name: "a1", age: null },
+        { name: "a2", age: null },
+      ]);
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, a.age AS age FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY name ASC",
@@ -949,12 +965,16 @@ describe("EntityManager.rawQueries", () => {
       `);
     });
 
-    it("rejects an orderBy key not in select", async () => {
+    it.each(["object", "array"])("rejects an orderBy key not in select in the %s form", async (form) => {
       const em = newEntityManager();
       const [a] = aliases(Author);
       // Given an invalid lastName sort key when the Author projection exposes only name
       await expect(
-        em.query({ from: a, select: { name: a.firstName }, orderBy: { lastName: "ASC" } as any }),
+        em.query({
+          from: a,
+          select: { name: a.firstName },
+          orderBy: (form === "object" ? { lastName: "ASC" } : [{ lastName: "ASC" }]) as any,
+        }),
       ).rejects.toThrow(new Error("orderBy key 'lastName' is not a key of select"));
     });
 
@@ -967,13 +987,78 @@ describe("EntityManager.rawQueries", () => {
       ).rejects.toThrow(new Error("Invalid orderBy nulls 'last;--'"));
     });
 
-    it("rejects an invalid orderBy direction", async () => {
+    it.each(["object", "array"])("rejects an invalid orderBy direction in the %s form", async (form) => {
       const em = newEntityManager();
       const [a] = aliases(Author);
       // Given an injected SQL fragment instead of a valid direction for the Author name sort
       await expect(
-        em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "ASC; DROP TABLE" as any } }),
+        em.query({
+          from: a,
+          select: { name: a.firstName },
+          orderBy: form === "object" ? { name: "ASC; DROP TABLE" as any } : [{ name: "ASC; DROP TABLE" as any }],
+        }),
       ).rejects.toThrow(new Error("Invalid orderBy direction 'ASC; DROP TABLE'"));
+    });
+
+    it("mixes keyed and expression ordering while keeping a join referenced only by orderBy", async () => {
+      // Given Author a1 aged 20 whose Book sorts last by title
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertBook({ title: "b3", author_id: 1 });
+      // And Author a2 of the same age whose Book sorts before a1's, breaking the age tie
+      await insertAuthor({ first_name: "a2", age: 20 });
+      await insertBook({ title: "b2", author_id: 2 });
+      // And an older Author a3 whose Book sorts first by title, so age must take precedence
+      await insertAuthor({ first_name: "a3", age: 30 });
+      await insertBook({ title: "b1", author_id: 3 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [{ left: b, on: b.author.eq(a.id) }],
+        select: { name: a.firstName, age: a.age },
+        orderBy: [{ age: "ASC" }, { asc: b.title }],
+      });
+      expect(rows).toEqual([
+        { name: "a2", age: 20 },
+        { name: "a1", age: 20 },
+        { name: "a3", age: 30 },
+      ]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS name, a.age AS age FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL ORDER BY age ASC, b.title ASC",
+       ]
+      `);
+    });
+
+    it("orders select keys named asc, desc, and nulls as keyed array entries", async () => {
+      // Given Author a1 aged 20
+      await insertAuthor({ first_name: "a1", age: 20 });
+      // And another Author named a1 of the same age, so descending id must break the tie
+      await insertAuthor({ first_name: "a1", age: 20 });
+      // And Author a2 of the same age, whose name must sort after both Authors named a1
+      await insertAuthor({ first_name: "a2", age: 20 });
+      // And younger Author a0, whose earlier name must not override descending age
+      await insertAuthor({ first_name: "a0", age: 10 });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        select: { asc: a.age, desc: a.firstName, nulls: a.id },
+        orderBy: [{ asc: "DESC" }, { desc: "ASC" }, { nulls: "DESC" }],
+      });
+      expect(rows).toEqual([
+        { asc: 20, desc: "a1", nulls: "a:2" },
+        { asc: 20, desc: "a1", nulls: "a:1" },
+        { asc: 20, desc: "a2", nulls: "a:3" },
+        { asc: 10, desc: "a0", nulls: "a:4" },
+      ]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.age AS "asc", a.first_name AS "desc", a.id AS nulls FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "asc" DESC, "desc" ASC, nulls DESC",
+       ]
+      `);
     });
 
     it("can order with nulls last, limit, and offset", async () => {
@@ -1032,6 +1117,36 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("composition", () => {
+    it("preserves named outputs with keyed orderBy arrays in a derived table and its outer query", async () => {
+      // Given Author a2 aged 40, outside the first two Authors by name despite being the oldest
+      await insertAuthor({ first_name: "a2", age: 40 });
+      // And Author a1 aged 30, inside the name-ordered page and first by descending age
+      await insertAuthor({ first_name: "a1", age: 30 });
+      // And Author a0 aged 20, first by name but last by descending age
+      await insertAuthor({ first_name: "a0", age: 20 });
+      const em = newEntityManager();
+      const [a] = aliases(Author);
+      // And a derived table exposing named outputs for the first two Authors by name
+      const sub = query({
+        from: a,
+        select: { authorId: a.id, name: a.firstName, age: a.age },
+        orderBy: [{ name: "ASC" }],
+        limit: 2,
+        as: "author_page",
+      });
+      resetQueryCount();
+      const rows = await em.query({ from: sub, select: sub, orderBy: [{ age: "DESC" }] });
+      expect(rows).toEqual([
+        { authorId: "a:2", name: "a1", age: 30 },
+        { authorId: "a:3", name: "a0", age: 20 },
+      ]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT author_page."authorId" AS "authorId", author_page.name AS name, author_page.age AS age FROM (SELECT a.id AS "authorId", a.first_name AS name, a.age AS age FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY name ASC LIMIT $1) AS author_page ORDER BY age DESC",
+       ]
+      `);
+    });
+
     it("can left join a subquery and coalesce its columns", async () => {
       // Given Authors a1 and a2, with a2 left without Books or a matching aggregate row
       await insertAuthor({ first_name: "a1" });

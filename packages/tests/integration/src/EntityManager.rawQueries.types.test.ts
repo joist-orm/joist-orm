@@ -105,7 +105,7 @@ async function typeAssertions() {
 
   // === A whole query is a value
   // `satisfies Query` checks the shape but keeps the literal `select` type...
-  const q = { from: a, select: { name: a.firstName } } satisfies Query;
+  const q = { from: a, select: { name: a.firstName }, orderBy: [{ name: "ASC" }, { asc: a.age }] } satisfies Query;
   const direct = em.query(q);
   expectTypeOf(direct).resolves.toEqualTypeOf<{ name: string }[]>();
   // ...and `query(q)` builds the same rows as `em.query(q)` ran directly; anonymous tables share the "?" key
@@ -117,6 +117,26 @@ async function typeAssertions() {
   em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "ASC NULLS LAST" } });
   // In entity mode the keys are the entity's sortable fields instead
   em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
+  // Keyed and expression entries can share a readonly array without widening the selected row type
+  const ordered = em.query({
+    from: a,
+    select: { name: a.firstName, age: a.age },
+    orderBy: [undefined, { age: undefined }, { age: "DESC" }, { asc: a.id }, { name: "ASC NULLS LAST" }] as const,
+  });
+  expectTypeOf(ordered).resolves.toEqualTypeOf<{ name: string; age: number | null }[]>();
+  // Entity fields and derived-table output names are also accepted in keyed array entries
+  em.query({ from: a, select: a, orderBy: [{ firstName: "DESC" }, { age: "ASC NULLS LAST" }] });
+  const orderedStats = em.query({ from: bookStats, select: bookStats, orderBy: [{ bookCount: "DESC" }] });
+  expectTypeOf(orderedStats).resolves.toEqualTypeOf<
+    { authorId: AuthorId; bookCount: number; lastTitle: string | null }[]
+  >();
+  // query() shares the same orderBy array support and keeps its derived-table row type
+  const orderedNames = query({
+    from: a,
+    select: { name: a.firstName },
+    orderBy: [{ asc: a.age }, { name: "ASC" }],
+  });
+  expectTypeOf(orderedNames).toEqualTypeOf<Subquery<{ name: string }, "?">>();
 
   // === A single bare condition works for where/having, no `{ and: [...] }` wrapper needed
   em.query({ from: a, where: a.age.gte(18), select: a });
@@ -170,6 +190,25 @@ async function typeAssertions() {
   em.query({ from: a, select: { name: a.firstName }, orderBy: { age: "ASC" } });
   // @ts-expect-error: keyed orderBy directions are uppercase SQL literals, i.e. "ASC" not "asc"
   em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "asc" } });
+  // @ts-expect-error: keyed array entries only accept selected keys, even alongside expression entries
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ asc: a.age }, { age: "ASC" }] });
+  // @ts-expect-error: keyed array directions must also be uppercase SQL literals
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ name: "asc" }] });
+  // @ts-expect-error: entity collections are not sortable fields
+  em.query({ from: a, select: a, orderBy: [{ books: "ASC" }] });
+  // @ts-expect-error: scalar selects have no keys to address in orderBy
+  em.query({ from: a, select: a.firstName, orderBy: [{ name: "ASC" }] });
+  // @ts-expect-error: query() also rejects keys that are absent from select
+  query({ from: a, select: { name: a.firstName }, orderBy: [{ age: "ASC" }] });
+  // @ts-expect-error: keyed and expression sorts must be separate array entries
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ asc: a.age, name: "ASC" }] });
+  const unionSelect: Query<{ name: typeof a.firstName } | { age: typeof a.age }> = {
+    from: a,
+    select: { name: a.firstName },
+    // @ts-expect-error: a union of select shapes must still reject a combined keyed/expression entry
+    orderBy: [{ asc: a.age, name: "ASC" }],
+  };
+  em.query(unionSelect);
   // @ts-expect-error: `sum` only exists on numeric columns
   a.firstName.sum();
   // @ts-expect-error: a top-level query has no `as`; only subqueries built with `query(...)` are named

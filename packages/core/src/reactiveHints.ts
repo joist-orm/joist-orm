@@ -10,6 +10,7 @@ import {
   type OneToOneField,
   type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
+  getBaseMeta,
   getMetadata,
 } from "./EntityMetadata.ts";
 import { getProperties } from "./getProperties.ts";
@@ -362,7 +363,7 @@ function reverseSubHint(
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
         entity: entityType,
-        fields: [m2oFieldName],
+        fields: recursiveMembershipFields(meta, m2oFieldName),
         path: [otherFieldName],
       });
       // Any reactables who were watching `parentsRecursive`, we'll back down to by going through `childrenRecursive`
@@ -382,7 +383,7 @@ function reverseSubHint(
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
         entity: entityType,
-        fields: [m2oFieldName], // i.e. parent
+        fields: recursiveMembershipFields(meta, m2oFieldName), // i.e. parent
         path: [otherFieldName], // i.e. parentsRecursive to tell them "observe your new childrenRecursive"
       });
       // Any reactables who were watching `childrenRecursive`, we'll up to by going through `parentsRecursive`
@@ -403,7 +404,7 @@ function reverseSubHint(
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
         entity: entityType,
-        fields: [m2mFieldName],
+        fields: recursiveMembershipFields(meta, m2mFieldName),
         path: [otherFieldName],
       });
       // Any reactables who were watching this recursive collection, we'll reach via the other direction
@@ -505,7 +506,7 @@ export async function followReverseHint(
       // If we're going from Book.author back to Author to re-validate the Author.books collection,
       // see if Book.author has changed, so we can re-validate both the old author's books and the
       // new author's books.
-      const fieldKind = getMetadata(c).fields[fieldName]?.kind;
+      const fieldKind = getMetadata(c).allFields[fieldName]?.kind;
       const isReference = fieldKind === "m2o" || fieldKind === "poly";
       const isManyToMany = fieldKind === "m2m";
       // See jsdoc comment about why this is only necessary for references...
@@ -699,6 +700,12 @@ function appendPath(reverseField: string): (rt: ReactiveTarget) => ReactiveTarge
     rt.path = [...rt.path, reverseField];
     return rt;
   };
+}
+
+/** Recursive membership changes on soft deletion or resurrection, even when the underlying relation is unchanged. */
+function recursiveMembershipFields(meta: EntityMetadata, fieldName: string): string[] {
+  const deletedAt = getBaseMeta(meta).timestampFields?.deletedAt;
+  return deletedAt ? [fieldName, deletedAt] : [fieldName];
 }
 
 function isAllReadOnly(hint: any): boolean {

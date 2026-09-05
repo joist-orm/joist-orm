@@ -19,6 +19,7 @@ import {
   Critic,
   Publisher,
   PublisherGroup,
+  TaskOld,
   User,
   newAuthor,
   newLargePublisher,
@@ -153,7 +154,7 @@ describe("reactiveHints", () => {
   it("can do recursive relations", () => {
     expect(reverse(Author, Author, { mentorsRecursive: "firstName" })).toEqual([
       { entity: "Author", fields: ["mentor"], path: [] },
-      { entity: "Author", fields: ["mentor"], path: ["menteesRecursive"] },
+      { entity: "Author", fields: ["mentor", "deletedAt"], path: ["menteesRecursive"] },
       { entity: "Author", fields: ["firstName"], path: ["menteesRecursive"] },
     ]);
     expect(reverse(Book, Book, { author: { mentorsRecursive: { publisher: "name" } } })).toEqual([
@@ -162,12 +163,48 @@ describe("reactiveHints", () => {
       // When `a2.mentor` changes to `a3`, we *could* recalc through `a3.menteesRecursive`, but that would over
       // fetch, so instead we (as a new mentee) ping our books directly + our own mentees.
       { entity: "Author", fields: ["mentor"], path: ["books"] },
-      { entity: "Author", fields: ["mentor"], path: ["menteesRecursive", "books"] },
+      { entity: "Author", fields: ["mentor", "deletedAt"], path: ["menteesRecursive", "books"] },
       // When I am the mentor, and my publisher changes, tell my mentee's books
       { entity: "Author", fields: ["publisher"], path: ["menteesRecursive", "books"] },
       // When I am the Publisher, tell my authors, who if they're mentors, will tell their mentees
       // (which will get us to the `author` level in the hint, to invalidate their books.)
       { entity: "Publisher", fields: ["name"], path: ["authors", "menteesRecursive", "books"] },
+    ]);
+  });
+
+  it("includes soft-delete dependencies for recursive children", () => {
+    expect(reverse(Author, Author, { menteesRecursive: "firstName" })).toEqual([
+      { entity: "Author", fields: ["mentor"], path: [] },
+      { entity: "Author", fields: ["mentor", "deletedAt"], path: ["mentorsRecursive"] },
+      { entity: "Author", fields: ["firstName"], path: ["mentorsRecursive"] },
+    ]);
+  });
+
+  it("keeps recursive soft-delete dependencies read-only for read-only hints", () => {
+    expect(reverse(Author, Author, "mentorsRecursive:ro")).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["mentor"], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["mentor", "deletedAt"], path: ["menteesRecursive"] },
+      { entity: "Author", fields: [], path: ["menteesRecursive"] },
+    ]);
+    expect(reverse(Author, Author, "menteesRecursive:ro")).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["mentor"], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["mentor", "deletedAt"], path: ["mentorsRecursive"] },
+      { entity: "Author", fields: [], path: ["mentorsRecursive"] },
+    ]);
+  });
+
+  it("includes inherited soft-delete dependencies for recursive relations", () => {
+    expect(reverse(TaskOld, TaskOld, "parentOldTasksRecursive")).toEqual([
+      { entity: "TaskOld", fields: ["parentOldTask"], path: [] },
+      { entity: "TaskOld", fields: ["parentOldTask", "deletedAt"], path: ["tasksRecursive"] },
+      { entity: "TaskOld", fields: [], path: ["tasksRecursive"] },
+    ]);
+    expect(reverse(TaskOld, TaskOld, "tasksRecursive")).toEqual([
+      { entity: "TaskOld", fields: ["parentOldTask"], path: [] },
+      { entity: "TaskOld", fields: ["parentOldTask", "deletedAt"], path: ["parentOldTasksRecursive"] },
+      { entity: "TaskOld", fields: [], path: ["parentOldTasksRecursive"] },
     ]);
   });
 

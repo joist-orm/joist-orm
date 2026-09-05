@@ -270,7 +270,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
       // Author's addCycleRule for mentorsRecursive
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
-      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: ["menteesRecursive"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor", "deletedAt"], path: ["menteesRecursive"], fn },
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: ["menteesRecursive"], fn },
       // Book's noop author.firstName rule, only depends on firstName
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },

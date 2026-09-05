@@ -680,6 +680,17 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ name: "a1" }]);
     });
 
+    it("allows a subquery named unset", async () => {
+      // Given an Author to select through a subquery
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      // And a subquery whose name matches the old unresolved-alias placeholder
+      const sub = query({ from: a, select: { name: a.firstName }, as: "unset" });
+      const rows = await em.query({ from: sub, select: sub });
+      expect(rows).toEqual([{ name: "a1" }]);
+    });
+
     it("keeps a join pinned with keep", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

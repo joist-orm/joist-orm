@@ -480,8 +480,6 @@ class SubqueryColumnExpr extends BaseExpr {
  * subquery's "free" aliases and count toward the outer query's join pruning.
  */
 class SubqueryExpr extends BaseExpr {
-  readonly isSubquery = true;
-
   constructor(readonly handle: SubqueryHandle) {
     super();
   }
@@ -551,7 +549,6 @@ function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
 // Runtime: parse -> prune -> SQL -> decode
 // =====================================================================================================
 
-/** Runs `em.query(...)`: a `Query` POJO, or a `query(...)` value. */
 /**
  * Parses `arg` (a `Query` POJO or `query(...)` value) into a runnable `Plan`.
  *
@@ -666,8 +663,7 @@ export interface Plan {
 /**
  * Parses one `Query` POJO into SQL, recursively for subqueries.
  *
- * 1. Assign a SQL alias to every source and bind entity aliases (`setAlias`, so `ColumnCondition`s
- *    created by `a.age.gte(18)` learn their alias, exactly as in `em.find`).
+ * 1. Register every source's runtime identity with its SQL alias in this parse's context.
  * 2. Generate SQL for sources, selects, conditions, group-bys, and order-bys against the context; every fragment
  *    reports the aliases it references.
  * 3. Prune: drop joins nothing references (see below), then reject a kept join whose ON collapsed.
@@ -678,7 +674,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   const selectedAlias = isAlias(q.select) ? getAliasMgmt(q.select) : undefined;
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
 
-  // 1. Assign and bind every alias before generating any SQL, so ON conditions can reference any source.
+  // 1. Register every source before generating SQL, so conditions can resolve their aliases.
   const fromThunk = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedAlias);
   const joinThunks = joinEntries.flatMap((j) => {
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
@@ -762,16 +758,8 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   if (q.limit !== undefined) out.push({ sql: ` LIMIT ?`, bindings: [q.limit], refs: [] });
   if (q.offset !== undefined) out.push({ sql: ` OFFSET ?`, bindings: [q.offset], refs: [] });
 
-  const sqlText = out.map((o) => o.sql).join("");
-  // `unsetN.` is a deferred-binding placeholder that only survives when a condition references an alias
-  // that is not in this query's from/join, i.e. its `setAlias` callbacks never fired
-  const unset = sqlText.match(/\bunset\d*\./);
-  if (unset) {
-    fail(`A condition references an alias that is not in this query's from/join (rendered as '${unset[0]}')`);
-  }
-
   return {
-    sql: sqlText,
+    sql: out.map((o) => o.sql).join(""),
     bindings: out.flatMap((o) => o.bindings),
     outerRefs: [...ctx.outerRefs],
     decodeRows,
@@ -781,9 +769,9 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
 /**
  * Assigns a SQL alias to a source and returns a thunk that produces its SQL once every alias is known.
  *
- * Entity aliases are bound with `setAlias`, which fires the deferred-binding callbacks that
- * `ColumnCondition`s registered when they were created; CTI entities get their base/sub-table joins from
- * `addTablePerClassJoinsAndClassTag`, and the entity-mode `select` gets that helper's selects too.
+ * Conditions resolve source identities through the context when their SQL is generated. CTI entities
+ * get their base/sub-table joins from `addTablePerClassJoinsAndClassTag`, and the entity-mode `select`
+ * gets that helper's selects too.
  */
 function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPrimary: boolean): () => ParsedSource {
   const handle = handleOf(source);

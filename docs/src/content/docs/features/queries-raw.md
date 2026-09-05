@@ -166,7 +166,7 @@ const rows = await em.query({
 });
 ```
 
-Polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, which the expanded form cannot express.
+Polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, like an explicit join with `on: c.parent.eq(a.id)`.
 
 :::tip[Tip]
 

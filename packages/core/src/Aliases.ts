@@ -140,7 +140,7 @@ export interface ReferenceAlias<U extends Entity, N extends null | never, Src ex
 /**
  * A polymorphic reference: condition methods (each resolving the component column from the value), plus
  * a join factory that picks the component from the argument's entity, i.e. `c.parent.as(a)` joins
- * through `parent_author_id`, which the expanded form cannot express.
+ * through `parent_author_id`, like an explicit join with `on: c.parent.eq(a.id)`.
  */
 export interface PolyAlias<U extends Entity, N extends null | never> {
   as<A extends AliasFor<U>>(other: A): [N] extends [never] ? InnerJoin<A> : LeftJoin<A>;
@@ -291,12 +291,11 @@ export function isAlias(obj: any): obj is Alias<any, any> & { [aliasMgmt]: Alias
 /**
  * A single column of an alias.
  *
- * For `em.find`, its methods create `ColumnCondition`s whose alias is filled in later, when the
- * parser binds the alias to a join-tree location (`setAlias`).
+ * For `em.find`, its methods create `ColumnCondition`s that resolve their alias against each parse's
+ * join-literal bindings.
  *
- * For `em.query`, the same methods also an `Expr`: they becomes `alias."column"` in raw SQL queries,
- * now how to decode result values through the field's serde, and also inherit/provide the aggregate
- * methods from `BaseExpr`.
+ * For `em.query`, the column also implements `Expr`: it renders as `alias."column"`, decodes result
+ * values through the field's serde, and inherits aggregate methods from `BaseExpr`.
  */
 class AbstractAliasColumn<V> extends BaseExpr {
   public constructor(

@@ -144,16 +144,6 @@ export interface ExprContext {
   conditionToSql(cond: ExpressionCondition): SqlFragment | undefined;
 }
 
-/** The runtime half of the `Expr` protocol. */
-export interface ExprNode {
-  /** Produces this expression's SQL so it can be embedded in a larger expression, i.e. a subquery gets parens. */
-  toSql(ctx: ExprContext): SqlFragment;
-  /** Converts a result-set value into the domain value, i.e. an int into a tagged id. */
-  decode(value: unknown): unknown;
-  /** Converts a domain value into the database value, i.e. a tagged id into an int, for bindings. */
-  encode(value: unknown): unknown;
-}
-
 export function isExpr(value: unknown): value is ExprLike<any> {
   return typeof value === "object" && value !== null && exprBrand in value;
 }
@@ -266,11 +256,10 @@ export function joinFragments(parts: SqlFragment[], sep: string): SqlFragment {
  * Alias columns override the comparison methods with the `em.find` `ColumnCondition` path when the
  * right-hand side is a literal, and fall back to these for expression-vs-expression comparisons.
  */
-export abstract class BaseExpr implements ExprNode {
+export abstract class BaseExpr {
   readonly [exprBrand]: any = this;
-  /** True for scalar subqueries, whose `IN (...)` form must not get a second set of parens. */
-  readonly isSubquery: boolean = false;
 
+  /** Produces this expression's SQL so it can be embedded in a larger expression, i.e. a subquery gets parens. */
   abstract toSql(ctx: ExprContext): SqlFragment;
 
   /** The expression selected by a scalar subquery, used to resolve polymorphic IN conditions. */
@@ -283,10 +272,12 @@ export abstract class BaseExpr implements ExprNode {
     return this.toSql(ctx);
   }
 
+  /** Converts a result-set value into the domain value, i.e. an int into a tagged id. */
   decode(value: unknown): unknown {
     return value;
   }
 
+  /** Converts a domain value into the database value, i.e. a tagged id into an int, for bindings. */
   encode(value: unknown): unknown {
     return value;
   }

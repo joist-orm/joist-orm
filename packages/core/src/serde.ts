@@ -73,6 +73,8 @@ export interface Column {
   rowValue(data: any): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
+  /** Converts one driver-level column value to its domain value, including entity null/default handling. */
+  mapFromDb(value: unknown): unknown;
   /**
    * For converting `json_agg`-preloaded JSON values into *ResultSet* type.
    *
@@ -122,13 +124,7 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
-    data[this.fieldName] =
-      value !== undefined
-        ? this.isArray
-          ? value.map((value: any) => this.mapper.fromDb(value))
-          : this.mapper.fromDb(value)
-        : undefined;
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any): any {
@@ -146,6 +142,16 @@ export class CustomSerdeAdapter implements FieldSerde {
 
   mapToDb(value: any): any {
     return value === null ? value : this.mapper.toDb(value);
+  }
+
+  /** Converts a driver value with the custom mapper, including array elements. */
+  mapFromDb(value: unknown): unknown {
+    const dbValue = maybeNullToUndefined(value);
+    return dbValue !== undefined
+      ? this.isArray
+        ? dbValue.map((value: unknown) => this.mapper.fromDb(value))
+        : this.mapper.fromDb(dbValue)
+      : undefined;
   }
 
   mapFromJsonAgg(value: any): any {
@@ -178,7 +184,7 @@ export class PrimitiveSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -191,6 +197,11 @@ export class PrimitiveSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return value;
+  }
+
+  /** Keeps driver values as-is, with SQL NULL represented as an unset entity field. */
+  mapFromDb(value: unknown): unknown {
+    return maybeNullToUndefined(value);
   }
 
   mapFromJsonAgg(value: any): any {
@@ -276,8 +287,7 @@ export class BigIntSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
-    data[this.fieldName] = value ? BigInt(value) : value;
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -290,6 +300,12 @@ export class BigIntSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return value;
+  }
+
+  /** Converts the driver's bigint representation to the entity value. */
+  mapFromDb(value: unknown): unknown {
+    const dbValue = maybeNullToUndefined(value);
+    return dbValue ? BigInt(dbValue) : dbValue;
   }
 
   mapFromJsonAgg(value: any): any {
@@ -318,8 +334,7 @@ export class DecimalToNumberSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
-    data[this.fieldName] = value !== undefined ? Number(value) : value;
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -332,6 +347,12 @@ export class DecimalToNumberSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return value;
+  }
+
+  /** Converts a driver decimal value to a JavaScript number. */
+  mapFromDb(value: unknown): unknown {
+    const dbValue = maybeNullToUndefined(value);
+    return dbValue !== undefined ? Number(dbValue) : dbValue;
   }
 
   mapFromJsonAgg(value: any): any {
@@ -362,7 +383,7 @@ export class KeySerde implements FieldSerde {
   }
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = keyToTaggedId(this.meta, rowData.get(rowIndex, this.columnName));
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined) {
@@ -398,6 +419,11 @@ export class KeySerde implements FieldSerde {
     return keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 
+  /** Converts a physical primary or foreign key to a tagged id. */
+  mapFromDb(value: unknown): string | undefined {
+    return keyToTaggedId(this.meta, value as string | number);
+  }
+
   mapFromJsonAgg(value: any): any {
     return value === null ? value : value;
   }
@@ -412,7 +438,7 @@ export class PolymorphicKeySerde implements FieldSerde {
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
     for (const column of this.columns) {
       const value = rowData.get(rowIndex, column.columnName);
-      if (value) data[this.fieldName] ??= keyToTaggedId(column.otherMetadata(), value);
+      if (value) data[this.fieldName] ??= column.mapFromDb(value);
     }
   }
 
@@ -451,6 +477,10 @@ export class PolymorphicKeySerde implements FieldSerde {
       mapToDb(value: any): any {
         return keyToNumber(comp.otherMetadata(), typeof value === "number" ? value : maybeResolveReferenceToId(value));
       },
+      /** Converts this component's foreign key to its target entity's tagged id. */
+      mapFromDb(value: unknown): string | undefined {
+        return keyToTaggedId(comp.otherMetadata(), value as string | number);
+      },
       mapFromJsonAgg(value: any): any {
         return value === null ? value : value;
       },
@@ -483,7 +513,7 @@ export class EnumFieldSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.enumObject.findById(rowData.get(rowIndex, this.columnName))?.code;
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -496,6 +526,11 @@ export class EnumFieldSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return this.enumObject.findByCode(value)?.id;
+  }
+
+  /** Converts a stored enum id to its enum code. */
+  mapFromDb(value: unknown): unknown {
+    return this.enumObject.findById(value)?.code;
   }
 
   mapFromJsonAgg(value: any): any {
@@ -516,8 +551,7 @@ export class EnumArrayFieldSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] =
-      rowData.get(rowIndex, this.columnName)?.map((id: any) => this.enumObject.findById(id).code) || [];
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -532,13 +566,14 @@ export class EnumArrayFieldSerde implements FieldSerde {
     return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
   }
 
+  /** Converts stored enum ids to codes, defaulting an unset entity field to an empty array. */
+  mapFromDb(value: unknown): unknown[] {
+    return (value as readonly unknown[] | null | undefined)?.map((id) => this.enumObject.findById(id).code) || [];
+  }
+
   mapFromJsonAgg(value: any): any {
     return value === null ? value : value;
   }
-}
-
-function maybeNullToUndefined(value: any): any {
-  return value === null ? undefined : value;
 }
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
@@ -559,11 +594,7 @@ export class SuperstructSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
-    if (value) {
-      this.assert(value, this.superstruct);
-    }
-    data[this.fieldName] = value;
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -579,6 +610,13 @@ export class SuperstructSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return JSON.stringify(value);
+  }
+
+  /** Validates a driver JSON value with the field's Superstruct schema. */
+  mapFromDb(value: unknown): unknown {
+    const dbValue = maybeNullToUndefined(value);
+    if (dbValue) this.assert(dbValue, this.superstruct);
+    return dbValue;
   }
 
   mapFromJsonAgg(value: any): any {
@@ -598,7 +636,7 @@ export class JsonSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -615,6 +653,11 @@ export class JsonSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return JSON.stringify(value);
+  }
+
+  /** Keeps the driver's parsed JSON value, normalizing SQL NULL for entity fields. */
+  mapFromDb(value: unknown): unknown {
+    return maybeNullToUndefined(value);
   }
 
   mapFromJsonAgg(value: any): any {
@@ -636,12 +679,7 @@ export class ZodSerde implements FieldSerde {
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    const value = maybeNullToUndefined(rowData.get(rowIndex, this.columnName));
-    if (value) {
-      data[this.fieldName] = this.zodSchema.parse(value);
-    } else {
-      data[this.fieldName] = value;
-    }
+    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
   }
 
   dbValue(data: any) {
@@ -660,7 +698,18 @@ export class ZodSerde implements FieldSerde {
     return JSON.stringify(value);
   }
 
+  /** Parses a driver JSON value with the field's Zod schema. */
+  mapFromDb(value: unknown): unknown {
+    const dbValue = maybeNullToUndefined(value);
+    return dbValue ? this.zodSchema.parse(dbValue) : dbValue;
+  }
+
   mapFromJsonAgg(value: any): any {
     return value === null ? value : value;
   }
+}
+
+/** Normalizes SQL NULL to an unset entity field. */
+function maybeNullToUndefined(value: any): any {
+  return value === null ? undefined : value;
 }

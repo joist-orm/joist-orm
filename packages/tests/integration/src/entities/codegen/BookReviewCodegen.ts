@@ -80,6 +80,7 @@ export interface BookReviewFields {
   critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   bestReviewAuthors: { kind: "m2m"; type: Author };
+  comment: { kind: "o2o"; type: Comment };
 }
 
 export interface BookReviewOpts {

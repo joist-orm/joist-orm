@@ -336,17 +336,22 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
   /** Array of changed field names w/o o2m & m2m relations (which can be expensive). */
   fieldsWithoutRelations: NonNullable<K>[];
 } & {
+  // The o2o branch is `never`: the FK lives on the other entity, so changes never track o2o fields.
+  // (The exclusion must stay in the value position: a conditional in the `[P in ...]` clause defers on
+  // a generic `T` and collapses `keyof Changes<T>` at inference time, i.e. in `cannotBeUpdated` calls.)
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
     ? ManyToManyFieldStatus<U>
     : FieldsOf<T>[P] extends { kind: "m2mEnum"; type: infer E }
       ? EnumCollectionFieldStatus<E>
       : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
         ? OneToManyFieldStatus<U>
-        : FieldsOf<T>[P] extends { type: (infer U) | undefined }
-          ? U extends Entity
-            ? ManyToOneFieldStatus<U>
-            : PrimitiveFieldStatus<U>
-          : never;
+        : FieldsOf<T>[P] extends { kind: "o2o" }
+          ? never
+          : FieldsOf<T>[P] extends { type: (infer U) | undefined }
+            ? U extends Entity
+              ? ManyToOneFieldStatus<U>
+              : PrimitiveFieldStatus<U>
+            : never;
 };
 
 // type A1 = never extends string ? 1 : 2;

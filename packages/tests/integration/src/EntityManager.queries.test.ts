@@ -3773,18 +3773,26 @@ describe("EntityManager.queries", () => {
       const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions });
       expect(books.length).toEqual(1);
 
-      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
-        selects: [`a.*`],
-        tables: [{ alias: "a", table: "authors", join: "primary" }],
+      // The parse binds both aliases through the join literal; conditions referencing an alias the
+      // literal does not bind fail fast (each parse resolves alias conditions against its own bindings)
+      expect(parseFindQuery(bm, { as: b, author: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`b.*`],
+        tables: [
+          { alias: "b", table: "books", join: "primary" },
+          { alias: "a", table: "authors", join: "inner" },
+        ],
         condition: {
           op: "or",
           conditions: [
-            { aliases: ["b", "a"], condition: "a.last_name = b.title", bindings: [], pruneable: false },
+            { aliases: ["a", "b"], condition: "a.last_name = b.title", bindings: [], pruneable: false },
             { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
           ],
         },
-        orderBys: [expect.anything()],
+        orderBys: [expect.anything(), expect.anything()],
       });
+      expect(() => parseFindQuery(am, { as: a }, { ...opts, conditions })).toThrow(
+        "Alias for books is not bound to this query's join literal",
+      );
     });
 
     it("can eq in a loop", async () => {

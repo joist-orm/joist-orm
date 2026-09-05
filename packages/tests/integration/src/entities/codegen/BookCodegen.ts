@@ -90,6 +90,10 @@ export interface BookFields {
   advances: { kind: "o2m"; type: BookAdvance };
   reviews: { kind: "o2m"; type: BookReview };
   comments: { kind: "o2m"; type: Comment };
+  sequel: { kind: "o2o"; type: Book };
+  currentDraftAuthor: { kind: "o2o"; type: Author };
+  favoriteAuthor: { kind: "o2o"; type: Author };
+  image: { kind: "o2o"; type: Image };
 }
 
 export interface BookOpts {

@@ -92,12 +92,25 @@ function ruleWithOpts<T extends Entity>(
 }
 
 /**
+ * The fields of `F` that have their own column, i.e. what a required rule can check.
+ *
+ * The filter is an allow-list ("keep kinds primitive/enum/m2o/poly"), not a deny-list ("drop kind
+ * o2o"), because of how it degrades when `T` is generic/uninferred: `FieldsOf<T>` is then `never`,
+ * and `never extends X` is true for any `X`, so an allow-list keeps every key (permissive, exactly
+ * like the unfiltered `keyof FieldsOf<T>` before it) while a deny-list would drop every key and
+ * break valid calls like `newRequiredRule("city")`.
+ */
+type ColumnBackedFields<F> = {
+  [K in keyof F as F[K] extends { kind: "primitive" | "enum" | "m2o" | "poly" } ? K : never]: F[K];
+};
+
+/**
  * Creates a validation rule for required fields.
  *
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
 export function newRequiredRule<T extends Entity>(
-  key: keyof FieldsOf<T> & string,
+  key: keyof ColumnBackedFields<FieldsOf<T>> & string,
   opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
   return ruleWithOpts(opts, (entity) => {

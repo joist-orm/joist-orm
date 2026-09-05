@@ -164,7 +164,8 @@ export async function insertPublisher(row: {
   base_sync_default?: string;
   base_async_default?: string;
 }) {
-  const { shared_column, ...others } = row;
+  // `city`/`shared_column` live on small_publishers, not the base publishers table
+  const { shared_column, city, ...others } = row;
   await testDriver.insert("publishers", {
     base_sync_default: "FactorySyncDefault",
     base_async_default: "FactoryAsyncDefault",

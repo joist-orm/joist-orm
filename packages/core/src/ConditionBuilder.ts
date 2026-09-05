@@ -1,5 +1,6 @@
 import { type ExpressionFilter } from "./EntityFilter.ts";
 import { isDefined } from "./EntityManager.ts";
+import { skipCondition } from "./Expr.ts";
 import {
   type ColumnCondition,
   type ParsedExpressionCondition,
@@ -7,7 +8,6 @@ import {
   type ParsedValueFilter,
   type RawCondition,
   mapToDb,
-  skipCondition,
 } from "./QueryParser.ts";
 import { type Column } from "./serde.ts";
 import { fail, partition } from "./utils.ts";

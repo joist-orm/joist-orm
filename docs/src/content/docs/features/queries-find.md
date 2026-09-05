@@ -33,7 +33,7 @@ You can watch this overview of `em.find` on our YouTube channel:
 
 As mentioned on [Loading Entities](./loading-entities), Joist's `find` methods are meant to handle the ~80-90% of SQL queries in your codebase that are simple `SELECT`s of entities with a variety of joins and conditions.
 
-If you need more complex queries, i.e. with aggregates or subqueries, you can still use a raw query builder like Knex.
+If you need more complex queries, i.e. with aggregates or subqueries, use [Raw Queries](./queries-raw), Joist's lower-level `em.query` API.
 
 :::
 

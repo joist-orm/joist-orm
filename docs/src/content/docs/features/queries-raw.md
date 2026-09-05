@@ -92,7 +92,7 @@ They also carry SQL functions as methods, so aggregates need no imports:
 
 - `count()`, `countDistinct()` — `b.id.count()` is the idiomatic `count(*)`
 - `sum()`, `avg()` (numeric columns only), `min()`, `max()`
-- `arrayAgg()`, `stringAgg(delimiter)`
+- `arrayAgg()`, `stringAgg(delimiter)` — like `min`/`max`, nullable (zero rows aggregate as `NULL`), and `arrayAgg` keeps element `NULL`s, i.e. a left-joined empty group is `[null]`
 - `coalesce(fallback)`
 
 The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:

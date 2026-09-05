@@ -79,7 +79,8 @@ export interface Expr<R, Src extends string = string> {
   avg(this: Expr<number | null, Src>): Expr<number | null, Src>;
   min(): Expr<R | null, Src>;
   max(): Expr<R | null, Src>;
-  arrayAgg(): Expr<NonNullable<R>[], Src>;
+  /** PG keeps element NULLs (a left-joined empty group aggregates as `[null]`), and zero rows aggregate as NULL. */
+  arrayAgg(): Expr<R[] | null, Src>;
   stringAgg(this: Expr<string | null, Src>, delimiter: string): Expr<string | null, Src>;
   coalesce(fallback: NonNullable<R>): Expr<NonNullable<R>, never>;
 }
@@ -347,8 +348,11 @@ export abstract class BaseExpr implements ExprNode {
   }
 
   arrayAgg(): Expr<any, any> {
+    // Values are arrays while the argument encodes/decodes *elements*, i.e. a `.coalesce(["b:1"])`
+    // fallback must encode each tagged id, not hand the whole array to the id column's encoder
     return new FnExpr("array_agg", [this], {
       decode: (v) => (Array.isArray(v) ? v.map((e) => this.decode(e)) : v),
+      encode: (v) => (Array.isArray(v) ? v.map((e) => this.encode(e)) : v),
     }) as any;
   }
 

@@ -57,6 +57,9 @@ async function typeAssertions() {
   type _s2 = Expect<Equal<typeof bookStats.bookCount, Expr<number, "book_stats">>>;
   // ...while `max()` is nullable even inside it (SQL `max` over an empty group)
   type _s3 = Expect<Equal<typeof bookStats.lastTitle, Expr<string | null, "book_stats">>>;
+  // `arrayAgg()` keeps the element's own nullability, and is itself `| null` (zero rows aggregate as NULL)
+  type _s4 = Expect<Equal<ReturnType<typeof b.title.arrayAgg>, Expr<string[] | null, "Book">>>;
+  type _s5 = Expect<Equal<ReturnType<typeof a.age.arrayAgg>, Expr<(number | null)[] | null, "Author">>>;
   // `select: <subquery>` is that table's `select *`, returning its full row type
   const star = em.query({ from: bookStats, select: bookStats });
   type _star = Expect<Equal<Rows<typeof star>, { authorId: AuthorId; bookCount: number; lastTitle: string | null }>>;

@@ -533,11 +533,30 @@ describe("EntityManager.rawQueries", () => {
       });
       // array_agg has no intra-aggregate ORDER BY, so Postgres may return the elements in any order
       const [row] = rows;
-      expect({ ...row, titles: [...row.titles].sort(), bookIds: [...row.bookIds].sort() }).toEqual({
+      expect({ ...row, titles: [...row.titles!].sort(), bookIds: [...row.bookIds!].sort() }).toEqual({
         name: "a1",
         titles: ["b1", "b2"],
         bookIds: ["b:1", "b:2"],
       });
+    });
+
+    it("decodes arrayAgg element nulls and encodes coalesce fallbacks per element", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      // a1 has no books: the left-joined group aggregates as [null], and the correlated (zero-row)
+      // aggregate is NULL, recovered by coalesce, whose id fallback must encode per element
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b)],
+        groupBy: [a.id],
+        select: {
+          name: a.firstName,
+          titles: b.title.arrayAgg(),
+          fallback: query({ from: b, where: b.author.eq(a.id), select: b.id.arrayAgg().coalesce(["b:9"]) }),
+        },
+      });
+      expect(rows).toEqual([{ name: "a1", titles: [null], fallback: ["b:9"] }]);
     });
 
     // From em-query-sample-bills.ts: entity mode + GROUP BY the PK + ORDER BY an aggregate

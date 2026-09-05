@@ -580,8 +580,8 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
-  const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}: { kind: "o2o"; type: ${otherEntity.type} };`;
+  const o2o = meta.oneToOnes.map((field) => {
+    return code`${field.fieldName}: { kind: "o2o"; type: ${field.otherEntity.type} };`;
   });
   const lo2m = meta.largeOneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;

@@ -349,18 +349,6 @@ class AbstractAliasColumn<V> extends BaseExpr {
     });
   }
 
-  protected addCrossColumnRawCondition(otherColumn: AbstractAliasColumn<any>, op: string): RawCondition {
-    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
-    return withDeferredAlias(cond, (resolve) => {
-      const r1 = resolve(this.mgmt);
-      const r2 = resolve(otherColumn.mgmt);
-      const a1 = getMaybeCtiAlias(this.meta, this.field, r1.meta, r1.alias);
-      const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
-      cond.aliases = [a1, a2];
-      cond.condition = `${a1}.${this.column.columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
-    });
-  }
-
   /**
    * Compares this column to another expression.
    *
@@ -370,7 +358,9 @@ class AbstractAliasColumn<V> extends BaseExpr {
    * the `em.query` parser resolves.
    */
   protected compareToExpr(op: string, value: ExprLike<any>): ExpressionCondition {
-    if (value instanceof AbstractAliasColumn) return this.addCrossColumnRawCondition(value, op);
+    if (value instanceof AbstractAliasColumn) {
+      return newCrossColumnCondition(this.meta, this.field, this.mgmt, this.column.columnName, value, op);
+    }
     return this.compare(op, value);
   }
 }
@@ -671,7 +661,14 @@ class PolyReferenceAlias<T extends Entity> {
       const comp =
         this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
         fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
-      return this.addCrossColumnRawCondition(comp, value, kind === "eq" ? "=" : "!=");
+      return newCrossColumnCondition(
+        this.meta,
+        this.field,
+        this.mgmt,
+        comp.columnName,
+        value,
+        kind === "eq" ? "=" : "!=",
+      );
     } else if (isExpr(value)) {
       return fail(
         `${this.field.fieldName} is polymorphic, so it can only be compared to tagged ids or entity alias columns`,
@@ -690,23 +687,6 @@ class PolyReferenceAlias<T extends Entity> {
         ) || fail(`Could not find component for ${value}`);
       return this.addCondition(comp, { kind, value });
     }
-  }
-
-  /** `parent_author_id = <other id>`, i.e. `c.parent.eq(a.id)`; both aliases resolve per parse. */
-  private addCrossColumnRawCondition(
-    comp: PolymorphicFieldComponent,
-    otherColumn: AbstractAliasColumn<any>,
-    op: string,
-  ): RawCondition {
-    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
-    return withDeferredAlias(cond, (resolve) => {
-      const r1 = resolve(this.mgmt);
-      const r2 = resolve(otherColumn.mgmt);
-      const a1 = getMaybeCtiAlias(this.meta, this.field, r1.meta, r1.alias);
-      const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
-      cond.aliases = [a1, a2];
-      cond.condition = `${a1}.${comp.columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
-    });
   }
 
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
@@ -847,6 +827,26 @@ class ManyToManyAliasImpl extends AbstractCollectionAlias {
       [m2mJoinTable]: { handle: jt, on: jtOn } satisfies M2mJoinTable,
     };
   }
+}
+
+/** Compares columns with per-parse aliases, i.e. `parent_author_id = <other id>` for `c.parent.eq(a.id)`. */
+function newCrossColumnCondition(
+  meta: EntityMetadata,
+  field: Field & { aliasSuffix: string },
+  mgmt: AliasMgmt,
+  columnName: string,
+  otherColumn: AbstractAliasColumn<unknown>,
+  op: string,
+): RawCondition {
+  const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
+  return withDeferredAlias(cond, (resolve) => {
+    const r1 = resolve(mgmt);
+    const r2 = resolve(otherColumn.mgmt);
+    const a1 = getMaybeCtiAlias(meta, field, r1.meta, r1.alias);
+    const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
+    cond.aliases = [a1, a2];
+    cond.condition = `${a1}.${columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
+  });
 }
 
 /** Fails fast when a join factory is passed something other than an alias. */

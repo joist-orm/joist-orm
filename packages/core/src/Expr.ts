@@ -1,3 +1,4 @@
+import type { AliasMgmt } from "./Aliases.ts";
 import type { ExpressionCondition } from "./EntityFilter.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
@@ -156,7 +157,7 @@ export function asNode(expr: ExprLike<any>): BaseExpr {
 export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
 
 /** Resolves an alias handle (its `AliasMgmt`) to this parse's binding: the bound meta and SQL alias. */
-export type AliasResolver = (handle: object) => { meta: EntityMetadata; alias: string };
+export type AliasResolver = (handle: AliasMgmt) => { meta: EntityMetadata; alias: string };
 
 /**
  * A `ColumnCondition`/`RawCondition` whose alias(es) are re-resolved on every parse.
@@ -236,8 +237,8 @@ export function resolveDeferredConditions(cond: ExpressionCondition | undefined,
 
 /** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
 function ctxResolver(ctx: ExprContext): AliasResolver {
-  return function resolve(handle: object) {
-    return { meta: (handle as any).meta, alias: ctx.aliasFor(handle) };
+  return function resolve(handle: AliasMgmt) {
+    return { meta: handle.meta, alias: ctx.aliasFor(handle) };
   };
 }
 

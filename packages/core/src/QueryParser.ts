@@ -233,7 +233,7 @@ export function parseFindQuery(
   const cb = new ConditionBuilder();
   // Where each user-created `alias(...)` is bound in this parse's join literal; alias-built conditions
   // (`a.firstName.eq(...)`) are resolved against it once the whole tree is walked
-  const aliasBindings = new Map<object, { meta: EntityMetadata; alias: string }>();
+  const aliasBindings = new Map<AliasMgmt, { meta: EntityMetadata; alias: string }>();
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -1220,13 +1220,10 @@ export function lazyExcludedSelects(meta: EntityMetadata, alias: string): string
 /** Resolves every `DeferredAliasCondition` in `query` against the parse's alias bindings. */
 function resolveAliasConditions(
   query: ParsedFindQuery,
-  bindings: Map<object, { meta: EntityMetadata; alias: string }>,
+  bindings: Map<AliasMgmt, { meta: EntityMetadata; alias: string }>,
 ): void {
-  function resolve(handle: object): { meta: EntityMetadata; alias: string } {
-    return (
-      bindings.get(handle) ??
-      fail(`Alias for ${(handle as AliasMgmt).tableName} is not bound to this query's join literal`)
-    );
+  function resolve(handle: AliasMgmt): { meta: EntityMetadata; alias: string } {
+    return bindings.get(handle) ?? fail(`Alias for ${handle.tableName} is not bound to this query's join literal`);
   }
   function maybeResolve(c: ColumnCondition | RawCondition): void {
     if (isDeferredAliasCondition(c)) c[deferredAliasSym](resolve);

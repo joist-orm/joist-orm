@@ -659,7 +659,10 @@ class PolyReferenceAlias<T extends Entity> {
     });
   }
 
-  private addEqOrNe(kind: "eq" | "ne", value: unknown): ExpressionCondition {
+  private addEqOrNe(
+    kind: "eq" | "ne",
+    value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>,
+  ): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value instanceof AbstractAliasColumn) {
@@ -683,10 +686,9 @@ class PolyReferenceAlias<T extends Entity> {
       // If we have a value, we can find the component
       const comp =
         this.field.components.find(
-          (p) =>
-            p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value as any) as string),
+          (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value) as string),
         ) || fail(`Could not find component for ${value}`);
-      return this.addCondition(comp, { kind, value: value as any });
+      return this.addCondition(comp, { kind, value });
     }
   }
 

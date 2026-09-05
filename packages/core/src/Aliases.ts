@@ -146,20 +146,20 @@ export interface PolyAlias<U extends Entity, N extends null | never> {
   as<A extends AliasFor<U>>(other: A): [N] extends [never] ? InnerJoin<A> : LeftJoin<A>;
   inner<A extends AliasFor<U>>(other: A): InnerJoin<A>;
   left<A extends AliasFor<U>>(other: A): LeftJoin<A>;
-  eq(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
-  ne(value: U | TaggedId | null | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
-  in(values: Array<U | TaggedId> | undefined | ExprLike<IdOf<U> | null>): ExpressionCondition;
+  eq(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): ExpressionCondition;
+  ne(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): ExpressionCondition;
+  in(values: Array<U | TaggedId> | ExprLike<IdOf<U> | null> | undefined): ExpressionCondition;
 }
 
 export interface PrimitiveAlias<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
-  eq(value: V | N | undefined | ExprLike<V | N>): ExpressionCondition;
-  ne(value: V | N | undefined | ExprLike<V | N>): ExpressionCondition;
-  in(values: readonly (V | null)[] | undefined | ExprLike<V | null>): ExpressionCondition;
-  nin(values: readonly (V | null)[] | undefined | ExprLike<V | null>): ExpressionCondition;
-  gt(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
-  gte(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
-  lt(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
-  lte(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
+  eq(value: V | ExprLike<V | N> | N | undefined): ExpressionCondition;
+  ne(value: V | ExprLike<V | N> | N | undefined): ExpressionCondition;
+  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition;
+  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition;
+  gt(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
+  gte(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
+  lt(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
+  lte(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
   like(value: V | undefined): ExpressionCondition;
   ilike(value: V | undefined): ExpressionCondition;
   search(value: V | undefined): ExpressionCondition;
@@ -167,10 +167,10 @@ export interface PrimitiveAlias<V, N extends null | never, Src extends string = 
   // need to move to ArrayAlias
   // ...added the `string` to support jsonb contains like `WHERE profile @> '{"age": 25}'`
   // Ideally this would go in a JsonbAlias
-  contains(value: string | V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  ncontains(value: string | V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  contains(value: string | V | PrimitiveAlias<V, any> | N | undefined): ExpressionCondition;
+  ncontains(value: string | V | PrimitiveAlias<V, any> | N | undefined): ExpressionCondition;
+  overlaps(value: V | PrimitiveAlias<V, any> | N | undefined): ExpressionCondition;
+  noverlaps(value: V | PrimitiveAlias<V, any> | N | undefined): ExpressionCondition;
 
   /**
    * Adds a JSON path existence condition, using the `@?` operator.
@@ -207,15 +207,15 @@ export interface EntityAlias<T, N extends null | never = never, Src extends stri
   IdOf<T> | N,
   Src
 > {
-  eq(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  ne(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
   // Adding `| null` for GraphQL support
-  in(value: readonly (T | IdOf<T> | null)[] | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  nin(value: readonly (T | IdOf<T> | null)[] | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  gt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  gte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  lt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
-  lte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  in(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  nin(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
   raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
@@ -483,21 +483,21 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
 }
 
 class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
-  eq(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
     if (value === null) return this.addCondition({ kind: "is-null" });
     if (isExpr(value)) return this.compareToExpr("=", value);
     return this.addCondition({ kind: "eq", value: value as any });
   }
 
-  ne(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
     if (value === null) return this.addCondition({ kind: "not-null" });
     if (isExpr(value)) return this.compareToExpr("!=", value);
     return this.addCondition({ kind: "ne", value: value as any });
   }
 
-  in(values: readonly (T | IdOf<T> | null)[] | undefined | null | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
@@ -514,7 +514,7 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     }
   }
 
-  nin(values: readonly (T | IdOf<T> | null)[] | undefined | null | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  nin(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
@@ -526,19 +526,19 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     }
   }
 
-  gt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.compareId(">", "gt", value);
   }
 
-  gte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.compareId(">=", "gte", value);
   }
 
-  lt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.compareId("<", "lt", value);
   }
 
-  lte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.compareId("<=", "lte", value);
   }
 
@@ -580,16 +580,16 @@ class PolyReferenceAlias<T extends Entity> {
   ) {}
 
   /** Compares to a tagged id, an entity, or another alias's id column, which picks the component (`c.parent.eq(a.id)`). */
-  eq(value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  eq(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.addEqOrNe("eq", value);
   }
 
-  ne(value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  ne(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     return this.addEqOrNe("ne", value);
   }
 
   // We required tagged ids for polys
-  in(values: Array<T | TaggedId> | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+  in(values: Array<T | TaggedId> | ExprLike<IdOf<T> | null> | undefined): ExpressionCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inSubquery(values);
     // Split up the ids by constructor
@@ -651,7 +651,7 @@ class PolyReferenceAlias<T extends Entity> {
 
   private addEqOrNe(
     kind: "eq" | "ne",
-    value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>,
+    value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined,
   ): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;

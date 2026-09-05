@@ -50,8 +50,21 @@ import {
 export type T5AuthorId = Flavor<number, "T5Author">;
 
 export interface T5AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: number;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  firstName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   t5Books: { kind: "o2m"; type: T5Book };
 }
 
@@ -104,6 +117,7 @@ declare module "joist-core" {
       orderType: T5AuthorOrder;
       optsType: T5AuthorOpts;
       fieldsType: T5AuthorFields;
+      supportsEmExecute: true;
       optIdsType: T5AuthorIdsOpts;
       factoryExtrasType: T5AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT5Author>[1];

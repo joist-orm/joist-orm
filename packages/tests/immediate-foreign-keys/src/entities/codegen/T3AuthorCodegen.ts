@@ -53,9 +53,28 @@ import {
 export type T3AuthorId = Flavor<number, "T3Author">;
 
 export interface T3AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  favoriteBook: { kind: "m2o"; type: T3Book; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: number;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  firstName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  favoriteBook: {
+    kind: "m2o";
+    type: T3Book;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   t3Books: { kind: "o2m"; type: T3Book };
 }
 
@@ -115,6 +134,7 @@ declare module "joist-core" {
       orderType: T3AuthorOrder;
       optsType: T3AuthorOpts;
       fieldsType: T3AuthorFields;
+      supportsEmExecute: true;
       optIdsType: T3AuthorIdsOpts;
       factoryExtrasType: T3AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT3Author>[1];

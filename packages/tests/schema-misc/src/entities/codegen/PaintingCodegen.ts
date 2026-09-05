@@ -51,11 +51,44 @@ import {
 export type PaintingId = Flavor<string, "Painting">;
 
 export interface PaintingFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "required"; update: false }];
+  };
+  title: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  artist: {
+    kind: "m2o";
+    type: Artist;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
 }
 
 export interface PaintingOpts {
@@ -118,6 +151,7 @@ declare module "joist-core" {
       orderType: PaintingOrder;
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
+      supportsEmExecute: true;
       optIdsType: PaintingIdsOpts;
       factoryExtrasType: PaintingFactoryExtras;
       factoryOptsType: Parameters<typeof newPainting>[1];

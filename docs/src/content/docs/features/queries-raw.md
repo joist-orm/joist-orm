@@ -7,6 +7,8 @@ sidebar:
 
 Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, set operations, and arbitrary joins, returning entities, plain, strongly-typed POJOs, or scalar values.
 
+For immediate SQL `INSERT`, `UPDATE`, and `DELETE` statements, use [`em.execute`](/features/sql-mutations/).
+
 Like [find queries](./queries-find), the `em.query` DSL is "just a POJO" of data--no fluent builders to chain 🎉, but thanks to TypeScript's mapped types, still sufficiently type-safe to catch most common errors/typos 💪.
 
 Here's an example of getting the count of books per author:
@@ -476,7 +478,7 @@ Compatibility is deliberately conservative: every output needs a known codec wit
 - Aggregate compatibility also requires a known PostgreSQL overload. I.e. `MIN`/`MAX` of `varchar` or `name` produce `text`, so their outputs do not share the original field's SQL representation. Unmodeled aggregate overloads remain unsupported as set outputs.
 - Known scalar enums (including native enums), custom types, schema-backed JSON, `Date`, and Temporal values are supported when their SQL representations and domains match. Domain compatibility uses the enum, custom mapper, JSON schema, or date/time conversion, not merely the storage type or the field's TypeScript shape. Different schemas, or a custom type and a primitive with identical storage, are not interchangeable.
 - Physical primitive arrays and `arrayAgg()` outputs are supported only when both the driver array representation and element conversion are known. I.e. `a.nickNames` can combine with `a.firstName.arrayAgg()` when both are `varchar[]`, and `a.id.arrayAgg()` can combine with `b.author.arrayAgg()`. Element encoders and decoders are retained.
-- Physical enum, custom-type, `Date`, and Temporal array columns are rejected, even when both operands select the same field. Native enum/citext arrays, `Date`/Temporal aggregates, primitive numeric arrays, and custom numeric aggregates also remain unsupported because array driver values may differ from scalar values. Nested SQL arrays, including `arrayAgg()` over an array, are unsupported.
+- Compatible physical custom-type and Temporal arrays support elementwise filters and compound outputs. Their codecs are distinct from scalar `arrayAgg()` codecs because physical arrays pass null elements to the element mapper. Physical enum and `Date` array columns remain unsupported, even when both operands select the same field. Native enum/citext arrays, `Date`/Temporal aggregates, primitive numeric arrays, custom numeric arrays, and custom numeric aggregates also remain unsupported because array driver values may differ from scalar values. Nested SQL arrays, including `arrayAgg()` over an array, are unsupported.
 - Outputs from `sql<R>` and `sql.ref` have unknown codecs and are rejected, even if both operands reuse the same expression or produce only SQL `NULL`. A generic annotation or a cast inside raw SQL does not declare a codec. Known nullable field outputs remain supported even when every returned value happens to be `NULL`.
 
 These codecs are internal compatibility information, not a public coercion/decoder API. Raw `sql` expressions remain available in ordinary queries, including an outer query over a compatible compound; they do not bypass set-output validation.
@@ -508,7 +510,7 @@ Interpolated expressions and conditions render with the alias Joist assigned and
 ## Not (Yet) Supported
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
-- `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; mutations are not read operands, even with `RETURNING`
+- `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
 - User-authored CTEs (`WITH ...`) — subqueries render as inline derived tables
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) alias

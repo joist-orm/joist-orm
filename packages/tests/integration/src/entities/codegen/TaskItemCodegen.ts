@@ -57,12 +57,50 @@ import {
 export type TaskItemId = Flavor<string, "TaskItem">;
 
 export interface TaskItemFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
-  task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  newTask: {
+    kind: "m2o";
+    type: TaskNew;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  oldTask: {
+    kind: "m2o";
+    type: TaskOld;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  task: {
+    kind: "m2o";
+    type: Task;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
 }
 
 export interface TaskItemOpts {
@@ -137,6 +175,7 @@ declare module "joist-core" {
       orderType: TaskItemOrder;
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
+      supportsEmExecute: true;
       optIdsType: TaskItemIdsOpts;
       factoryExtrasType: TaskItemFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskItem>[1];

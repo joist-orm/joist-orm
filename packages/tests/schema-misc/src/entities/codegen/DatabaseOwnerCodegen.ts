@@ -50,8 +50,21 @@ import {
 export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;
 
 export interface DatabaseOwnerFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   tags: { kind: "m2m"; type: Tag };
 }
 
@@ -104,6 +117,7 @@ declare module "joist-core" {
       orderType: DatabaseOwnerOrder;
       optsType: DatabaseOwnerOpts;
       fieldsType: DatabaseOwnerFields;
+      supportsEmExecute: true;
       optIdsType: DatabaseOwnerIdsOpts;
       factoryExtrasType: DatabaseOwnerFactoryExtras;
       factoryOptsType: Parameters<typeof newDatabaseOwner>[1];

@@ -70,18 +70,98 @@ import {
 export type TaskId = Flavor<string, "Task">;
 
 export interface TaskFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  syncDefault: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  asyncDefault_1: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  asyncDefault_2: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  syncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  asyncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: TaskType; nullable: undefined };
-  copiedFrom: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  durationInDays: {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  deletedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  syncDefault: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  asyncDefault_1: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  asyncDefault_2: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  syncDerived: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: true;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  asyncDerived: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: true;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  type: {
+    kind: "enum";
+    type: TaskType;
+    nullable: undefined;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  copiedFrom: {
+    kind: "m2o";
+    type: Task;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   tags: { kind: "m2m"; type: Tag };
   copiedTo: { kind: "o2m"; type: Task };
   taskTaskItems: { kind: "o2m"; type: TaskItem };
@@ -193,6 +273,7 @@ declare module "joist-core" {
       orderType: TaskOrder;
       optsType: TaskOpts;
       fieldsType: TaskFields;
+      supportsEmExecute: false;
       optIdsType: TaskIdsOpts;
       factoryExtrasType: TaskFactoryExtras;
       factoryOptsType: Parameters<typeof newTask>[1];

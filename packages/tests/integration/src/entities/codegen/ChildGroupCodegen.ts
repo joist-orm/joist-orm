@@ -58,12 +58,51 @@ import {
 export type ChildGroupId = Flavor<string, "ChildGroup">;
 
 export interface ChildGroupFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroup: { kind: "m2o"; type: Child; nullable: never; derived: false };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  childGroup: {
+    kind: "m2o";
+    type: Child;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  parentGroup: {
+    kind: "m2o";
+    type: ParentGroup;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   childItems: { kind: "o2m"; type: ChildItem };
 }
 
@@ -137,6 +176,7 @@ declare module "joist-core" {
       orderType: ChildGroupOrder;
       optsType: ChildGroupOpts;
       fieldsType: ChildGroupFields;
+      supportsEmExecute: true;
       optIdsType: ChildGroupIdsOpts;
       factoryExtrasType: ChildGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newChildGroup>[1];

@@ -1,6 +1,7 @@
 import { type SQL, type SQLQuery, type TransactionSQL, sql } from "bun";
 import {
   type Driver,
+  type DriverQueryResult,
   type EntityManager,
   type IdAssigner,
   type JoinRowTodo,
@@ -24,6 +25,7 @@ type DeleteOp = any;
 type InsertOp = any;
 type UpdateOp = any;
 
+/** Incomplete Bun SQL driver; raw-query execution is not implemented. */
 export class BunPgDriver implements Driver<TransactionSQL> {
   readonly #idAssigner: IdAssigner;
   readonly #sql: SQL;
@@ -41,8 +43,8 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     throw new Error("Method not implemented.");
   }
 
-  executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]> {
-    throw new Error("Method not implemented.");
+  executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<DriverQueryResult> {
+    throw new Error("BunPgDriver.executeQuery is not implemented; em.query and em.execute are unsupported.");
   }
 
   async transaction<T>(em: EntityManager, fn: (txn: TransactionSQL) => Promise<T>): Promise<T> {

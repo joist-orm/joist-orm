@@ -71,13 +71,52 @@ import {
 
 export type SmallPublisherId = Flavor<string, "Publisher">;
 
-export interface SmallPublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
-  group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
+export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "group"> {
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  city: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  sharedColumn: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  allAuthorNames: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: true;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  selfReferential: {
+    kind: "m2o";
+    type: SmallPublisher;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  group: {
+    kind: "m2o";
+    type: SmallPublisherGroup;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   smallPublishers: { kind: "o2m"; type: SmallPublisher };
   users: { kind: "o2m"; type: User };
 }
@@ -159,6 +198,7 @@ declare module "joist-core" {
       orderType: SmallPublisherOrder;
       optsType: SmallPublisherOpts;
       fieldsType: SmallPublisherFields;
+      supportsEmExecute: false;
       optIdsType: SmallPublisherIdsOpts;
       factoryExtrasType: SmallPublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisher>[1];

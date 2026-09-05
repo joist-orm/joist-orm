@@ -181,17 +181,17 @@ describe("EntityManager.setQueries", () => {
     }
   });
 
-  it.each(["physical", "arrayAgg"] as const)("rejects %s Temporal arrays before SQL", async (output) => {
-    // Given Author and Book aliases for each physical Temporal array and its scalar arrayAgg counterpart
+  it("rejects Temporal arrayAgg outputs before SQL", async () => {
+    // Given Author and Book aliases for each scalar Temporal arrayAgg
     const [a, b] = aliases(Author, Book);
     // And a recorded EntityManager to detect execution before codec validation
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
     // And same-field branches for all four unsupported Temporal array domains
     const branches = [
-      { from: a, select: { value: output === "physical" ? a.childrenBirthdays : a.birthday.arrayAgg() } },
-      { from: a, select: { value: output === "physical" ? a.times : a.time.arrayAgg() } },
-      { from: a, select: { value: output === "physical" ? a.timestamps : a.timestamp.arrayAgg() } },
-      { from: b, select: { value: output === "physical" ? b.timestampTzs : b.publishedAt.arrayAgg() } },
+      { from: a, select: { value: a.birthday.arrayAgg() } },
+      { from: a, select: { value: a.time.arrayAgg() } },
+      { from: a, select: { value: a.timestamp.arrayAgg() } },
+      { from: b, select: { value: b.publishedAt.arrayAgg() } },
     ] as const;
     // And isolated recording so an empty log proves rejection before PostgreSQL
     resetQueryCount();

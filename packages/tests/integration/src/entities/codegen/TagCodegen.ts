@@ -58,10 +58,37 @@ import {
 export type TagId = Flavor<string, "Tag">;
 
 export interface TagFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
   authors: { kind: "m2m"; type: Author };
   books: { kind: "m2m"; type: Book };
   bookReviews: { kind: "m2m"; type: BookReview };
@@ -142,6 +169,7 @@ declare module "joist-core" {
       orderType: TagOrder;
       optsType: TagOpts;
       fieldsType: TagFields;
+      supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;
       factoryOptsType: Parameters<typeof newTag>[1];

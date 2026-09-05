@@ -55,12 +55,53 @@ import {
 export type ParentGroupId = Flavor<string, "ParentGroup">;
 
 export interface ParentGroupFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  bulkData: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
-  requiredData: { kind: "primitive"; type: Object; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  bulkData: {
+    kind: "primitive";
+    type: Object;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  requiredData: {
+    kind: "primitive";
+    type: Object;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
   childGroups: { kind: "o2m"; type: ChildGroup };
   parentItems: { kind: "o2m"; type: ParentItem };
 }
@@ -134,6 +175,7 @@ declare module "joist-core" {
       orderType: ParentGroupOrder;
       optsType: ParentGroupOpts;
       fieldsType: ParentGroupFields;
+      supportsEmExecute: true;
       optIdsType: ParentGroupIdsOpts;
       factoryExtrasType: ParentGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newParentGroup>[1];

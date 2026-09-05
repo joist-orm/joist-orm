@@ -1,5 +1,7 @@
-import { type Entity, setDefaultEntityLimit } from "joist-orm";
 import { performance } from "node:perf_hooks";
+
+import { type Entity, setDefaultEntityLimit } from "joist-orm";
+
 import { Todo, createTodos } from "../../core/src/Todo";
 import { Author, EntityManager, newAuthor, newTaskNew, newTaskOld } from "./src/entities";
 
@@ -273,8 +275,8 @@ function noopDriver(): EntityManager["driver"] {
     executeFind: async function executeFind(): Promise<unknown[]> {
       return [];
     },
-    executeQuery: async function executeQuery(): Promise<unknown[]> {
-      return [];
+    executeQuery: async function executeQuery() {
+      return { rowCount: null, rows: [] };
     },
     flush: async function flush(): Promise<void> {},
     transaction: async function transaction<T>(_em: EntityManager, fn: () => Promise<T>): Promise<T> {

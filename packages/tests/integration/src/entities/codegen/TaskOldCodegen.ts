@@ -66,11 +66,36 @@ import {
 
 export type TaskOldId = Flavor<string, "Task">;
 
-export interface TaskOldFields extends TaskFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
-  copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  specialOldField: {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  parentOldTask: {
+    kind: "m2o";
+    type: TaskOld;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  copiedFrom: {
+    kind: "m2o";
+    type: TaskOld;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   publishers: { kind: "m2m"; type: Publisher };
   comments: { kind: "o2m"; type: Comment };
   oldTaskTaskItems: { kind: "o2m"; type: TaskItem };
@@ -154,6 +179,7 @@ declare module "joist-core" {
       orderType: TaskOldOrder;
       optsType: TaskOldOpts;
       fieldsType: TaskOldFields;
+      supportsEmExecute: false;
       optIdsType: TaskOldIdsOpts;
       factoryExtrasType: TaskOldFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskOld>[1];

@@ -54,12 +54,51 @@ import {
 export type ChildItemId = Flavor<string, "ChildItem">;
 
 export interface ChildItemFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroup: { kind: "m2o"; type: ChildGroup; nullable: never; derived: false };
-  parentItem: { kind: "m2o"; type: ParentItem; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  childGroup: {
+    kind: "m2o";
+    type: ChildGroup;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  parentItem: {
+    kind: "m2o";
+    type: ParentItem;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
 }
 
 export interface ChildItemOpts {
@@ -128,6 +167,7 @@ declare module "joist-core" {
       orderType: ChildItemOrder;
       optsType: ChildItemOpts;
       fieldsType: ChildItemFields;
+      supportsEmExecute: true;
       optIdsType: ChildItemIdsOpts;
       factoryExtrasType: ChildItemFactoryExtras;
       factoryOptsType: Parameters<typeof newChildItem>[1];

@@ -1,6 +1,7 @@
 import {
   type DeleteOp,
   type Driver,
+  type DriverQueryResult,
   type EntityManager,
   type IdAssigner,
   type InsertOp,
@@ -132,7 +133,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
-    return this.executeQuery(em, sql, bindings);
+    return (await this.executeQuery(em, sql, bindings)).rows;
   }
 
   async #executeFindRowData(
@@ -165,11 +166,13 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     }
   }
 
-  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
+  /** Returns PostgreSQL's native command count and raw rows, including null counts for DDL. */
+  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<DriverQueryResult> {
     const pgSql = toPgParams(sql);
     this.#onQuery?.(pgSql);
     const client = this.getMaybeInTxnClient(em);
-    return client.query(pgSql, bindings as any[]).then((result) => result.rows);
+    const { rowCount, rows } = await client.query(pgSql, bindings as any[]);
+    return { rowCount, rows };
   }
 
   async transaction<T>(em: EntityManager, fn: (txn: pg.PoolClient) => Promise<T>): Promise<T> {

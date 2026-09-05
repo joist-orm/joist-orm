@@ -48,6 +48,8 @@ export interface EntityMetadata<T extends Entity = any> {
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;
+  /** Whether codegen verified this table is a supported SQL mutation target; does not gate reads. */
+  supportsEmExecute?: boolean;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;
   inheritanceType?: "sti" | "cti" | undefined;

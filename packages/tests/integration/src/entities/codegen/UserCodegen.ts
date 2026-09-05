@@ -78,18 +78,107 @@ export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is Us
 }
 
 export interface UserFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
-  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
-  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
-  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  email: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  ipAddress: {
+    kind: "primitive";
+    type: IpAddress;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  password: {
+    kind: "primitive";
+    type: PasswordValue;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  bio: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  originalEmail: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  trialPeriod: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  passwordHistory: {
+    kind: "primitive";
+    type: PasswordValue[];
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  manager: {
+    kind: "m2o";
+    type: User;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  authorManyToOne: {
+    kind: "m2o";
+    type: Author;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
   parents: { kind: "m2m"; type: User };
@@ -106,6 +195,7 @@ export interface UserOpts {
   bio?: string;
   originalEmail?: string;
   trialPeriod?: string | null;
+  passwordHistory?: PasswordValue[] | null;
   manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
   favoritePublisher?: UserFavoritePublisher;
@@ -138,6 +228,7 @@ export interface UserFilter {
   trialPeriod?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  passwordHistory?: ValueFilter<PasswordValue[], null>;
   manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
   managerAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -163,6 +254,7 @@ export interface UserGraphQLFilter {
   trialPeriod?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  passwordHistory?: ValueGraphQLFilter<PasswordValue[]>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -201,6 +293,7 @@ export interface UserOrder {
   trialPeriod?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  passwordHistory?: OrderBy;
   manager?: UserOrder;
   authorManyToOne?: AuthorOrder;
 }
@@ -234,6 +327,7 @@ declare module "joist-core" {
       orderType: UserOrder;
       optsType: UserOpts;
       fieldsType: UserFields;
+      supportsEmExecute: false;
       optIdsType: UserIdsOpts;
       factoryExtrasType: UserFactoryExtras;
       factoryOptsType: Parameters<typeof newUser>[1];
@@ -336,6 +430,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get passwordHistory(): PasswordValue[] | undefined {
+    return getField(this, "passwordHistory");
+  }
+
+  set passwordHistory(passwordHistory: PasswordValue[] | undefined) {
+    setField(this, "passwordHistory", passwordHistory);
   }
 
   /**

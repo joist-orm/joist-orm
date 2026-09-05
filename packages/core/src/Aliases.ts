@@ -39,6 +39,7 @@ import {
   getConstructorFromTaggedId,
   maybeResolveReferenceToId,
 } from "./index.ts";
+import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
 import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
 import { type Column, KeySerde } from "./serde.ts";
@@ -93,7 +94,11 @@ export type Alias<T extends Entity, Name extends string = RootTypeNameOf<T>> = {
   [P in keyof FieldsOf<T>]: P extends "id"
     ? EntityAlias<T, never, Name>
     : FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
-      ? PrimitiveAlias<V, N extends undefined ? null : never, Name>
+      ? PrimitiveAlias<
+          V,
+          FieldsOf<T>[P] extends { columns: [{ nullable: true }] } ? null : N extends undefined ? null : never,
+          Name
+        >
       : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U extends Entity; nullable: infer N }
         ? ReferenceAlias<U, N extends undefined ? null : never, Name>
         : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity; nullable: infer N }
@@ -316,15 +321,33 @@ class AbstractAliasColumn<V> extends BaseExpr {
     return idMeta ? { ...outputType, idMeta } : undefined;
   }
 
+  get sqlNullable(): boolean | undefined {
+    // Entity requiredness differs from physical NOT NULL for derived and STI fields.
+    return this.column.sqlNullable;
+  }
+
+  get sqlSource(): object {
+    return this.mgmt;
+  }
+
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.mgmt);
     const ctiAlias = getMaybeCtiAlias(this.meta, this.field, this.meta, alias);
     return { sql: kqDot(ctiAlias, this.column.columnName), bindings: [], refs: [alias] };
   }
 
-  /** Decodes a result-set value the same way `hydrate` would, i.e. an int into a tagged id. */
+  /** Decodes result-set values with public PK/FK ids, while hydration keeps internal tagged ids. */
   decode(value: unknown): unknown {
     if (value === null || value === undefined) return value;
+    if (this.column instanceof KeySerde) {
+      const idMeta =
+        this.field.kind === "primaryKey"
+          ? this.meta
+          : this.field.kind === "m2o"
+            ? this.field.otherMetadata()
+            : undefined;
+      if (idMeta) return toIdOf(idMeta, this.column.mapFromDb(value));
+    }
     return this.column.mapFromDb(value);
   }
 
@@ -340,7 +363,7 @@ class AbstractAliasColumn<V> extends BaseExpr {
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
-    return withDeferredAlias(cond, (resolve) => {
+    return withDeferredAlias(cond, (resolve, cond) => {
       const r = resolve(this.mgmt);
       cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
     });
@@ -348,7 +371,7 @@ class AbstractAliasColumn<V> extends BaseExpr {
 
   protected addRawCondition(exp: string, bindings: readonly any[]): RawCondition {
     const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings };
-    return withDeferredAlias(cond, (resolve) => {
+    return withDeferredAlias(cond, (resolve, cond) => {
       const r = resolve(this.mgmt);
       const alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
       cond.aliases = [alias];
@@ -715,7 +738,7 @@ class PolyReferenceAlias<T extends Entity> {
       dbType: this.field.serde.columns[0].dbType,
       cond: mapToDb(column, value),
     };
-    return withDeferredAlias(cond, (resolve) => {
+    return withDeferredAlias(cond, (resolve, cond) => {
       const r = resolve(this.mgmt);
       cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
     });
@@ -856,7 +879,7 @@ function newCrossColumnCondition(
   op: string,
 ): RawCondition {
   const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
-  return withDeferredAlias(cond, (resolve) => {
+  return withDeferredAlias(cond, (resolve, cond) => {
     const r1 = resolve(mgmt);
     const r2 = resolve(otherColumn.mgmt);
     const a1 = getMaybeCtiAlias(meta, field, r1.meta, r1.alias);

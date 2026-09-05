@@ -64,12 +64,51 @@ import {
 export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  favoriteLargePublisher: {
+    kind: "m2o";
+    type: LargePublisher;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  group: {
+    kind: "m2o";
+    type: PublisherGroup;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   bookReviews: { kind: "o2m"; type: BookReview };
   criticColumn: { kind: "o2o"; type: CriticColumn };
 }
@@ -159,6 +198,7 @@ declare module "joist-core" {
       orderType: CriticOrder;
       optsType: CriticOpts;
       fieldsType: CriticFields;
+      supportsEmExecute: true;
       optIdsType: CriticIdsOpts;
       factoryExtrasType: CriticFactoryExtras;
       factoryOptsType: Parameters<typeof newCritic>[1];

@@ -55,11 +55,44 @@ import {
 export type ParentItemId = Flavor<string, "ParentItem">;
 
 export interface ParentItemFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  parentGroup: {
+    kind: "m2o";
+    type: ParentGroup;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   childItems: { kind: "o2m"; type: ChildItem };
 }
 
@@ -126,6 +159,7 @@ declare module "joist-core" {
       orderType: ParentItemOrder;
       optsType: ParentItemOpts;
       fieldsType: ParentItemFields;
+      supportsEmExecute: true;
       optIdsType: ParentItemIdsOpts;
       factoryExtrasType: ParentItemFactoryExtras;
       factoryOptsType: Parameters<typeof newParentItem>[1];

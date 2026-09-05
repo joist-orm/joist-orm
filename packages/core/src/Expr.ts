@@ -196,20 +196,30 @@ export type AliasResolver = (handle: AliasMgmt) => { meta: EntityMetadata; alias
  * correlation. Resolving recomputes from scratch, so one condition works across queries whose alias
  * assignments differ.
  */
-export interface DeferredAliasCondition {
-  [deferredAliasSym]: (resolve: AliasResolver) => void;
+export interface DeferredAliasCondition<C = ColumnCondition | RawCondition> {
+  [deferredAliasSym]: (resolve: AliasResolver) => C;
 }
 
-export function isDeferredAliasCondition(cond: unknown): cond is DeferredAliasCondition {
+export function isDeferredAliasCondition<C>(cond: C): cond is C & DeferredAliasCondition<C> {
   return typeof cond === "object" && cond !== null && deferredAliasSym in cond;
 }
 
-/** Tags `cond` with its per-parse resolve function, non-enumerable so the condition still deep-equals as data. */
+/**
+ * Tags `cond` with its per-parse resolve function, non-enumerable so the condition still deep-equals as data.
+ * The callback receives a fresh shallow copy; it must not write to the original captured condition.
+ */
 export function withDeferredAlias<C extends object>(
   cond: C,
-  resolve: (r: AliasResolver) => void,
-): C & DeferredAliasCondition {
-  return Object.defineProperty(cond, deferredAliasSym, { value: resolve, enumerable: false }) as any;
+  resolve: (r: AliasResolver, copy: C) => void,
+): C & DeferredAliasCondition<C> {
+  return Object.defineProperty(cond, deferredAliasSym, {
+    value: (r: AliasResolver) => {
+      const copy = { ...cond };
+      resolve(r, copy);
+      return copy;
+    },
+    enumerable: false,
+  }) as C & DeferredAliasCondition<C>;
 }
 
 export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
@@ -224,7 +234,7 @@ export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
  * involve a non-alias expression.
  */
 export interface DeferredCondition extends RawCondition {
-  [deferredSym]: (ctx: ExprContext) => void;
+  [deferredSym]: (ctx: ExprContext) => RawCondition;
 }
 
 export function isDeferredCondition(cond: unknown): cond is DeferredCondition {
@@ -241,9 +251,7 @@ export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): Deferr
     pruneable: false,
     [deferredSym]: (ctx) => {
       const { sql, bindings, refs } = fn(ctx);
-      cond.condition = sql;
-      cond.bindings = bindings;
-      cond.aliases = refs;
+      return { ...cond, condition: sql, bindings, aliases: refs };
     },
   };
   return cond;
@@ -259,11 +267,9 @@ export function resolveDeferredConditions(
 ): ExpressionCondition | undefined {
   if (cond === undefined || cond === null) return cond;
   if (isDeferredCondition(cond)) {
-    cond[deferredSym](ctx);
-    return { ...cond };
+    return cond[deferredSym](ctx);
   } else if (isDeferredAliasCondition(cond)) {
-    cond[deferredAliasSym](ctxResolver(ctx));
-    return { ...cond };
+    return cond[deferredAliasSym](ctxResolver(ctx));
   } else if ("and" in cond && cond.and) {
     return { ...cond, and: cond.and.map((c) => resolveDeferredConditions(c, ctx)) };
   } else if ("or" in cond && cond.or) {
@@ -300,6 +306,16 @@ export abstract class BaseExpr {
 
   /** Known SQL representation and logical domain; raw SQL and unmodeled refs remain unknown. */
   get outputType(): ExprOutputType | undefined {
+    return undefined;
+  }
+
+  /** Physical SQL nullability; undefined means unknown, not a NOT NULL guarantee. */
+  get sqlNullable(): boolean | undefined {
+    return undefined;
+  }
+
+  /** The source of a direct column reference, whose value becomes NULL under an unmatched LEFT join. */
+  get sqlSource(): object | undefined {
     return undefined;
   }
 
@@ -491,6 +507,25 @@ export class FnExpr extends BaseExpr {
     return this.opts.outputType;
   }
 
+  get sqlNullable(): boolean | undefined {
+    switch (this.name) {
+      case "count":
+        return false;
+      case "sum":
+      case "avg":
+      case "min":
+      case "max":
+      case "array_agg":
+      case "string_agg":
+        return true;
+      case "coalesce":
+        // Only the fallback is independent of an outer query's LEFT joins.
+        return this.args[1]?.sqlNullable === false ? false : undefined;
+      default:
+        return undefined;
+    }
+  }
+
   toSql(ctx: ExprContext): SqlFragment {
     const args = joinFragments(
       this.args.map((a) => a.toSql(ctx)),
@@ -515,6 +550,10 @@ export class BindingExpr extends BaseExpr {
     super();
   }
 
+  get sqlNullable(): boolean {
+    return this.value === null || this.value === undefined;
+  }
+
   toSql(): SqlFragment {
     return { sql: "?", bindings: [this.value], refs: [] };
   }
@@ -527,6 +566,10 @@ export class RefExpr extends BaseExpr {
     private column: string,
   ) {
     super();
+  }
+
+  get sqlSource(): object {
+    return this.handle;
   }
 
   toSql(ctx: ExprContext): SqlFragment {

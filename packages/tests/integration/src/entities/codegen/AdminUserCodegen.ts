@@ -50,9 +50,22 @@ import {
 
 export type AdminUserId = Flavor<string, "User">;
 
-export interface AdminUserFields extends UserFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+export interface AdminUserFields extends Omit<UserFields, "id"> {
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  role: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
 }
 
 export interface AdminUserOpts extends UserOpts {
@@ -97,6 +110,7 @@ declare module "joist-core" {
       orderType: AdminUserOrder;
       optsType: AdminUserOpts;
       fieldsType: AdminUserFields;
+      supportsEmExecute: false;
       optIdsType: AdminUserIdsOpts;
       factoryExtrasType: AdminUserFactoryExtras;
       factoryOptsType: Parameters<typeof newAdminUser>[1];

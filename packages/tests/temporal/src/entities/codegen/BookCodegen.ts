@@ -53,21 +53,76 @@ import {
 export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  publishedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: false };
-  timestampTzs: { kind: "primitive"; type: Temporal.ZonedDateTime[]; unique: false; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  title: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  publishedAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  timestampTzs: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime[];
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
   maybeTimestampTzs: {
     kind: "primitive";
     type: Temporal.ZonedDateTime[];
     unique: false;
     nullable: undefined;
     derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
   };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
-  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  createdAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  deletedAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  author: {
+    kind: "m2o";
+    type: Author;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
 }
 
 export interface BookOpts {
@@ -148,6 +203,7 @@ declare module "joist-core" {
       orderType: BookOrder;
       optsType: BookOpts;
       fieldsType: BookFields;
+      supportsEmExecute: true;
       optIdsType: BookIdsOpts;
       factoryExtrasType: BookFactoryExtras;
       factoryOptsType: Parameters<typeof newBook>[1];

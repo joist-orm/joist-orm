@@ -53,9 +53,28 @@ import {
 export type T4BookId = Flavor<number, "T4Book">;
 
 export interface T4BookFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  author: { kind: "m2o"; type: T4Author; nullable: never; derived: false };
+  id: {
+    kind: "primitive";
+    type: number;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  title: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  author: {
+    kind: "m2o";
+    type: T4Author;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   t4Authors: { kind: "o2m"; type: T4Author };
 }
 
@@ -115,6 +134,7 @@ declare module "joist-core" {
       orderType: T4BookOrder;
       optsType: T4BookOpts;
       fieldsType: T4BookFields;
+      supportsEmExecute: true;
       optIdsType: T4BookIdsOpts;
       factoryExtrasType: T4BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT4Book>[1];

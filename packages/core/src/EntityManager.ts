@@ -26,6 +26,15 @@ import { setAsyncDefaults, setSyncDefaults } from "./defaults.ts";
 import { type Driver } from "./drivers/index.ts";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { type Entity, type Entity as EntityW, type IdType, isEntity } from "./Entity.ts";
+import {
+  type CheckMutation,
+  type ExecuteResult,
+  type MutationInput,
+  type MutationRow,
+  decodeStatementResult,
+  isMutation,
+  parseStatement,
+} from "./execute.ts";
 import { getField, setField } from "./fields.ts";
 import { FlushLock } from "./FlushLock.ts";
 import {
@@ -561,9 +570,42 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const em = this;
     return (async function query() {
       const plan = parseUserQuery(q);
-      const rows = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
       return plan.decodeRows(em, rows);
     })().catch(function query(err) {
+      throw appendStack(err, new Error());
+    });
+  }
+
+  /**
+   * Executes immediate SQL with a native command count. Mutations bypass the entity unit of work;
+   * reads retain query's decoding and permissions. Neither path flushes or repairs cached entities.
+   */
+  public execute<const M extends MutationInput>(
+    statement: M & CheckMutation<M>,
+  ): Promise<ExecuteResult<MutationRow<M>>>;
+  public execute<R>(statement: Subquery<R, any>): Promise<ExecuteResult<R>>;
+  public execute<T extends Entity>(statement: EntityQuery<T>): Promise<ExecuteResult<T>>;
+  public execute<const Q extends SetQuery<readonly SetOperand[]>>(
+    statement: Q & CheckSetQuery<Q>,
+  ): Promise<ExecuteResult<SetQueryRow<Q>>>;
+  public execute<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
+    statement: QueryArg<F, S, J, never>,
+  ): Promise<ExecuteResult<QueryRow<S, J>>>;
+  public execute(statement: unknown): Promise<ExecuteResult<unknown>> {
+    const em = this;
+    return (async function execute() {
+      if (isMutation(statement)) {
+        em.__api.checkWritesAllowed();
+        if (em.mode === "in-memory-writes") fail("SQL mutations do not support in-memory-writes mode");
+      } else {
+        em.#assertFindAllowed("execute");
+      }
+      const plan = parseStatement(statement);
+      if (!plan) return { rowCount: 0, rows: [] };
+      const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      return decodeStatementResult(em, plan, result);
+    })().catch(function execute(err) {
       throw appendStack(err, new Error());
     });
   }

@@ -71,12 +71,45 @@ import {
 
 export type LargePublisherId = Flavor<string, "Publisher">;
 
-export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
+export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rating" | "spotlightAuthor"> {
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  sharedColumn: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  country: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  rating: {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  spotlightAuthor: {
+    kind: "m2o";
+    type: Author;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
   critics: { kind: "o2m"; type: Critic };
   users: { kind: "o2m"; type: User };
 }
@@ -147,6 +180,7 @@ declare module "joist-core" {
       orderType: LargePublisherOrder;
       optsType: LargePublisherOpts;
       fieldsType: LargePublisherFields;
+      supportsEmExecute: false;
       optIdsType: LargePublisherIdsOpts;
       factoryExtrasType: LargePublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newLargePublisher>[1];

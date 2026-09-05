@@ -56,13 +56,59 @@ import {
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  firstName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  lastName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  delete: {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  favoriteColors: {
+    kind: "enum";
+    type: Color[];
+    nullable: never;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   books: { kind: "o2m"; type: Book };
 }
 
@@ -135,6 +181,7 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];

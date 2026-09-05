@@ -1225,8 +1225,8 @@ function resolveAliasConditions(
   function resolve(handle: AliasMgmt): { meta: EntityMetadata; alias: string } {
     return bindings.get(handle) ?? fail(`Alias for ${handle.tableName} is not bound to this query's join literal`);
   }
-  function maybeResolve(c: ColumnCondition | RawCondition): void {
-    if (isDeferredAliasCondition(c)) c[deferredAliasSym](resolve);
+  function maybeResolve<C extends ColumnCondition | RawCondition>(c: C): C | undefined {
+    return isDeferredAliasCondition(c) ? c[deferredAliasSym](resolve) : undefined;
   }
   visitConditions(query, { visitCond: maybeResolve, visitRaw: maybeResolve });
 }

@@ -1,5 +1,5 @@
+import { expectTypeOf } from "expect-type";
 import {
-  CustomSerdeAdapter,
   DateSerde,
   PlainDateSerde,
   PlainDateTimeSerde,
@@ -12,9 +12,21 @@ import {
   query,
   sql,
 } from "joist-orm";
-import { Author, Book, BookRange, Comment, FavoriteShape, Publisher, Tag, TaskNew, TaskOld, User } from "src/entities";
+import {
+  Author,
+  Book,
+  BookRange,
+  Comment,
+  FavoriteShape,
+  Publisher,
+  Tag,
+  TaskNew,
+  TaskOld,
+  User,
+  newUser,
+} from "src/entities";
 import { insertAuthor, insertBook, insertComment, insertTask, insertUser } from "src/entities/inserts";
-import { PasswordValue, PasswordValueSerde } from "src/entities/types";
+import { PasswordValue } from "src/entities/types";
 import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
 import { ZodError } from "zod";
 
@@ -1585,6 +1597,40 @@ describe("EntityManager.setQueries", () => {
       }
     });
 
+    it.each(["populated", "empty", "null"] as const)("filters and combines %s custom password arrays", async (kind) => {
+      // Given a User with an ordered password history, an empty history, or SQL NULL
+      const em = newEntityManager();
+      const password = PasswordValue.fromPlainText("previous");
+      const older = PasswordValue.fromPlainText("older");
+      const history = kind === "populated" ? [password, older] : kind === "empty" ? [] : null;
+      const user = newUser(em, { passwordHistory: history ?? undefined });
+      // And another User whose different history must not match the array predicate
+      newUser(em, { passwordHistory: [older, password] });
+      await em.flush();
+      // And independent aliases sharing the generated password-history codec
+      const [u, other] = aliases(User, User);
+      const histories = query({
+        union: [
+          { from: u, select: { history: u.passwordHistory } },
+          { from: other, select: { history: other.passwordHistory } },
+        ],
+        as: "histories",
+      });
+      // When filtering both a physical alias and the compound's derived array column
+      const direct = await em.query({ from: u, where: u.passwordHistory.eq(history), select: u.passwordHistory });
+      const combined = await em.query({ from: histories, where: histories.history.eq(history), select: histories });
+      const found = await em.find(User, { passwordHistory: { eq: history } });
+      // Then each path encodes elements, preserves SQL NULL, and decodes the same domain array
+      expect(direct).toEqual([history]);
+      expect(combined).toEqual([{ history }]);
+      expectTypeOf(combined).toEqualTypeOf<{ history: PasswordValue[] | null }[]>();
+      expect(found).toEqual([user]);
+      if (kind === "populated") {
+        expect(combined[0].history![0]).toBeInstanceOf(PasswordValue);
+        expect(combined[0].history![0].matches("previous")).toBe(true);
+      }
+    });
+
     it("combines physical primitive arrays with matching arrayAgg outputs", async () => {
       // Given an Author whose varchar array matches its single first name
       await insertAuthor({ first_name: "a1", nick_names: ["a1"] });
@@ -2330,27 +2376,6 @@ describe("EntityManager.setQueries", () => {
       expect(left.outputType).toBeDefined();
       expect(right.outputType).toEqual(left.outputType);
       expect(left.outputType?.domain).not.toBe(date.outputType?.domain);
-    });
-
-    it.each([
-      { name: "PlainDate", serde: PlainDateSerde, dbType: "date[]" },
-      { name: "PlainTime", serde: PlainTimeSerde, dbType: "time[]" },
-      { name: "PlainDateTime", serde: PlainDateTimeSerde, dbType: "timestamp[]" },
-      { name: "ZonedDateTime", serde: ZonedDateTimeSerde, dbType: "timestamptz[]" },
-    ])("leaves physical Temporal $name arrays unsupported", (testCase) => {
-      // Given a physical Temporal array column, not arrayAgg over a supported scalar expression
-      const column = new testCase.serde("values", "values", testCase.dbType, true);
-      // When inspecting the codec available to set validation
-      // Then physical Temporal arrays remain unknown rather than claiming an elementwise encoder
-      expect(column.outputType).toBeUndefined();
-    });
-
-    it("leaves physical custom arrays unsupported", () => {
-      // Given a physical password array using a mapper designed for individual PasswordValue instances
-      const column = new CustomSerdeAdapter("passwords", "passwords", "character varying[]", PasswordValueSerde, true);
-      // When inspecting the codec available to set validation
-      // Then a scalar custom mapper does not imply a supported physical array encoder
-      expect(column.outputType).toBeUndefined();
     });
   });
 

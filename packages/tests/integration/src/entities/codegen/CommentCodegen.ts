@@ -76,13 +76,60 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  parentTaggedId: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  parentTags: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
-  text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  parentTaggedId: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: true;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  parentTags: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  text: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  user: {
+    kind: "m2o";
+    type: User;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
   likedByUsers: { kind: "m2m"; type: User };
   books: { kind: "o2m"; type: Book };
@@ -181,6 +228,7 @@ declare module "joist-core" {
       orderType: CommentOrder;
       optsType: CommentOpts;
       fieldsType: CommentFields;
+      supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];

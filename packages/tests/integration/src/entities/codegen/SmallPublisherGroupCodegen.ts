@@ -53,9 +53,22 @@ import {
 
 export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
 
-export interface SmallPublisherGroupFields extends PublisherGroupFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "id"> {
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  smallName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   publishers: { kind: "o2m"; type: SmallPublisher };
 }
 
@@ -105,6 +118,7 @@ declare module "joist-core" {
       orderType: SmallPublisherGroupOrder;
       optsType: SmallPublisherGroupOpts;
       fieldsType: SmallPublisherGroupFields;
+      supportsEmExecute: false;
       optIdsType: SmallPublisherGroupIdsOpts;
       factoryExtrasType: SmallPublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];

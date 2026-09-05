@@ -51,10 +51,37 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  text: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  text: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
@@ -121,6 +148,7 @@ declare module "joist-core" {
       orderType: CommentOrder;
       optsType: CommentOpts;
       fieldsType: CommentFields;
+      supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];

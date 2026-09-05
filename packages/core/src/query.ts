@@ -30,10 +30,13 @@ import {
   type SqlFragment,
   TemplateExpr,
   asNode,
+  deferredAliasSym,
   deferredCondition,
+  deferredSym,
   exprBrand,
   isExpr,
   resolveDeferredConditions,
+  skipCondition,
 } from "./Expr.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
@@ -185,7 +188,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
 
 /** A whole query: `Clauses` plus its source. `query(q)` turns it into a value; `em.query(q)` runs it. */
 export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins>
-  extends Clauses<S, J>, Partial<Record<SetOperation, never>> {
+  extends Clauses<S, J>, Partial<Record<SetOperation | MutationKey | "with" | "ctes", never>> {
   from: QuerySource;
 }
 
@@ -195,6 +198,9 @@ export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins
  * I.e. `union` removes duplicate projected Author names; `unionAll` keeps every copy.
  */
 export type SetOperation = "union" | "unionAll" | "intersect" | "intersectAll" | "except" | "exceptAll";
+
+/** Mutation clauses are forbidden even on nonliteral read inputs. */
+type MutationKey = "insert" | "update" | "delete" | "values" | "set" | "returning" | "allowAll";
 
 /**
  * For set operations like UNION, this is one read operand with named POJO columns: an ordinary query,
@@ -241,7 +247,19 @@ export type SetQuery<Operands extends readonly SetOperand[] = readonly [SetOpera
 } & {
   // SELECT clauses and branch policies must stay inside operands or an ordinary outer query.
   readonly [
-    K in "from" | "select" | "join" | "where" | "groupBy" | "having" | "distinct" | "softDeletes" | "pruneJoins"
+    K in
+      | "from"
+      | "select"
+      | "join"
+      | "where"
+      | "groupBy"
+      | "having"
+      | "distinct"
+      | "softDeletes"
+      | "pruneJoins"
+      | MutationKey
+      | "with"
+      | "ctes"
   ]?: never;
 };
 
@@ -355,7 +373,7 @@ type CheckOperand<First, Q> =
     ? // Validate nested roots too, so an otherwise compatible one-operand UNION cannot hide inside Q.
       Q extends SetQuery<readonly SetOperand[]>
       ? CheckSetQuery<Q>
-      : unknown
+      : CheckReadQuery<Q>
     : "set operands must have the same keys and compatible column values";
 
 /**
@@ -407,11 +425,36 @@ export type CheckSetQuery<Q extends SetQuery<readonly SetOperand[]>> = Q extends
             : never
           : // Non-operation clauses retain their inferred types; SetQuery already constrains their shapes.
             unknown;
-      } & {
-        // Only the inferred output keys are legal here; expression ordering needs an outer SELECT.
-        readonly orderBy?: CheckSetOrder<Q["orderBy"], keyof ReadQueryRow<FirstOperand<Q>>>;
-      }
+      } & CheckReadQuery<Q> & {
+          // Only the inferred output keys are legal here; expression ordering needs an outer SELECT.
+          readonly orderBy?: CheckSetOrder<Q["orderBy"], keyof ReadQueryRow<FirstOperand<Q>>>;
+        }
   : never;
+
+/**
+ * Rejects unknown clauses on concrete read inputs, recursively through compound operands.
+ * Intersect this with an inferred Q; a widened annotation cannot reveal keys already erased from its type.
+ * I.e. an INSERT source with `select: { title: b.title }` and `ctes: [...]` must not silently discard the CTEs.
+ */
+export type CheckReadQuery<Q> = SetOperand extends Q
+  ? unknown
+  : Q extends readonly unknown[]
+    ? { readonly [I in keyof Q]: CheckReadQuery<Q[I]> }
+    : Q extends { readonly [subqueryBrand]: SubqueryBrand<infer R, string> }
+      ? { readonly [K in keyof Q]: K extends keyof R | typeof subqueryBrand ? unknown : never }
+      : Q extends { readonly [entityQueryBrand]: unknown }
+        ? { readonly [K in keyof Q]: K extends typeof entityQueryBrand ? unknown : never }
+        : Q extends { readonly from: unknown; readonly select: unknown }
+          ? { readonly [K in keyof Q]: K extends keyof Clauses | "from" | "as" ? unknown : never }
+          : {
+              readonly [K in keyof Q]: K extends SetOperation
+                ? Q[K] extends readonly unknown[]
+                  ? CheckReadQuery<Q[K]>
+                  : unknown
+                : K extends "orderBy" | "limit" | "offset" | "as"
+                  ? unknown
+                  : never;
+            };
 
 // =====================================================================================================
 // Result-row types
@@ -484,7 +527,9 @@ export type Subquery<R, Name extends string> = {
 } & { readonly [K in keyof R]: Expr<R[K], Name> };
 
 /** An entity-mode query (`select: a`): runnable, but it has no columns to reference. */
-export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } };
+export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } } & Partial<
+  Record<MutationKey | "with" | "ctes", never>
+>;
 
 /**
  * Rejects a `select` that a `: Query` annotation widened to the whole `QuerySelect` union.
@@ -658,7 +703,47 @@ sql.ref = function ref<R = unknown>(source: QuerySource, column: string): Expr<R
  * `EntityHydrator`), so it parses and hands back `{ sql, bindings, decodeRows }` instead of executing.
  */
 export function parseUserQuery(arg: unknown): Plan {
+  if (arg instanceof SubqueryExpr) fail("Scalar query values are expressions, not executable read inputs");
   return parseQuery(toQuery(arg), undefined, new AliasAssigner());
+}
+
+/** Recognizes read brands, including malformed hybrids that must reach read validation rather than mutation execution. */
+export function isReadQueryValue(arg: unknown): boolean {
+  return isSubqueryValue(arg) || isEntityQueryValue(arg);
+}
+
+/**
+ * Compiles scalar or nonempty named expression projections, shared by SELECT and mutation RETURNING.
+ * Source-shaped values need read hydration/source rules and are deliberately excluded here.
+ */
+export function projectionToSql(
+  select: unknown,
+  ctx: Ctx,
+): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
+  const output = projectionOutput(select);
+  if (output.kind === "scalar") {
+    // Scalar mode: one value per row, used by scalar/IN-list subqueries
+    const expr = output.columns[0][1];
+    const fragment = expr.toSql(ctx);
+    const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
+    return {
+      selects,
+      decodeRows: (_, rows) => rows.map((row) => expr.decode(row.value)),
+      output,
+    };
+  }
+  // POJO mode
+  const entries = output.columns;
+  const selects = entries.map((entry) => {
+    const [key, expr] = entry;
+    const fragment = expr.toSql(ctx);
+    return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
+  });
+  return {
+    selects,
+    decodeRows: (_, rows) => rows.map((row) => decodeRow(row, entries)),
+    output,
+  };
 }
 
 /**
@@ -693,6 +778,7 @@ type AnyReadQuery = AnyQuery | SetQuery<readonly SetOperand[]>;
 /** Only POJO outputs can be set operands; ordinary scalar reads also expose an ordered output column. */
 export interface QueryOutput {
   kind: "entity" | "scalar" | "pojo";
+  /** Expressions retain codecs and physical nullability after LEFT joins and set operations. */
   columns: readonly (readonly [string, BaseExpr])[];
 }
 
@@ -760,6 +846,14 @@ class SubqueryColumnExpr extends BaseExpr {
   get outputType(): ExprOutputType | undefined {
     return this.inner.outputType;
   }
+
+  get sqlNullable(): boolean | undefined {
+    return this.inner.sqlNullable;
+  }
+
+  get sqlSource(): object {
+    return this.handle;
+  }
 }
 
 /**
@@ -774,11 +868,18 @@ class SubqueryExpr extends BaseExpr {
   }
 
   get subquerySelect(): BaseExpr {
-    return this.handle.output().columns[0][1];
+    const expr = this.handle.output().columns[0][1];
+    // Polymorphic IN uses the original alias's ID metadata when its key codec is unknown.
+    return expr instanceof OutputExpr ? expr.inner : expr;
   }
 
   get outputType(): ExprOutputType | undefined {
     return this.subquerySelect.outputType;
+  }
+
+  get sqlNullable(): boolean {
+    // Even a NOT NULL projection becomes NULL when a scalar subquery returns no rows.
+    return true;
   }
 
   toSql(ctx: ExprContext): SqlFragment {
@@ -827,14 +928,19 @@ function isEntityQueryValue(value: unknown): value is { [entityQueryBrand]: Subq
 
 function isPlainSelect(select: unknown): select is Record<string, ExprLike<any>> {
   return (
-    typeof select === "object" && select !== null && !isAlias(select) && !isExpr(select) && !isSubqueryValue(select)
+    typeof select === "object" &&
+    select !== null &&
+    !isExpr(select) &&
+    !isSubqueryValue(select) &&
+    !isEntityQueryValue(select) &&
+    (Object.getPrototypeOf(select) === Object.prototype || Object.getPrototypeOf(select) === null)
   );
 }
 
 /** Returns the runtime identity of a source: an alias's `AliasMgmt` or a subquery's handle. */
 function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
   if (isAlias(source)) return getAliasMgmt(source);
-  if (isSubqueryValue(source)) return source[subqueryBrand];
+  if (isSubqueryValue(source)) return readValueHandle(source);
   return fail(`Expected an alias or a query(...) value, got ${source}`);
 }
 
@@ -843,12 +949,19 @@ function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
 // =====================================================================================================
 
 function toQuery(arg: unknown): AnyReadQuery {
-  if (isSubqueryValue(arg)) return arg[subqueryBrand].q;
-  if (isEntityQueryValue(arg)) return arg[entityQueryBrand].q;
-  if (arg instanceof SubqueryExpr) return arg.handle.q;
-  if (isSetQuery(arg)) return arg;
-  if (typeof arg === "object" && arg !== null && "from" in arg && "select" in arg) return arg as AnyQuery;
-  return fail(`em.query expects a { from, select, ... } object or a query(...) value`);
+  if (isReadQueryValue(arg)) return toQuery(readValueHandle(arg).q);
+  if (arg instanceof SubqueryExpr) return toQuery(arg.handle.q);
+  validateReadQuery(arg);
+  return arg;
+}
+
+/** Virtual subquery columns are not own clauses; attached properties on the value are always rejected. */
+function readValueHandle(arg: unknown): SubqueryHandle {
+  if (!isSubqueryValue(arg) && !isEntityQueryValue(arg)) return fail("Expected a branded read query value");
+  const brand = isSubqueryValue(arg) ? subqueryBrand : entityQueryBrand;
+  validateQueryKeys(arg, [brand], "Read query values");
+  const handle = isSubqueryValue(arg) ? arg[subqueryBrand] : arg[entityQueryBrand];
+  return handle instanceof SubqueryHandle ? handle : fail("Invalid read query value handle");
 }
 
 const SET_OPERATIONS: Record<SetOperation, string> = {
@@ -860,6 +973,68 @@ const SET_OPERATIONS: Record<SetOperation, string> = {
   exceptAll: "EXCEPT ALL",
 };
 
+const MUTATION_KEYS: readonly MutationKey[] = ["insert", "update", "delete", "values", "set", "returning", "allowAll"];
+
+const READ_KEYS: readonly (keyof Clauses | "from" | "as")[] = [
+  "from",
+  "join",
+  "where",
+  "groupBy",
+  "having",
+  "select",
+  "orderBy",
+  "limit",
+  "offset",
+  "distinct",
+  "pruneJoins",
+  "softDeletes",
+  "as",
+];
+
+/**
+ * Checks every ordinary or compound root before exposing output metadata or compiling SQL.
+ * Validate options before applying defaults so wrong-type values, including null, cannot disappear.
+ */
+function validateReadQuery(arg: unknown): asserts arg is AnyReadQuery {
+  if (typeof arg !== "object" || arg === null || Array.isArray(arg)) {
+    fail("em.query expects a { from, select, ... } object or a query(...) value");
+  }
+  if (isSetQuery(arg)) {
+    setOperands(arg);
+  } else {
+    validateQueryKeys(arg, READ_KEYS, "Read queries");
+    if (!("from" in arg && "select" in arg))
+      fail("em.query expects a { from, select, ... } object or a query(...) value");
+  }
+  const options = arg as Record<string, unknown>;
+  for (const key of ["limit", "offset"]) {
+    const value = options[key];
+    if (value !== undefined && (typeof value !== "number" || !Number.isInteger(value) || value < 0)) {
+      fail(`Read query ${key} must be a nonnegative finite integer`);
+    }
+  }
+  if (options.softDeletes !== undefined && options.softDeletes !== "include" && options.softDeletes !== "exclude") {
+    fail("Read query softDeletes must be 'include' or 'exclude'");
+  }
+  for (const key of ["distinct", "pruneJoins"]) {
+    if (options[key] !== undefined && typeof options[key] !== "boolean") fail(`Read query ${key} must be a boolean`);
+  }
+  if (options.as !== undefined && typeof options.as !== "string") fail("Read query as must be a string");
+}
+
+/** Includes undefined, symbol, non-enumerable, and inherited clauses rather than silently ignoring them. */
+function validateQueryKeys(arg: object, allowed: readonly PropertyKey[], description: string): void {
+  for (let object: object | null = arg; object && object !== Object.prototype; object = Object.getPrototypeOf(object)) {
+    for (const key of Reflect.ownKeys(object)) {
+      if (allowed.includes(key)) continue;
+      if (MUTATION_KEYS.includes(key as MutationKey)) {
+        fail(`Read queries do not support mutation clause '${String(key)}'; use em.execute`);
+      }
+      fail(`${description} do not support clause '${String(key)}'`);
+    }
+  }
+}
+
 /** Detect operation keys even when their values are invalid, so mixed roots cannot fall through to SELECT. */
 function isSetQuery(value: unknown): value is SetQuery<readonly SetOperand[]> {
   return typeof value === "object" && value !== null && Object.keys(SET_OPERATIONS).some((key) => key in value);
@@ -869,11 +1044,7 @@ function isSetQuery(value: unknown): value is SetQuery<readonly SetOperand[]> {
 function setOperands(q: SetQuery<readonly SetOperand[]>): [SetOperation, readonly SetOperand[]] {
   const keys = (Object.keys(SET_OPERATIONS) as SetOperation[]).filter((key) => key in q);
   if (keys.length !== 1) fail("A set query requires exactly one operation key");
-  for (const key of Object.keys(q)) {
-    if (key !== keys[0] && !["orderBy", "limit", "offset", "as"].includes(key)) {
-      fail(`Set queries do not support '${key}'; put it in an operand or an outer query`);
-    }
-  }
+  validateQueryKeys(q, [keys[0], "orderBy", "limit", "offset", "as"], "Set queries");
   const operands = q[keys[0]];
   if (!Array.isArray(operands) || operands.length < 2) fail("Set operations require at least two operands");
   return [keys[0], operands];
@@ -885,11 +1056,15 @@ function setOperands(q: SetQuery<readonly SetOperand[]>): [SetOperation, readonl
  *
  * I.e. Author.id and Book.author share the Author key codec, but Book.id must never decode as Author.id.
  * The first branch supplies names and conversions only after every branch passes these checks.
+ * UNION admits NULL from any branch; EXCEPT/INTERSECT retain the left branch's nullable facts.
+ * Unknown nullability stays unknown unless another UNION branch is known nullable.
  */
 function queryOutput(q: AnyReadQuery): QueryOutput {
+  validateReadQuery(q);
   if (isSetQuery(q)) {
-    const [, operands] = setOperands(q);
+    const [operation, operands] = setOperands(q);
     const first = queryOutput(toQuery(operands[0]));
+    const columns = [...first.columns];
     for (const operand of operands) {
       const output = operand === operands[0] ? first : queryOutput(toQuery(operand));
       if (output.kind !== "pojo") {
@@ -900,7 +1075,8 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
         );
       }
       if (output.columns.length !== first.columns.length) fail("Set operands must have the same POJO keys");
-      for (const [key, expr] of first.columns) {
+      for (let i = 0; i < columns.length; i++) {
+        const [key, expr] = columns[i];
         const other = output.columns.find(([name]) => name === key)?.[1];
         if (!other) fail(`Set operands must have the same POJO keys; missing '${key}'`);
         const left = expr.outputType;
@@ -914,21 +1090,91 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
             `Set column '${key}' has incompatible output codecs (${left.dbType} and ${right.dbType}); use matching SQL representations and logical domains`,
           );
         }
+        if (operation === "union" || operation === "unionAll") {
+          const nullable =
+            expr.sqlNullable === true || other.sqlNullable === true
+              ? true
+              : expr.sqlNullable === undefined || other.sqlNullable === undefined
+                ? undefined
+                : false;
+          if (nullable !== expr.sqlNullable) columns[i] = [key, new OutputExpr(expr, nullable)];
+        }
       }
     }
     setOrderBys(q, first);
-    return first;
+    return { kind: first.kind, columns };
   }
   const { select } = q;
   if (isAlias(select)) return { kind: "entity", columns: [] };
-  if (isExpr(select)) return { kind: "scalar", columns: [["value", asNode(select)]] };
-  if (isSubqueryValue(select)) return select[subqueryBrand].output();
-  if (isPlainSelect(select))
-    return {
-      kind: "pojo",
-      columns: Object.entries(select).map(([key, expr]) => [key, asExpr(expr, `select.${key}`)] as const),
-    };
-  return fail(`Unsupported select ${select}`);
+  if (isSubqueryValue(select)) return readValueHandle(select).output();
+  return joinedOutput(projectionOutput(select), q.join);
+}
+
+/** Validates the projection before compiling SQL or exposing reusable query columns. */
+function projectionOutput(select: unknown): QueryOutput {
+  if (isExpr(select)) return { kind: "scalar", columns: [["value", asExpr(select, "select")]] };
+  if (isPlainSelect(select)) {
+    const columns: [string, BaseExpr][] = [];
+    // Enumerate once: a projection proxy must not be revisited just to check for symbol keys.
+    for (const key of Reflect.ownKeys(select)) {
+      if (typeof key !== "string") fail("Projection keys must be strings");
+      if (Object.prototype.propertyIsEnumerable.call(select, key))
+        columns.push([key, asExpr(select[key], `select.${key}`)]);
+    }
+    if (columns.length === 0) fail("A named expression projection must not be empty");
+    return { kind: "pojo", columns };
+  }
+  return fail("Expected a scalar expression or a nonempty named expression projection");
+}
+
+/**
+ * Adds physical NULL from unmatched LEFT joins without mutating shared expressions or their codecs.
+ * Only direct columns carry sqlSource; COUNT and COALESCE retain their own SQL nullability.
+ * I.e. selecting Book.title from a LEFT-joined Book makes its output nullable, but COUNT(Book.id) stays NOT NULL.
+ */
+function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): QueryOutput {
+  if (!joins?.some((join) => join?.left)) return output;
+  const left = new Set<object>();
+  for (const join of joins) if (join?.left) left.add(handleOf(join.left));
+  return {
+    kind: output.kind,
+    columns: output.columns.map((column) => {
+      const [key, expr] = column;
+      return expr.sqlSource && left.has(expr.sqlSource) && expr.sqlNullable !== true
+        ? [key, new OutputExpr(expr, true)]
+        : column;
+    }),
+  };
+}
+
+/** An output-only nullability adjustment that preserves the selected expression's SQL and conversions. */
+class OutputExpr extends BaseExpr {
+  constructor(
+    readonly inner: BaseExpr,
+    private nullable: boolean | undefined,
+  ) {
+    super();
+  }
+
+  get outputType(): ExprOutputType | undefined {
+    return this.inner.outputType;
+  }
+
+  get sqlNullable(): boolean | undefined {
+    return this.nullable;
+  }
+
+  toSql(ctx: ExprContext): SqlFragment {
+    return this.inner.toSql(ctx);
+  }
+
+  decode(value: unknown): unknown {
+    return this.inner.decode(value);
+  }
+
+  encode(value: unknown): unknown {
+    return this.inner.encode(value);
+  }
 }
 
 /**
@@ -994,7 +1240,7 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
  * records the hit in `outerRefs`, which is how a correlated subquery reports the outer aliases it
  * depends on (the way `ExistsCondition.outerAliases` does), so join pruning keeps them.
  */
-class Ctx implements ExprContext {
+export class Ctx implements ExprContext {
   private aliases = new Map<object, string>();
   readonly outerRefs = new Set<string>();
   /** Physical CTI table aliases (`sp_b0`) to their source alias (`sp`), shared across the whole parse. */
@@ -1070,6 +1316,7 @@ interface ParsedJoin {
  * 4. Assemble the SQL from the kept fragments, so pruned bindings disappear with their SQL.
  */
 function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+  validateReadQuery(q);
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
   const ctx = new Ctx(assigner, parent);
   const selectedAlias = isAlias(q.select) ? getAliasMgmt(q.select) : undefined;
@@ -1238,7 +1485,10 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
  * The conditions go into the from's WHERE or the join's ON, and never keep an otherwise unreferenced
  * join alive, which is what `pruneable: true` means on em.find's side.
  */
-function injectedConditions(source: ParsedSource, softDeletes: "include" | "exclude"): ColumnCondition[] {
+export function injectedConditions(
+  source: { meta: EntityMetadata | undefined; alias: string },
+  softDeletes: "include" | "exclude",
+): ColumnCondition[] {
   const { meta } = source;
   if (!meta) return [];
   const conditions: ColumnCondition[] = [];
@@ -1299,7 +1549,7 @@ function selectsToSql(
   } else if (isSubqueryValue(select)) {
     // `select: <subquery>` is `select *` for that table; like entity mode, only for the from, since a
     // left-joined subquery's unmatched rows would decode null fields the row type calls non-null
-    const handle = select[subqueryBrand];
+    const handle = readValueHandle(select);
     if (from.handle !== handle) {
       fail(
         "Selecting a joined subquery is not supported; select the from subquery, or select its columns individually",
@@ -1317,36 +1567,23 @@ function selectsToSql(
       decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
       output,
     };
-  } else if (isExpr(select)) {
-    // Scalar mode: one value per row, used by scalar/IN-list subqueries
-    const fragment = asNode(select).toSql(ctx);
-    const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
-    return {
-      selects,
-      decodeRows: (_, rows) => rows.map((row) => asNode(select).decode(row.value)),
-      output: { kind: "scalar", columns: [["value", asNode(select)]] },
-    };
-  } else if (isPlainSelect(select)) {
-    // POJO mode
-    const entries = Object.entries(select).map(([key, expr]) => [key, asExpr(expr, `select.${key}`)] as const);
-    const selects = entries.map(([key, expr]) => {
-      const fragment = expr.toSql(ctx);
-      return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
-    });
-    return {
-      selects,
-      decodeRows: (_, rows) => rows.map((row) => decodeRow(row, entries)),
-      output: { kind: "pojo", columns: entries },
-    };
   }
-  return fail(`Unsupported select ${select}`);
+  const projection = projectionToSql(select, ctx);
+  projection.output = joinedOutput(projection.output, q.join);
+  return projection;
 }
 
 function decodeRow(row: any, decoders: readonly (readonly [string, BaseExpr])[]): any {
   const result: any = {};
   for (const [key, expr] of decoders) {
     const value = row[key];
-    result[key] = value === null || value === undefined ? null : expr.decode(value);
+    const decoded = value === null || value === undefined ? null : expr.decode(value);
+    // A projected __proto__ is data, not a request to replace the result object's prototype.
+    if (key === "__proto__") {
+      Object.defineProperty(result, key, { value: decoded, enumerable: true, configurable: true, writable: true });
+    } else {
+      result[key] = decoded;
+    }
   }
   return result;
 }
@@ -1415,8 +1652,13 @@ function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
  * `pruneIfUndefined` applies unchanged. Deferred (expression-vs-expression) conditions are resolved
  * against the context first.
  */
-function conditionToSql(cond: ExpressionCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
-  if (cond === undefined || cond === null) return undefined;
+export function conditionToSql(
+  cond: ExpressionCondition | undefined,
+  ctx: Ctx,
+  topLevel: boolean,
+): SqlFragment | undefined {
+  checkCondition(cond);
+  if (cond === undefined) return undefined;
   cond = resolveDeferredConditions(cond, ctx)!;
   const filter: ExpressionFilter = isFilter(cond) ? cond : { and: [cond] };
   const cb = new ConditionBuilder();
@@ -1426,6 +1668,106 @@ function conditionToSql(cond: ExpressionCondition | undefined, ctx: Ctx, topLeve
   const where = buildWhereClause(parsed, topLevel);
   if (!where) return undefined;
   return { sql: where[0], bindings: where[1], refs: refsOf(parsed, ctx) };
+}
+
+/**
+ * Rejects malformed predicates throughout a condition tree before pruning can discard a restriction.
+ * I.e. an invalid Author-name condition stays invalid even inside a group that would otherwise prune.
+ */
+function checkCondition(value: unknown): void {
+  if (value === undefined || value === skipCondition) return;
+  if (!value || typeof value !== "object" || Array.isArray(value) || isExpr(value))
+    fail("Query predicate must be a condition or an and/or group");
+  const condition = value as Record<string, unknown>;
+  if ("and" in condition || "or" in condition) {
+    if ("and" in condition === "or" in condition) fail("Query conditions require exactly one and/or group");
+    const key = "and" in condition ? "and" : "or";
+    checkConditionKeys(condition, [key, "pruneIfUndefined"], "Query condition group");
+    if (!Array.isArray(condition[key])) fail("Query condition groups require an array");
+    if (
+      condition.pruneIfUndefined !== undefined &&
+      condition.pruneIfUndefined !== "any" &&
+      condition.pruneIfUndefined !== "all"
+    )
+      fail("Invalid query pruneIfUndefined policy");
+    for (const child of condition[key]) checkCondition(child);
+  } else if (condition.kind === "raw") {
+    checkConditionKeys(
+      condition,
+      ["kind", "aliases", "condition", "bindings", "pruneable", deferredAliasSym, deferredSym],
+      "Query raw condition",
+    );
+    if (
+      typeof condition.condition !== "string" ||
+      !Array.isArray(condition.aliases) ||
+      !condition.aliases.every((alias) => typeof alias === "string") ||
+      !Array.isArray(condition.bindings) ||
+      typeof condition.pruneable !== "boolean"
+    )
+      fail("Malformed query raw condition");
+  } else if (condition.kind === "column") {
+    checkConditionKeys(
+      condition,
+      ["kind", "alias", "column", "dbType", "cond", "pruneable", deferredAliasSym],
+      "Query column condition",
+    );
+    if (
+      typeof condition.alias !== "string" ||
+      typeof condition.column !== "string" ||
+      typeof condition.dbType !== "string" ||
+      (condition.pruneable !== undefined && typeof condition.pruneable !== "boolean")
+    )
+      fail("Malformed query column condition");
+    const filter = condition.cond as Record<string, unknown> | undefined;
+    if (!filter) fail("Malformed query column filter");
+    checkConditionKeys(filter, ["kind", "value"], "Query column filter");
+    const unary = filter.kind === "is-null" || filter.kind === "not-null";
+    if (
+      !unary &&
+      (![
+        "eq",
+        "ne",
+        "in",
+        "nin",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "like",
+        "nlike",
+        "ilike",
+        "nilike",
+        "regex",
+        "nregex",
+        "iregex",
+        "niregex",
+        "contains",
+        "ncontains",
+        "overlaps",
+        "noverlaps",
+        "containedBy",
+        "between",
+        "jsonPathExists",
+        "jsonPathPredicate",
+      ].includes(filter.kind as string) ||
+        !("value" in filter))
+    )
+      fail("Malformed query column filter");
+    if (unary && "value" in filter) fail("Unary query filters do not accept values");
+  } else {
+    fail("Unknown query condition");
+  }
+}
+
+/** Conditions use own enumerable POJO fields, with non-enumerable deferred resolver symbols allowed. */
+function checkConditionKeys(value: object, allowed: readonly PropertyKey[], description: string): void {
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
+    fail(`${description} must be a plain POJO`);
+  for (const key of Reflect.ownKeys(value)) {
+    if (!allowed.includes(key)) fail(`${description} does not support '${String(key)}'`);
+    if (typeof key === "string" && !Object.prototype.propertyIsEnumerable.call(value, key))
+      fail(`${description} requires enumerable fields`);
+  }
 }
 
 function isFilter(cond: ExpressionCondition): cond is ExpressionFilter {
@@ -1473,10 +1815,8 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
 }
 
 function asExpr(value: unknown, where: string): BaseExpr {
-  if (isExpr(value)) return value as any as BaseExpr;
-  return fail(
-    `${where} must be an expression, i.e. an alias column, aggregate, sql\`...\`, or query(...); got ${value}`,
-  );
+  if (value instanceof BaseExpr) return value;
+  return fail(`${where} must be an expression, i.e. an alias column, aggregate, sql\`...\`, or scalar query(...)`);
 }
 
 function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {

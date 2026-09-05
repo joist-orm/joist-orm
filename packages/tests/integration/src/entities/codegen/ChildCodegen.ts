@@ -50,10 +50,37 @@ import {
 export type ChildId = Flavor<string, "Child">;
 
 export interface ChildFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  name: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
+  createdAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
+  updatedAt: {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    nullable: never;
+    derived: true;
+    columns: [{ nullable: false; insert: "optional"; update: true }];
+  };
   groups: { kind: "o2m"; type: ChildGroup };
 }
 
@@ -113,6 +140,7 @@ declare module "joist-core" {
       orderType: ChildOrder;
       optsType: ChildOpts;
       fieldsType: ChildFields;
+      supportsEmExecute: true;
       optIdsType: ChildIdsOpts;
       factoryExtrasType: ChildFactoryExtras;
       factoryOptsType: Parameters<typeof newChild>[1];

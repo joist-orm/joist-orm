@@ -53,9 +53,28 @@ import {
 export type T2AuthorId = Flavor<number, "T2Author">;
 
 export interface T2AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  favoriteBook: { kind: "m2o"; type: T2Book; nullable: undefined; derived: false };
+  id: {
+    kind: "primitive";
+    type: number;
+    unique: true;
+    nullable: never;
+    columns: [{ nullable: false; insert: "optional"; update: false }];
+  };
+  firstName: {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    nullable: never;
+    derived: false;
+    columns: [{ nullable: false; insert: "required"; update: true }];
+  };
+  favoriteBook: {
+    kind: "m2o";
+    type: T2Book;
+    nullable: undefined;
+    derived: false;
+    columns: [{ nullable: true; insert: "optional"; update: true }];
+  };
   t2Books: { kind: "o2m"; type: T2Book };
 }
 
@@ -114,6 +133,7 @@ declare module "joist-core" {
       orderType: T2AuthorOrder;
       optsType: T2AuthorOpts;
       fieldsType: T2AuthorFields;
+      supportsEmExecute: true;
       optIdsType: T2AuthorIdsOpts;
       factoryExtrasType: T2AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT2Author>[1];

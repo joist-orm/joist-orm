@@ -56,6 +56,16 @@ export * from "./EntityFilter.ts";
 export * from "./EntityGraphQLFilter.ts";
 export * from "./EntityManager.ts";
 export * from "./EntityMetadata.ts";
+export type {
+  DeleteStatement,
+  ExecuteResult,
+  InsertStatement,
+  InsertValues,
+  MutationReturning,
+  MutationStatement,
+  UpdateStatement,
+  UpdateValues,
+} from "./execute.ts";
 export type { EnumMetadata } from "./EnumMetadata.ts";
 // `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
 // (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to

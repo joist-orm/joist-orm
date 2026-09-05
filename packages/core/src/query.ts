@@ -390,15 +390,22 @@ export function query<
 }
 
 /**
- * The escape hatch for SQL with no modeled shape.
+ * Builds a SQL expression from a tagged template.
  *
- * Interpolated expressions use the alias Joist assigned, interpolated conditions become SQL,
- * and every other value becomes a `?` binding, so users never write `"a.age * 2"` and hope `a` is the SQL
- * alias, and referenced aliases still count for join pruning.
+ * For an Author alias `a` assigned the SQL alias `a1`:
  *
- *   sql<number>`${b.order} * ${2}`
- *   sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${term})`
- *   sql.ref<string>(a, "ts_search")   // an unmodeled column; untracked at the type level
+ * ```ts
+ * sql`${a.age} * 2`     // Expression: a1.age * 2
+ * sql`${a.age.gte(18)}` // Condition: (a1.age >= ?), bindings [18]
+ * sql`${"Alice"}`      // Value: ?, bindings ["Alice"]
+ *
+ * // Selecting this expression keeps the join to Book b.
+ * sql<number>`${b.order} * ${2}`
+ *
+ * // Reference an unmodeled column; it is untracked at the type level.
+ * sql.ref<string>(a, "ts_search")
+ * sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${term})`
+ * ```
  */
 export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
   return new TemplateExpr(strings, values) as any;

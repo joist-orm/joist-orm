@@ -28,6 +28,7 @@ import {
   type SqlFragment,
   asNode,
   deferredCondition,
+  withDeferredAlias,
   isExpr,
   skipCondition,
 } from "./Expr.ts";
@@ -224,7 +225,7 @@ export function getAliasMgmt(alias: Alias<any, any>): AliasMgmt {
   return (alias as any)[aliasMgmt];
 }
 
-/** Management interface for `QueryParser` to set Alias's canonical alias. */
+/** The identity both parsers bind an `alias(...)` by, plus the metadata it was created with. */
 export interface AliasMgmt {
   tableName: string;
   /**
@@ -236,12 +237,7 @@ export interface AliasMgmt {
    * for entity-mode hydration).
    */
   meta: EntityMetadata;
-  setAlias(meta: EntityMetadata, alias: string): void;
-  onBind(callback: BindCallback): void;
 }
-
-/** Called when `em.find` binds a pre-created `alias(...)` to a concrete join-tree location. */
-type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
 
 /** Returns the metadata for the entity that `alias` is bound to. */
 export function getAliasMetadata<T extends Entity>(alias: Alias<T, any>): EntityMetadata<T> {
@@ -251,21 +247,8 @@ export function getAliasMetadata<T extends Entity>(alias: Alias<T, any>): Entity
 
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
-  // Keeps a list of callbacks we've created for this specific proxy, so that parseFindQuery
-  // can tell us, after we've been creating via the `const a = alias(Author)` command, which
-  // alias we're actually bound to in the join literal.
-  const callbacks: BindCallback[] = [];
-  // Give QueryBuilder a hook to assign our actual alias
-  const mgmt: AliasMgmt = {
-    tableName: meta.tableName,
-    meta,
-    setAlias(newMeta: EntityMetadata, newAlias: string) {
-      for (const callback of callbacks) callback(newMeta, newAlias);
-    },
-    onBind(callback) {
-      callbacks.push(callback);
-    },
-  };
+  // The identity both parsers bind: `em.find` maps it to a join-literal location, `em.query` to a source
+  const mgmt: AliasMgmt = { tableName: meta.tableName, meta };
   const proxy: any = new Proxy(cstr, {
     /** Create a column alias, or a relation join factory, for the given field. */
     get(_, key: PropertyKey): any {
@@ -277,11 +260,11 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
+          return new PrimitiveAliasImpl(meta, field, field.serde!.columns[0], mgmt);
         case "m2o":
-          return new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
+          return new EntityAliasImpl(meta, field, field.serde!.columns[0], mgmt);
         case "poly":
-          return new PolyReferenceAlias(meta, callbacks, field);
+          return new PolyReferenceAlias(meta, mgmt, field);
         case "o2m":
         case "o2o":
         case "lo2m":
@@ -319,7 +302,6 @@ class AbstractAliasColumn<V> extends BaseExpr {
   public constructor(
     readonly meta: EntityMetadata,
     readonly field: Field & { aliasSuffix: string },
-    readonly callbacks: BindCallback[],
     readonly column: Column,
     readonly mgmt: AliasMgmt,
   ) {
@@ -352,64 +334,41 @@ class AbstractAliasColumn<V> extends BaseExpr {
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
-    // Track the conditions we've created to re-write the alias when we're bound
-    this.callbacks.push((newMeta, newAlias) => {
-      cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    return withDeferredAlias(cond, (resolve) => {
+      const r = resolve(this.mgmt);
+      cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
     });
-    return cond;
   }
 
   protected addRawCondition(exp: string, bindings: readonly any[]): RawCondition {
-    const cond = {
-      kind: "raw",
-      aliases: [] as string[],
-      condition: `unset.${this.column.columnName} ${exp}`,
-      pruneable: false,
-      bindings,
-    } satisfies RawCondition;
-    // Update `unset` placeholder when we're bound
-    this.callbacks.push((newMeta, newAlias) => {
-      // Add a base-table/sub-table alias if needed
-      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
-      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
-      cond.condition = cond.condition.replace("unset", alias);
+    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings };
+    return withDeferredAlias(cond, (resolve) => {
+      const r = resolve(this.mgmt);
+      const alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
+      cond.aliases = [alias];
+      cond.condition = `${alias}.${this.column.columnName} ${exp}`;
     });
-    return cond;
   }
 
   protected addCrossColumnRawCondition(otherColumn: AbstractAliasColumn<any>, op: string): RawCondition {
-    const cond = {
-      kind: "raw",
-      aliases: [] as string[],
-      condition: `unset1.${this.column.columnName} ${op} unset2.${otherColumn.column.columnName}`,
-      pruneable: false,
-      bindings: [],
-    } satisfies RawCondition;
-    // Update `unset1` placeholder when we're bound
-    this.callbacks.push((newMeta, newAlias) => {
-      // Add a base-table/sub-table alias if needed
-      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
-      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
-      cond.condition = cond.condition.replace("unset1", alias);
+    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
+    return withDeferredAlias(cond, (resolve) => {
+      const r1 = resolve(this.mgmt);
+      const r2 = resolve(otherColumn.mgmt);
+      const a1 = getMaybeCtiAlias(this.meta, this.field, r1.meta, r1.alias);
+      const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
+      cond.aliases = [a1, a2];
+      cond.condition = `${a1}.${this.column.columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
     });
-    // Update `unset2` placeholder when we're bound
-    otherColumn.callbacks.push((newMeta, newAlias) => {
-      // Add a base-table/sub-table alias if needed
-      const alias = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, newMeta, newAlias);
-      // Kinda weird, we can get bound a few times
-      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
-      cond.condition = cond.condition.replace("unset2", alias);
-    });
-    return cond;
   }
 
   /**
    * Compares this column to another expression.
    *
-   * Another alias column takes the `em.find` deferred-binding path (`unset1.col = unset2.col`, bound by
-   * callbacks), which also works inside `em.find`'s complex conditions; every other expression (an
-   * aggregate, a subquery column, a `sql` template) only exists in `em.query`, so it takes the deferred
-   * `ExprContext` path, which only the `em.query` parser resolves.
+   * Another alias column becomes a `DeferredAliasCondition`, which both parsers can resolve, so it also
+   * works inside `em.find`'s complex conditions; every other expression (an aggregate, a subquery column,
+   * a `sql` template) only exists in `em.query`, so it takes the `ExprContext`-deferred path, which only
+   * the `em.query` parser resolves.
    */
   protected compareToExpr(op: string, value: ExprLike<any>): ExpressionCondition {
     if (value instanceof AbstractAliasColumn) return this.addCrossColumnRawCondition(value, op);
@@ -627,7 +586,7 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
 class PolyReferenceAlias<T extends Entity> {
   public constructor(
     private meta: EntityMetadata,
-    private callbacks: BindCallback[],
+    private mgmt: AliasMgmt,
     private field: PolymorphicField & { aliasSuffix: string },
   ) {}
 
@@ -695,13 +654,8 @@ class PolyReferenceAlias<T extends Entity> {
     const comp =
       this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
       fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
-    // Like `addCrossColumnRawCondition`, learn our SQL alias from the deferred-binding callback (it fires
-    // in the parser's step 1, before conditions are turned into SQL in step 2)
-    let alias = "unset1";
-    this.callbacks.push((newMeta, newAlias) => {
-      alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
-    });
     return deferredCondition((ctx) => {
+      const alias = getMaybeCtiAlias(this.meta, this.field, this.meta, ctx.aliasFor(this.mgmt));
       const sub = asNode(values).toSqlBare(ctx);
       return { sql: `${alias}.${comp.columnName} IN (${sub.sql})`, bindings: sub.bindings, refs: [alias, ...sub.refs] };
     });
@@ -738,30 +692,21 @@ class PolyReferenceAlias<T extends Entity> {
     }
   }
 
-  /** `unset1.parent_author_id = unset2.id`, bound to real aliases when both sides are bound. */
+  /** `parent_author_id = <other id>`, i.e. `c.parent.eq(a.id)`; both aliases resolve per parse. */
   private addCrossColumnRawCondition(
     comp: PolymorphicFieldComponent,
     otherColumn: AbstractAliasColumn<any>,
     op: string,
   ): RawCondition {
-    const cond = {
-      kind: "raw",
-      aliases: [] as string[],
-      condition: `unset1.${comp.columnName} ${op} unset2.${otherColumn.column.columnName}`,
-      pruneable: false,
-      bindings: [],
-    } satisfies RawCondition;
-    this.callbacks.push((newMeta, newAlias) => {
-      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
-      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
-      cond.condition = cond.condition.replace("unset1", alias);
+    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
+    return withDeferredAlias(cond, (resolve) => {
+      const r1 = resolve(this.mgmt);
+      const r2 = resolve(otherColumn.mgmt);
+      const a1 = getMaybeCtiAlias(this.meta, this.field, r1.meta, r1.alias);
+      const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
+      cond.aliases = [a1, a2];
+      cond.condition = `${a1}.${comp.columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
     });
-    otherColumn.callbacks.push((newMeta, newAlias) => {
-      const alias = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, newMeta, newAlias);
-      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
-      cond.condition = cond.condition.replace("unset2", alias);
-    });
-    return cond;
   }
 
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
@@ -773,11 +718,10 @@ class PolyReferenceAlias<T extends Entity> {
       dbType: this.field.serde.columns[0].dbType,
       cond: mapToDb(column, value),
     };
-    // Track the conditions we've created to re-write the alias when we're bound
-    this.callbacks.push((newMeta, newAlias) => {
-      cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    return withDeferredAlias(cond, (resolve) => {
+      const r = resolve(this.mgmt);
+      cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
     });
-    return cond;
   }
 }
 

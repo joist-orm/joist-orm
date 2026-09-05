@@ -802,7 +802,6 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
   } else {
     const meta = getAliasMetadata(source as any);
     const alias = assigner.getAlias(meta.tableName);
-    handle.setAlias(meta, alias);
     ctx.register(handle, alias);
     // Record the physical CTI table aliases this source emits (i.e. `sp_b0`), so `refsOf` can credit
     // their refs to this alias exactly; a user subquery named `book_b0` must not be mistaken for one

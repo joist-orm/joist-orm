@@ -929,6 +929,42 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ authorId: "a:1", bookCount: 2 }]);
     });
 
+    it("re-renders a reused correlated scalar with each query's aliases", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const cnt = query({ from: b, where: b.author.eq(a.id), select: b.id.count() });
+      const b2 = alias(Book, "b2");
+      resetQueryCount();
+      const one = await em.query({ from: a, select: { n: cnt } });
+      // The second query joins books itself, which re-aliases the subquery's books to b1; the
+      // correlation must re-render as b1.author_id, not keep the first parse's b (the outer join!)
+      const two = await em.query({ from: a, join: [a.books.as(b2)], where: b2.title.ne("x"), select: { n: cnt } });
+      expect(one).toEqual([{ n: 1 }]);
+      expect(two).toEqual([{ n: 1 }]);
+      expect(queries).toEqual([
+        "SELECT (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AS n FROM authors AS a WHERE a.deleted_at IS NULL",
+        "SELECT (SELECT count(b1.id)::int AS value FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL) AS n FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE b.title != $1 AND a.deleted_at IS NULL",
+      ]);
+    });
+
+    it("keeps an outer join alive that only a correlated subquery references", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ rating: 5, book_id: 1 });
+      const em = newEntityManager();
+      const [a, b, br] = aliases(Author, Book, BookReview);
+      // The outer b join's only reference is the correlated cross-column condition inside the scalar
+      // subquery; that correlation must count as a use, or pruning drops the join it depends on
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b)],
+        select: { name: a.firstName, reviews: query({ from: br, where: br.book.eq(b.id), select: br.id.count() }) },
+      });
+      expect(rows).toEqual([{ name: "a1", reviews: 1 }]);
+    });
+
     it("can select a correlated scalar subquery", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

@@ -1,10 +1,11 @@
 import { groupBy, isPlainObject } from "joist-utils";
 
-import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
+import { type AliasMgmt, getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
 import { getMetadataForTable } from "./configure.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionFilter, type OrderBy, type ValueFilter } from "./EntityFilter.ts";
 import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata.ts";
+import { deferredAliasSym, isDeferredAliasCondition } from "./Expr.ts";
 import {
   type Column,
   ConditionBuilder,
@@ -230,6 +231,9 @@ export function parseFindQuery(
   const query: ParsedFindQuery = { selects, tables, orderBys };
   const { orderBy, conditions: optsExpression, softDeletes = "exclude", pruneJoins = false, keepAliases = [] } = opts;
   const cb = new ConditionBuilder();
+  // Where each user-created `alias(...)` is bound in this parse's join literal; alias-built conditions
+  // (`a.firstName.eq(...)`) are resolved against it once the whole tree is walked
+  const aliasBindings = new Map<object, { meta: EntityMetadata; alias: string }>();
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -324,9 +328,9 @@ export function parseFindQuery(
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
     if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      getAliasMgmt(filter.as).setAlias(meta, alias);
+      aliasBindings.set(getAliasMgmt(filter.as), { meta, alias });
     } else if (isAlias(filter)) {
-      getAliasMgmt(filter).setAlias(meta, alias);
+      aliasBindings.set(getAliasMgmt(filter), { meta, alias });
     }
 
     addFilterAt(meta, alias, filter, targetCb, ef, join);
@@ -363,7 +367,7 @@ export function parseFindQuery(
       } else {
         const a = newAlias(meta.cstr);
         const result = fragment.fn(a);
-        getAliasMgmt(a).setAlias(meta, tableAlias);
+        aliasBindings.set(getAliasMgmt(a), { meta, alias: tableAlias });
         if (isScopeJoinFilter(result)) {
           // Parse the join tree first so its `as:` bindings re-root the aliases that
           // `conditions` reference, then add the conditions against the now-bound aliases.
@@ -718,6 +722,10 @@ export function parseFindQuery(
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
   });
+
+  // Resolve alias-built conditions against this parse's bindings, before anything reads their
+  // aliases (the id-not-null injection just below, and join pruning)
+  resolveAliasConditions(query, aliasBindings);
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);
@@ -1207,6 +1215,23 @@ export function lazyExcludedSelects(meta: EntityMetadata, alias: string): string
     for (const column of field.serde.columns) selects.push(kqDot(alias, column.columnName));
   }
   return selects;
+}
+
+/** Resolves every `DeferredAliasCondition` in `query` against the parse's alias bindings. */
+function resolveAliasConditions(
+  query: ParsedFindQuery,
+  bindings: Map<object, { meta: EntityMetadata; alias: string }>,
+): void {
+  function resolve(handle: object): { meta: EntityMetadata; alias: string } {
+    return (
+      bindings.get(handle) ??
+      fail(`Alias for ${(handle as AliasMgmt).tableName} is not bound to this query's join literal`)
+    );
+  }
+  function maybeResolve(c: ColumnCondition | RawCondition): void {
+    if (isDeferredAliasCondition(c)) c[deferredAliasSym](resolve);
+  }
+  visitConditions(query, { visitCond: maybeResolve, visitRaw: maybeResolve });
 }
 
 export function maybeAddNotSoftDeleted(

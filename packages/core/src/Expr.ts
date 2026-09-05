@@ -1,4 +1,5 @@
 import type { ExpressionCondition } from "./EntityFilter.ts";
+import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
 import type { ColumnCondition, RawCondition } from "./QueryParser.ts";
 
@@ -161,6 +162,36 @@ export function asNode(expr: ExprLike<any>): BaseExpr {
   return expr as any as BaseExpr;
 }
 
+export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
+
+/** Resolves an alias handle (its `AliasMgmt`) to this parse's binding: the bound meta and SQL alias. */
+export type AliasResolver = (handle: object) => { meta: EntityMetadata; alias: string };
+
+/**
+ * A `ColumnCondition`/`RawCondition` whose alias(es) are re-resolved on every parse.
+ *
+ * Alias columns create conditions before any parser assigns SQL aliases, so the condition carries a
+ * resolve function instead of a baked-in alias: `em.find` resolves with its join-literal bindings, and
+ * `em.query` resolves through the `ExprContext`, whose `aliasFor` also records the ref for pruning and
+ * correlation. Resolving recomputes from scratch, so one condition works across queries whose alias
+ * assignments differ.
+ */
+export interface DeferredAliasCondition {
+  [deferredAliasSym]: (resolve: AliasResolver) => void;
+}
+
+export function isDeferredAliasCondition(cond: unknown): cond is DeferredAliasCondition {
+  return typeof cond === "object" && cond !== null && deferredAliasSym in cond;
+}
+
+/** Tags `cond` with its per-parse resolve function, non-enumerable so the condition still deep-equals as data. */
+export function withDeferredAlias<C extends object>(
+  cond: C,
+  resolve: (r: AliasResolver) => void,
+): C & DeferredAliasCondition {
+  return Object.defineProperty(cond, deferredAliasSym, { value: resolve, enumerable: false }) as any;
+}
+
 export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
 
 /**
@@ -198,16 +229,25 @@ export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): Deferr
   return cond;
 }
 
-/** Walks an `ExpressionCondition` tree and resolves every `DeferredCondition` in place. */
+/** Walks an `ExpressionCondition` tree and resolves every deferred condition in place. */
 export function resolveDeferredConditions(cond: ExpressionCondition | undefined, ctx: ExprContext): void {
   if (cond === undefined || cond === null) return;
   if (isDeferredCondition(cond)) {
     cond[deferredSym](ctx);
+  } else if (isDeferredAliasCondition(cond)) {
+    cond[deferredAliasSym](ctxResolver(ctx));
   } else if ("and" in cond && cond.and) {
     for (const c of cond.and) resolveDeferredConditions(c, ctx);
   } else if ("or" in cond && cond.or) {
     for (const c of cond.or) resolveDeferredConditions(c, ctx);
   }
+}
+
+/** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
+function ctxResolver(ctx: ExprContext): AliasResolver {
+  return function resolve(handle: object) {
+    return { meta: (handle as any).meta, alias: ctx.aliasFor(handle) };
+  };
 }
 
 /** Concatenates SQL fragments with `sep`, keeping bindings and refs in order. */

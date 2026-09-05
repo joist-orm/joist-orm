@@ -235,13 +235,6 @@ export function resolveDeferredConditions(cond: ExpressionCondition | undefined,
   }
 }
 
-/** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
-function ctxResolver(ctx: ExprContext): AliasResolver {
-  return function resolve(handle: AliasMgmt) {
-    return { meta: handle.meta, alias: ctx.aliasFor(handle) };
-  };
-}
-
 /** Concatenates SQL fragments with `sep`, keeping bindings and refs in order. */
 export function joinFragments(parts: SqlFragment[], sep: string): SqlFragment {
   return {
@@ -510,6 +503,13 @@ export function isConditionLike(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
   const v = value as any;
   return "and" in v || "or" in v || v.kind === "column" || v.kind === "raw" || v.kind === "exists";
+}
+
+/** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
+function ctxResolver(ctx: ExprContext): AliasResolver {
+  return function resolve(handle: AliasMgmt) {
+    return { meta: handle.meta, alias: ctx.aliasFor(handle) };
+  };
 }
 
 /** Decodes `count`/`sum`/`avg` results, which Postgres returns as strings for bigint/numeric. */

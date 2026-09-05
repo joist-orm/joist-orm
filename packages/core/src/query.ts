@@ -406,6 +406,36 @@ sql.ref = function ref<R = unknown>(source: QuerySource, column: string): Expr<R
   return new RefExpr(handleOf(source), column) as any;
 };
 
+/**
+ * Parses `arg` (a `Query` POJO or `query(...)` value) into a runnable `Plan`.
+ *
+ * `EntityManager.query` runs the plan; this module deliberately does not import `EntityManager` (see
+ * `EntityHydrator`), so it parses and hands back `{ sql, bindings, decodeRows }` instead of executing.
+ */
+export function parseUserQuery(arg: unknown): Plan {
+  return parseQuery(toQuery(arg), undefined, new AliasAssigner());
+}
+
+/**
+ * The one `EntityManager` capability that row decoding needs, typed structurally.
+ *
+ * Importing `EntityManager.ts` here would complete an `EntityManager.ts` <-> `query.ts` declaration
+ * cycle (`EntityManager.query` imports this module's types), which correlated with a tsc 7.0.2
+ * incremental-build bug: after tsdown rewrites `build/`, `tsc --build` sporadically reports thousands
+ * of phantom "Module 'joist-orm' has no exported member ..." errors and caches them in `.tsbuildinfo`.
+ */
+export interface EntityHydrator {
+  hydrate(cstr: any, rows: readonly any[]): any[];
+}
+
+export interface Plan {
+  sql: string;
+  bindings: any[];
+  /** Aliases of enclosing queries this (sub)query referenced. */
+  outerRefs: string[];
+  decodeRows(em: EntityHydrator, rows: any[]): any[];
+}
+
 // =====================================================================================================
 // Runtime: handles, subquery expressions, the proxy
 // =====================================================================================================
@@ -549,16 +579,6 @@ function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
 // Runtime: parse -> prune -> SQL -> decode
 // =====================================================================================================
 
-/**
- * Parses `arg` (a `Query` POJO or `query(...)` value) into a runnable `Plan`.
- *
- * `EntityManager.query` runs the plan; this module deliberately does not import `EntityManager` (see
- * `EntityHydrator`), so it parses and hands back `{ sql, bindings, decodeRows }` instead of executing.
- */
-export function parseUserQuery(arg: unknown): Plan {
-  return parseQuery(toQuery(arg), undefined, new AliasAssigner());
-}
-
 function toQuery(arg: unknown): AnyQuery {
   if (isSubqueryValue(arg)) return arg[subqueryBrand].q;
   if (isEntityQueryValue(arg)) return arg[entityQueryBrand].q;
@@ -638,26 +658,6 @@ interface ParsedJoin {
   /** The ON to emit: the user's ON plus any injected soft-delete/STI-discriminator conditions. */
   fullOn: SqlFragment | undefined;
   keep: boolean;
-}
-
-/**
- * The one `EntityManager` capability that row decoding needs, typed structurally.
- *
- * Importing `EntityManager.ts` here would complete an `EntityManager.ts` <-> `query.ts` declaration
- * cycle (`EntityManager.query` imports this module's types), which correlated with a tsc 7.0.2
- * incremental-build bug: after tsdown rewrites `build/`, `tsc --build` sporadically reports thousands
- * of phantom "Module 'joist-orm' has no exported member ..." errors and caches them in `.tsbuildinfo`.
- */
-export interface EntityHydrator {
-  hydrate(cstr: any, rows: readonly any[]): any[];
-}
-
-export interface Plan {
-  sql: string;
-  bindings: any[];
-  /** Aliases of enclosing queries this (sub)query referenced. */
-  outerRefs: string[];
-  decodeRows(em: EntityHydrator, rows: any[]): any[];
 }
 
 /**

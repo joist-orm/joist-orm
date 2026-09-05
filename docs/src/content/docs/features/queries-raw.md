@@ -79,9 +79,9 @@ Row types follow the join list: a column from an inner-joined or `from` source k
 const rows = await em.query({
   from: a,
   join: [{ left: b, on: b.author.eq(a.id) }],
-  select: { name: a.firstName, title: b.title, bookCount: b.id.count().coalesce(0) },
+  select: { name: a.firstName, title: b.title, safeTitle: b.title.coalesce("No book") },
 });
-// { name: string; title: string | null; bookCount: number }[]
+// { name: string; title: string | null; safeTitle: string }[]
 ```
 
 ## Conditions and Expressions
@@ -306,7 +306,7 @@ For SQL that Joist does not model, the `sql` tagged template creates a typed exp
 
 ```ts
 // A computed expression, usable in select/orderBy
-sql<number>`${bli.amountInCents.sum()} - ${b.amountPaidInCents}`;
+sql<number>`${b.order} * ${2}`;
 
 // A condition, i.e. full-text search against an unmodeled column
 where: {

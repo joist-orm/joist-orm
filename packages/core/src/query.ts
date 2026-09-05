@@ -388,8 +388,8 @@ export function query<
  * and every other value becomes a `?` binding, so users never write `"a.age * 2"` and hope `a` is the SQL
  * alias, and referenced aliases still count for join pruning.
  *
- *   sql<number>`${bli.amountInCents.sum()} - ${b.quickbooksAmountPaidInCents}`
- *   sql.condition`${sql.ref(p, "ts_search")} @@ plainto_tsquery(${term})`
+ *   sql<number>`${b.order} * ${2}`
+ *   sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${term})`
  *   sql.ref<string>(a, "ts_search")   // an unmodeled column; untracked at the type level
  */
 export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {

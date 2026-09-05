@@ -40,7 +40,6 @@ import {
 } from "./index.ts";
 import { kqDot } from "./keywords.ts";
 import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
-import { PojoRowData } from "./RowData.ts";
 import { type Column } from "./serde.ts";
 import { type FieldsOf, type RootTypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
@@ -316,9 +315,7 @@ class AbstractAliasColumn<V> extends BaseExpr {
   /** Decodes a result-set value the same way `hydrate` would, i.e. an int into a tagged id. */
   decode(value: unknown): unknown {
     if (value === null || value === undefined) return value;
-    const data: any = {};
-    this.field.serde!.setOnEntityFromRowData(data, new PojoRowData([{ [this.column.columnName]: value }]), 0);
-    return data[this.field.fieldName];
+    return this.column.mapFromDb(value);
   }
 
   encode(value: unknown): unknown {

@@ -45,6 +45,53 @@ describe("plainDate", () => {
     expect(a.childrenBirthdays).toEqual([jan1, jan2]);
   });
 
+  it("decodes plain date projections while preserving nullable arrays", async () => {
+    // Given Author a1 with a plain date and populated required and optional date arrays
+    await knex
+      .insert({
+        firstName: "a1",
+        birthday: "2018-01-01",
+        children_birthdays: ["2018-01-01", "2018-01-02"],
+        maybe_birthdays: ["2018-01-02"],
+      })
+      .into("authors");
+    // And Author a2 keeps the required array's empty default but stores SQL NULL for the optional array
+    await knex.insert({ firstName: "a2", birthday: "2018-01-02", maybe_birthdays: null }).into("authors");
+    const em = newEntityManager();
+    const a = alias(Author);
+    // When projecting each Author's birthday and birthday arrays
+    const rows = await em.query({
+      from: a,
+      select: { birthday: a.birthday, childrenBirthdays: a.childrenBirthdays, maybeBirthdays: a.maybeBirthdays },
+      orderBy: [{ asc: a.firstName }],
+    });
+    // Then dates decode to PlainDate values while empty arrays and SQL NULL remain distinct
+    expect(rows).toEqual([
+      { birthday: jan1, childrenBirthdays: [jan1, jan2], maybeBirthdays: [jan2] },
+      { birthday: jan2, childrenBirthdays: [], maybeBirthdays: null },
+    ]);
+    // When loading the same Authors as entities
+    // em.loadAll exercises binary-decoded Temporal inputs when the lazy variant is enabled.
+    const authors = await em.loadAll(Author, ["a:1", "a:2"]);
+    // Then hydration returns the same dates but represents a2's missing optional array as undefined
+    expect(authors).toMatchEntity([
+      { birthday: jan1, childrenBirthdays: [jan1, jan2], maybeBirthdays: [jan2] },
+      { birthday: jan2, childrenBirthdays: [], maybeBirthdays: undefined },
+    ]);
+  });
+
+  it("preserves native PlainDate values during column decoding", () => {
+    // Raw queries use text results even in lazy mode, so native column inputs need separate coverage.
+    // Given the Author birthday columns and already-created PlainDate values
+    const fields = getMetadata(Author).fields;
+    // When decoding existing PlainDate values through the birthday and childrenBirthdays columns
+    const birthday = fields.birthday.serde!.columns[0].mapFromDb(jan1);
+    const childrenBirthdays = fields.childrenBirthdays.serde!.columns[0].mapFromDb([jan1, jan2]);
+    // Then the scalar keeps its identity and the array retains its PlainDate values
+    expect(birthday).toBe(jan1);
+    expect(childrenBirthdays).toEqual([jan1, jan2]);
+  });
+
   it("can update a nullable plain date array to null", async () => {
     await knex
       .insert({ firstName: "a1", birthday: "2018-01-01", maybe_birthdays: ["2018-01-01", "2018-01-02"] })

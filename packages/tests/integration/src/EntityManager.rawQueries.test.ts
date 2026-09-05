@@ -1,9 +1,10 @@
-import { Query, alias, aliases, query, sql } from "joist-orm";
+import { Query, alias, aliases, getMetadata, query, sql } from "joist-orm";
 import {
   Author,
   Book,
   BookRange,
   BookReview,
+  Color,
   Comment,
   Critic,
   LargePublisher,
@@ -16,6 +17,7 @@ import {
   TaskItem,
   TaskNew,
   TaskOld,
+  User,
 } from "src/entities";
 import {
   insertAuthor,
@@ -30,8 +32,12 @@ import {
   insertTag,
   insertTask,
   insertTaskItem,
+  insertUser,
+  update,
 } from "src/entities/inserts";
+import { PasswordValue } from "src/entities/types";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { ZodError } from "zod";
 
 /**
  * `em.query`: SQL-shaped queries as plain object literals.
@@ -83,6 +89,110 @@ describe("EntityManager.rawQueries", () => {
         { authorId: "a:1", name: "a1", age: 30, range: BookRange.Few },
         { authorId: "a:2", name: "a2", age: null, range: null },
       ]);
+    });
+
+    it("decodes custom passwords in projections and hydration without converting nulls", async () => {
+      // Given User u1 with an encoded password and no manager, so its left join has an absent row
+      const password = PasswordValue.fromPlainText("secret");
+      await insertUser({ name: "u1", password: password.encoded });
+      // And User u2 initially has the insert fixture's default password
+      await insertUser({ name: "u2" });
+      // And u2 has a SQL NULL password and references u1 as its manager, giving the left join a matching row
+      await update("users", { id: 2, password: null, manager_id: 1 });
+      const em = newEntityManager();
+      const u = alias(User);
+      const m = alias(User, "manager");
+      // When selecting each User's password and its manager's password
+      const rows = await em.query({
+        from: u,
+        join: [{ left: m, on: u.manager.eq(m.id) }],
+        select: { name: u.name, password: u.password, managerPassword: m.password },
+        orderBy: [{ asc: u.name }],
+      });
+      // Then stored passwords decode to PasswordValue while missing passwords or managers remain null
+      expect(rows).toEqual([
+        { name: "u1", password, managerPassword: null },
+        { name: "u2", password: null, managerPassword: password },
+      ]);
+      expect(rows[0].password!.matches("secret")).toBe(true);
+      // When loading the same Users as entities
+      const users = await em.loadAll(User, ["u:1", "u:2"]);
+      // Then stored passwords decode to PasswordValue while SQL NULL becomes an unset password
+      expect(users).toMatchEntity([{ password }, { password: undefined }]);
+      expect(users[0].password!.matches("secret")).toBe(true);
+    });
+
+    it("preserves null enum array projections while hydration defaults them to empty arrays", async () => {
+      // Given Author a1 with two stored Color ids
+      await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+      // And Author a2 initially has the schema's empty-array default
+      await insertAuthor({ first_name: "a2" });
+      // And a2's favorite_colors is SQL NULL instead of that empty-array default
+      await update("authors", { id: 2, favorite_colors: null });
+      // And Author a3 retains the schema's empty-array default
+      await insertAuthor({ first_name: "a3" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const rows = await em.query({
+        from: a,
+        select: { name: a.firstName, colors: a.favoriteColors },
+        orderBy: [{ asc: a.firstName }],
+      });
+      expect(rows).toEqual([
+        { name: "a1", colors: [Color.Red, Color.Green] },
+        { name: "a2", colors: null },
+        { name: "a3", colors: [] },
+      ]);
+      // Bare scalar selects must also preserve NULL without the POJO decoder's null handling.
+      expect(await em.query({ from: a, select: a.favoriteColors, orderBy: [{ asc: a.firstName }] })).toEqual([
+        [Color.Red, Color.Green],
+        null,
+        [],
+      ]);
+      expect(await em.loadAll(Author, ["a:1", "a:2", "a:3"])).toMatchEntity([
+        { favoriteColors: [Color.Red, Color.Green] },
+        { favoriteColors: [] },
+        { favoriteColors: [] },
+      ]);
+      // The Author getter also defaults to [], so check the column's own default directly.
+      const column = getMetadata(Author).fields.favoriteColors.serde!.columns[0];
+      expect(column.mapFromDb(null)).toEqual([]);
+      expect(column.mapFromDb(undefined)).toEqual([]);
+    });
+
+    it("parses schema-backed JSON projections like hydrated fields", async () => {
+      // Given Author a1 with a valid street and an extra JSON key that AddressSchema strips
+      await insertAuthor({ first_name: "a1", business_address: { street: "123 Main", extra: "not in the schema" } });
+      // And Author a2 has SQL NULL for its optional businessAddress
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      // When projecting each Author's businessAddress
+      const rows = await em.query({
+        from: a,
+        select: { name: a.firstName, address: a.businessAddress },
+        orderBy: [{ asc: a.firstName }],
+      });
+      // Then AddressSchema strips a1's extra key while a2's missing address remains null
+      expect(rows).toEqual([
+        { name: "a1", address: { street: "123 Main" } },
+        { name: "a2", address: null },
+      ]);
+      // When loading the same Authors as entities
+      const authors = await em.loadAll(Author, ["a:1", "a:2"]);
+      // Then hydration also strips a1's extra key but represents a2's missing address as undefined
+      expect(authors).toMatchEntity([{ businessAddress: { street: "123 Main" } }, { businessAddress: undefined }]);
+    });
+
+    it("rejects schema-backed JSON projections with an invalid street", async () => {
+      // Given Author a1 with a numeric street instead of the string required by AddressSchema
+      await insertAuthor({ first_name: "a1", business_address: { street: 123 } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      // When projecting a1's invalid businessAddress
+      const invalidAddressQuery = em.query({ from: a, where: a.id.eq("a:1"), select: { address: a.businessAddress } });
+      // Then AddressSchema rejects the numeric street instead of returning unvalidated JSON
+      await expect(invalidAddressQuery).rejects.toThrow(ZodError);
     });
 
     it("returns a subquery's rows for a bare subquery", async () => {

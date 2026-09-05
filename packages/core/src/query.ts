@@ -675,29 +675,29 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
 
   // 1. Register every source before generating SQL, so conditions can resolve their aliases.
-  const fromThunk = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedAlias);
-  const joinThunks = joinEntries.flatMap((j) => {
+  const parseFrom = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedAlias);
+  const pendingJoins = joinEntries.flatMap((j) => {
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
     const alias = kind === "inner" ? j.inner : j.left;
     const keep = j.keep ?? false;
     // Only collection sugar joins (o2m/m2m) filter soft-deletes, em.find's relation semantics:
     // references (m2o/o2o/poly) resolve soft-deleted entities, and explicit joins are the user's own
     const softDeletes = (j as any)[collectionJoin] === true;
-    const target = { kind, keep, on: j.on, softDeletes, source: registerSource(alias, ctx, assigner, false) };
+    const target = { kind, keep, on: j.on, softDeletes, parseSource: registerSource(alias, ctx, assigner, false) };
     // A sugar m2m join (`a.tags.as(t)`) carries a hidden join-table join; emit it first, with the same kind
     const m2m: M2mJoinTable | undefined = (j as any)[m2mJoinTable];
     if (!m2m) return [target];
     return [
-      { kind, keep, on: m2m.on, softDeletes: false, source: registerJoinTable(m2m.handle, ctx, assigner) },
+      { kind, keep, on: m2m.on, softDeletes: false, parseSource: registerJoinTable(m2m.handle, ctx, assigner) },
       target,
     ];
   });
 
   // 2. Generate SQL.
   const softDeletes = q.softDeletes ?? "exclude";
-  const from = fromThunk();
-  const joins: ParsedJoin[] = joinThunks.map((j) => {
-    const source = j.source();
+  const from = parseFrom();
+  const joins: ParsedJoin[] = pendingJoins.map((j) => {
+    const source = j.parseSource();
     // `userOn` is the user's ON alone, so the collapsed-ON check below is not fooled by injections
     const userOn = conditionToSql(j.on, ctx, true);
     const injected = injectedConditions(source, j.softDeletes ? softDeletes : "include");
@@ -767,7 +767,7 @@ function parseQuery(q: AnyQuery, parent: Ctx | undefined, assigner: AliasAssigne
 }
 
 /**
- * Assigns a SQL alias to a source and returns a thunk that produces its SQL once every alias is known.
+ * Assigns a SQL alias to a source and returns a function that parses it after all sources are registered.
  *
  * Conditions resolve source identities through the context when their SQL is generated. CTI entities
  * get their base/sub-table joins from `addTablePerClassJoinsAndClassTag`, and the entity-mode `select`

@@ -273,6 +273,11 @@ export abstract class BaseExpr implements ExprNode {
 
   abstract toSql(ctx: ExprContext): SqlFragment;
 
+  /** The expression selected by a scalar subquery, used to resolve polymorphic IN conditions. */
+  get subquerySelect(): BaseExpr | undefined {
+    return undefined;
+  }
+
   /** Produces the SQL without the outer parens a subquery normally gets; only differs for subqueries. */
   toSqlBare(ctx: ExprContext): SqlFragment {
     return this.toSql(ctx);

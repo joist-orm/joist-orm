@@ -638,9 +638,8 @@ class PolyReferenceAlias<T extends Entity> {
    * subquery's select column picks the component, i.e. authors pick `parent_author_id`.
    */
   private inSubquery(values: ExprLike<any>): ExpressionCondition {
-    // Reach into the subquery for its select column; `handle` is `query.ts`'s SubqueryHandle, accessed
-    // dynamically so this module does not import `query.ts` back
-    const select = (values as any).handle?.q?.select;
+    // Read the selected expression without importing query.ts, which would create a load-order cycle.
+    const select = asNode(values).subquerySelect;
     if (!(select instanceof AbstractAliasColumn)) {
       return fail(`${this.field.fieldName} is polymorphic, so \`in\` needs a subquery selecting an id or FK column`);
     }

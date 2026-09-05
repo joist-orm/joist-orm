@@ -486,6 +486,10 @@ class SubqueryExpr extends BaseExpr {
     super();
   }
 
+  get subquerySelect(): BaseExpr {
+    return asNode(this.handle.q.select);
+  }
+
   toSql(ctx: ExprContext): SqlFragment {
     const bare = this.toSqlBare(ctx);
     return { ...bare, sql: `(${bare.sql})` };
@@ -498,11 +502,11 @@ class SubqueryExpr extends BaseExpr {
   }
 
   decode(value: unknown): unknown {
-    return (this.handle.q.select as any as BaseExpr).decode(value);
+    return this.subquerySelect.decode(value);
   }
 
   encode(value: unknown): unknown {
-    return (this.handle.q.select as any as BaseExpr).encode(value);
+    return this.subquerySelect.encode(value);
   }
 }
 

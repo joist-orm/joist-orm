@@ -1,6 +1,14 @@
-import { Expr, ExprBrand, Query, Subquery, alias, aliases, exprBrand, query } from "joist-orm";
-import { Author, AuthorId, Book, Comment, Publisher, PublisherId } from "src/entities";
+import { expectTypeOf } from "expect-type";
+import { type Expr, type ExprBrand, type Query, type Subquery, alias, aliases, type exprBrand, query } from "joist-orm";
+import { Author, type AuthorId, Book, Comment, Publisher, type PublisherId } from "src/entities";
 import { newEntityManager } from "src/testEm";
+
+describe("EntityManager.rawQueries.types", () => {
+  it("type-checks", () => {
+    // The assertions in `typeAssertions` are checked by `tsc`; referencing the function keeps it from being flagged as unused
+    expect(typeof typeAssertions).toBe("function");
+  });
+});
 
 /**
  * Compile-time assertions for `em.query`: row types, left-join nullability, source keys, and the mistakes
@@ -9,12 +17,6 @@ import { newEntityManager } from "src/testEm";
  * `tsc` is the test. The statements live in `typeAssertions`, which is never called, so importing this file
  * runs no queries; the one `it` keeps jest from complaining about an empty suite.
  */
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-type Expect<T extends true> = T;
-type Rows<P> = P extends Promise<(infer R)[]> ? R : never;
-type ResultOf<E> = E extends { readonly [exprBrand]: ExprBrand<infer R, any> } ? R : never;
-type SourceOf<E> = E extends { readonly [exprBrand]: ExprBrand<any, infer Src> } ? Src : never;
-
 async function typeAssertions() {
   const em = newEntityManager();
   const [a, b, p] = aliases(Author, Book, Publisher);
@@ -22,27 +24,27 @@ async function typeAssertions() {
   // === Alias columns are typed expressions: `Expr<R, Src>` where `R` is the decoded result type and
   // === `Src` is the source key that left-join nullability and scope checking look up
   // A required primitive keeps its bare type
-  type _c1 = Expect<Equal<ResultOf<typeof a.firstName>, string>>;
+  expectTypeOf<ResultOf<typeof a.firstName>>().toEqualTypeOf<string>();
   // A nullable primitive carries `| null` from the field itself, before any joins are considered
-  type _c2 = Expect<Equal<ResultOf<typeof a.age>, number | null>>;
+  expectTypeOf<ResultOf<typeof a.age>>().toEqualTypeOf<number | null>();
   // The id column decodes to the entity's tagged id type, not `string`
-  type _c3 = Expect<Equal<ResultOf<typeof a.id>, AuthorId>>;
+  expectTypeOf<ResultOf<typeof a.id>>().toEqualTypeOf<AuthorId>();
   // An m2o FK column decodes to the *other* entity's id type
-  type _c4 = Expect<Equal<ResultOf<typeof b.author>, AuthorId>>;
+  expectTypeOf<ResultOf<typeof b.author>>().toEqualTypeOf<AuthorId>();
   // A nullable m2o FK is `| null`
-  type _c5 = Expect<Equal<ResultOf<typeof a.publisher>, PublisherId | null>>;
+  expectTypeOf<ResultOf<typeof a.publisher>>().toEqualTypeOf<PublisherId | null>();
   // The default source key is the entity's root type name (so CTI subtype/base aliases share one key)
-  type _c6 = Expect<Equal<SourceOf<typeof a.firstName>, "Author">>;
+  expectTypeOf<SourceOf<typeof a.firstName>>().toEqualTypeOf<"Author">();
   // Aggregates are source-less (`never`): a left join can never make `count(...)` itself null
-  type _c7 = Expect<Equal<SourceOf<ReturnType<typeof b.id.count>>, never>>;
+  expectTypeOf<SourceOf<ReturnType<typeof b.id.count>>>().toEqualTypeOf<never>();
 
   // === The `select` shape decides the row type
   // Entity mode: a bare alias returns the entity itself, not a row of columns
   const entities = em.query({ from: a, select: a });
-  type _e = Expect<Equal<Rows<typeof entities>, Author>>;
+  expectTypeOf(entities).resolves.toEqualTypeOf<Author[]>();
   // POJO mode: one key per column, each with its decoded type (tagged ids, field nullability)
   const pojo = em.query({ from: a, select: { id: a.id, name: a.firstName, age: a.age } });
-  type _p = Expect<Equal<Rows<typeof pojo>, { id: AuthorId; name: string; age: number | null }>>;
+  expectTypeOf(pojo).resolves.toEqualTypeOf<{ id: AuthorId; name: string; age: number | null }[]>();
 
   // === `query(...)` turns the same POJO into a derived table with typed columns
   const bookStats = query({
@@ -52,17 +54,17 @@ async function typeAssertions() {
     as: "book_stats",
   });
   // Each column keeps its inner result type and takes the `as` name as its source key
-  type _s1 = Expect<Equal<typeof bookStats.authorId, Expr<AuthorId, "book_stats">>>;
+  expectTypeOf(bookStats.authorId).toEqualTypeOf<Expr<AuthorId, "book_stats">>();
   // `count()` is non-null inside the subquery (every group has rows)...
-  type _s2 = Expect<Equal<typeof bookStats.bookCount, Expr<number, "book_stats">>>;
+  expectTypeOf(bookStats.bookCount).toEqualTypeOf<Expr<number, "book_stats">>();
   // ...while `max()` is nullable even inside it (SQL `max` over an empty group)
-  type _s3 = Expect<Equal<typeof bookStats.lastTitle, Expr<string | null, "book_stats">>>;
+  expectTypeOf(bookStats.lastTitle).toEqualTypeOf<Expr<string | null, "book_stats">>();
   // `arrayAgg()` keeps the element's own nullability, and is itself `| null` (zero rows aggregate as NULL)
-  type _s4 = Expect<Equal<ReturnType<typeof b.title.arrayAgg>, Expr<string[] | null, "Book">>>;
-  type _s5 = Expect<Equal<ReturnType<typeof a.age.arrayAgg>, Expr<(number | null)[] | null, "Author">>>;
+  expectTypeOf<ReturnType<typeof b.title.arrayAgg>>().toEqualTypeOf<Expr<string[] | null, "Book">>();
+  expectTypeOf<ReturnType<typeof a.age.arrayAgg>>().toEqualTypeOf<Expr<(number | null)[] | null, "Author">>();
   // `select: <subquery>` is that table's `select *`, returning its full row type
   const star = em.query({ from: bookStats, select: bookStats });
-  type _star = Expect<Equal<Rows<typeof star>, { authorId: AuthorId; bookCount: number; lastTitle: string | null }>>;
+  expectTypeOf(star).resolves.toEqualTypeOf<{ authorId: AuthorId; bookCount: number; lastTitle: string | null }[]>();
 
   // === The join list decides nullability: the same column, inner- vs left-joined
   // Inner join: the row is guaranteed a match, so `bookCount` stays `number`
@@ -71,14 +73,14 @@ async function typeAssertions() {
     join: [{ inner: bookStats, on: bookStats.authorId.eq(a.id) }],
     select: { name: a.firstName, bookCount: bookStats.bookCount },
   });
-  type _inner = Expect<Equal<Rows<typeof inner>, { name: string; bookCount: number }>>;
+  expectTypeOf(inner).resolves.toEqualTypeOf<{ name: string; bookCount: number }[]>();
   // Left join: the same column picks up `| null`, and `.coalesce(0)` recovers the non-null type
   const left = em.query({
     from: a,
     join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
     select: { name: a.firstName, bookCount: bookStats.bookCount, safe: bookStats.bookCount.coalesce(0) },
   });
-  type _left = Expect<Equal<Rows<typeof left>, { name: string; bookCount: number | null; safe: number }>>;
+  expectTypeOf(left).resolves.toEqualTypeOf<{ name: string; bookCount: number | null; safe: number }[]>();
 
   // === Nullability is per-source: a left join nullifies only its own columns
   // `alias(Author, "m")` gives the self-join its own source key, so left-joining the mentor
@@ -92,12 +94,12 @@ async function typeAssertions() {
     ],
     select: { mentee: a.firstName, mentor: m.firstName, publisher: p.name },
   });
-  type _m = Expect<Equal<Rows<typeof mentors>, { mentee: string; mentor: string | null; publisher: string | null }>>;
+  expectTypeOf(mentors).resolves.toEqualTypeOf<{ mentee: string; mentor: string | null; publisher: string | null }[]>();
 
   // === Subqueries as expressions
   // A single-expression select is a scalar subquery: `| null` because it can return no row
   const scalar = query({ from: b, where: { and: [b.author.eq(a.id)] }, select: b.id.count() });
-  type _scalar = Expect<Equal<typeof scalar, Expr<number | null, never>>>;
+  expectTypeOf(scalar).toEqualTypeOf<Expr<number | null, never>>();
   // A single-column subquery is an IN-list target, checked against the column's id type
   a.id.in(query({ from: b, select: b.author }));
 
@@ -105,10 +107,10 @@ async function typeAssertions() {
   // `satisfies Query` checks the shape but keeps the literal `select` type...
   const q = { from: a, select: { name: a.firstName } } satisfies Query;
   const direct = em.query(q);
-  type _q = Expect<Equal<Rows<typeof direct>, { name: string }>>;
+  expectTypeOf(direct).resolves.toEqualTypeOf<{ name: string }[]>();
   // ...and `query(q)` builds the same rows as `em.query(q)` ran directly; anonymous tables share the "?" key
   const built = query(q);
-  type _built = Expect<Equal<typeof built, Subquery<{ name: string }, "?">>>;
+  expectTypeOf(built).toEqualTypeOf<Subquery<{ name: string }, "?">>();
 
   // === The keyed orderBy form
   // Keys must be keys of `select`, with uppercase SQL direction literals (NULLS FIRST/LAST suffixes allowed)
@@ -135,17 +137,17 @@ async function typeAssertions() {
     join: [a.books.as(b), a.publisher.as(p)],
     select: { name: a.firstName, title: b.title, publisher: p.name },
   });
-  type _sugar = Expect<Equal<Rows<typeof sugar>, { name: string; title: string | null; publisher: string | null }>>;
+  expectTypeOf(sugar).resolves.toEqualTypeOf<{ name: string; title: string | null; publisher: string | null }[]>();
   // A required reference (`book.author`) defaults to INNER: `author` stays non-null
   const requiredInner = em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
-  type _ri = Expect<Equal<Rows<typeof requiredInner>, { title: string; author: string }>>;
+  expectTypeOf(requiredInner).resolves.toEqualTypeOf<{ title: string; author: string }[]>();
   // `.inner(...)` overrides a collection's LEFT default, so `title` stays non-null
   const withBooks = em.query({ from: a, join: [a.books.inner(b)], select: { title: b.title } });
-  type _wb = Expect<Equal<Rows<typeof withBooks>, { title: string }>>;
+  expectTypeOf(withBooks).resolves.toEqualTypeOf<{ title: string }[]>();
   // An o2o (`book.sequel`) is LEFT like any collection; the self-join needs its own named alias
   const s = alias(Book, "s");
   const withSequel = em.query({ from: b, join: [b.sequel.as(s)], select: { title: b.title, sequel: s.title } });
-  type _o2o = Expect<Equal<Rows<typeof withSequel>, { title: string; sequel: string | null }>>;
+  expectTypeOf(withSequel).resolves.toEqualTypeOf<{ title: string; sequel: string | null }[]>();
 
   // === Mistakes that must not compile
   // @ts-expect-error: an AuthorId column cannot be compared to a BookId column
@@ -183,9 +185,5 @@ async function typeAssertions() {
   c.parent.in(query({ from: b, select: b.order }));
 }
 
-describe("EntityManager.rawQueries.types", () => {
-  it("type-checks", () => {
-    // The assertions above are checked by `tsc`; referencing the function keeps it from being flagged as unused
-    expect(typeof typeAssertions).toBe("function");
-  });
-});
+type ResultOf<E> = E extends { readonly [exprBrand]: ExprBrand<infer R, any> } ? R : never;
+type SourceOf<E> = E extends { readonly [exprBrand]: ExprBrand<any, infer Src> } ? Src : never;

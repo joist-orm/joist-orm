@@ -32,6 +32,56 @@ app.get("/authors/:id", (req, res) =>
 
 If your application creates the `EntityManager` in middleware, `track` must wrap that middleware as well as the endpoint handler. Its callback must await the downstream work and be able to re-run both EM creation and the handler on a retry. The order is `track -> create EM and register plugin -> handler`, with a fresh EM for each attempt, not just each request.
 
+## GraphQL and Envelop
+
+The `joist-graphql-plugins` package, also exported as `joist-orm/graphql-plugins`, provides `useExactColumns` for [Envelop](https://the-guild.dev/graphql/envelop). It wraps GraphQL execution in `track`, derives the profile key from the operation, and handles GraphQL's conversion of resolver exceptions into result errors.
+
+This adapter requires **Envelop 5.5.1+ within 5.x and GraphQL.js 17.0.2+ within 17.x**. Install `@envelop/core` and `graphql` in the application. It supports the standard GraphQL.js `execute` function, not `useGraphQlJit` or custom execution functions. Put it after every other plugin with an `onExecute` hook; unsupported executors and plugin ordering produce an error rather than silently disabling retry safety.
+
+```typescript
+import { envelop, useEngine, useSchema } from "@envelop/core";
+import { execute, parse, subscribe, validate } from "graphql";
+import { ExactColumnsPlugin } from "joist-orm";
+import { useExactColumns } from "joist-orm/graphql-plugins";
+import { cloneContext, type Context } from "./context";
+import { schema } from "./schema";
+
+export const exactColumns = new ExactColumnsPlugin();
+
+export const getEnveloped = envelop({
+  plugins: [
+    useEngine({ execute, parse, subscribe, validate }),
+    useSchema(schema),
+    // Put other execution plugins before this one.
+    useExactColumns<Context>({
+      exactColumns,
+      createAttemptContext: (requestContext) => {
+        // Application helper, not a Joist API: create a complete context with a fresh EM.
+        const context = cloneContext(requestContext);
+        context.em.addPlugin(exactColumns);
+        return context;
+      },
+    }),
+  ],
+});
+```
+
+`cloneContext` above is an application-provided factory. It runs **inside `track` on every attempt, including the first**, so the original request context can be created and authenticated before GraphQL parsing. The original EM is not used for tracked execution. The factory must:
+
+- Create a fresh context object and EM, with the shared `exactColumns` plugin registered before loading attempt entities. Register it in the factory itself if the factory performs loads; do not register it twice.
+- Rebind entity-valued properties such as `user` to the new EM, and recreate loaders, authorization records, cost counters, and other mutable attempt state. Do not clone the abandoned attempt or reuse its entities. `em.fork()` preserves loaded entity state and is not a fresh retry EM.
+- Preserve desired request/framework/plugin fields in the returned context. A shallow spread is useful for shared services and request metadata, but does not isolate nested mutable objects or callbacks that capture the old EM.
+
+The adapter gives resolvers a separate context object per attempt and synchronizes its enumerable string and symbol properties back to Envelop's outer context for completion hooks, including removing properties absent from the attempt. Context-building and other `onExecute` hooks run **once**, not again on retry. Those hooks must not capture an EM before execution or read partial entities after execution. Framework-specific references such as a separate `req.ctx` are not automatically rebound.
+
+### Execution and keys
+
+Only ordinary queries are tracked. Mutations, subscriptions, and operations using reachable `@defer` or `@stream` directives bypass the adapter and use their normal context and executor, even when the directive is disabled by an argument. Queries must still be safe to replay: the GraphQL operation type does not prevent a resolver from writing or sending an email.
+
+The adapter waits for GraphQL's outstanding execution work before allowing a retry, including sibling resolvers still running after a non-null failure. Resolvers must await their work; detached tasks are not covered. Missing-column errors are retried through `track`, while a refused retry or failed second attempt retains the terminal GraphQL error result, including paths, locations, partial data, and extensions. Ordinary resolver errors are not retry signals. GraphQL can suppress a late missing-column error after another non-null failure; that failed result is not retried, but the field read still teaches the profile for future requests.
+
+Profile keys are `graphql:<sha256>` hashes of the printed selected operation and its transitively referenced fragments. Runtime variable values and unrelated definitions do not affect the key; operation names, aliases, inline literals, and changes to referenced fragments do. Use a **bounded persisted-operation set**: hashing bounds key length, not the number of profiles, and profiles remain in memory for the plugin's lifetime. `onTrack` reports these keys through the same metrics API described below.
+
 ## How it works
 
 The plugin uses two modes, learning and narrowed, with self-healing returning it to learning:

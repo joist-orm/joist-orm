@@ -2308,6 +2308,80 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("raw sql escape hatches", () => {
+    it("can prefix expressions to raw predicates with bound values", async () => {
+      // Given an Author whose name contains SQL punctuation
+      await insertAuthor({ first_name: "O'Brien", age: 30 });
+      // And another Author outside the requested age range
+      await insertAuthor({ first_name: "Other", age: 40 });
+      const em = newEntityManager();
+      const [a] = tables(Author);
+      // When Authors are filtered by exact name and an inclusive age range
+      const rows = await em.query({
+        from: a,
+        where: {
+          and: [a.first_name.is`= ${"O'Brien"}`, sql.ref(a, "age").is`BETWEEN ${25} AND ${35}`],
+        },
+        select: { name: a.first_name },
+      });
+      // Then only O'Brien is returned, with the apostrophe treated as part of the name
+      expect(rows).toEqual([{ name: "O'Brien" }]);
+    });
+
+    it("tracks receiver and interpolated aliases in raw predicates", async () => {
+      // Given an Author with a Book whose title equals the Author's name
+      await insertAuthor({ first_name: "Same" });
+      await insertBook({ title: "Same", author_id: 1 });
+      // And another Author with a Book whose title differs
+      await insertAuthor({ first_name: "Different" });
+      await insertBook({ title: "Other", author_id: 2 });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // When Book titles are compared to Author names with Book.title as the receiver
+      const rows = await em.query({
+        from: a,
+        join: [{ inner: b, on: b.author_id.is`= ${a.id}` }],
+        where: b.title.is`= ${a.first_name}`,
+        select: { name: a.first_name },
+      });
+      // Then the Book join is retained and only the Author with a matching Book title is returned
+      expect(rows).toEqual([{ name: "Same" }]);
+      // When Author names are compared to interpolated Book titles instead
+      const interpolated = await em.query({
+        from: a,
+        join: [{ inner: b, on: b.author_id.eq(a.id) }],
+        where: a.first_name.is`= ${b.title}`,
+        select: { name: a.first_name },
+      });
+      // Then the interpolated Book title retains the join and returns the same Author
+      expect(interpolated).toEqual(rows);
+    });
+
+    it("supports computed and subquery receivers and literal IS predicates", async () => {
+      // Given an Author with a known age
+      await insertAuthor({ first_name: "Known", age: 30 });
+      // And an Author whose age is NULL
+      await insertAuthor({ first_name: "Unknown" });
+      const em = newEntityManager();
+      const [a] = tables(Author);
+      const ages = query({ from: a, select: { name: a.first_name, age: a.age } });
+      // When the Author age subquery is filtered with a literal IS NULL predicate
+      const rows = await em.query({
+        from: ages,
+        where: ages.age.is`IS NULL`,
+        select: { name: ages.name },
+      });
+      // Then only the Author whose age is unknown is returned
+      expect(rows).toEqual([{ name: "Unknown" }]);
+      // When the computed Author count is filtered to require more than one Author
+      const counts = await em.query({
+        from: a,
+        having: a.id.count().is`> ${1}`,
+        select: { count: a.id.count() },
+      });
+      // Then the count of both Authors passes the predicate
+      expect(counts).toEqual([{ count: 2 }]);
+    });
+
     // sql.ref supports unmodeled physical columns; the modeled Author age column exercises the same path.
     it("can use sql.condition and sql.ref for unmodeled columns", async () => {
       // Given Author a1 below the raw SQL age threshold of 35

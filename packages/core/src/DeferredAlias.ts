@@ -1,25 +1,16 @@
-// Erased imports keep domain predicates and SQL expressions independent at module load time.
-import type { EntityMetadata } from "./EntityMetadata.ts";
-import type { ColumnCondition, RawCondition } from "./QueryParser.ts";
-
-/** An undefined predicate is pruned by either query parser. */
-export const skipCondition: ColumnCondition = {
-  kind: "column",
-  alias: "skip",
-  column: "skip",
-  dbType: "skip",
-  cond: undefined as any,
-};
+// Erased imports keep domain predicates independent of the query parser at module load time.
+import { type EntityMetadata } from "./EntityMetadata.ts";
+import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
 
 export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
 
-/** Resolves a domain alias or physical table handle to this parse's binding. */
+/** Resolves a domain alias to this em.find parse's binding. */
 export type AliasResolver = (handle: { meta: EntityMetadata; tableName: string }) => {
   meta: EntityMetadata;
   alias: string;
 };
 
-/** A condition whose SQL aliases are resolved afresh for each occurrence in a query. */
+/** A domain condition whose SQL aliases are resolved afresh for each occurrence in em.find. */
 export interface DeferredAliasCondition<C = ColumnCondition | RawCondition> {
   [deferredAliasSym]: (resolve: AliasResolver) => C;
 }

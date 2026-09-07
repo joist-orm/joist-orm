@@ -1,5 +1,6 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
 import { ConditionBuilder } from "./ConditionBuilder.ts";
+import { isDeferredAliasCondition } from "./DeferredAlias.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
 import { type ExpressionCondition, type ExpressionFilter } from "./EntityFilter.ts";
@@ -17,13 +18,11 @@ import {
   type SqlFragment,
   TemplateExpr,
   asNode,
-  deferredAliasSym,
   deferredCondition,
   deferredSym,
   exprBrand,
   isExpr,
   resolveDeferredConditions,
-  skipCondition,
 } from "./Expr.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
@@ -36,6 +35,7 @@ import {
   lazyExcludedSelects,
   stiSubtypeFilter,
 } from "./QueryParser.ts";
+import { skipCondition } from "./skipCondition.ts";
 import {
   JoinTableHandle,
   type M2mJoinTable,
@@ -1649,7 +1649,7 @@ function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
 /**
  * Parses a user-facing condition (a single condition or an `{ and }`/`{ or }` filter) with the same
  * `ConditionBuilder` `em.find` uses, so `undefined` members drop out, empty groups drop, and
- * `pruneIfUndefined` applies unchanged. Deferred (expression-vs-expression) conditions are resolved
+ * `pruneIfUndefined` applies unchanged. Deferred SQL expression conditions are resolved
  * against the context first.
  */
 export function conditionToSql(
@@ -1675,6 +1675,10 @@ export function conditionToSql(
  * I.e. an invalid Author-name condition stays invalid even inside a group that would otherwise prune.
  */
 function checkCondition(value: unknown): void {
+  if (isDeferredAliasCondition(value))
+    fail(
+      "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
+    );
   if (value === undefined || value === skipCondition) return;
   if (!value || typeof value !== "object" || Array.isArray(value) || isExpr(value))
     fail("Query predicate must be a condition or an and/or group");
@@ -1694,7 +1698,7 @@ function checkCondition(value: unknown): void {
   } else if (condition.kind === "raw") {
     checkConditionKeys(
       condition,
-      ["kind", "aliases", "condition", "bindings", "pruneable", deferredAliasSym, deferredSym],
+      ["kind", "aliases", "condition", "bindings", "pruneable", deferredSym],
       "Query raw condition",
     );
     if (
@@ -1706,11 +1710,7 @@ function checkCondition(value: unknown): void {
     )
       fail("Malformed query raw condition");
   } else if (condition.kind === "column") {
-    checkConditionKeys(
-      condition,
-      ["kind", "alias", "column", "dbType", "cond", "pruneable", deferredAliasSym],
-      "Query column condition",
-    );
+    checkConditionKeys(condition, ["kind", "alias", "column", "dbType", "cond", "pruneable"], "Query column condition");
     if (
       typeof condition.alias !== "string" ||
       typeof condition.column !== "string" ||
@@ -1759,7 +1759,7 @@ function checkCondition(value: unknown): void {
   }
 }
 
-/** Conditions use own enumerable POJO fields, with non-enumerable deferred resolver symbols allowed. */
+/** Conditions use own enumerable POJO fields, with the SQL expression resolver symbol allowed. */
 function checkConditionKeys(value: object, allowed: readonly PropertyKey[], description: string): void {
   if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
     fail(`${description} must be a plain POJO`);

@@ -4,7 +4,8 @@ import { groupBy } from "joist-utils";
 // base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
 import "./configure.ts";
 import { getMaybeCtiAlias } from "./Aliases.ts";
-import { type Entity, type IdType } from "./Entity.ts";
+import { buildValueCondition } from "./drivers/buildUtils.ts";
+import { type Entity } from "./Entity.ts";
 import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
 import {
   type EntityMetadata,
@@ -31,14 +32,13 @@ import {
   canonicalDbType,
   deferredCondition,
   isExpr,
-  skipCondition,
-  withDeferredAlias,
 } from "./Expr.ts";
 import { type ExpressionCondition, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index.ts";
 import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
-import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
+import { type ParsedValueFilter, makeLike, mapToDb } from "./QueryParser.ts";
 import { type Column, KeySerde, PolymorphicKeySerde } from "./serde.ts";
+import { skipCondition } from "./skipCondition.ts";
 import { type ColumnsOf, type FieldsOf, type RootTypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
@@ -80,6 +80,23 @@ export interface TableBrand<T, Name extends string> extends TableMgmt {
 /**
  * A physical table for `T`: one expression per SQL column, with relationship names as join factories.
  * Selecting the table itself retains entity hydration; selecting columns returns decoded SQL values.
+ *
+ * Unlike an Alias, a Table is an explicit SQL source, not a place to bind in an em.find relationship
+ * tree. I.e. with `a = table(Author)`, `{ from: a }` registers that handle in the query's scope.
+ * Its columns already know their physical column and codec, but their SQL name still depends on the
+ * query: the same Author handle might be `a` in one query and `a1` in a nested query.
+ *
+ * Each predicate occurrence renders through ExprContext.aliasFor using the current scope (or an
+ * enclosing scope for a correlation). Rendering returns SQL, ordered bindings, and source references
+ * together. A comparison records both sides' references; templates and subqueries carry their
+ * references too. Join pruning follows these references and join dependencies, rather than guessing
+ * which tables a SQL string mentions. It also accounts for select/order/group expressions and keep.
+ *
+ * I.e. if a joined Author is used only by `a.first_name.eq(name)`, supplying undefined removes that
+ * predicate and lets the unused join prune. Both APIs share this undefined-condition pruning rule;
+ * they differ in how they get the references: Alias resolves domain conditions against a relationship
+ * tree, while Table renders SQL expressions against explicit sources. Neither caches SQL names on
+ * the reusable handle or predicate, so one parse cannot overwrite another parse's bindings.
  *
  * `Name` is the table's type-level source key, defaulting to the entity's root type name (see
  * `RootTypeNameOf`); `table(Author, "m")` gives a self-join table its own key.
@@ -305,7 +322,7 @@ export function isTable(obj: unknown): obj is Table<any, any> {
  * A physical table column implements `Expr`: it renders as `alias."column"`, decodes result
  * values through the field's serde, and inherits aggregate methods from `BaseExpr`.
  */
-class TableColumn<V> extends BaseExpr {
+class TableColumn extends BaseExpr {
   public constructor(
     readonly meta: EntityMetadata,
     readonly field: Field & { aliasSuffix: string },
@@ -373,35 +390,40 @@ class TableColumn<V> extends BaseExpr {
           : undefined;
   }
 
-  protected addCondition(value: ParsedValueFilter<V>): ColumnCondition {
-    const cond: ColumnCondition = {
-      kind: "column",
-      alias: "unset",
-      column: this.column.columnName,
-      dbType: this.column.dbType,
-      cond: mapToDb(this.column, value),
-    };
-    return withDeferredAlias(cond, (resolve, cond) => {
-      const r = resolve(this.mgmt);
-      cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
+  /** Encodes literals when the condition is created and renders with each query's aliases. */
+  addCondition(value: ParsedValueFilter<unknown>): ExpressionCondition {
+    const encoded = mapToDb(this.column, value);
+    return deferredCondition((ctx) => {
+      const left = this.toSql(ctx);
+      const [sql, bindings] = buildValueCondition(left.sql, encoded);
+      return { sql, bindings: [...left.bindings, ...bindings], refs: left.refs };
     });
   }
 
-  protected addRawCondition(exp: string, bindings: readonly any[]): RawCondition {
-    const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings };
-    return withDeferredAlias(cond, (resolve, cond) => {
-      const r = resolve(this.mgmt);
-      const alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
-      cond.aliases = [alias];
-      cond.condition = `${alias}.${this.column.columnName} ${exp}`;
+  /** Renders raw operators against the same quoted column SQL as other expressions. */
+  protected addRawCondition(exp: string, bindings: readonly any[]): ExpressionCondition {
+    return deferredCondition((ctx) => {
+      const left = this.toSql(ctx);
+      return { sql: `${left.sql} ${exp}`, bindings: [...left.bindings, ...bindings], refs: left.refs };
     });
+  }
+
+  /** Uses column filter conversions for literals and shared comparisons for expressions and null equality. */
+  protected compare(op: string, value: unknown): ExpressionCondition {
+    if (value === undefined || isExpr(value) || (value === null && (op === "=" || op === "!="))) {
+      return super.compare(op, value);
+    }
+    // Primitive relational comparisons historically bind null through mapToDb.
+    const kind = ({ "=": "eq", "!=": "ne", ">": "gt", ">=": "gte", "<": "lt", "<=": "lte" } as const)[op];
+    if (!kind) return fail(`Invalid operator ${op}`);
+    return this.addCondition({ kind, value });
   }
 
   /**
    * Compares this column to another expression.
    *
-   * Another table column uses a deferred column condition. Other expressions (aggregates, subquery
-   * columns, and `sql` templates) use the expression context to render their complete SQL.
+   * Table columns, aggregates, subquery columns, and `sql` templates use the expression context
+   * to render their complete SQL.
    * Negated array operators wrap the complete comparison in NOT.
    */
   protected compareToExpr(op: string, value: ExprLike<any>, negate = false): ExpressionCondition {
@@ -411,68 +433,27 @@ class TableColumn<V> extends BaseExpr {
         return { ...comparison, sql: `NOT (${comparison.sql})` };
       });
     }
-    if (value instanceof TableColumn) {
-      return newCrossColumnCondition(this.meta, this.field, this.mgmt, this.column.columnName, value, op);
-    }
-    return this.compare(op, value);
+    return super.compare(op, value);
   }
 }
 
-class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn<V> implements PrimitiveColumn<V, N> {
-  eq(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (value === null) return this.addCondition({ kind: "is-null" });
-    if (isExpr(value)) return this.compareToExpr("=", value);
-    return this.addCondition({ kind: "eq", value: value as any });
-  }
-
-  ne(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (value === null) return this.addCondition({ kind: "not-null" });
-    if (isExpr(value)) return this.compareToExpr("!=", value);
-    return this.addCondition({ kind: "ne", value: value as any });
-  }
-
-  gt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (isExpr(value)) return this.compareToExpr(">", value);
-    return this.addCondition({ kind: "gt", value: value as any });
-  }
-
-  gte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (isExpr(value)) return this.compareToExpr(">=", value);
-    return this.addCondition({ kind: "gte", value: value as any });
-  }
-
-  lt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (isExpr(value)) return this.compareToExpr("<", value);
-    return this.addCondition({ kind: "lt", value: value as any });
-  }
-
-  lte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (isExpr(value)) return this.compareToExpr("<=", value);
-    return this.addCondition({ kind: "lte", value: value as any });
-  }
-
-  between(v1: V | undefined, v2: V | undefined): ColumnCondition {
+class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn implements PrimitiveColumn<V, N> {
+  between(v1: V | undefined, v2: V | undefined): ExpressionCondition {
     if (v1 === undefined || v2 === undefined) return skipCondition;
     return this.addCondition({ kind: "between", value: [v1, v2] });
   }
 
-  like(value: V | undefined): ColumnCondition {
+  like(value: V | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "like", value });
   }
 
-  ilike(value: V | undefined): ColumnCondition {
+  ilike(value: V | undefined): ExpressionCondition {
     if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "ilike", value });
   }
 
-  search(value: V | undefined): ColumnCondition {
+  search(value: V | undefined): ExpressionCondition {
     // Check !value so that empty strings are pruned
     if (!value) return skipCondition;
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
@@ -523,37 +504,23 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn<V> impl
     return this.addCondition({ kind: "noverlaps", value: v1 as any });
   }
 
-  pathExists(jsonPath: string | undefined): ColumnCondition {
+  pathExists(jsonPath: string | undefined): ExpressionCondition {
     if (jsonPath === undefined) return skipCondition;
     return this.addCondition({ kind: "jsonPathExists", value: jsonPath });
   }
 
-  pathIsTrue(jsonPath: string | undefined): ColumnCondition {
+  pathIsTrue(jsonPath: string | undefined): ExpressionCondition {
     if (jsonPath === undefined) return skipCondition;
     return this.addCondition({ kind: "jsonPathPredicate", value: jsonPath });
   }
 
-  raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {
+  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition {
     if (bindings === undefined) return skipCondition;
     return this.addRawCondition(exp, bindings);
   }
 }
 
-class EntityColumnImpl<T> extends TableColumn<IdType> implements EntityColumn<T> {
-  eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (value === null) return this.addCondition({ kind: "is-null" });
-    if (isExpr(value)) return this.compareToExpr("=", value);
-    return this.addCondition({ kind: "eq", value: value as any });
-  }
-
-  ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
-    if (value === undefined) return skipCondition;
-    if (value === null) return this.addCondition({ kind: "not-null" });
-    if (isExpr(value)) return this.compareToExpr("!=", value);
-    return this.addCondition({ kind: "ne", value: value as any });
-  }
-
+class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
   in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
     if (values === undefined) {
       return skipCondition;
@@ -599,7 +566,7 @@ class EntityColumnImpl<T> extends TableColumn<IdType> implements EntityColumn<T>
     return this.compareId("<=", "lte", value);
   }
 
-  raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {
+  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition {
     if (bindings === undefined) return skipCondition;
     return this.addRawCondition(exp, bindings);
   }
@@ -657,7 +624,7 @@ class PolyReferenceImpl<T extends Entity> {
         const comp =
           this.field.components.find((p) => p.otherMetadata().cstr.name === cstrName) ??
           fail(`No component for ${cstrName}`);
-        return this.addCondition(comp, { kind: "in", value: ids });
+        return this.componentColumn(comp).addCondition({ kind: "in", value: ids });
       }),
     };
   }
@@ -704,11 +671,7 @@ class PolyReferenceImpl<T extends Entity> {
     const comp =
       this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
       fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
-    return deferredCondition((ctx) => {
-      const alias = getMaybeCtiAlias(this.meta, this.field, this.meta, ctx.aliasFor(this.mgmt));
-      const sub = asNode(values).toSqlBare(ctx);
-      return { sql: `${alias}.${comp.columnName} IN (${sub.sql})`, bindings: sub.bindings, refs: [alias, ...sub.refs] };
-    });
+    return this.componentColumn(comp).in(values);
   }
 
   private addEqOrNe(
@@ -723,14 +686,7 @@ class PolyReferenceImpl<T extends Entity> {
       const comp =
         this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
         fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
-      return newCrossColumnCondition(
-        this.meta,
-        this.field,
-        this.mgmt,
-        comp.columnName,
-        value,
-        kind === "eq" ? "=" : "!=",
-      );
+      return this.componentColumn(comp)[kind](value);
     } else if (isExpr(value)) {
       return fail(
         `${this.field.fieldName} is polymorphic, so it can only be compared to tagged ids or entity table columns`,
@@ -739,7 +695,7 @@ class PolyReferenceImpl<T extends Entity> {
       // We can AND each of the components as many conditions
       const value = kind === "eq" ? ({ kind: "is-null" } as const) : ({ kind: "not-null" } as const);
       return {
-        and: this.field.components.map((p) => this.addCondition(p, value)),
+        and: this.field.components.map((p) => this.componentColumn(p).addCondition(value)),
       };
     } else {
       // If we have a value, we can find the component
@@ -747,23 +703,14 @@ class PolyReferenceImpl<T extends Entity> {
         this.field.components.find(
           (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value) as string),
         ) || fail(`Could not find component for ${value}`);
-      return this.addCondition(comp, { kind, value });
+      return this.componentColumn(comp)[kind](value);
     }
   }
 
-  private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
+  /** Returns the physical FK expression for one polymorphic target. */
+  private componentColumn(comp: PolymorphicFieldComponent): EntityColumnImpl<T> {
     const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
-    const cond: ColumnCondition = {
-      kind: "column",
-      alias: "unset",
-      column: comp.columnName,
-      dbType: column.dbType,
-      cond: mapToDb(column, value),
-    };
-    return withDeferredAlias(cond, (resolve, cond) => {
-      const r = resolve(this.mgmt);
-      cond.alias = getMaybeCtiAlias(this.meta, this.field, r.meta, r.alias);
-    });
+    return new EntityColumnImpl<T>(this.meta, this.field, column, this.mgmt);
   }
 }
 
@@ -877,26 +824,6 @@ class ManyToManyJoinImpl extends CollectionJoinImpl {
   }
 }
 
-/** Compares columns with per-parse aliases, i.e. `parent_author_id = <other id>` for `c.parent.eq(a.id)`. */
-function newCrossColumnCondition(
-  meta: EntityMetadata,
-  field: Field & { aliasSuffix: string },
-  mgmt: TableMgmt,
-  columnName: string,
-  otherColumn: TableColumn<unknown>,
-  op: string,
-): RawCondition {
-  const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", pruneable: false, bindings: [] };
-  return withDeferredAlias(cond, (resolve, cond) => {
-    const r1 = resolve(mgmt);
-    const r2 = resolve(otherColumn.mgmt);
-    const a1 = getMaybeCtiAlias(meta, field, r1.meta, r1.alias);
-    const a2 = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, r2.meta, r2.alias);
-    cond.aliases = [a1, a2];
-    cond.condition = `${a1}.${columnName} ${op} ${a2}.${otherColumn.column.columnName}`;
-  });
-}
-
 /** Fails fast when a join factory is passed something other than a table. */
 function requireTable(other: object): TableFor<Entity> {
   if (!isTable(other)) return fail(`Expected a table to join, got ${other}`);
@@ -904,7 +831,7 @@ function requireTable(other: object): TableFor<Entity> {
 }
 
 /** The id column of a joined table, for building sugar ON conditions. */
-function idColumnOf(other: object): TableColumn<unknown> {
+function idColumnOf(other: object): TableColumn {
   return (other as any).id;
 }
 

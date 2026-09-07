@@ -6,6 +6,7 @@ import {
   type ExistsCondition,
   type ParsedExpressionFilter,
   type ParsedFindQuery,
+  type ParsedValueFilter,
   type RawCondition,
 } from "../QueryParser.ts";
 import { assertNever, fail } from "../utils.ts";
@@ -47,7 +48,11 @@ function buildRawCondition(raw: RawCondition): [string, readonly any[]] {
 /** Returns a tuple of `["column op ?"`, bindings]`. */
 function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
-  const columnName = kqDot(alias, column);
+  return buildValueCondition(kqDot(alias, column), cond);
+}
+
+/** Renders an encoded value filter against a SQL column expression. */
+export function buildValueCondition(columnName: string, cond: ParsedValueFilter<unknown>): [string, any[]] {
   switch (cond.kind) {
     case "eq":
     case "ne":

@@ -2,7 +2,7 @@ import { groupBy } from "joist-utils";
 
 // Load configure first: relations must not evaluate before their base classes exist.
 import { getConstructorFromTaggedId } from "./configure.ts";
-import { skipCondition, withDeferredAlias } from "./DeferredAlias.ts";
+import { withDeferredAlias } from "./DeferredAlias.ts";
 import { type Entity } from "./Entity.ts";
 import { type ExpressionCondition } from "./EntityFilter.ts";
 import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
@@ -17,6 +17,7 @@ import {
 import { maybeResolveReferenceToId } from "./keys.ts";
 import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
 import { type Column } from "./serde.ts";
+import { skipCondition } from "./skipCondition.ts";
 import { type FieldsOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
@@ -46,7 +47,25 @@ export interface AliasBrand<T> extends AliasMgmt {
   readonly __entity: T;
 }
 
-/** Domain field predicates, deliberately separate from SQL table expressions. */
+/**
+ * Domain field predicates, deliberately separate from SQL table expressions.
+ *
+ * An Alias names a place in an em.find relationship tree, not a fixed SQL table occurrence.
+ * I.e. with `a = alias(Author)`, `{ author: { as: a } }` binds `a` to the Book's Author;
+ * binding it under `{ author: { mentor: { as: a } } }` instead makes it the Author's mentor.
+ * The find parser builds those joins and knows which entity metadata and SQL name apply there,
+ * including any inheritance joins. The Alias cannot know that when `a.firstName.eq(name)` is created.
+ *
+ * DeferredAlias therefore resolves each predicate to a fresh column/raw condition using that parse's
+ * binding. The resolved condition records the SQL aliases it reads, including both sides of a
+ * cross-alias comparison. Join pruning uses those references to retain the joins the filter needs.
+ * An undefined predicate is skipped, so it does not keep an otherwise-unused join alive; explicit
+ * keepAliases and other query dependencies can still retain that join.
+ *
+ * Table expressions solve a different problem: their sources are supplied directly in from/join,
+ * so they render through ExprContext rather than asking the find parser to bind a relationship path.
+ * Neither path stores a resolved SQL name on the reusable handle or predicate.
+ */
 export type Alias<T extends Entity> = { readonly [aliasMgmt]: AliasBrand<T> } & {
   [P in keyof FieldsOf<T>]: P extends "id"
     ? EntityAlias<T>

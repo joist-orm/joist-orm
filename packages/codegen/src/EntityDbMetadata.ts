@@ -148,6 +148,8 @@ export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object"
 export type PrimitiveField = Field & {
   kind: "primitive";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
@@ -171,6 +173,8 @@ export type PrimitiveField = Field & {
 export type EnumField = Field & {
   kind: "enum";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
@@ -189,6 +193,8 @@ export type EnumField = Field & {
 export type PgEnumField = Field & {
   kind: "pg-enum";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
   columnNotNull: boolean;
@@ -206,6 +212,8 @@ export type PgEnumField = Field & {
 export type ManyToOneField = Field & {
   kind: "m2o";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnDefault?: number | boolean | string | null;
   columnGenerated: boolean;
   columnNotNull: boolean;
@@ -284,8 +292,11 @@ export type PolymorphicField = Field & {
   components: PolymorphicFieldComponent[];
 };
 
+/** A column such as `parent_book_id` or `parent_book_review_id`. */
 export type PolymorphicFieldComponent = {
-  columnName: string; // eg `parent_book_id` or `parent_book_review_id`
+  columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   otherFieldName: string; // eg `comment` or `comments`
   otherEntity: Entity;
   isDeferredAndDeferrable: boolean;
@@ -579,6 +590,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "primitive",
+    columnOwner: entity,
     columnNotNull: column.notNull,
     fieldName,
     columnName,
@@ -635,6 +647,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnOwner: entity,
     columnNotNull: column.notNull,
     fieldName,
     columnName,
@@ -669,6 +682,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnOwner: entity,
     columnNotNull: column.notNull,
     fieldName,
     columnName,
@@ -696,6 +710,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "pg-enum",
+    columnOwner: entity,
     columnNotNull: column.notNull,
     fieldName,
     columnName,
@@ -728,6 +743,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "m2o",
+    columnOwner: entity,
     columnNotNull: column.notNull,
     fieldName,
     columnName,
@@ -873,6 +889,7 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   const isDeferredAndDeferrable = r.foreignKey.isDeferred && r.foreignKey.isDeferrable;
   return {
     columnName,
+    columnOwner: entity,
     otherEntity,
     otherFieldName,
     isDeferredAndDeferrable,

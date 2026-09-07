@@ -43,6 +43,7 @@ function primitive(fieldName: string): PrimitiveField {
     kind: "primitive",
     fieldName,
     columnName: fieldName,
+    columnOwner: makeEntity("Author"),
     columnType: "text",
     fieldType: "string",
     rawFieldType: "string",

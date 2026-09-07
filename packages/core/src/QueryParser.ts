@@ -67,8 +67,8 @@ export interface ExistsCondition {
   outerAliases: string[];
 }
 
-// `skipCondition` lives in `DeferredAlias.ts`, shared by domain aliases and SQL expressions
-// without a load-order cycle; `index.ts` re-exports it through Expr.ts.
+// `skipCondition` lives in its own leaf module, shared by domain aliases and SQL expressions
+// without a load-order cycle; `index.ts` re-exports it directly.
 
 export interface PrimaryTable {
   join: "primary";

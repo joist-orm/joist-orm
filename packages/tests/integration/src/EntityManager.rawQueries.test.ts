@@ -846,6 +846,368 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("pruning", () => {
+    it("encodes both between bounds and expands search words", async () => {
+      // Given an Author at the lower BookRange bound with separated search words
+      await insertAuthor({ first_name: "Alice Mary Smith", range_of_books: 1 });
+      // And an Author at the upper bound with differently cased search words
+      await insertAuthor({ first_name: "ALICE SMITH", range_of_books: 2 });
+      // And an Author inside the range whose name does not match the search
+      await insertAuthor({ first_name: "Bob Smith", range_of_books: 1 });
+      // And an Author matching the search but without a BookRange, excluded by between
+      await insertAuthor({ first_name: "Alice Smith" });
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        where: { and: [a.range_of_books.between(BookRange.Few, BookRange.Lot), a.first_name.search("alice smith")] },
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      expect(rows).toEqual(["Alice Mary Smith", "ALICE SMITH"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE (a.range_of_books BETWEEN $1 AND $2 AND a.first_name ILIKE $3) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
+    it("encodes enum array operators and compares array columns without encoding them", async () => {
+      // Given an Author whose colors contain both requested colors
+      await insertAuthor({ first_name: "Both", favorite_colors: [1, 2] });
+      // And an Author whose colors overlap but do not contain both colors
+      await insertAuthor({ first_name: "Red", favorite_colors: [1], mentor_id: 1 });
+      // And an Author with no overlapping colors
+      await insertAuthor({ first_name: "Empty", favorite_colors: [], mentor_id: 1 });
+      const em = newEntityManager();
+      const a = table(Author);
+      const m = table(Author, "mentor");
+      resetQueryCount();
+      const contains = await em.query({
+        from: a,
+        where: a.favorite_colors.contains([Color.Red, Color.Green]),
+        select: a.first_name,
+      });
+      const ncontains = await em.query({
+        from: a,
+        where: a.favorite_colors.ncontains([Color.Red, Color.Green]),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const overlaps = await em.query({
+        from: a,
+        where: a.favorite_colors.overlaps([Color.Green]),
+        select: a.first_name,
+      });
+      const noverlaps = await em.query({
+        from: a,
+        where: a.favorite_colors.noverlaps([Color.Green]),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      expect(contains).toEqual(["Both"]);
+      expect(ncontains).toEqual(["Red", "Empty"]);
+      expect(overlaps).toEqual(["Both"]);
+      expect(noverlaps).toEqual(["Red", "Empty"]);
+      const containingMentor = await em.query({
+        from: a,
+        join: [a.mentor.inner(m)],
+        where: m.favorite_colors.contains(a.favorite_colors),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const notContainingMentor = await em.query({
+        from: a,
+        join: [a.mentor.inner(m)],
+        where: a.favorite_colors.ncontains(m.favorite_colors),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const overlappingMentor = await em.query({
+        from: a,
+        join: [a.mentor.inner(m)],
+        where: a.favorite_colors.overlaps(m.favorite_colors),
+        select: a.first_name,
+      });
+      const notOverlappingMentor = await em.query({
+        from: a,
+        join: [a.mentor.inner(m)],
+        where: a.favorite_colors.noverlaps(m.favorite_colors),
+        select: a.first_name,
+      });
+      expect(containingMentor).toEqual(["Red", "Empty"]);
+      expect(notContainingMentor).toEqual(["Red", "Empty"]);
+      expect(overlappingMentor).toEqual(["Red"]);
+      expect(notOverlappingMentor).toEqual(["Empty"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.favorite_colors @> $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE NOT (a.favorite_colors @> $1) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.favorite_colors && $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE NOT (a.favorite_colors && $1) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a JOIN authors AS a1 ON a.mentor_id = a1.id WHERE a1.favorite_colors @> a.favorite_colors AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a JOIN authors AS a1 ON a.mentor_id = a1.id WHERE NOT ((a.favorite_colors @> a1.favorite_colors)) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a JOIN authors AS a1 ON a.mentor_id = a1.id WHERE a.favorite_colors && a1.favorite_colors AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a JOIN authors AS a1 ON a.mentor_id = a1.id WHERE NOT ((a.favorite_colors && a1.favorite_colors)) AND a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("rewrites array in to containment and rejects array nin before SQL", async () => {
+      // Given an Author whose colors contain both requested colors
+      await insertAuthor({ first_name: "Both", favorite_colors: [1, 2] });
+      // And an Author with only one requested color, which overlap semantics would incorrectly include
+      await insertAuthor({ first_name: "Red", favorite_colors: [1] });
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        // @ts-expect-error The legacy array IN rewrite takes elements, not the declared array-of-arrays.
+        where: a.favorite_colors.in([Color.Red, Color.Green]),
+        select: a.first_name,
+      });
+      expect(rows).toEqual(["Both"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.favorite_colors @> $1 AND a.deleted_at IS NULL",
+       ]
+      `);
+      resetQueryCount();
+      expect(() => a.favorite_colors.nin([[Color.Red]])).toThrow(
+        "The nin operator is not supported on array columns yet",
+      );
+      expect(queries).toMatchInlineSnapshot(`[]`);
+    });
+
+    it("bypasses the address codec for JSON paths and containment operands", async () => {
+      // Given an Author whose stored JSON includes a key that AddressSchema strips
+      await insertAuthor({ first_name: "Selected", business_address: { street: "Main", extra: "kept" } });
+      // And an Author with the same valid street but a different extra value
+      await insertAuthor({ first_name: "Other", business_address: { street: "Main", extra: "other" } });
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+      const exists = await em.query({
+        from: a,
+        where: a.business_address.pathExists('$.extra ? (@ == "kept")'),
+        select: a.first_name,
+      });
+      const isTrue = await em.query({
+        from: a,
+        where: a.business_address.pathIsTrue('$.extra == "kept"'),
+        select: a.first_name,
+      });
+      const contains = await em.query({
+        from: a,
+        where: a.business_address.contains('{"extra":"kept"}'),
+        select: a.first_name,
+      });
+      const ncontains = await em.query({
+        from: a,
+        where: a.business_address.ncontains('{"extra":"kept"}'),
+        select: a.first_name,
+      });
+      expect(exists).toEqual(["Selected"]);
+      expect(isTrue).toEqual(["Selected"]);
+      expect(contains).toEqual(["Selected"]);
+      expect(ncontains).toEqual(["Other"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.business_address @? $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.business_address @@ $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.business_address @> $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE NOT (a.business_address @> $1) AND a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("keeps a joined SmallPublisher only for its base-field predicate and prunes omitted filters", async () => {
+      // Given an Author with a SmallPublisher whose name is stored on publishers
+      await insertPublisher({ name: "Selected" });
+      await insertAuthor({ first_name: "Published", publisher_id: 1 });
+      // And an Author without a Publisher, excluded only when the inner join survives
+      await insertAuthor({ first_name: "Unpublished" });
+      const em = newEntityManager();
+      const [a, sp] = tables(Author, SmallPublisher);
+      resetQueryCount();
+      const filtered = await em.query({
+        from: a,
+        join: [a.publisher.inner(sp)],
+        where: sp.name.eq("Selected"),
+        select: a.first_name,
+      });
+      const omitted = await em.query({
+        from: a,
+        join: [a.publisher.inner(sp)],
+        where: { and: [sp.name.eq(undefined), sp.name.search(""), sp.name.between(undefined, "Z")] },
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const prunedGroup = await em.query({
+        from: a,
+        join: [a.publisher.inner(sp)],
+        where: { and: [sp.name.eq("Selected"), sp.name.search(undefined)], pruneIfUndefined: "any" },
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      expect(filtered).toEqual(["Published"]);
+      expect(omitted).toEqual(["Published", "Unpublished"]);
+      expect(prunedGroup).toEqual(["Published", "Unpublished"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a JOIN (small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id) ON a.publisher_id = sp_b0.id WHERE sp_b0.name = $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
+    it("distinguishes null, empty, and omitted Author enum lists", async () => {
+      // Given an Author with a stored BookRange enum id
+      await insertAuthor({ first_name: "Few", range_of_books: 1 });
+      // And another Author has a different enum id
+      await insertAuthor({ first_name: "Many", range_of_books: 2 });
+      // And an Author has SQL NULL rather than a BookRange value
+      await insertAuthor({ first_name: "Unset" });
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+      // When comparing nulls and lists through the real enum column codec
+      const absent = await em.query({ from: a, where: a.range_of_books.eq(null), select: a.first_name });
+      const present = await em.query({
+        from: a,
+        where: a.range_of_books.ne(null),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const included = await em.query({
+        from: a,
+        where: a.range_of_books.in([BookRange.Few, null]),
+        select: a.first_name,
+        orderBy: [{ asc: a.id }],
+      });
+      const excluded = await em.query({
+        from: a,
+        where: a.range_of_books.nin([BookRange.Few, null]),
+        select: a.first_name,
+      });
+      const empty = await em.query({ from: a, where: a.range_of_books.in([]), select: a.first_name });
+      const notEmpty = await em.query({ from: a, where: a.range_of_books.nin([]), select: a.id.count() });
+      const omitted = await em.query({ from: a, where: a.range_of_books.in(undefined), select: a.id.count() });
+      // Then IN includes unset ranges, while NOT IN removes null operands and excludes unset ranges
+      expect(absent).toEqual(["Unset"]);
+      expect(present).toEqual(["Few", "Many"]);
+      expect(included).toEqual(["Few", "Unset"]);
+      expect(excluded).toEqual(["Many"]);
+      expect(empty).toEqual([]);
+      expect(notEmpty).toEqual([3]);
+      expect(omitted).toEqual([3]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books IS NULL AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books IS NOT NULL AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a WHERE (a.range_of_books IS NULL OR a.range_of_books = ANY($1)) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books != ALL($1) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books = ANY($1) AND a.deleted_at IS NULL",
+         "SELECT count(a.id)::int AS value FROM authors AS a WHERE a.range_of_books != ALL($1) AND a.deleted_at IS NULL",
+         "SELECT count(a.id)::int AS value FROM authors AS a WHERE a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("encodes custom PasswordValue lists without passing nulls to the codec", async () => {
+      // Given a User with a password stored as encoded text
+      const password = PasswordValue.fromPlainText("secret");
+      await insertUser({ name: "Selected", password: password.encoded });
+      // And another User has a different encoded password
+      await insertUser({ name: "Other", password: PasswordValue.fromPlainText("other").encoded });
+      // And a third User starts with the fixture's default password
+      await insertUser({ name: "Unset" });
+      // And its password is SQL NULL instead of encoded text
+      await update("users", { id: 3, password: null });
+      const em = newEntityManager();
+      const u = table(User);
+      resetQueryCount();
+      // When filtering by domain objects and SQL NULL through the custom column
+      const included = await em.query({
+        from: u,
+        where: u.password.in([password, null]),
+        select: u.name,
+        orderBy: [{ asc: u.id }],
+      });
+      const excluded = await em.query({ from: u, where: u.password.nin([password]), select: u.name });
+      const absent = await em.query({ from: u, where: u.password.eq(null), select: u.name });
+      // Then each non-null operand is encoded while NULL remains a SQL value
+      expect(included).toEqual(["Selected", "Unset"]);
+      expect(excluded).toEqual(["Other"]);
+      expect(absent).toEqual(["Unset"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT u.name AS value FROM users AS u WHERE u.password IS NULL OR u.password = ANY($1) ORDER BY u.id ASC",
+         "SELECT u.name AS value FROM users AS u WHERE u.password != ALL($1)",
+         "SELECT u.name AS value FROM users AS u WHERE u.password IS NULL",
+       ]
+      `);
+    });
+
+    it("resolves a frozen Author id list independently in outer and inner scopes", async () => {
+      // Given an Author selected by a tagged-id list
+      await insertAuthor({ first_name: "Selected" });
+      // And another Author must not leak into either use of the list
+      await insertAuthor({ first_name: "Other" });
+      const em = newEntityManager();
+      const a = table(Author);
+      // And both scopes share the exact same immutable table predicate and table handle
+      const where = Object.freeze(a.id.in(Object.freeze(["a:1"]))!);
+      const count = query({ from: a, where, select: a.id.count() });
+      resetQueryCount();
+      // When resolving the shared predicate in two scopes and then using it alone again
+      const nested = await em.query({ from: a, where, select: { id: a.id, count } });
+      const again = await em.query({ from: a, where, select: a.id });
+      // Then neither scope captures the other's SQL alias or double-encodes the tagged id
+      expect(nested).toEqual([{ id: "a:1", count: 1 }]);
+      expect(again).toEqual(["a:1"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.id AS id, (SELECT count(a1.id)::int AS value FROM authors AS a1 WHERE a1.id = ANY($1) AND a1.deleted_at IS NULL) AS "count" FROM authors AS a WHERE a.id = ANY($2) AND a.deleted_at IS NULL",
+         "SELECT a.id AS value FROM authors AS a WHERE a.id = ANY($1) AND a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it.each(["where", "having", "join", "template"] as const)(
+      "rejects domain alias conditions in SQL %s before execution",
+      async (clause) => {
+        // Given a persisted Author that a domain alias can find
+        await insertAuthor({ first_name: "Selected" });
+        const em = newEntityManager();
+        const a = table(Author);
+        const b = table(Book);
+        // And the domain condition is already bound by em.find, not merely an unresolved alias
+        const domain = alias(Author);
+        const condition = domain.firstName.eq("Selected");
+        expect(await em.find(Author, { as: domain }, { conditions: { and: [condition] } })).toMatchEntity([
+          { firstName: "Selected" },
+        ]);
+        resetQueryCount();
+        // When the find-only condition is reused in an otherwise SQL-shaped query
+        const clauses =
+          clause === "where"
+            ? { where: { and: [a.id.eq("a:1"), condition] } }
+            : clause === "having"
+              ? { groupBy: [a.id], having: condition }
+              : clause === "join"
+                ? { join: [{ inner: b, on: condition, keep: true }] }
+                : { where: sql.condition`${condition}` };
+        // Then every SQL condition entry point rejects the domain alias before issuing SQL
+        await expect(em.query({ from: a, ...clauses, select: a.id })).rejects.toThrow(
+          "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
+        );
+        expect(queries).toMatchInlineSnapshot(`[]`);
+      },
+    );
+
     it("accepts a single bare condition for where and having", async () => {
       // Given Author a1 below the age threshold and without Books
       await insertAuthor({ first_name: "a1", age: 20 });

@@ -1,6 +1,5 @@
 import { type ExpressionFilter } from "./EntityFilter.ts";
 import { isDefined } from "./EntityManager.ts";
-import { skipCondition } from "./Expr.ts";
 import {
   type ColumnCondition,
   type ParsedExpressionCondition,
@@ -10,6 +9,7 @@ import {
   mapToDb,
 } from "./QueryParser.ts";
 import { type Column } from "./serde.ts";
+import { skipCondition } from "./skipCondition.ts";
 import { fail, partition } from "./utils.ts";
 
 type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

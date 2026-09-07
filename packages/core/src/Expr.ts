@@ -1,16 +1,8 @@
-import { type AliasResolver, deferredAliasSym, isDeferredAliasCondition, skipCondition } from "./DeferredAlias.ts";
-export {
-  type AliasResolver,
-  type DeferredAliasCondition,
-  deferredAliasSym,
-  isDeferredAliasCondition,
-  skipCondition,
-  withDeferredAlias,
-} from "./DeferredAlias.ts";
 import type { ExpressionCondition } from "./EntityFilter.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
 import type { RawCondition } from "./QueryParser.ts";
+import { skipCondition } from "./skipCondition.ts";
 
 /**
  * The shared expression protocol for `em.query`.
@@ -159,7 +151,7 @@ export interface SqlFragment {
  * source, and a way to turn nested conditions into SQL (which needs `ConditionBuilder`, so it lives in `query.ts`).
  */
 export interface ExprContext {
-  /** Returns the SQL alias for an alias's `AliasMgmt` or a subquery handle, searching enclosing queries. */
+  /** Returns the SQL alias for a table's `TableMgmt` or a subquery handle, searching enclosing queries. */
   aliasFor(handle: object): string;
   /** Turns a user-facing condition into SQL; `undefined` if it pruned away entirely. */
   conditionToSql(cond: ExpressionCondition): SqlFragment | undefined;
@@ -181,9 +173,8 @@ export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
  * `bookStats.bookCount.gt(1)` or `bs.authorId.eq(a.id)`.
  *
  * It is shaped like a `RawCondition` so it can sit in any `ExpressionFilter`; `resolveDeferredConditions`
- * snapshots `condition`, `bindings`, and `aliases` before the filter is parsed. Alias columns compared to
- * literals keep producing `ColumnCondition`s (the `em.find` path), so this is only for comparisons that
- * involve a non-alias expression.
+ * snapshots `condition`, `bindings`, and `aliases` before the filter is parsed. Domain alias conditions
+ * use a separate protocol in the `em.find` parser.
  */
 export interface DeferredCondition extends RawCondition {
   [deferredSym]: (ctx: ExprContext) => RawCondition;
@@ -220,8 +211,6 @@ export function resolveDeferredConditions(
   if (cond === undefined || cond === null) return cond;
   if (isDeferredCondition(cond)) {
     return cond[deferredSym](ctx);
-  } else if (isDeferredAliasCondition(cond)) {
-    return cond[deferredAliasSym](ctxResolver(ctx));
   } else if ("and" in cond && cond.and) {
     return { ...cond, and: cond.and.map((c) => resolveDeferredConditions(c, ctx)) };
   } else if ("or" in cond && cond.or) {
@@ -242,8 +231,8 @@ export function joinFragments(parts: SqlFragment[], sep: string): SqlFragment {
 /**
  * The methods every expression shares. Subclasses provide `toSql`, and usually `decode`/`encode`.
  *
- * Alias columns override the comparison methods with the `em.find` `ColumnCondition` path when the
- * right-hand side is a literal, and fall back to these for expression-vs-expression comparisons.
+ * Table columns can override comparisons to apply column-specific conversions. Domain aliases do not
+ * implement this protocol.
  */
 export abstract class BaseExpr {
   readonly [exprBrand]: any = this;
@@ -534,7 +523,7 @@ export class RefExpr extends BaseExpr {
 /**
  * A `sql` tagged template.
  *
- * For an Author alias `a` assigned the SQL alias `a1`:
+ * For an Author table `a` assigned the SQL alias `a1`:
  *
  * ```ts
  * sql`${a.age} * 2`     // Expression: a1.age * 2
@@ -719,13 +708,6 @@ function minMaxOutputType(outputType: ExprOutputType | undefined): ExprOutputTyp
     default:
       return undefined;
   }
-}
-
-/** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
-function ctxResolver(ctx: ExprContext): AliasResolver {
-  return function resolve(handle) {
-    return { meta: handle.meta, alias: ctx.aliasFor(handle) };
-  };
 }
 
 /** Decodes `count`/`sum`/`avg` results, which Postgres returns as strings for bigint/numeric. */

@@ -1,4 +1,14 @@
-import { type ColumnCondition, type Entity, type ExecuteResult, getMetadata, query, sql, table } from "joist-orm";
+import {
+  type ColumnCondition,
+  type Entity,
+  type ExecuteResult,
+  type RawCondition,
+  alias,
+  getMetadata,
+  query,
+  sql,
+  table,
+} from "joist-orm";
 import {
   AdminUser,
   Author,
@@ -367,6 +377,31 @@ describe("EntityManager.execute", () => {
   });
 
   describe("UPDATE and DELETE", () => {
+    it.each(["update", "delete"] as const)(
+      "rejects domain alias conditions in %s without changing stored Tags",
+      async (operation) => {
+        // Given a persisted Tag that must survive the rejected mutation unchanged
+        await insertTag({ name: "Retained" });
+        const em = newEntityManager();
+        const t = table(Tag);
+        // And a domain alias predicate is nested beside a valid SQL table predicate
+        const domain = alias(Tag);
+        const where = { and: [t.id.eq("t:1"), domain.name.eq("Retained")] };
+        resetQueryCount();
+        // When a mutation receives a find-only predicate despite allowAll
+        const result =
+          operation === "update"
+            ? em.execute({ update: t, set: { name: "Changed" }, where, allowAll: true })
+            : em.execute({ delete: t, where, allowAll: true });
+        // Then rejection happens before SQL and cannot silently discard part of the guard
+        await expect(result).rejects.toThrow(
+          "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
+        );
+        expect(queries).toMatchInlineSnapshot(`[]`);
+        expect(await select("tags")).toMatchObject([{ id: 1, name: "Retained" }]);
+      },
+    );
+
     it("updates arithmetic expressions in target scope while pruning undefined assignments", async () => {
       // Given an Author with two Books whose orders differ
       await insertAuthor({ first_name: "Owner" });
@@ -1658,8 +1693,16 @@ describe("EntityManager.execute", () => {
           operation === "update"
             ? { update: t, set: { name: "Changed" }, allowAll: true }
             : { delete: t, allowAll: true };
-        // And a real column condition supplies the column and storage facts for invalid leaf variants
-        const selected = t.name.like("Selected%") as ColumnCondition;
+        // And a table predicate supplies a real deferred raw leaf for invalid predicate variants
+        const deferred = t.name.like("Selected%") as RawCondition;
+        // And an explicit column leaf retains coverage for malformed column and filter inputs
+        const selected: ColumnCondition = {
+          kind: "column",
+          alias: "t",
+          column: "name",
+          dbType: getMetadata(Tag).fields.name.serde!.columns[0].dbType,
+          cond: { kind: "like", value: "Selected%" },
+        };
         // When a null leaf appears beside an omitted condition, pruning must not turn it into full-table consent
         await expect(execute({ ...statement, where: { and: [undefined, null] } })).rejects.toThrow(
           "Query predicate must be a condition or an and/or group",
@@ -1698,18 +1741,25 @@ describe("EntityManager.execute", () => {
         await expect(
           execute({ ...statement, where: { ...selected, cond: { kind: "eq", value: "Selected", extra: true } } }),
         ).rejects.toThrow("Query column filter does not support 'extra'");
-        // And a raw condition with non-array bindings is malformed even if its SQL text is valid
+        // And deferred raw predicates cannot carry the old column storage and filter fields
+        await expect(execute({ ...statement, where: { ...deferred, dbType: 1 } })).rejects.toThrow(
+          "Query raw condition does not support 'dbType'",
+        );
+        await expect(execute({ ...statement, where: { ...deferred, cond: undefined } })).rejects.toThrow(
+          "Query raw condition does not support 'cond'",
+        );
+        // And a deferred raw condition with non-array bindings is malformed before SQL resolution
         await expect(
           execute({
             ...statement,
-            where: { kind: "raw", aliases: [], condition: "true", bindings: {}, pruneable: false },
+            where: { ...deferred, bindings: {} },
           }),
         ).rejects.toThrow("Malformed query raw condition");
         // And raw aliases must name SQL sources rather than contain arbitrary values
         await expect(
           execute({
             ...statement,
-            where: { kind: "raw", aliases: [1], condition: "true", bindings: [], pruneable: false },
+            where: { ...deferred, aliases: [1] },
           }),
         ).rejects.toThrow("Malformed query raw condition");
         // Then all invalid leaves fail before any Tag can be changed or deleted
@@ -1964,9 +2014,10 @@ describe("EntityManager.execute", () => {
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
         const t = table(Tag);
-        // And the column leaf, filter, group, and array are all frozen before alias resolution
-        const selected = t.name.like("Selected%") as ColumnCondition;
-        Object.freeze(selected.cond);
+        // And the raw leaf, bindings, aliases, group, and array are all frozen before alias resolution
+        const selected = t.name.like("Selected%") as RawCondition;
+        Object.freeze(selected.bindings);
+        Object.freeze(selected.aliases);
         Object.freeze(selected);
         const where = { and: [selected, undefined] };
         Object.freeze(where.and);
@@ -1984,8 +2035,11 @@ describe("EntityManager.execute", () => {
         // Then UPDATE remains repeatable while DELETE correctly finds no row on its second execution
         expect(first).toEqual({ rowCount: 1, rows: ["t:1"] });
         expect(second).toEqual(operation === "update" ? { rowCount: 1, rows: ["t:1"] } : { rowCount: 0, rows: [] });
-        expect(selected.alias).toBe("unset");
-        expect(selected.cond).toEqual({ kind: "like", value: "Selected%" });
+        expect(selected.kind).toBe("raw");
+        expect(selected.condition).toBe("<unresolved>");
+        expect(selected.bindings).toEqual([]);
+        expect(selected.aliases).toEqual([]);
+        expect(selected.pruneable).toBe(false);
         expect(where.and).toEqual([selected, undefined]);
         expect(await select("tags")).toMatchObject(
           operation === "update" ? [{ name: "Selected changed" }, { name: "Retained" }] : [{ name: "Retained" }],
@@ -1999,9 +2053,10 @@ describe("EntityManager.execute", () => {
       const em = newEntityManager();
       const source = table(Tag);
       const target = table(Tag);
-      // And the source's deferred column guard and pruning group are immutable
-      const selected = source.name.like("Source") as ColumnCondition;
-      Object.freeze(selected.cond);
+      // And the source's deferred raw guard, bindings, aliases, and pruning group are immutable
+      const selected = source.name.like("Source") as RawCondition;
+      Object.freeze(selected.bindings);
+      Object.freeze(selected.aliases);
       Object.freeze(selected);
       const where = { and: [selected, source.id.eq("t:1"), undefined] };
       Object.freeze(where.and[1]);
@@ -2017,8 +2072,11 @@ describe("EntityManager.execute", () => {
       // Then each import copies only the original Tag and leaves deferred source metadata untouched
       expect(first).toEqual({ rowCount: 1, rows: ["t:2"] });
       expect(second).toEqual({ rowCount: 1, rows: ["t:3"] });
-      expect(selected.alias).toBe("unset");
-      expect(selected.cond).toEqual({ kind: "like", value: "Source" });
+      expect(selected.kind).toBe("raw");
+      expect(selected.condition).toBe("<unresolved>");
+      expect(selected.bindings).toEqual([]);
+      expect(selected.aliases).toEqual([]);
+      expect(selected.pruneable).toBe(false);
       expect(where.and[2]).toBeUndefined();
       expect(read.where).toBe(where);
       expect(await select("tags")).toMatchObject([{ name: "Source" }, { name: "Source" }, { name: "Source" }]);

@@ -51,28 +51,23 @@ import {
 export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "required"; update: false }];
-  };
-  rating: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  book: { kind: "m2o"; type: Author; nullable: never; derived: false };
+}
+
+export interface BookReviewColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
+  "rating": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  book: {
-    kind: "m2o";
-    type: Author;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
+  "book_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookReviewOpts {
@@ -127,6 +122,7 @@ declare module "joist-core" {
       orderType: BookReviewOrder;
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
+      columnsType: BookReviewColumns;
       supportsEmExecute: true;
       optIdsType: BookReviewIdsOpts;
       factoryExtrasType: BookReviewFactoryExtras;

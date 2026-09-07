@@ -68,6 +68,16 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tableName: "${meta.tableName}",
       supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true},
       fields: ${fields},
+      columns: ${Object.fromEntries([
+        ["id", { fieldName: "id" }],
+        ...[...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes].map((field) => [
+          field.columnName,
+          { fieldName: field.fieldName },
+        ]),
+        ...meta.polymorphics.flatMap((field) =>
+          field.components.map((component) => [component.columnName, { fieldName: field.fieldName }]),
+        ),
+      ])},
       allFields: {},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
@@ -342,9 +352,9 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
 /** Emits constructor options using codegen's existing column facts. */
 function columnOptions(
-  column: Pick<PrimitiveField, "notNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
+  column: Pick<PrimitiveField, "columnNotNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
 ): Code {
-  return code`{ sqlNullable: ${!column.notNull}, hasDefault: ${column.columnDefault != null && !column.columnGenerated}, isGenerated: ${column.columnGenerated} }`;
+  return code`{ sqlNullable: ${!column.columnNotNull}, hasDefault: ${column.columnDefault != null && !column.columnGenerated}, isGenerated: ${column.columnGenerated} }`;
 }
 
 function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: number | boolean | string | null }): Code | "" {

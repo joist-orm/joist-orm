@@ -51,28 +51,23 @@ import {
 export type T5BookReviewId = Flavor<number, "T5BookReview">;
 
 export interface T5BookReviewFields {
-  id: {
-    kind: "primitive";
-    type: number;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  title: {
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  book: { kind: "m2o"; type: T5Book; nullable: undefined; derived: false };
+}
+
+export interface T5BookReviewColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  book: {
-    kind: "m2o";
-    type: T5Book;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  "book_id": { kind: "m2o"; type: T5Book; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface T5BookReviewOpts {
@@ -126,6 +121,7 @@ declare module "joist-core" {
       orderType: T5BookReviewOrder;
       optsType: T5BookReviewOpts;
       fieldsType: T5BookReviewFields;
+      columnsType: T5BookReviewColumns;
       supportsEmExecute: true;
       optIdsType: T5BookReviewIdsOpts;
       factoryExtrasType: T5BookReviewFactoryExtras;

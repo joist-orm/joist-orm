@@ -55,55 +55,63 @@ import {
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  firstName: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  lastName: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  tags: { kind: "m2m"; type: Tag };
+  books: { kind: "o2m"; type: Book };
+}
+
+export interface AuthorColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "firstName": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  delete: {
+  "lastName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "delete": {
     kind: "primitive";
     type: boolean;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  createdAt: {
+  "createdAt": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updatedAt": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  tags: { kind: "m2m"; type: Tag };
-  books: { kind: "o2m"; type: Book };
 }
 
 export interface AuthorOpts {
@@ -175,6 +183,7 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
       supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;

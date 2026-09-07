@@ -61,55 +61,63 @@ import {
 export type PublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface PublisherGroupFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  numberOfBookReviewsFormatted: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  publishers: { kind: "o2m"; type: Publisher };
+  critics: { kind: "o2m"; type: Critic };
+}
+
+export interface PublisherGroupColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  numberOfBookReviews: {
+  "number_of_book_reviews": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  numberOfBookReviewsFormatted: {
+  "number_of_book_reviews_formatted": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  createdAt: {
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updated_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  publishers: { kind: "o2m"; type: Publisher };
-  critics: { kind: "o2m"; type: Critic };
 }
 
 export interface PublisherGroupOpts {
@@ -192,6 +200,7 @@ declare module "joist-core" {
       orderType: PublisherGroupOrder;
       optsType: PublisherGroupOpts;
       fieldsType: PublisherGroupFields;
+      columnsType: PublisherGroupColumns;
       supportsEmExecute: false;
       optIdsType: PublisherGroupIdsOpts;
       factoryExtrasType: PublisherGroupFactoryExtras;

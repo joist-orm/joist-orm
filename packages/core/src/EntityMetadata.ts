@@ -61,6 +61,8 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
+  /** Physical column names mapped to their owning domain fields, including inherited fields. */
+  columns: Record<string, { fieldName: string }>;
   allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;

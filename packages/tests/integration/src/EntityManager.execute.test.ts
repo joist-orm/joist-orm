@@ -1,4 +1,4 @@
-import { type ColumnCondition, type Entity, type ExecuteResult, alias, getMetadata, query, sql } from "joist-orm";
+import { type ColumnCondition, type Entity, type ExecuteResult, getMetadata, query, sql, table } from "joist-orm";
 import {
   AdminUser,
   Author,
@@ -27,8 +27,8 @@ describe("EntityManager.execute", () => {
   it("round-trips native numeric AuthorStat arrays through VALUES, SELECT, and UPDATE", async () => {
     // Given an AuthorStat import with fractional samples and bigint samples beyond Number's exact range
     const em = newEntityManager();
-    const s = alias(AuthorStat);
-    const returning = { decimal: s.decimalSamples, bigint: s.bigintSamples };
+    const s = table(AuthorStat);
+    const returning = { decimal: s.decimal_samples, bigint: s.bigint_samples };
     // When inserting domain arrays through the generated codecs
     const inserted = await em.execute({
       insert: s,
@@ -38,9 +38,9 @@ describe("EntityManager.execute", () => {
         bigint: 1n,
         decimal: 1.5,
         real: 1.5,
-        doublePrecision: 1.5,
-        decimalSamples: [0, 1.25, 2.5],
-        bigintSamples: [0n, 9007199254740993n],
+        double_precision: 1.5,
+        decimal_samples: [0, 1.25, 2.5],
+        bigint_samples: [0n, 9007199254740993n],
       },
       returning,
     });
@@ -60,9 +60,9 @@ describe("EntityManager.execute", () => {
           bigint: s.bigint,
           decimal: s.decimal,
           real: s.real,
-          doublePrecision: s.doublePrecision,
-          decimalSamples: s.decimalSamples,
-          bigintSamples: s.bigintSamples,
+          double_precision: s.double_precision,
+          decimal_samples: s.decimal_samples,
+          bigint_samples: s.bigint_samples,
         },
       },
       returning,
@@ -72,7 +72,7 @@ describe("EntityManager.execute", () => {
     // When replacing both arrays with empty arrays
     const empty = await em.execute({
       update: s,
-      set: { decimalSamples: [], bigintSamples: [] },
+      set: { decimal_samples: [], bigint_samples: [] },
       allowAll: true,
       returning,
     });
@@ -84,7 +84,7 @@ describe("EntityManager.execute", () => {
     // When clearing the nullable physical columns
     const cleared = await em.execute({
       update: s,
-      set: { decimalSamples: null, bigintSamples: null },
+      set: { decimal_samples: null, bigint_samples: null },
       allowAll: true,
       returning,
     });
@@ -102,9 +102,9 @@ describe("EntityManager.execute", () => {
     const user = newUser(em, { passwordHistory: [password] });
     await em.flush();
     // And User's inherited family supplies a scalar subquery, not a mutation target
-    const u = alias(User);
-    const t = alias(Tag);
-    const history = query({ from: u, where: u.id.eq(user.id), select: u.passwordHistory });
+    const u = table(User);
+    const t = table(Tag);
+    const history = query({ from: u, where: u.id.eq(user.id), select: u.password_history });
     // When a Tag mutation returns the stored password history
     const inserted = await em.execute({ insert: t, values: { name: "Password audit" }, returning: history });
     // Then each returned element is the domain object, not its encoded text
@@ -136,12 +136,12 @@ describe("EntityManager.execute", () => {
     it("leaves generated search storage and a falsy default to PostgreSQL", async () => {
       // Given an Author import that omits isFunny and the generated ts_search column
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When writing search without running the ORM's derived-field reactions
       const inserted = await em.execute({
         insert: a,
-        values: { firstName: "Importer", numberOfBooks: 0, search: "catalog" },
-        returning: { isFunny: a.isFunny, bookComments: a.bookComments },
+        values: { first_name: "Importer", number_of_books: 0, search: "catalog" },
+        returning: { isFunny: a.is_funny, bookComments: a.book_comments },
       });
       // Then the SQL false default and physically nullable derived storage retain their values
       expect(inserted.rows).toEqual([{ isFunny: false, bookComments: null }]);
@@ -158,19 +158,19 @@ describe("EntityManager.execute", () => {
       // And the explicit-id import marks Books for this fixture's sequence-based cleanup
       await knex.raw("SELECT nextval('books_id_seq')");
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       resetQueryCount();
       // When inserting a Book without ORM defaults or timestamp assignments
       const result = await em.execute({
         insert: b,
-        values: { id: "b:10", title: "Imported", author: "a:1", notes: "Explicit notes" },
+        values: { id: "b:10", title: "Imported", author_id: "a:1", notes: "Explicit notes" },
         returning: {
           id: b.id,
           title: b.title,
-          author: b.author,
+          author: b.author_id,
           order: b.order,
-          createdAt: b.createdAt,
-          updatedAt: b.updatedAt,
+          createdAt: b.created_at,
+          updatedAt: b.updated_at,
         },
       });
       // Then PostgreSQL supplies the order and timestamps without hydrating a Book
@@ -200,16 +200,16 @@ describe("EntityManager.execute", () => {
       // Given a persisted Author for four Books with different assignment keys
       await insertAuthor({ first_name: "Importer" });
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       resetQueryCount();
       // When only the first Book supplies acknowledgements and a nondefault order
       const result = await em.execute({
         insert: b,
         values: [
-          { title: "Explicit", author: "a:1", notes: "n1", order: 9, acknowledgements: "Thanks" },
-          { notes: "n2", author: "a:1", title: "Undefined", order: undefined, acknowledgements: undefined },
-          { author: "a:1", title: "Omitted", notes: "n3" },
-          { title: "Default", author: "a:1", notes: "n4", order: sql<number>`DEFAULT`, acknowledgements: null },
+          { title: "Explicit", author_id: "a:1", notes: "n1", order: 9, acknowledgements: "Thanks" },
+          { notes: "n2", author_id: "a:1", title: "Undefined", order: undefined, acknowledgements: undefined },
+          { author_id: "a:1", title: "Omitted", notes: "n3" },
+          { title: "Default", author_id: "a:1", notes: "n4", order: sql<number>`DEFAULT`, acknowledgements: null },
         ],
         returning: { title: b.title, order: b.order, acknowledgements: b.acknowledgements },
       });
@@ -233,7 +233,7 @@ describe("EntityManager.execute", () => {
     it("returns the native bulk INSERT count without RETURNING", async () => {
       // Given an empty Tag table and a fresh EntityManager
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // When inserting two Tags without asking PostgreSQL to return rows
       const result = await em.execute({ insert: t, values: [{ name: "History" }, { name: "Science" }] });
       // Then the command count does not depend on the returned row array
@@ -244,7 +244,7 @@ describe("EntityManager.execute", () => {
     it("reuses frozen statement POJOs and returns scalar ids", async () => {
       // Given a frozen Tag statement that must not acquire aliases or normalized values
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       const statement = Object.freeze({ insert: t, values: Object.freeze({ name: "Reusable" }), returning: t.id });
       // When executing the same statement twice
       const first = await em.execute(statement);
@@ -261,7 +261,7 @@ describe("EntityManager.execute", () => {
     it("returns an empty envelope without SQL for an empty VALUES array", async () => {
       // Given an empty list of imported Books, which need no required-field values
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       // When executing the empty import with a valid scalar RETURNING
       const result = await em.execute({ insert: b, values: [], returning: b.id });
       // Then no SQL or entity work is needed
@@ -278,15 +278,15 @@ describe("EntityManager.execute", () => {
       const em = newEntityManager();
       // And the first Author is already loaded, not a new entity with an id
       const owner = await em.load(Author, "a:1");
-      const b = alias(Book);
+      const b = table(Book);
       // When assigning references as both entities and ids
       const result = await em.execute({
         insert: b,
         values: [
-          { title: "Entity owner", author: owner, reviewer: "a:2", notes: "Imported" },
-          { title: "Id owner", author: "a:2", reviewer: owner, notes: "Imported" },
+          { title: "Entity owner", author_id: owner, reviewer_id: "a:2", notes: "Imported" },
+          { title: "Id owner", author_id: "a:2", reviewer_id: owner, notes: "Imported" },
         ],
-        returning: { author: b.author, reviewer: b.reviewer },
+        returning: { author: b.author_id, reviewer: b.reviewer_id },
       });
       // Then each reference is encoded as a foreign key and decoded as an Author id
       expect(result).toEqual({
@@ -306,9 +306,9 @@ describe("EntityManager.execute", () => {
     it("lets PostgreSQL validate an id-only foreign key without creating an Author", async () => {
       // Given an Author id with no corresponding persisted row
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       // When importing a Book that references the missing Author
-      const result = em.execute({ insert: b, values: { title: "Orphan", author: "a:999", notes: "Imported" } });
+      const result = em.execute({ insert: b, values: { title: "Orphan", author_id: "a:999", notes: "Imported" } });
       // Then the database foreign-key constraint rejects the write without ORM fixups
       await expect(result).rejects.toMatchObject({ code: "23503" });
       expect(await select("books")).toEqual([]);
@@ -319,7 +319,7 @@ describe("EntityManager.execute", () => {
       // Given a persisted Tag whose name can be copied by a scalar subquery
       await insertTag({ name: "Source" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the subquery uses the same alias handle in its own lexical source, not the new target row
       const name = query({ from: t, where: t.id.eq("t:1"), select: t.name }).coalesce("Fallback");
       resetQueryCount();
@@ -344,7 +344,7 @@ describe("EntityManager.execute", () => {
       // And the second Book must retain its order
       await insertBook({ title: "Second", author_id: 1, order: 8 });
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       resetQueryCount();
       // When incrementing the first Book's order and omitting its title
       const result = await em.execute({
@@ -374,20 +374,20 @@ describe("EntityManager.execute", () => {
       const loaded = await em.load(Author, "a:1");
       // And an unflushed Author must not be inserted as a side effect of execute
       const pending = em.create(Author, { firstName: "Pending" });
-      const a = alias(Author);
+      const a = table(Author);
       resetQueryCount();
       // When importing derived values and a name that violates the first-name/last-name entity rule
       const result = await em.execute({
         update: a,
         set: {
-          firstName: "Same",
-          lastName: "Same",
+          first_name: "Same",
+          last_name: "Same",
           initials: "BACKFILL",
-          numberOfBooks: 42,
+          number_of_books: 42,
           numberOfPublicReviews2: 7,
         },
         where: a.id.eq("a:1"),
-        returning: { initials: a.initials, count: a.numberOfBooks, publicReviews: a.numberOfPublicReviews2 },
+        returning: { initials: a.initials, count: a.number_of_books, publicReviews: a.numberOfPublicReviews2 },
       });
       // Then physical derived fields are writable without recalculation or identity-map synchronization
       expect(result).toEqual({ rowCount: 1, rows: [{ initials: "BACKFILL", count: 42, publicReviews: 7 }] });
@@ -404,7 +404,7 @@ describe("EntityManager.execute", () => {
       expect(
         await newEntityManager().query({
           from: a,
-          select: { name: a.firstName, initials: a.initials, count: a.numberOfBooks },
+          select: { name: a.first_name, initials: a.initials, count: a.number_of_books },
         }),
       ).toEqual([{ name: "Same", initials: "BACKFILL", count: 42 }]);
     });
@@ -415,7 +415,7 @@ describe("EntityManager.execute", () => {
       // And a second Author also differs from the database's initials default
       await insertAuthor({ first_name: "Second", initials: "TWO" });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When explicitly allowing all live Authors and resetting their initials to the SQL default
       const result = await em.execute({ update: a, set: { initials: sql<string>`DEFAULT` }, allowAll: true });
       // Then the command count remains nonzero despite the absence of RETURNING
@@ -433,12 +433,12 @@ describe("EntityManager.execute", () => {
         // And another live Author must remain outside the user predicate even with allowAll
         await insertAuthor({ first_name: "Other", age: 30 });
         const em = newEntityManager();
-        const a = alias(Author);
+        const a = table(Author);
         // When updating selected Authors under the requested soft-delete policy
         const result = await em.execute({
           update: a,
           set: { age: 50 },
-          where: a.firstName.eq("Selected"),
+          where: a.first_name.eq("Selected"),
           allowAll: true,
           softDeletes,
         });
@@ -458,10 +458,10 @@ describe("EntityManager.execute", () => {
       // And an already soft-deleted Author must remain under the default policy
       await insertAuthor({ first_name: "Deleted", deleted_at: new Date("2020-01-01") });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       resetQueryCount();
       // When explicitly deleting all visible Authors
-      const result = await em.execute({ delete: a, allowAll: true, returning: { id: a.id, name: a.firstName } });
+      const result = await em.execute({ delete: a, allowAll: true, returning: { id: a.id, name: a.first_name } });
       // Then DELETE removes the live row instead of setting its deleted_at
       expect(result).toEqual({ rowCount: 1, rows: [{ id: "a:1", name: "Live" }] });
       expect(queries).toMatchInlineSnapshot(`
@@ -480,7 +480,7 @@ describe("EntityManager.execute", () => {
       // And an unrelated live Author must survive the explicit predicate
       await insertAuthor({ first_name: "Live" });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When deleting the soft-deleted Author with include and allowAll
       const result = await em.execute({
         delete: a,
@@ -500,7 +500,7 @@ describe("EntityManager.execute", () => {
       // And a second Tag contributes independently to the command count
       await insertTag({ name: "Second" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // When a user explicitly supplies a true SQL predicate rather than an omitted guard
       const result = await em.execute({ delete: t, where: sql<boolean>`true` });
       // Then the command reports both removed rows even without returned data
@@ -514,7 +514,7 @@ describe("EntityManager.execute", () => {
       // And the Book's required foreign key prevents removing its Author
       await insertBook({ title: "Retained", author_id: 1 });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When execute tries physical deletion instead of invoking ORM relationship handling
       const result = em.execute({ delete: a, where: a.id.eq("a:1") });
       // Then PostgreSQL rejects the deletion and both physical rows remain
@@ -530,7 +530,7 @@ describe("EntityManager.execute", () => {
         await insertTag({ name: "Retained" });
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const t = alias(Tag);
+        const t = table(Tag);
         const statement =
           operation === "update"
             ? { update: t, set: { name: "Changed" }, where: t.id.eq("t:999") }
@@ -551,17 +551,21 @@ describe("EntityManager.execute", () => {
     it("rejects physical enum-array copying before SQL", async () => {
       // Given an Author source and target with the same physical enum-array field
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When copying the array whose element decoder rejects null enum ids
       await expect(
         em.execute({
           insert: a,
           from: {
             from: a,
-            select: { firstName: a.firstName, numberOfBooks: a.numberOfBooks, favoriteColors: a.favoriteColors },
+            select: {
+              first_name: a.first_name,
+              number_of_books: a.number_of_books,
+              favorite_colors: a.favorite_colors,
+            },
           },
         }),
-      ).rejects.toThrow("INSERT SELECT Author.favoriteColors has incompatible or unknown storage codecs");
+      ).rejects.toThrow("INSERT SELECT Author.favorite_colors has incompatible or unknown storage codecs");
       // Then no SQL runs for this unsupported codec
       expect(queries).toEqual([]);
     });
@@ -574,9 +578,9 @@ describe("EntityManager.execute", () => {
       // And Gamma must not be copied after the source limit
       await insertTag({ name: "Gamma" });
       const em = newEntityManager();
-      const source = alias(Tag);
-      const target = alias(Tag);
-      // And the source exposes the target's domain field name rather than a scalar projection
+      const source = table(Tag);
+      const target = table(Tag);
+      // And the source exposes the target's physical column name rather than a scalar projection
       const read = {
         from: source,
         where: source.name.ne("Missing"),
@@ -603,20 +607,20 @@ describe("EntityManager.execute", () => {
       // And the source Book supplies a title, notes, and its Author foreign key
       await insertBook({ title: "Copied", author_id: 1 });
       const em = newEntityManager();
-      const source = alias(Book);
-      const target = alias(Book);
+      const source = table(Book);
+      const target = table(Book);
       // And the second UNION ALL branch deliberately orders its named output keys differently
       const copies = query({
         unionAll: [
           {
             from: source,
             where: source.id.eq("b:1"),
-            select: { notes: source.notes, author: source.author, title: source.title },
+            select: { notes: source.notes, author_id: source.author_id, title: source.title },
           },
           {
             from: source,
             where: source.title.eq("Copied"),
-            select: { title: source.title, notes: source.notes, author: source.author },
+            select: { title: source.title, notes: source.notes, author_id: source.author_id },
           },
         ],
         orderBy: [{ title: "ASC" }],
@@ -627,7 +631,7 @@ describe("EntityManager.execute", () => {
       const result = await em.execute({
         insert: target,
         from: copies,
-        returning: { title: target.title, author: target.author, notes: target.notes },
+        returning: { title: target.title, author: target.author_id, notes: target.notes },
       });
       // Then both duplicate rows survive and each source key reaches its correct physical column
       expect(result).toEqual({
@@ -638,9 +642,9 @@ describe("EntityManager.execute", () => {
         ],
       });
       expect(queries).toMatchInlineSnapshot(`
-        [
-          "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author FROM ((SELECT b.notes AS notes, b.author_id AS author, b.title AS title FROM books AS b WHERE b.id = $1 AND b.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq.author AS author, sq.title AS title FROM (SELECT b1.title AS title, b1.notes AS notes, b1.author_id AS author FROM books AS b1 WHERE b1.title = $2 AND b1.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
-        ]
+       [
+         "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM ((SELECT b.notes AS notes, b.author_id AS author_id, b.title AS title FROM books AS b WHERE b.id = $1 AND b.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq.author_id AS author_id, sq.title AS title FROM (SELECT b1.title AS title, b1.notes AS notes, b1.author_id AS author_id FROM books AS b1 WHERE b1.title = $2 AND b1.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
+       ]
       `);
       expect(await select("books")).toMatchObject([
         { title: "Copied", author_id: 1, notes: "notes" },
@@ -653,8 +657,8 @@ describe("EntityManager.execute", () => {
       // Given an Author address with an extra key that its real Zod decoder would strip
       await insertAuthor({ first_name: "Source", business_address: { street: "Main", imported: true } });
       const em = newEntityManager();
-      const source = alias(Author);
-      const target = alias(Author);
+      const source = table(Author);
+      const target = table(Author);
       // And both directions of the actual schema-backed column codec are observed after fixture setup
       const column = getMetadata(Author).fields.businessAddress.serde!.columns[0];
       const decode = jest.spyOn(column, "mapFromDb");
@@ -668,9 +672,9 @@ describe("EntityManager.execute", () => {
           from: query({
             from: source,
             select: {
-              businessAddress: source.businessAddress,
-              numberOfBooks: source.numberOfBooks,
-              firstName: source.firstName,
+              business_address: source.business_address,
+              number_of_books: source.number_of_books,
+              first_name: source.first_name,
             },
           }),
           returning: target.id,
@@ -681,9 +685,9 @@ describe("EntityManager.execute", () => {
         expect(decode).not.toHaveBeenCalled();
         expect(encode).not.toHaveBeenCalled();
         expect(queries).toMatchInlineSnapshot(`
-          [
-            "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq.\"firstName\", sq.\"numberOfBooks\", sq.\"businessAddress\" FROM (SELECT a.business_address AS \"businessAddress\", a.number_of_books AS \"numberOfBooks\", a.first_name AS \"firstName\" FROM authors AS a WHERE a.deleted_at IS NULL) AS sq RETURNING a.id AS value",
-          ]
+         [
+           "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq.first_name, sq.number_of_books, sq.business_address FROM (SELECT a.business_address AS business_address, a.number_of_books AS number_of_books, a.first_name AS first_name FROM authors AS a WHERE a.deleted_at IS NULL) AS sq RETURNING a.id AS value",
+         ]
         `);
         expect(await select("authors")).toMatchObject([
           { business_address: { street: "Main", imported: true } },
@@ -700,17 +704,17 @@ describe("EntityManager.execute", () => {
       // Given an Author address deliberately containing a numeric street that AddressSchema rejects
       await insertAuthor({ first_name: "Source", business_address: { street: 123 } });
       const em = newEntityManager();
-      const source = alias(Author);
-      const target = alias(Author);
+      const source = table(Author);
+      const target = table(Author);
       // When copying the schema-backed JSON column directly between SQL stages
       const result = await em.execute({
         insert: target,
         from: {
           from: source,
           select: {
-            businessAddress: source.businessAddress,
-            numberOfBooks: source.numberOfBooks,
-            firstName: source.firstName,
+            business_address: source.business_address,
+            number_of_books: source.number_of_books,
+            first_name: source.first_name,
           },
         },
       });
@@ -725,8 +729,8 @@ describe("EntityManager.execute", () => {
     it("returns a zero INSERT count when its SQL source has no rows", async () => {
       // Given an empty source Tag table
       const em = newEntityManager();
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       resetQueryCount();
       // When a valid INSERT SELECT evaluates an empty source rather than an empty VALUES shortcut
       const result = await em.execute({
@@ -756,8 +760,8 @@ describe("EntityManager.execute", () => {
       // And the second Tag is outside both compound branches
       await insertTag({ name: "Retained" });
       const em = newEntityManager();
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       // And the compound's named ids are wrapped in an ordinary scalar query for IN
       const ids = query({
         unionAll: [
@@ -788,33 +792,33 @@ describe("EntityManager.execute", () => {
     it("encodes and returns enums, enum arrays, JSON, native arrays, bigint, and dates", async () => {
       // Given a fresh Author import with real domain values rather than raw database enum ids
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       const graduated = new Date("2020-01-02T00:00:00.000Z");
       // When writing the supported native and schema-backed fields without an entity setter
       const result = await em.execute({
         insert: a,
         values: {
-          firstName: "Codecs",
-          numberOfBooks: 0,
-          rangeOfBooks: BookRange.Few,
-          favoriteColors: [Color.Red, Color.Green],
-          favoriteShape: FavoriteShape.Triangle,
-          nickNames: ["One", "Two"],
+          first_name: "Codecs",
+          number_of_books: 0,
+          range_of_books: BookRange.Few,
+          favorite_colors: [Color.Red, Color.Green],
+          favorite_shape: FavoriteShape.Triangle,
+          nick_names: ["One", "Two"],
           address: { street: "Home" },
-          businessAddress: { street: "Work" },
+          business_address: { street: "Work" },
           quotes: ["First", "Second"],
-          numberOfAtoms: 9007199254740993n,
+          number_of_atoms: 9007199254740993n,
           graduated,
         },
         returning: {
-          range: a.rangeOfBooks,
-          colors: a.favoriteColors,
-          shape: a.favoriteShape,
-          nickNames: a.nickNames,
+          range: a.range_of_books,
+          colors: a.favorite_colors,
+          shape: a.favorite_shape,
+          nickNames: a.nick_names,
           address: a.address,
-          businessAddress: a.businessAddress,
+          businessAddress: a.business_address,
           quotes: a.quotes,
-          atoms: a.numberOfAtoms,
+          atoms: a.number_of_atoms,
           graduated: a.graduated,
         },
       });
@@ -851,29 +855,29 @@ describe("EntityManager.execute", () => {
     it("distinguishes SQL NULL, JSON null, and empty enum arrays in physical storage", async () => {
       // Given three Author rows that will distinguish absent SQL values from JSON and array values
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When inserting SQL NULL, a JSON null expression, and concrete empty arrays separately
       const result = await em.execute({
         insert: a,
         values: [
           {
-            firstName: "SQL null",
-            numberOfBooks: 0,
+            first_name: "SQL null",
+            number_of_books: 0,
             address: null,
-            businessAddress: null,
-            favoriteColors: null,
+            business_address: null,
+            favorite_colors: null,
             quotes: null,
           },
-          { firstName: "JSON null", numberOfBooks: 0, address: sql<null>`'null'::jsonb`, favoriteColors: [] },
+          { first_name: "JSON null", number_of_books: 0, address: sql<null>`'null'::jsonb`, favorite_colors: [] },
           {
-            firstName: "Values",
-            numberOfBooks: 0,
+            first_name: "Values",
+            number_of_books: 0,
             address: { street: "Main" },
-            favoriteColors: [Color.Blue],
+            favorite_colors: [Color.Blue],
             quotes: [],
           },
         ],
-        returning: { address: a.address, colors: a.favoriteColors, quotes: a.quotes },
+        returning: { address: a.address, colors: a.favorite_colors, quotes: a.quotes },
       });
       // Then null bypasses schema and enum codecs, while SQL still distinguishes the two kinds of null
       expect(result).toEqual({
@@ -905,20 +909,20 @@ describe("EntityManager.execute", () => {
       // Given an Author whose colors are initially concrete enum values
       await insertAuthor({ first_name: "Colors", favorite_colors: [1, 2] });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When replacing the enum array with an empty domain array
       const empty = await em.execute({
         update: a,
-        set: { favoriteColors: [] },
+        set: { favorite_colors: [] },
         where: a.id.eq("a:1"),
-        returning: a.favoriteColors,
+        returning: a.favorite_colors,
       });
       // And a subsequent UPDATE explicitly stores SQL NULL rather than the enum-array default
       const absent = await em.execute({
         update: a,
-        set: { favoriteColors: null },
+        set: { favorite_colors: null },
         where: a.id.eq("a:1"),
-        returning: a.favoriteColors,
+        returning: a.favorite_colors,
       });
       // Then scalar results retain their array/null identity
       expect(empty).toEqual({ rowCount: 1, rows: [[]] });
@@ -931,8 +935,8 @@ describe("EntityManager.execute", () => {
       const password = PasswordValue.fromPlainText("secret");
       await insertUser({ name: "User", password: password.encoded });
       const em = newEntityManager();
-      const u = alias(User);
-      const t = alias(Tag);
+      const u = table(User);
+      const t = table(Tag);
       // And User's CTI family is read-only to mutations, so a scalar source supplies the password
       const passwordQuery = query({ from: u, where: u.id.eq("u:1"), select: u.password });
       // And the actual custom decoder is observed for stored passwords and SQL NULL
@@ -975,14 +979,14 @@ describe("EntityManager.execute", () => {
       // Given an Author whose persisted address initially satisfies AddressSchema
       await insertAuthor({ first_name: "Valid", business_address: { street: "Main" } });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       resetQueryCount();
       // When SQL writes a numeric street that is valid JSON but invalid for AddressSchema
       const result = em.execute({
         update: a,
-        set: { businessAddress: sql<{ street: string }>`'{"street":123}'::jsonb` },
+        set: { business_address: sql<{ street: string }>`'{"street":123}'::jsonb` },
         where: a.id.eq("a:1"),
-        returning: a.businessAddress,
+        returning: a.business_address,
       });
       // Then the decoder rejects after PostgreSQL has committed, without a hidden transaction
       await expect(result).rejects.toThrow(ZodError);
@@ -1004,12 +1008,18 @@ describe("EntityManager.execute", () => {
       // And Gamma lies outside the requested page
       await insertAuthor({ first_name: "Gamma", age: 30 });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When execute receives an ordinary scalar-select POJO with pagination
-      const scalar = await em.execute({ from: a, select: a.age, orderBy: [{ asc: a.firstName }], offset: 1, limit: 1 });
+      const scalar = await em.execute({
+        from: a,
+        select: a.age,
+        orderBy: [{ asc: a.first_name }],
+        offset: 1,
+        limit: 1,
+      });
       // And a reusable named read returns the same page with its Author id codec
       const named = await em.execute(
-        query({ from: a, select: { id: a.id, age: a.age }, orderBy: [{ asc: a.firstName }], offset: 1, limit: 1 }),
+        query({ from: a, select: { id: a.id, age: a.age }, orderBy: [{ asc: a.first_name }], offset: 1, limit: 1 }),
       );
       // Then counts describe the selected page, not all source rows
       expect(scalar).toEqual({ rowCount: 1, rows: [null] });
@@ -1023,7 +1033,7 @@ describe("EntityManager.execute", () => {
       // And Beta sorts after the repeated Alpha rows
       await insertTag({ name: "Beta" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       resetQueryCount();
       // When execute consumes a compound POJO with ordering and pagination
       const result = await em.execute({
@@ -1048,7 +1058,7 @@ describe("EntityManager.execute", () => {
       // Given an empty Tag table and a scalar query expression intended only for SQL contexts
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // When an ordinary read selects the empty table
       const empty = await em.execute({ from: t, select: t.id });
       // Then execute returns the driver's zero count in the same stable envelope
@@ -1070,14 +1080,14 @@ describe("EntityManager.execute", () => {
         // Given a soft-deletable Author target whose metadata filter is not user consent
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const a = alias(Author);
+        const a = table(Author);
         const statement = operation === "update" ? { update: a, set: { age: 50 } } : { delete: a };
         // And each user condition is absent or contains only omitted Author filters
         const guards = [
           {},
           { where: undefined },
-          { where: a.firstName.eq(undefined) },
-          { where: { and: [a.firstName.eq(undefined), { or: [a.age.eq(undefined)] }] } },
+          { where: a.first_name.eq(undefined) },
+          { where: { and: [a.first_name.eq(undefined), { or: [a.age.eq(undefined)] }] } },
         ];
         // When executing without allowAll, even though a deleted_at predicate could be injected
         for (const guard of guards) {
@@ -1094,7 +1104,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag assignment object with no defined field values
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // When an empty object is used as a row rather than the documented empty-array shortcut
       await expect(execute({ insert: t, values: fields })).rejects.toThrow(
         "insert requires at least one defined field",
@@ -1112,15 +1122,15 @@ describe("EntityManager.execute", () => {
     });
 
     it.each([
-      [{ title: "Missing author", notes: "Explicit" }, "Book.author"],
-      [{ title: "Missing notes", author: "a:1" }, "Book.notes"],
-      [{ author: "a:1", notes: "Explicit" }, "Book.title"],
-      [{ title: "Undefined notes", author: "a:1", notes: undefined }, "Book.notes"],
+      [{ title: "Missing author", notes: "Explicit" }, "Book.author_id"],
+      [{ title: "Missing notes", author_id: "a:1" }, "Book.notes"],
+      [{ author_id: "a:1", notes: "Explicit" }, "Book.title"],
+      [{ title: "Undefined notes", author_id: "a:1", notes: undefined }, "Book.notes"],
     ])("requires physical Book inputs rather than config defaults: %j", async (values, field) => {
       // Given a Book import that omits a physically required field despite ORM optionality
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const b = alias(Book);
+      const b = table(Book);
       // When executing the incomplete import
       await expect(execute({ insert: b, values })).rejects.toThrow(`INSERT requires ${field}`);
       // Then execute does not run configuration defaults or send invalid SQL
@@ -1131,11 +1141,11 @@ describe("EntityManager.execute", () => {
       // Given one valid Author import followed by one missing its derived NOT NULL count
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const a = alias(Author);
+      const a = table(Author);
       // When an incomplete row follows a complete one in the bulk input
       await expect(
-        execute({ insert: a, values: [{ firstName: "Valid", numberOfBooks: 0 }, { firstName: "Missing count" }] }),
-      ).rejects.toThrow("INSERT requires Author.numberOfBooks");
+        execute({ insert: a, values: [{ first_name: "Valid", number_of_books: 0 }, { first_name: "Missing count" }] }),
+      ).rejects.toThrow("INSERT requires Author.number_of_books");
       // Then validation covers every row before any INSERT executes
       expect(queries).toEqual([]);
     });
@@ -1144,13 +1154,13 @@ describe("EntityManager.execute", () => {
       // Given a new Author that has not been flushed, regardless of whether its id was preassigned
       const em = newEntityManager();
       const author = em.create(Author, preassigned ? { id: "a:10", firstName: "Pending" } : { firstName: "Pending" });
-      const b = alias(Book);
+      const b = table(Book);
       // When a SQL INSERT tries to reference the unpersisted Author
       await expect(
-        em.execute({ insert: b, values: { title: "Premature", author, notes: "Imported" } }),
+        em.execute({ insert: b, values: { title: "Premature", author_id: author, notes: "Imported" } }),
       ).rejects.toThrow("Cannot reference an unflushed Author, even with an assigned ID");
       // And UPDATE must reject the same unflushed reference before issuing SQL
-      await expect(em.execute({ update: b, set: { author }, allowAll: true })).rejects.toThrow(
+      await expect(em.execute({ update: b, set: { author_id: author }, allowAll: true })).rejects.toThrow(
         "Cannot reference an unflushed Author, even with an assigned ID",
       );
       // Then execute neither flushes the Author nor performs foreign-key fixups
@@ -1158,16 +1168,16 @@ describe("EntityManager.execute", () => {
       expect(author.isNewEntity).toBe(true);
     });
 
-    it.each(["author_id", "missing", "tags", "reviews", "image", "sequel", "fullName", "__proto__", "constructor"])(
+    it.each(["author", "missing", "tags", "reviews", "image", "sequel", "fullName", "__proto__", "constructor"])(
       "rejects unsupported Book assignment key %s even when undefined",
       async (field) => {
         // Given a field name that is not an ordinary writable Book storage field
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const b = alias(Book);
+        const b = table(Book);
         // When the unknown, collection, inverse, or non-domain key is supplied with undefined
         await expect(
-          execute({ insert: b, values: { title: "Import", author: "a:1", notes: "Explicit", [field]: undefined } }),
+          execute({ insert: b, values: { title: "Import", author_id: "a:1", notes: "Explicit", [field]: undefined } }),
         ).rejects.toThrow(`Unsupported SQL mutation field Book.${field}`);
         // And UPDATE must validate keys before pruning their undefined values
         await expect(
@@ -1182,8 +1192,8 @@ describe("EntityManager.execute", () => {
       // Given real polymorphic Comment storage and an Author generated tsvector omitted from its domain fields
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const c = alias(Comment);
-      const a = alias(Author);
+      const c = table(Comment);
+      const a = table(Author);
       // When trying to assign the polymorphic relationship instead of one supported physical reference
       await expect(execute({ update: c, set: { parent: "a:1" }, allowAll: true })).rejects.toThrow(
         "Unsupported SQL mutation field Comment.parent",
@@ -1200,14 +1210,14 @@ describe("EntityManager.execute", () => {
       // Given a Book target and an unrelated new Tag entity
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const b = alias(Book);
+      const b = table(Book);
       const tag = em.create(Tag, { name: "Not an Author" });
       // When nested creation options are assigned to the owning Author reference
-      await expect(execute({ update: b, set: { author: { firstName: "Nested" } }, allowAll: true })).rejects.toThrow(
+      await expect(execute({ update: b, set: { author_id: { firstName: "Nested" } }, allowAll: true })).rejects.toThrow(
         "nested creation is not supported",
       );
       // And an entity of another type cannot use the Author foreign-key codec
-      await expect(execute({ update: b, set: { author: tag }, allowAll: true })).rejects.toThrow(
+      await expect(execute({ update: b, set: { author_id: tag }, allowAll: true })).rejects.toThrow(
         "Expected a Author reference",
       );
       // And even an unchanged primary key is not an allowed UPDATE assignment
@@ -1224,7 +1234,7 @@ describe("EntityManager.execute", () => {
         // Given a CTI or STI family whose reads do not imply single-table mutation support
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const target = alias<Entity>(type);
+        const target = table<Entity>(type);
         // When an empty INSERT attempts to bypass the target-family restriction
         await expect(execute({ insert: target, values: [] })).rejects.toThrow(
           "SQL mutations do not support CTI/STI targets or inherited table families",
@@ -1244,10 +1254,10 @@ describe("EntityManager.execute", () => {
         // Given Author.initials is derived in the ORM but physically NOT NULL in PostgreSQL
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const a = alias(Author);
+        const a = table(Author);
         const statement =
           operation === "insert"
-            ? { insert: a, values: { firstName: "Null initials", numberOfBooks: 0, initials: null } }
+            ? { insert: a, values: { first_name: "Null initials", number_of_books: 0, initials: null } }
             : { update: a, set: { initials: null }, allowAll: true };
         // When explicitly assigning SQL NULL rather than omission or DEFAULT
         await expect(execute(statement)).rejects.toThrow("Author.initials is physically NOT NULL");
@@ -1260,7 +1270,7 @@ describe("EntityManager.execute", () => {
       // Given a target alias with no existing row available during VALUES evaluation
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // When a direct column or SQL expression tries to read the row being inserted
       await expect(execute({ insert: t, values: { name: t.name } })).rejects.toThrow(
         "is not in this query's from/join",
@@ -1276,8 +1286,8 @@ describe("EntityManager.execute", () => {
     it("keeps INSERT source aliases out of target RETURNING and unrelated aliases out of UPDATE", async () => {
       // Given distinct source and target Tag aliases
       const em = newEntityManager();
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       // When RETURNING tries to read the INSERT SELECT source rather than the new target
       await expect(
         em.execute({ insert: target, from: { from: source, select: { name: source.name } }, returning: source.name }),
@@ -1294,7 +1304,7 @@ describe("EntityManager.execute", () => {
       // Given a valid Tag alias and named read to isolate malformed mutation roots
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       const from = { from: t, select: { name: t.name } };
       // When more than one root operation is present, including an undefined extra root
       await expect(execute({ insert: t, delete: undefined, values: [] })).rejects.toThrow(
@@ -1318,7 +1328,7 @@ describe("EntityManager.execute", () => {
         // Given an empty Tag import with an unsupported clause explicitly present
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const t = alias(Tag);
+        const t = table(Tag);
         // When the excluded clause is supplied even with an undefined value
         await expect(execute({ insert: t, values: [], [clause]: undefined })).rejects.toThrow(
           `SQL insert does not support '${clause}'`,
@@ -1332,7 +1342,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag target with valid assignments but unsupported mutation extensions
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // When an UPDATE attempts to declare a FROM source
       await expect(execute({ update: t, set: { name: "Changed" }, from: t, allowAll: true })).rejects.toThrow(
         "SQL update does not support 'from'",
@@ -1357,12 +1367,12 @@ describe("EntityManager.execute", () => {
       // Given a Tag constructor, a read value, and invalid assignment containers
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // When a constructor is passed where a target alias is required
-      await expect(execute({ insert: Tag, values: [] })).rejects.toThrow("A mutation target must be an entity alias");
+      await expect(execute({ insert: Tag, values: [] })).rejects.toThrow("A mutation target must be an entity table");
       // And a reusable named read is not a mutable table target
       await expect(execute({ delete: query({ from: t, select: { name: t.name } }), allowAll: true })).rejects.toThrow(
-        "A mutation target must be an entity alias",
+        "A mutation target must be an entity table",
       );
       // And primitive VALUES are not domain-field assignments
       await expect(execute({ insert: t, values: "name" })).rejects.toThrow("insert assignments must be a field POJO");
@@ -1378,7 +1388,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag alias and source-shaped values that are not expression projections
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // And malformed projections include empty objects, nested objects, raw values, and read values
       const projections = [
         t,
@@ -1404,7 +1414,7 @@ describe("EntityManager.execute", () => {
       const em = newEntityManager();
       const read = em.query.bind(em) as (statement: unknown) => Promise<unknown[]>;
       const readValue = query as (statement: unknown) => unknown;
-      const t = alias(Tag);
+      const t = table(Tag);
       const mutation = { insert: t, values: { name: "Imported" }, returning: { name: t.name } };
       // When a mutation is passed to the ordinary read executor
       await expect(read(mutation)).rejects.toThrow(
@@ -1424,9 +1434,9 @@ describe("EntityManager.execute", () => {
       // Given Book source and target aliases plus a User with an incompatible custom password codec
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = alias(Book);
-      const target = alias(Book);
-      const u = alias(User);
+      const source = table(Book);
+      const target = table(Book);
+      const u = table(User);
       // When a scalar read omits target-field names
       await expect(execute({ insert: target, from: { from: source, select: source.title } })).rejects.toThrow(
         "INSERT SELECT requires named POJO output columns",
@@ -1441,7 +1451,10 @@ describe("EntityManager.execute", () => {
       );
       // And named sources must include required notes even though the ORM config has a default
       await expect(
-        execute({ insert: target, from: { from: source, select: { title: source.title, author: source.author } } }),
+        execute({
+          insert: target,
+          from: { from: source, select: { title: source.title, author_id: source.author_id } },
+        }),
       ).rejects.toThrow("INSERT requires Book.notes");
       // And extra keys cannot be silently dropped when matching output columns
       await expect(
@@ -1449,7 +1462,7 @@ describe("EntityManager.execute", () => {
           insert: target,
           from: {
             from: source,
-            select: { title: source.title, author: source.author, notes: source.notes, extra: source.title },
+            select: { title: source.title, author_id: source.author_id, notes: source.notes, extra: source.title },
           },
         }),
       ).rejects.toThrow("Unsupported SQL mutation field Book.extra");
@@ -1457,25 +1470,28 @@ describe("EntityManager.execute", () => {
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: source.title, author: source.id, notes: source.notes } },
+          from: { from: source, select: { title: source.title, author_id: source.id, notes: source.notes } },
         }),
-      ).rejects.toThrow("INSERT SELECT Book.author has incompatible or unknown storage codecs");
+      ).rejects.toThrow("INSERT SELECT Book.author_id has incompatible or unknown storage codecs");
       // And nullable reviewer ids cannot satisfy the physically required author column
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: source.title, author: source.reviewer, notes: source.notes } },
+          from: { from: source, select: { title: source.title, author_id: source.reviewer_id, notes: source.notes } },
         }),
-      ).rejects.toThrow("INSERT SELECT Book.author cannot accept a nullable output");
+      ).rejects.toThrow("INSERT SELECT Book.author_id cannot accept a nullable output");
       // And unannotated SQL storage cannot be assumed compatible solely from a TypeScript generic
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: sql<string>`'Title'`, author: source.author, notes: source.notes } },
+          from: {
+            from: source,
+            select: { title: sql<string>`'Title'`, author_id: source.author_id, notes: source.notes },
+          },
         }),
       ).rejects.toThrow("INSERT SELECT Book.title has incompatible or unknown storage codecs");
       // And custom password storage is not interchangeable with ordinary varchar name storage
-      await expect(execute({ insert: alias(Tag), from: { from: u, select: { name: u.password } } })).rejects.toThrow(
+      await expect(execute({ insert: table(Tag), from: { from: u, select: { name: u.password } } })).rejects.toThrow(
         "INSERT SELECT Tag.name has incompatible or unknown storage codecs",
       );
       // Then every incompatible source is rejected without fetching or writing rows
@@ -1488,7 +1504,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag mutation with explicit full-table consent that must not excuse malformed predicates
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       const statement =
         operation === "update"
           ? { update: t, set: { name: "Changed" }, allowAll: true }
@@ -1537,7 +1553,7 @@ describe("EntityManager.execute", () => {
         // Given a Tag mutation that otherwise permits all rows
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const t = alias(Tag);
+        const t = table(Tag);
         const statement =
           operation === "update"
             ? { update: t, set: { name: "Changed" }, allowAll: true }
@@ -1605,8 +1621,8 @@ describe("EntityManager.execute", () => {
       // Given a reusable scalar Tag-id read that starts with a valid name restriction
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       const read = { from: source, select: source.id, where: { and: [source.name.eq("Selected")] } };
       const ids = query(read);
       // And the stored read is corrupted after construction with conflicting nested AND and OR groups
@@ -1627,8 +1643,8 @@ describe("EntityManager.execute", () => {
       // Given two valid named Tag reads whose UNION ALL output can populate Tag.name
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       const first = { from: source, select: { name: source.name } };
       const second = { from: source, select: { name: source.name }, where: { and: [source.name.eq("Selected")] } };
       const compound = { unionAll: [first, second] };
@@ -1645,8 +1661,8 @@ describe("EntityManager.execute", () => {
       // Given a named Tag source and a reusable scalar Tag-id source for mutation predicates
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       const named = { from: source, select: { name: source.name } };
       const scalar = { from: source, select: source.id };
       const ids = query(scalar);
@@ -1680,9 +1696,12 @@ describe("EntityManager.execute", () => {
       // Given valid named and scalar Author reads with a real soft-delete metadata policy
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = alias(Author);
-      const target = alias(Author);
-      const named = { from: source, select: { firstName: source.firstName, numberOfBooks: source.numberOfBooks } };
+      const source = table(Author);
+      const target = table(Author);
+      const named = {
+        from: source,
+        select: { first_name: source.first_name, number_of_books: source.number_of_books },
+      };
       const scalar = { from: source, select: source.id };
       const reusable = query(named);
       const ids = query(scalar);
@@ -1709,7 +1728,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag target with no own user predicate or own full-table consent
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // And a custom prototype tries to provide allowAll instead of an own statement clause
       const inheritedConsent = Object.assign(Object.create({ allowAll: true }), {
         update: t,
@@ -1733,7 +1752,7 @@ describe("EntityManager.execute", () => {
       // Given a Tag target and an empty INSERT that still requires full statement validation
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the INSERT operation is deliberately non-enumerable instead of an ordinary root key
       const hiddenRoot = Object.defineProperty({ values: [] }, "insert", { value: t });
       // When an invisible root attempts to use the empty-array shortcut
@@ -1760,7 +1779,7 @@ describe("EntityManager.execute", () => {
         // Given a persisted Tag that can be returned as plain read data
         await insertTag({ name: "Readable" });
         const em = newEntityManager();
-        const t = alias(Tag);
+        const t = table(Tag);
         // And the reusable read exposes mutation names as virtual output columns, not root clauses
         const source = { from: t, select: { insert: t.name, update: t.id, delete: t.name } };
         const statement = compound ? query({ unionAll: [source, source] }) : query(source);
@@ -1789,7 +1808,7 @@ describe("EntityManager.execute", () => {
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
         const read = em.query.bind(em) as (statement: unknown) => Promise<unknown[]>;
-        const t = alias(Tag);
+        const t = table(Tag);
         // And an attached mutation root must not disappear when the entity read is unwrapped
         const hybrid = Object.assign(query({ from: t, select: t }), { [operation]: t });
         // And read-only mode makes it observable that branded hybrids reach read validation, not write permissions
@@ -1815,7 +1834,7 @@ describe("EntityManager.execute", () => {
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
         const read = em.query.bind(em) as (statement: unknown) => Promise<unknown[]>;
-        const t = alias(Tag);
+        const t = table(Tag);
         const entityRead = query({ from: t, select: t });
         // And a DELETE clause is deliberately hidden outside ordinary enumerable own keys
         const hybrid =
@@ -1844,7 +1863,7 @@ describe("EntityManager.execute", () => {
         await insertTag({ name: "Retained" });
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-        const t = alias(Tag);
+        const t = table(Tag);
         // And the column leaf, filter, group, and array are all frozen before alias resolution
         const selected = t.name.like("Selected%") as ColumnCondition;
         Object.freeze(selected.cond);
@@ -1878,8 +1897,8 @@ describe("EntityManager.execute", () => {
       // Given a source Tag whose id will keep both imports restricted to the original row
       await insertTag({ name: "Source" });
       const em = newEntityManager();
-      const source = alias(Tag);
-      const target = alias(Tag);
+      const source = table(Tag);
+      const target = table(Tag);
       // And the source's deferred column guard and pruning group are immutable
       const selected = source.name.like("Source") as ColumnCondition;
       Object.freeze(selected.cond);
@@ -1911,7 +1930,7 @@ describe("EntityManager.execute", () => {
         // Given an Author with a JSON address object that must not become a returned row's prototype
         await insertAuthor({ first_name: "Owner", address: { street: "Main" } });
         const em = newEntityManager();
-        const a = alias(Author);
+        const a = table(Author);
         // And a computed key declares __proto__ as a real named output property
         const fields = { ["__proto__"]: a.address };
         // When decoding either a read projection or an UPDATE RETURNING projection
@@ -1920,7 +1939,7 @@ describe("EntityManager.execute", () => {
             ? await em.execute({ from: a, select: fields })
             : await em.execute({
                 update: a,
-                set: { firstName: "Backfilled" },
+                set: { first_name: "Backfilled" },
                 where: a.id.eq("a:1"),
                 returning: fields,
               });
@@ -1945,7 +1964,7 @@ describe("EntityManager.execute", () => {
         // Given a persisted Tag with ordinary read and filter codecs
         await insertTag({ name: "Readable" });
         const em = newEntityManager();
-        const t = alias(Tag);
+        const t = table(Tag);
         // And its column models legacy metadata missing one physical fact
         const column = getMetadata(Tag).fields.name.serde!.columns[0];
         const original = column[fact];
@@ -1973,7 +1992,7 @@ describe("EntityManager.execute", () => {
       // Given a persisted Tag whose ordinary read and filter codecs remain supported
       await insertTag({ name: "Readable" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the real column temporarily models an older custom Column without the optional write capability
       const column = getMetadata(Tag).fields.name.serde!.columns[0];
       const original = Object.getOwnPropertyDescriptor(column, "mapToDbValue");

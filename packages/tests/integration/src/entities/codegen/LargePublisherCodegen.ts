@@ -56,6 +56,7 @@ import {
   largePublisherMeta,
   newLargePublisher,
   Publisher,
+  type PublisherColumns,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -72,46 +73,53 @@ import {
 export type LargePublisherId = Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rating" | "spotlightAuthor"> {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  sharedColumn: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  country: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  critics: { kind: "o2m"; type: Critic };
+  users: { kind: "o2m"; type: User };
+}
+
+export interface LargePublisherColumns
+  extends Omit<PublisherColumns, "id" | "shared_column" | "country" | "rating" | "spotlight_author_id"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "shared_column": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  rating: {
+  "country": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "rating": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  spotlightAuthor: {
+  "spotlight_author_id": {
     kind: "m2o";
     type: Author;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  critics: { kind: "o2m"; type: Critic };
-  users: { kind: "o2m"; type: User };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
@@ -180,6 +188,7 @@ declare module "joist-core" {
       orderType: LargePublisherOrder;
       optsType: LargePublisherOpts;
       fieldsType: LargePublisherFields;
+      columnsType: LargePublisherColumns;
       supportsEmExecute: false;
       optIdsType: LargePublisherIdsOpts;
       factoryExtrasType: LargePublisherFactoryExtras;

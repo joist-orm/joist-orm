@@ -1,7 +1,13 @@
 import { expectTypeOf } from "expect-type";
 
 import { AliasAssigner } from "./AliasAssigner.ts";
-import { type Alias, type PrimitiveAlias, getAliasMgmt, newAliasProxy } from "./Aliases.ts";
+import {
+  type Alias,
+  type EntityAlias as FindEntityAlias,
+  type PrimitiveAlias as FindPrimitiveAlias,
+  getAliasMgmt,
+  newAliasProxy,
+} from "./Aliases.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
 import { type MaybeAbstractEntityConstructor } from "./EntityManager.ts";
@@ -22,17 +28,18 @@ import {
 } from "./query.ts";
 import { parseFindQuery } from "./QueryParser.ts";
 import { DateSerde, KeySerde, PrimitiveSerde } from "./serde.ts";
+import { type PrimitiveColumn, type Table, getTableMgmt, newTableProxy } from "./Tables.ts";
 
 describe("shared read compiler", () => {
   it("shares target scope, ordered projections, and column decoding without hydration", () => {
     // Given an Author target registered without a read FROM source
-    const a = testAlias();
+    const a = testTable();
     const ctx = new Ctx(new AliasAssigner(), undefined);
-    ctx.register(getAliasMgmt(a), "a");
+    ctx.register(getTableMgmt(a), "a");
     // And a hydrator that must not be used for expression projections
     const em = { hydrate: jest.fn() };
     // When compiling named and scalar projections through the shared helper
-    const named = projectionToSql({ name: a.firstName, id: a.id, count: a.id.count() }, ctx);
+    const named = projectionToSql({ name: a.first_name, id: a.id, count: a.id.count() }, ctx);
     const scalar = projectionToSql(a.id, ctx);
     // Then projection order, aliases, and physical codecs are retained
     expect(named.selects.map((select) => select.sql)).toMatchInlineSnapshot(`
@@ -43,7 +50,7 @@ describe("shared read compiler", () => {
       ]
     `);
     expect(named.output.columns.map((column) => column[0])).toEqual(["name", "id", "count"]);
-    expect(named.output.columns[1][1].outputType?.idMeta).toBe(getAliasMgmt(a).meta);
+    expect(named.output.columns[1][1].outputType?.idMeta).toBe(getTableMgmt(a).meta);
     expect(
       named.decodeRows(em, [
         { name: "First", id: 1, count: "2" },
@@ -64,15 +71,15 @@ describe("shared read compiler", () => {
 
   it("shares predicate pruning and metadata injections without a ParsedSource", () => {
     // Given a soft-deletable Author target in the mutation expression scope
-    const a = testAlias();
+    const a = testTable();
     const ctx = new Ctx(new AliasAssigner(), undefined);
-    ctx.register(getAliasMgmt(a), "a");
+    ctx.register(getTableMgmt(a), "a");
     // And a user condition whose only comparison prunes away
-    const user = { and: [a.firstName.eq(undefined), { or: [undefined] }] };
+    const user = { and: [a.first_name.eq(undefined), { or: [undefined] }] };
     // When compiling the user guard separately from metadata conditions
     const guard = conditionToSql(user, ctx, true);
     const injected = conditionToSql(
-      { and: injectedConditions({ meta: getAliasMgmt(a).meta, alias: "a" }, "exclude") },
+      { and: injectedConditions({ meta: getTableMgmt(a).meta, alias: "a" }, "exclude") },
       ctx,
       true,
     );
@@ -80,27 +87,27 @@ describe("shared read compiler", () => {
     expect(guard).toBeUndefined();
     expect(injected?.sql).toMatchInlineSnapshot(`"a.deleted_at IS NULL"`);
     expect(injected?.bindings).toEqual([]);
-    expect(injectedConditions({ meta: getAliasMgmt(a).meta, alias: "a" }, "include")).toEqual([]);
+    expect(injectedConditions({ meta: getTableMgmt(a).meta, alias: "a" }, "include")).toEqual([]);
     expect(injectedConditions({ meta: undefined, alias: "sq" }, "exclude")).toEqual([]);
   });
 
   it("resolves frozen deferred conditions without changing the caller's leaves", () => {
     // Given frozen Author ID, cross-column, raw-column, aggregate, and template predicates
-    const a = testAlias();
+    const a = testTable();
     const id = Object.freeze(a.id.eq("a:1")!);
     const cross = Object.freeze(a.id.eq(a.id)!);
-    const raw = Object.freeze(a.firstName.raw("LIKE ?", ["A%"]));
+    const raw = Object.freeze(a.first_name.raw("LIKE ?", ["A%"]));
     const aggregate = Object.freeze(a.id.count().eq(2)!);
-    const template = Object.freeze(sql.condition`${a.firstName} = ${"Alice"}`!);
+    const template = Object.freeze(sql.condition`${a.first_name} = ${"Alice"}`!);
     // And a frozen expression tree that retains an undefined comparison for pruning
     const where = { and: [id, cross, raw, aggregate, template, a.id.eq(undefined)] };
     Object.freeze(where.and);
     Object.freeze(where);
     // And two independent bindings for the same Author alias
     const firstCtx = new Ctx(new AliasAssigner(), undefined);
-    firstCtx.register(getAliasMgmt(a), "a");
+    firstCtx.register(getTableMgmt(a), "a");
     const secondCtx = new Ctx(new AliasAssigner(), undefined);
-    secondCtx.register(getAliasMgmt(a), "a1");
+    secondCtx.register(getTableMgmt(a), "a1");
     // When resolving each occurrence against its own scope
     const first = conditionToSql(where, firstCtx, true);
     const second = conditionToSql(where, secondCtx, true);
@@ -121,8 +128,11 @@ describe("shared read compiler", () => {
   });
 
   it("keeps em.find alias resolution compatible with frozen reusable conditions", () => {
-    // Given frozen Author alias conditions supported by both read parsers
-    const a = testAlias();
+    // Given frozen Author alias conditions for the find parser
+    const a = newAliasProxy(getTableMgmt(testTable()).meta.cstr) as Alias<Entity> & {
+      id: FindEntityAlias<Entity>;
+      firstName: FindPrimitiveAlias<string>;
+    };
     const id = Object.freeze(a.id.eq("a:1")!);
     const raw = Object.freeze(a.firstName.raw("LIKE ?", ["A%"]));
     const cross = Object.freeze(a.id.eq(a.id)!);
@@ -148,8 +158,8 @@ describe("shared read compiler", () => {
 
   it("reuses a frozen correlated predicate through scalar projections", () => {
     // Given Author and mentor aliases with one frozen cross-column predicate
-    const a = testAlias();
-    const mentor = testAlias();
+    const a = testTable();
+    const mentor = testTable();
     const on = Object.freeze(mentor.id.eq(a.id)!);
     // And a scalar read whose own source is the mentor and whose ID predicate references the outer Author
     const scalar = query(Object.freeze({ from: mentor, where: on, select: mentor.id.count() }));
@@ -215,7 +225,7 @@ describe("shared read compiler", () => {
     },
   ])("rejects $name before an enclosing read predicate can prune", (testCase) => {
     // Given an Author read with an otherwise valid named projection
-    const a = testAlias();
+    const a = testTable();
     // And an invalid predicate inside a group that would prune because another child is undefined
     const where = { and: [undefined, { or: [testCase.value] }], pruneIfUndefined: "any" };
     // When compiling that group through the shared read condition path
@@ -225,8 +235,8 @@ describe("shared read compiler", () => {
 
   it.each(["where", "having", "on"] as const)("validates scalar IN subquery %s before outer pruning", (clause) => {
     // Given an Author read and a reusable scalar ID source
-    const a = testAlias();
-    const source = testAlias();
+    const a = testTable();
+    const source = testTable();
     const read = { from: source, select: source.id };
     const scalar = query(read);
     // And a malformed nested predicate introduced after the scalar source was created
@@ -243,25 +253,25 @@ describe("shared read compiler", () => {
 
   it("preserves undefined and skip pruning while accepting explicit SQL NULL comparisons", () => {
     // Given an Author scope for shared predicate compilation
-    const a = testAlias();
+    const a = testTable();
     const ctx = new Ctx(new AliasAssigner(), undefined);
-    ctx.register(getAliasMgmt(a), "a");
+    ctx.register(getTableMgmt(a), "a");
     // When compiling absent predicates, pruned comparisons, and a valid SQL NULL comparison
     // Then only explicit null predicate values are invalid, not IS NULL conditions or optional filters
     expect(conditionToSql(undefined, ctx, true)).toBeUndefined();
     expect(conditionToSql(a.id.eq(undefined), ctx, true)).toBeUndefined();
     expect(conditionToSql({ and: [undefined, a.id.eq(undefined)] }, ctx, true)).toBeUndefined();
-    expect(conditionToSql(a.lastName.eq(null), ctx, true)?.sql).toMatchInlineSnapshot(`"a.last_name IS NULL"`);
+    expect(conditionToSql(a.last_name.eq(null), ctx, true)?.sql).toMatchInlineSnapshot(`"a.last_name IS NULL"`);
     expect(conditionToSql(sql.condition`true`, ctx, true)?.sql).toMatchInlineSnapshot(`"true"`);
   });
 
   it("uses physical nullability rather than ORM derived-field requiredness", () => {
     // Given Author columns with different physical nullability and a derived NOT NULL column
-    const a = testAlias();
+    const a = testTable();
     // When inspecting shared SQL output facts
-    const plan = parseUserQuery({ from: a, select: { id: a.id, name: a.lastName, books: a.numberOfBooks } });
+    const plan = parseUserQuery({ from: a, select: { id: a.id, name: a.last_name, books: a.number_of_books } });
     // Then nullable, NOT NULL, and ORM optionality stay distinct
-    expect(getAliasMgmt(a).meta.allFields.numberOfBooks.required).toBe(false);
+    expect(getTableMgmt(a).meta.allFields.numberOfBooks.required).toBe(false);
     expect(plan.output.columns[0][1].sqlNullable).toBe(false);
     expect(plan.output.columns[1][1].sqlNullable).toBe(true);
     expect(plan.output.columns[2][1].sqlNullable).toBe(false);
@@ -269,34 +279,34 @@ describe("shared read compiler", () => {
 
   it("keeps missing physical nullability unknown despite ORM requiredness and a known codec", () => {
     // Given an Author name marked required by the ORM
-    const a = testAlias();
+    const a = testTable();
     // And metadata with no physical SQL facts for that field
-    Object.assign(getAliasMgmt(a).meta.allFields.firstName.serde!.columns[0], { sqlNullable: undefined });
+    Object.assign(getTableMgmt(a).meta.allFields.firstName.serde!.columns[0], { sqlNullable: undefined });
     // When inspecting the column's output facts
     // Then ORM requiredness alone does not prove SQL NOT NULL
-    expect(asNode(a.firstName).sqlNullable).toBeUndefined();
-    expect(asNode(a.firstName).outputType).toBeDefined();
+    expect(asNode(a.first_name).sqlNullable).toBeUndefined();
+    expect(asNode(a.first_name).outputType).toBeDefined();
   });
 
   it.each(["count", "countDistinct", "sum", "avg", "min", "max", "arrayAgg"] as const)(
     "describes %s nullability independently of the input column",
     (operation) => {
       // Given a physically NOT NULL derived Author count
-      const a = testAlias();
+      const a = testTable();
       // When describing an aggregate over that column
-      const aggregate = asNode(a.numberOfBooks[operation]());
+      const aggregate = asNode(a.number_of_books[operation]());
       // Then COUNT returns zero for no rows, while other aggregates return SQL NULL
       expect(aggregate.sqlNullable).toBe(operation !== "count" && operation !== "countDistinct");
-      expect(asNode(a.firstName.stringAgg(",")).sqlNullable).toBe(true);
+      expect(asNode(a.first_name.stringAgg(",")).sqlNullable).toBe(true);
     },
   );
 
   it("nullifies LEFT-joined columns without nullifying COUNT or COALESCE or mutating expressions", () => {
     // Given an Author and a separately scoped mentor alias
-    const a = testAlias();
-    const mentor = testAlias();
+    const a = testTable();
+    const mentor = testTable();
     // And a shared required mentor name reused by joined and standalone reads
-    const name = mentor.firstName;
+    const name = mentor.first_name;
     const read = {
       from: a,
       join: [{ left: mentor, on: mentor.id.eq(a.id) }],
@@ -321,7 +331,7 @@ describe("shared read compiler", () => {
 
   it("nullifies a LEFT-joined derived COUNT column while preserving the inner COUNT", () => {
     // Given a reusable table with a NOT NULL count output
-    const a = testAlias();
+    const a = testTable();
     const counts = query({ from: a, select: { n: a.id.count() }, as: "counts" });
     // And an Author source that LEFT joins that derived table
     const read = { from: a, join: [{ left: counts, on: counts.n.gt(0) }], select: { n: counts.n } };
@@ -340,25 +350,25 @@ describe("shared read compiler", () => {
     "combines physical nullable facts according to %s semantics",
     (operation) => {
       // Given a required Author name in the first branch
-      const a = testAlias();
-      const first = { from: a, select: { name: a.firstName } };
+      const a = testTable();
+      const first = { from: a, select: { name: a.first_name } };
       // And a nullable name in a later branch with the same storage codec
-      const second = { from: a, select: { name: a.lastName } };
+      const second = { from: a, select: { name: a.last_name } };
       // When compiling a set and its reversed operand order
       const plan = parseUserQuery({ [operation]: [first, second] });
       const reversed = parseUserQuery({ [operation]: [second, first] });
       // Then UNION admits NULL from either branch while EXCEPT/INTERSECT retain the left facts
       expect(plan.output.columns[0][1].sqlNullable).toBe(operation === "union" || operation === "unionAll");
       expect(reversed.output.columns[0][1].sqlNullable).toBe(true);
-      expect(plan.output.columns[0][1].outputType).toEqual(asNode(a.firstName).outputType);
+      expect(plan.output.columns[0][1].outputType).toEqual(asNode(a.first_name).outputType);
     },
   );
 
   it("propagates nullability through nested UNION reads and reusable output columns", () => {
     // Given one required and one nullable Author-name read
-    const a = testAlias();
-    const required = { from: a, select: { name: a.firstName } };
-    const nullable = { from: a, select: { name: a.lastName } };
+    const a = testTable();
+    const required = { from: a, select: { name: a.first_name } };
+    const nullable = { from: a, select: { name: a.last_name } };
     // And a nullable branch inside a non-first nested compound
     const combined = query({ unionAll: [required, { union: [required, nullable] }] });
     // When using the compound as an ordinary read source
@@ -371,10 +381,10 @@ describe("shared read compiler", () => {
 
   it("enumerates a nested named projection only once per output traversal", () => {
     // Given an Author projection that records key traversal without changing its columns
-    const a = testAlias();
+    const a = testTable();
     let enumerations = 0;
     const select = new Proxy(
-      { id: a.id, name: a.firstName, lastName: a.lastName, books: a.numberOfBooks },
+      { id: a.id, name: a.first_name, lastName: a.last_name, books: a.number_of_books },
       {
         ownKeys(target) {
           enumerations++;
@@ -395,7 +405,7 @@ describe("shared read compiler", () => {
 
   it("keeps raw SQL and unmodeled refs unknown without treating sql<R> as a codec proof", () => {
     // Given typed raw SQL and an unmodeled Author column
-    const a = testAlias();
+    const a = testTable();
     const raw = sql<string>`'Alice'::varchar`;
     const ref = sql.ref<string>(a, "unmodeled");
     // When exposing their runtime facts and attempting a compound with a known column
@@ -408,7 +418,7 @@ describe("shared read compiler", () => {
     expect(() =>
       query({
         union: [
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
           { from: a, select: { name: raw } },
         ],
       }),
@@ -417,15 +427,15 @@ describe("shared read compiler", () => {
 
   it("keeps unknown branch nullability unknown even when its codec is known", () => {
     // Given a required Author-name projection
-    const a = testAlias();
-    const first = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const first = { from: a, select: { name: a.first_name } };
     // And an internal function with a known codec but no SQL nullability contract
-    const unknown = new FnExpr("unmodeled", [], { outputType: asNode(a.firstName).outputType });
+    const unknown = new FnExpr("unmodeled", [], { outputType: asNode(a.first_name).outputType });
     // When combining each possible nullable state with the unknown branch
     const plan = parseUserQuery({ unionAll: [first, { from: a, select: { name: unknown } }] });
     const nullable = parseUserQuery({
       unionAll: [
-        { from: a, select: { name: a.lastName } },
+        { from: a, select: { name: a.last_name } },
         { from: a, select: { name: unknown } },
       ],
     });
@@ -436,7 +446,7 @@ describe("shared read compiler", () => {
 
   it("keeps scalar query values nullable and non-executable while retaining scalar operands", () => {
     // Given a scalar Author-count query value
-    const a = testAlias();
+    const a = testTable();
     const scalar = query({ from: a, select: a.id.count() });
     // When inspecting it as an expression rather than a public execution input
     // Then zero rows can yield NULL, public execution rejects it, and inline scalar reads still decode
@@ -452,10 +462,10 @@ describe("shared read compiler", () => {
 
   it("preserves scalar ID alias identity for polymorphic IN with an unknown key codec", () => {
     // Given an Author and a LEFT-joined mentor with a custom key codec
-    const a = testAlias();
-    const mentor = testAlias();
+    const a = testTable();
+    const mentor = testTable();
     // And the mentor ID uses an unrecognized key conversion instead of the standard codec
-    getAliasMgmt(mentor).meta.allFields.id.serde = new CustomKeySerde("a", "id", "id", "int");
+    getTableMgmt(mentor).meta.allFields.id.serde = new CustomKeySerde("a", "id", "id", "int");
     // And a scalar projection of the mentor's ID, which polymorphic IN identifies by alias metadata
     const id = mentor.id;
     const read = { from: a, join: [{ left: mentor, on: id.eq(a.id) }], select: id };
@@ -472,8 +482,8 @@ describe("shared read compiler", () => {
     "rejects %s on ordinary, compound, and nested read roots",
     (key) => {
       // Given a valid named Author read
-      const a = testAlias();
-      const read = { from: a, select: { name: a.firstName } };
+      const a = testTable();
+      const read = { from: a, select: { name: a.first_name } };
       // And invalid read hybrids carrying a mutation-only key, even when its value is undefined
       const hybrid = { ...read, [key]: undefined };
       const compound = { union: [read, read], [key]: undefined };
@@ -491,8 +501,8 @@ describe("shared read compiler", () => {
 
   it("revalidates reusable read roots and permits mutation words as ordinary projection keys", () => {
     // Given a reusable Author read whose output is legitimately named returning
-    const a = testAlias();
-    const read = { from: a, select: { returning: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { returning: a.first_name } };
     const value = query(read);
     // When executing the unmodified read value
     expect(parseUserQuery(value).output.columns.map((column) => column[0])).toEqual(["returning"]);
@@ -504,7 +514,7 @@ describe("shared read compiler", () => {
 
   it.each(["insert", "update", "delete"] as const)("rejects a branded entity read mixed with %s", (key) => {
     // Given an entity-shaped Author read value
-    const a = testAlias();
+    const a = testTable();
     const entity = query({ from: a, select: a });
     // And a nonliteral hybrid with an own mutation operation and permission to affect every row
     const hybrid = { ...entity, [key]: a, allowAll: true };
@@ -521,8 +531,8 @@ describe("shared read compiler", () => {
 
   it("distinguishes projected mutation words from attached clauses on a table read value", () => {
     // Given a table-shaped Author read with legitimate output columns named after mutation operations
-    const a = testAlias();
-    const value = query({ from: a, select: { insert: a.firstName, update: a.firstName, delete: a.firstName } });
+    const a = testTable();
+    const value = query({ from: a, select: { insert: a.first_name, update: a.first_name, delete: a.first_name } });
     // When classifying and compiling the untouched proxy
     expect(isReadQueryValue(value)).toBe(true);
     expect(parseUserQuery(value).output.columns.map((column) => column[0])).toEqual(["insert", "update", "delete"]);
@@ -537,8 +547,8 @@ describe("shared read compiler", () => {
 
   it.each(["with", "ctes", "typo"])("rejects unsupported %s clauses throughout read compilation", (key) => {
     // Given a valid named Author read and a previously created table value
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     const value = query(read);
     const name = value.name;
     // And an ordinary read carrying an unsupported clause, even when its value is undefined
@@ -558,8 +568,8 @@ describe("shared read compiler", () => {
 
   it("checks inherited and non-enumerable clauses and extra read-value symbols", () => {
     // Given an ordinary Author read and its entity-shaped read value
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     const entity = query({ from: a, select: a });
     // And unsupported clauses hidden from Object.keys on different input surfaces
     const inherited = Object.assign(Object.create({ ctes: [] }), read);
@@ -574,7 +584,7 @@ describe("shared read compiler", () => {
 
   it("revalidates a scalar subquery root after its input gains an unsupported clause", () => {
     // Given a reusable scalar Author-count read
-    const a = testAlias();
+    const a = testTable();
     const read = { from: a, select: a.id.count() };
     const scalar = query(read);
     // And an unsupported CTE declaration added after the scalar value was created
@@ -588,8 +598,8 @@ describe("shared read compiler", () => {
 
   it.each(["limit", "offset"] as const)("validates %s on ordinary, compound, and nested read roots", (key) => {
     // Given a valid named Author read
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     // And invalid pagination values that must not be passed through or treated as absence
     const invalid = [-1, 0.5, NaN, Infinity, -Infinity, null, "1", true];
     // When compiling different roots or creating reusable values across an unchecked input boundary
@@ -618,8 +628,8 @@ describe("shared read compiler", () => {
     { key: "as", values: [null, 1, false], error: "Read query as must be a string" },
   ])("validates read $key before applying defaults", (testCase) => {
     // Given a valid named Author read
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     // When compiling invalid scalar options across an unchecked input boundary
     // Then null and wrong-type values cannot silently select a default policy
     for (const value of testCase.values) {
@@ -632,8 +642,8 @@ describe("shared read compiler", () => {
 
   it("revalidates a stored source's alias option before accepting its read plan", () => {
     // Given a reusable named Author source and a cached column expression
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName }, as: "names" };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name }, as: "names" };
     const source = query(read);
     const name = source.name;
     // And a wrong-type alias added after creation, without accessing the source's columns again
@@ -645,10 +655,10 @@ describe("shared read compiler", () => {
 
   it("accepts zero pagination and explicit false read flags without changing projections", () => {
     // Given an Author read with explicit false flags and included soft-deleted rows
-    const a = testAlias();
+    const a = testTable();
     const read = {
       from: a,
-      select: { name: a.firstName },
+      select: { name: a.first_name },
       limit: 0,
       offset: 0,
       distinct: false,
@@ -669,8 +679,8 @@ describe("shared read compiler", () => {
 
   it.each([null, "literal", { polluted: true }])("decodes __proto__ as an own data property for %p", (value) => {
     // Given a named Author projection with keys that also exist on Object.prototype
-    const a = testAlias();
-    const select = { ["__proto__"]: sql<unknown>`NULL`, constructor: a.firstName };
+    const a = testTable();
+    const select = { ["__proto__"]: sql<unknown>`NULL`, constructor: a.first_name };
     // And a driver row with an own __proto__ value rather than a changed prototype
     const row = { ["__proto__"]: value, constructor: "Alice" };
     // When decoding a named SELECT through the shared projection decoder
@@ -690,12 +700,12 @@ describe("shared read compiler", () => {
 
   it("rejects source-shaped, empty, and malformed projections before rendering SQL", () => {
     // Given an Author alias and reusable entity/table reads that are not expression projections
-    const a = testAlias();
+    const a = testTable();
     const entity = query({ from: a, select: a });
-    const table = query({ from: a, select: { name: a.firstName } });
+    const table = query({ from: a, select: { name: a.first_name } });
     // And a registered target scope which would otherwise accept Author column expressions
     const ctx = new Ctx(new AliasAssigner(), undefined);
-    ctx.register(getAliasMgmt(a), "a");
+    ctx.register(getTableMgmt(a), "a");
     // When validating source-shaped or malformed RETURNING/select inputs
     // Then neither the root nor a named column can request entity hydration or an implicit table projection
     for (const value of [
@@ -704,7 +714,7 @@ describe("shared read compiler", () => {
       table,
       {},
       [],
-      [a.firstName],
+      [a.first_name],
       new Date(),
       null,
       undefined,
@@ -717,16 +727,16 @@ describe("shared read compiler", () => {
       expect(() => projectionToSql({ value }, ctx)).toThrow("select.value must be an expression");
     }
     expect(() => parseUserQuery({ from: a, select: {} })).toThrow("must not be empty");
-    expect(() => parseUserQuery({ from: a, select: [a.firstName] })).toThrow("Expected a scalar expression");
-    expect(() => projectionToSql({ name: a.firstName, [Symbol("hidden")]: a.id }, ctx)).toThrow(
+    expect(() => parseUserQuery({ from: a, select: [a.first_name] })).toThrow("Expected a scalar expression");
+    expect(() => projectionToSql({ name: a.first_name, [Symbol("hidden")]: a.id }, ctx)).toThrow(
       "Projection keys must be strings",
     );
   });
 
   it("forbids mutation keys on nonliteral Query and SetQuery inputs statically", () => {
     // Given valid ordinary and compound Author reads with retained literal projections
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     const compound = { union: [read, read] } as const;
     // And each mutation key added to these nonliteral read types
     type MutationKey = "insert" | "update" | "delete" | "values" | "set" | "returning" | "allowAll";
@@ -740,8 +750,8 @@ describe("shared read compiler", () => {
 
   it("rejects nonliteral mutation hybrids at the query call signatures", () => {
     // Given a valid named Author read
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     // And nonliteral ordinary and compound inputs mixed with mutation operations
     const ordinary = { ...read, update: a };
     const compound = { union: [read, read], insert: a } as const;
@@ -759,10 +769,10 @@ describe("shared read compiler", () => {
 
   it("checks concrete read source clauses without rejecting legitimate projected keys", () => {
     // Given ordinary, compound, and branded Author reads with retained literal output types
-    const a = testAlias();
-    const read = { from: a, select: { name: a.firstName } };
+    const a = testTable();
+    const read = { from: a, select: { name: a.first_name } };
     const compound = { union: [read, read] } as const;
-    const projected = query({ from: a, select: { with: a.firstName, select: a.firstName, delete: a.firstName } });
+    const projected = query({ from: a, select: { with: a.first_name, select: a.first_name, delete: a.first_name } });
     // And nonliteral source inputs carrying unsupported clauses at different depths
     const invalid = { ...read, typo: true };
     const nested = { unionAll: [read, invalid] } as const;
@@ -792,11 +802,11 @@ class CustomKeySerde extends KeySerde {}
  * Supplies only compiler metadata, without loading integration entities or creating a database connection.
  * The derived Author.numberOfBooks is ORM-optional but physically NOT NULL, unlike Author.lastName.
  */
-function testAlias(): Alias<Entity, "Author"> & {
+function testTable(): Table<Entity, "Author"> & {
   id: Expr<string, "Author">;
-  firstName: PrimitiveAlias<string, never, "Author">;
-  lastName: Expr<string | null, "Author">;
-  numberOfBooks: Expr<number | null, "Author">;
+  first_name: PrimitiveColumn<string, never, "Author">;
+  last_name: Expr<string | null, "Author">;
+  number_of_books: Expr<number | null, "Author">;
 } {
   function Author() {}
   const meta = {
@@ -864,7 +874,14 @@ function testAlias(): Alias<Entity, "Author"> & {
       },
     },
   } as unknown as EntityMetadata;
+  meta.columns = {
+    id: { fieldName: "id" },
+    first_name: { fieldName: "firstName" },
+    last_name: { fieldName: "lastName" },
+    number_of_books: { fieldName: "numberOfBooks" },
+    deleted_at: { fieldName: "deletedAt" },
+  };
   meta.fields = meta.allFields;
   Object.assign(Author, { metadata: meta });
-  return newAliasProxy(meta.cstr) as ReturnType<typeof testAlias>;
+  return newTableProxy(meta.cstr) as ReturnType<typeof testTable>;
 }

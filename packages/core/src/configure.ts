@@ -254,6 +254,7 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
     // Only supporting one level of inheritance for now, ideally would loop `while current !== null`
     if (m.baseType) {
       const b = metaByName[m.baseType];
+      m.columns = { ...b.columns, ...m.columns };
       m.baseTypes.push(b);
       b.subTypes.push(m);
       // Add all the base's fields to our allFields, with the base's aliasSuffix, so that in

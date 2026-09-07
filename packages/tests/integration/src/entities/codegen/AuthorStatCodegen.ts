@@ -36,140 +36,170 @@ import { type AuthorStat, authorStatMeta, type Entity, EntityManager, newAuthorS
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
 export interface AuthorStatFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  smallint: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  integer: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  nullableInteger: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  smallint: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  integer: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
+  decimal: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  real: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  smallserial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  serial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
+  doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  decimalSamples: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  bigintSamples: { kind: "primitive"; type: bigint[]; unique: false; nullable: undefined; derived: false };
+}
+
+export interface AuthorStatColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "smallint": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  bigint: {
+  "integer": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "nullable_integer": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "bigint": {
     kind: "primitive";
     type: bigint;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  decimal: {
+  "decimal": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  real: {
+  "real": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  smallserial: {
+  "smallserial": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  serial: {
+  "serial": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  bigserial: {
+  "bigserial": {
     kind: "primitive";
     type: bigint;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  doublePrecision: {
+  "double_precision": {
     kind: "primitive";
     type: number;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  nullableText: {
+  "nullable_text": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  json: {
+  "json": {
     kind: "primitive";
     type: Object;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  createdAt: {
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updated_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  decimalSamples: {
+  "decimal_samples": {
     kind: "primitive";
     type: number[];
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  bigintSamples: {
+  "bigint_samples": {
     kind: "primitive";
     type: bigint[];
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
 }
 
@@ -286,6 +316,7 @@ declare module "joist-core" {
       orderType: AuthorStatOrder;
       optsType: AuthorStatOpts;
       fieldsType: AuthorStatFields;
+      columnsType: AuthorStatColumns;
       supportsEmExecute: true;
       optIdsType: AuthorStatIdsOpts;
       factoryExtrasType: AuthorStatFactoryExtras;

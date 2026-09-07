@@ -85,166 +85,27 @@ import {
 export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  latitude: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  longitude: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  hugeNumber: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  numberOfBookReviews: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  deletedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  titlesOfFavoriteBooks: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  bookAdvanceTitlesSnapshot: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  numberOfBookAdvancesSnapshot: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  baseSyncDefault: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  baseAsyncDefault: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  favoriteAuthorName: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  rating: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  size: {
-    kind: "enum";
-    type: PublisherSize;
-    nullable: undefined;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  type: {
-    kind: "enum";
-    type: PublisherType;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  favoriteAuthor: {
-    kind: "m2o";
-    type: Author;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  group: {
-    kind: "m2o";
-    type: PublisherGroup;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  spotlightAuthor: {
-    kind: "m2o";
-    type: Author;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  bookAdvanceTitlesSnapshot: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  numberOfBookAdvancesSnapshot: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  favoriteAuthorName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  size: { kind: "enum"; type: PublisherSize; nullable: undefined };
+  type: { kind: "enum"; type: PublisherType; nullable: never };
+  favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   tasks: { kind: "m2m"; type: TaskOld };
   logoColors: { kind: "m2mEnum"; type: Color };
@@ -252,6 +113,157 @@ export interface PublisherFields {
   bookAdvances: { kind: "o2m"; type: BookAdvance };
   comments: { kind: "o2m"; type: Comment };
   images: { kind: "o2m"; type: Image };
+}
+
+export interface PublisherColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "latitude": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "longitude": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "huge_number": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_book_reviews": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "deleted_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "titles_of_favorite_books": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "book_advance_titles_snapshot": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_book_advances_snapshot": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "base_sync_default": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "base_async_default": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "favorite_author_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "rating": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "size_id": { kind: "enum"; type: PublisherSize; nullable: true; insert: "optional"; update: true };
+  "type_id": { kind: "enum"; type: PublisherType; nullable: false; insert: "optional"; update: true };
+  "favorite_author_id": { kind: "m2o"; type: Author; derived: true; nullable: true; insert: "optional"; update: true };
+  "group_id": { kind: "m2o"; type: PublisherGroup; derived: false; nullable: true; insert: "optional"; update: true };
+  "spotlight_author_id": {
+    kind: "m2o";
+    type: Author;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface PublisherOpts {
@@ -424,6 +436,7 @@ declare module "joist-core" {
       orderType: PublisherOrder;
       optsType: PublisherOpts;
       fieldsType: PublisherFields;
+      columnsType: PublisherColumns;
       supportsEmExecute: false;
       optIdsType: PublisherIdsOpts;
       factoryExtrasType: PublisherFactoryExtras;

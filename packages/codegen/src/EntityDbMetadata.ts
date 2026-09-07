@@ -151,6 +151,8 @@ export type PrimitiveField = Field & {
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
+  /** Database nullability, unchanged by domain inheritance specialization. */
+  columnNotNull: boolean;
   // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
   fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
@@ -172,6 +174,7 @@ export type EnumField = Field & {
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
+  columnNotNull: boolean;
   derived: "sync" | "async" | false;
   enumName: string;
   enumType: Import;
@@ -188,6 +191,7 @@ export type PgEnumField = Field & {
   columnName: string;
   columnDefault: number | boolean | string | null;
   columnGenerated: boolean;
+  columnNotNull: boolean;
   /** I.e. `favorite_shape`. */
   dbType: string;
   /** I.e. `FavoriteShape`. */
@@ -204,6 +208,7 @@ export type ManyToOneField = Field & {
   columnName: string;
   columnDefault?: number | boolean | string | null;
   columnGenerated: boolean;
+  columnNotNull: boolean;
   dbType: string;
   otherFieldName: string;
   otherEntity: Entity;
@@ -572,6 +577,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "primitive",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
@@ -627,6 +633,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
@@ -660,6 +667,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
@@ -686,6 +694,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "pg-enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     dbType: column.type.name,
@@ -717,6 +726,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "m2o",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnDefault: column.default,

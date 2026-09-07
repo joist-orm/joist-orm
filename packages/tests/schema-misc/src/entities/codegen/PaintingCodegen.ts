@@ -51,44 +51,43 @@ import {
 export type PaintingId = Flavor<string, "Painting">;
 
 export interface PaintingFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "required"; update: false }];
-  };
-  title: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
+}
+
+export interface PaintingColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
+  "title": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  createdAt: {
+  "createdAt": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updatedAt": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  artist: {
-    kind: "m2o";
-    type: Artist;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
+  "artistId": { kind: "m2o"; type: Artist; derived: false; nullable: false; insert: "required"; update: true };
 }
 
 export interface PaintingOpts {
@@ -151,6 +150,7 @@ declare module "joist-core" {
       orderType: PaintingOrder;
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
+      columnsType: PaintingColumns;
       supportsEmExecute: true;
       optIdsType: PaintingIdsOpts;
       factoryExtrasType: PaintingFactoryExtras;

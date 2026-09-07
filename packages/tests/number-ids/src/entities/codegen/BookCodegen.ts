@@ -51,44 +51,43 @@ import {
 export type BookId = Flavor<number, "Book">;
 
 export interface BookFields {
-  id: {
-    kind: "primitive";
-    type: number;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  title: {
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+}
+
+export interface BookColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  createdAt: {
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updated_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  author: {
-    kind: "m2o";
-    type: Author;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
+  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookOpts {
@@ -151,6 +150,7 @@ declare module "joist-core" {
       orderType: BookOrder;
       optsType: BookOpts;
       fieldsType: BookFields;
+      columnsType: BookColumns;
       supportsEmExecute: true;
       optIdsType: BookIdsOpts;
       factoryExtrasType: BookFactoryExtras;

@@ -53,29 +53,24 @@ import {
 export type T2AuthorId = Flavor<number, "T2Author">;
 
 export interface T2AuthorFields {
-  id: {
-    kind: "primitive";
-    type: number;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  firstName: {
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  favoriteBook: { kind: "m2o"; type: T2Book; nullable: undefined; derived: false };
+  t2Books: { kind: "o2m"; type: T2Book };
+}
+
+export interface T2AuthorColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "first_name": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  favoriteBook: {
-    kind: "m2o";
-    type: T2Book;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  t2Books: { kind: "o2m"; type: T2Book };
+  "favorite_book_id": { kind: "m2o"; type: T2Book; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface T2AuthorOpts {
@@ -133,6 +128,7 @@ declare module "joist-core" {
       orderType: T2AuthorOrder;
       optsType: T2AuthorOpts;
       fieldsType: T2AuthorFields;
+      columnsType: T2AuthorColumns;
       supportsEmExecute: true;
       optIdsType: T2AuthorIdsOpts;
       factoryExtrasType: T2AuthorFactoryExtras;

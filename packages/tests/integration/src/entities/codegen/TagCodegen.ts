@@ -58,42 +58,46 @@ import {
 export type TagId = Flavor<string, "Tag">;
 
 export interface TagFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   authors: { kind: "m2m"; type: Author };
   books: { kind: "m2m"; type: Book };
   bookReviews: { kind: "m2m"; type: BookReview };
   publishers: { kind: "m2m"; type: Publisher };
   tasks: { kind: "m2m"; type: Task };
+}
+
+export interface TagColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface TagOpts {
@@ -169,6 +173,7 @@ declare module "joist-core" {
       orderType: TagOrder;
       optsType: TagOpts;
       fieldsType: TagFields;
+      columnsType: TagColumns;
       supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;

@@ -57,50 +57,37 @@ import {
 export type TaskItemId = Flavor<string, "TaskItem">;
 
 export interface TaskItemFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
+  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+}
+
+export interface TaskItemColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  newTask: {
-    kind: "m2o";
-    type: TaskNew;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  oldTask: {
-    kind: "m2o";
-    type: TaskOld;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  task: {
-    kind: "m2o";
-    type: Task;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  "new_task_id": { kind: "m2o"; type: TaskNew; derived: false; nullable: true; insert: "optional"; update: true };
+  "old_task_id": { kind: "m2o"; type: TaskOld; derived: false; nullable: true; insert: "optional"; update: true };
+  "task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskItemOpts {
@@ -175,6 +162,7 @@ declare module "joist-core" {
       orderType: TaskItemOrder;
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
+      columnsType: TaskItemColumns;
       supportsEmExecute: true;
       optIdsType: TaskItemIdsOpts;
       factoryExtrasType: TaskItemFactoryExtras;

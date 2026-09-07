@@ -64,53 +64,54 @@ import {
 export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  favoriteLargePublisher: {
-    kind: "m2o";
-    type: LargePublisher;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  group: {
-    kind: "m2o";
-    type: PublisherGroup;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
   bookReviews: { kind: "o2m"; type: BookReview };
   criticColumn: { kind: "o2o"; type: CriticColumn };
+}
+
+export interface CriticColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "favorite_large_publisher_id": {
+    kind: "m2o";
+    type: LargePublisher;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "group_id": { kind: "m2o"; type: PublisherGroup; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface CriticOpts {
@@ -198,6 +199,7 @@ declare module "joist-core" {
       orderType: CriticOrder;
       optsType: CriticOpts;
       fieldsType: CriticFields;
+      columnsType: CriticColumns;
       supportsEmExecute: true;
       optIdsType: CriticIdsOpts;
       factoryExtrasType: CriticFactoryExtras;

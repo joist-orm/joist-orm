@@ -43,126 +43,158 @@ import { type Author, authorMeta, type Book, type BookId, type Entity, EntityMan
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  firstName: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  lastName: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  birthday: {
-    kind: "primitive";
-    type: Temporal.PlainDate;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  childrenBirthdays: {
-    kind: "primitive";
-    type: Temporal.PlainDate[];
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  maybeBirthdays: {
-    kind: "primitive";
-    type: Temporal.PlainDate[];
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  timestamp: {
-    kind: "primitive";
-    type: Temporal.PlainDateTime;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  timestamps: {
-    kind: "primitive";
-    type: Temporal.PlainDateTime[];
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  birthday: { kind: "primitive"; type: Temporal.PlainDate; unique: false; nullable: never; derived: false };
+  childrenBirthdays: { kind: "primitive"; type: Temporal.PlainDate[]; unique: false; nullable: never; derived: false };
+  maybeBirthdays: { kind: "primitive"; type: Temporal.PlainDate[]; unique: false; nullable: undefined; derived: false };
+  timestamp: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: false };
+  timestamps: { kind: "primitive"; type: Temporal.PlainDateTime[]; unique: false; nullable: never; derived: false };
   maybeTimestamps: {
     kind: "primitive";
     type: Temporal.PlainDateTime[];
     unique: false;
     nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
   };
-  time: {
-    kind: "primitive";
-    type: Temporal.PlainTime;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  times: {
-    kind: "primitive";
-    type: Temporal.PlainTime[];
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  maybeTimes: {
-    kind: "primitive";
-    type: Temporal.PlainTime[];
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  timeToMicros: {
-    kind: "primitive";
-    type: Temporal.PlainTime;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Temporal.ZonedDateTime;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Temporal.ZonedDateTime;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
+  time: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
+  times: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: never; derived: false };
+  maybeTimes: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: undefined; derived: false };
+  timeToMicros: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   books: { kind: "o2m"; type: Book };
+}
+
+export interface AuthorColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "firstName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "lastName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "birthday": {
+    kind: "primitive";
+    type: Temporal.PlainDate;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "children_birthdays": {
+    kind: "primitive";
+    type: Temporal.PlainDate[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_birthdays": {
+    kind: "primitive";
+    type: Temporal.PlainDate[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "timestamp": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "timestamps": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_timestamps": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time": {
+    kind: "primitive";
+    type: Temporal.PlainTime;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "times": {
+    kind: "primitive";
+    type: Temporal.PlainTime[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_times": {
+    kind: "primitive";
+    type: Temporal.PlainTime[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time_to_micros": {
+    kind: "primitive";
+    type: Temporal.PlainTime;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface AuthorOpts {
@@ -271,6 +303,7 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
       supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;

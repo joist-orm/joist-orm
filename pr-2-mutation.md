@@ -6,10 +6,18 @@
 - Implement only after [PR1: Compound Reads](./pr-1-union.md) is merged; hand off next to [PR3: Extensions](./pr-3-extensions.md).
 - PR1 establishes root `{ union | unionAll | intersect | intersectAll | except | exceptAll: [read1, read2, ...] }`, with at least two named-POJO read operands, keyed-output `orderBy`, `limit`, and `offset`. Every compound returns POJO rows; `query(compound)` produces a `Subquery`.
 - PR1 rejects scalar set operands/results statically and at runtime, including all-scalar, mixed scalar/POJO, reusable scalar, and nested scalar operands. Untracked/widened `SetOperand` projections lose known output keys, not scalar-versus-POJO identity.
-- `query(...)` creates reusable read values, and `em.query(...)` returns read rows. Preserve these contracts and all existing public APIs.
+- `query(...)` creates reusable read values, and `em.query(...)` returns read rows. Preserve these contracts except for the explicitly approved table cutover below.
 - Ordinary `query({ from, select: expr })` remains `Expr<R | null, never>` for scalar/IN contexts, without a `ScalarQuery` brand or scalar-value execution overload. Inline `em.query({ from, select: expr })` still returns scalar arrays; direct execution of a scalar query value is not public API.
 - Recheck the merged implementation before editing. The source observations below describe the pre-PR1 baseline, not guaranteed final symbol names.
 - This handoff does not authorize commits or PR creation. Preserve unrelated work, including `.idea/vcs.xml`. Coordinate handoff updates when a reviewed decision affects later PRs.
+
+## Table Cutover Contract
+
+This reviewed decision supersedes the original **DOMAIN field-name assignment requirement**. SQL-shaped `em.query`, `query`, and `em.execute` use `table`/`tables` and `Table<T>`, with physical column keys such as `first_name` and `author_id`. VALUES, UPDATE SET, and INSERT SELECT target keys use those physical names, not `firstName` or `author`. Values still use domain codecs and public ID types. Ordinary read/RETURNING output keys remain freely chosen, i.e. `{ firstName: a.first_name }` or `{ authorId: b.author_id }`.
+
+`alias`/`aliases` and `Alias<T>` now belong only to `em.find` domain filters. `Tables.ts` owns SQL column expressions and joins, while `Aliases.ts` retains find predicates. Keep `b.author.as(a)`, `a.books.as(b)`, and polymorphic `c.parent.eq/ne/in` sugar. An owning relation name is a join factory, not a selectable FK expression or assignment key. Selecting a root table still hydrates entities; mutation RETURNING does not.
+
+Codegen emits physical `AuthorColumns`/`BookColumns` interfaces, linked through `TypeMap.columnsType` and `ColumnsOf<T>`, separately from domain `Fields` interfaces. These column types carry value/nullability and insert/update policies. Runtime `EntityMetadata.columns` maps physical names to owning `fieldName` entries, so SQL expressions and writes reuse existing serde columns and physical facts. Do not derive mutation keys from domain `Fields` or `OptsOf<T>`. Earlier source observations are historical. This cutover adds no PR3 features and does not relax excluded mutation targets or polymorphic assignments.
 
 ## Goals
 
@@ -36,24 +44,24 @@ em.execute(statement): Promise<{ rowCount: number; rows: R[] }>
 - Statements remain reusable POJOs. Export suitable statement types for annotations and `satisfies`, without a mutation builder or wrapper.
 - Reject `query(mutation)` and `em.query(mutation)` statically and at runtime; mutations are not read values or compound operands.
 - `em.execute` also accepts the read inputs supported by `em.query`, returning their rows in the metadata envelope. Preserve their existing decoding and read restrictions: ordinary scalar-select POJOs are executable inputs, but scalar `query()` expressions are not public execution inputs. Do not introduce a scalar query brand or turn every Expr into an executable statement. The no-entity-hydration rule below applies to mutation RETURNING, not existing ordinary entity reads.
-- RETURNING accepts named expression POJOs or one scalar expression. Never accept a managed entity alias or an entity-shaped read value.
+- RETURNING accepts named expression POJOs or one scalar expression. Never accept a table handle or an entity-shaped read value.
 - Infer `R` from RETURNING. Without RETURNING, use `rows: never[]` in the public type and return `[]` at runtime.
 - Always return the stable envelope. `rowCount` is the driver's top-level command count: affected rows for mutations and selected rows for reads. Never manufacture it from `rows.length`; no RETURNING does not mean zero affected rows.
 - A scalar RETURNING produces scalar array elements, not `{ value: ... }` objects. Preserve existing expression/column decode semantics and nullability.
 - PR1's POJO-only restriction is for read compounds, not mutation result modes. Scalar RETURNING remains required.
-- UPDATE SET, mutation predicates, and mutation RETURNING have the target alias in scope; reuse supported read subqueries without silently adding mutation joins.
+- UPDATE SET, mutation predicates, and mutation RETURNING have the target table in scope; reuse supported read subqueries without silently adding mutation joins.
 - To consume a compound in scalar/IN contexts, use a named column through an ordinary wrapper, i.e. `a.id.in(query({ from: ids, select: ids.id }))` for a compatible `{ id: AuthorId }` compound. Apply `.coalesce()` to that outer scalar expression. A scalar context adds SQL NULL for zero rows and errors on multiple rows; IN can consume many rows. Retain enclosing correlations and outer joins referenced by any branch, including non-first branches.
 - INSERT VALUES has no existing target row to read. Reject direct target-column references in its value expressions; scalar subqueries retain their own lexical sources. INSERT SELECT's source scope is independent from the target RETURNING scope.
 
 ## Examples
 
-Assume `em` exists and Author `a:1` is already persisted. These are independent examples, not a sequential setup script. Book `author` and `notes` need explicit inputs despite their ORM configuration defaults; its timestamp columns are supplied by the existing database trigger, not entity defaults.
+Assume `em` exists and Author `a:1` is already persisted. These are independent examples, not a sequential setup script. Book `author_id` and `notes` need explicit inputs despite their ORM configuration defaults; its timestamp columns are supplied by the existing database trigger, not entity defaults.
 
 ```ts
-const b = alias(Book);
+const b = table(Book);
 const insert = {
   insert: b,
-  values: { title: "Imported Book", author: "a:1", notes: "Imported without hooks" },
+  values: { title: "Imported Book", author_id: "a:1", notes: "Imported without hooks" },
   returning: { id: b.id, title: b.title },
 } as const;
 const inserted = await em.execute(insert);
@@ -75,18 +83,18 @@ const deleted = await em.execute({
 INSERT SELECT accepts either the read POJO directly or its `query(...)` value. This example independently assumes a live Book `b:1` exists:
 
 ```ts
-const source = alias(Book);
+const source = table(Book);
 const copiedBooks = query({
   unionAll: [
     {
       from: source,
       where: source.id.eq("b:1"),
-      select: { title: source.title, author: source.author, notes: source.notes },
+      select: { title: source.title, author_id: source.author_id, notes: source.notes },
     },
     {
       from: source,
       where: source.id.eq("b:1"),
-      select: { notes: source.notes, title: source.title, author: source.author },
+      select: { notes: source.notes, title: source.title, author_id: source.author_id },
     },
   ],
 });
@@ -96,7 +104,7 @@ await em.execute({ insert: b, from: copiedBooks, returning: { id: b.id } });
 
 ## Assignments And Defaults
 
-- Use target DOMAIN field names, such as `author`, not SQL column names such as `author_id`.
+- Use target physical column names, such as `author_id` and `first_name`. The former requirement to use DOMAIN field names is obsolete and must not be restored.
 - Accept compatible domain values and existing typed SQL expressions. Bind domain values through actual write encoding; expressions stay SQL.
 - Accept ordinary owning references as the correct entity ID type or a persisted entity. Use metadata-aware ID encoding, not string surgery.
 - Reject new/unflushed reference entities even when they have preassigned IDs. An ID on an entity is not proof that the row has been inserted.
@@ -128,8 +136,8 @@ await em.execute({ insert: b, from: copiedBooks, returning: { id: b.id } });
 ## Schema And Type Prerequisites
 
 - Do not derive SQL insert requiredness from `OptsOf<T>`, setters, or factories. Their optional fields can depend on hooks/defaults that execute bypasses.
-- Book `author` and `notes` have configuration defaults but no SQL defaults. Omission must not silently trigger ORM defaults.
-- Author `numberOfBooks` is derived but database NOT NULL without a default. Direct author inserts may need this and other explicit persisted fields.
+- Book `author_id` and `notes` have configuration defaults but no SQL defaults. Omission must not silently trigger ORM defaults.
+- Author `number_of_books` is derived but database NOT NULL without a default. Direct author inserts may need this and other explicit persisted columns.
 - Require known SQL-required values in each VALUES row and in INSERT SELECT's output keys, while accounting for genuine server-side providers. Let PostgreSQL validate supplied SQL expressions/defaults.
 - Resolve the server-supplied-field policy before locking insert requiredness. `createEntityTable` creates NOT NULL `created_at`/`updated_at` without column defaults; `trigger_maybe_set_created_at` fills them on INSERT. A blanket NOT NULL/no-DEFAULT rule would incorrectly reject the Book examples above.
 - Carry explicit, reviewed knowledge of server-provided values where needed. Do not infer arbitrary trigger behavior from ORM-derived flags or field names, invoke JS defaults to fill the gap, or pretend to statically analyze every trigger. Review any new configuration override before exposing it publicly.
@@ -156,8 +164,8 @@ await em.execute({ insert: b, from: copiedBooks, returning: { id: b.id } });
 - `packages/core/src/query.ts` currently builds a single read `Plan` with `decodeRows`. PR1 should expose ordered SQL output/codec descriptions.
 - Reuse the actual abstraction and symbol names merged in PR1. If a necessary output fact is absent, extend that abstraction rather than inventing a duplicate projection registry.
 - Compile INSERT, UPDATE, and DELETE in `execute.ts` with existing identifier quoting, expression scopes, placeholder handling, and condition pruning.
-- For INSERT SELECT, accept named POJO columns only, for both ordinary reads and PR1 compounds. Even a one-column source needs a target-field key, i.e. `select: { author: a.id }`, not `select: a.id`; a one-key source is valid only when the target's other fields may be omitted under the schema/server-provider rules. Reject scalar/entity projections, unknown target keys, missing required keys, and incompatible column representations.
-- Match output keys to target domain fields, then normalize target/source column order explicitly. Object insertion order must not swap assignments.
+- For INSERT SELECT, accept named POJO columns only, for both ordinary reads and PR1 compounds. Even a one-column source needs a physical target-column key, i.e. `select: { author_id: a.id }`, not `select: a.id`; a one-key source is valid only when the target's other columns may be omitted under the schema/server-provider rules. Reject scalar/entity projections, unknown target keys, missing required keys, and incompatible column representations.
+- Match output keys to target physical columns, then normalize target/source column order explicitly. Object insertion order must not swap assignments.
 - Keep source SQL, bindings, branch grouping, ordering, pagination, and compound semantics intact. A SQL projection wrapper may reorder outputs without materializing them.
 - Never call `em.query(source)`, decode rows, then re-encode INSERT values. No JavaScript round trip between SQL stages; preserve UNION ALL duplicates.
 - Validate source/target storage compatibility as well as domain types; an INSERT SELECT must not assume two custom codecs with the same TypeScript type share a SQL representation.
@@ -190,7 +198,7 @@ await em.execute({ insert: b, from: copiedBooks, returning: { id: b.id } });
 ## Files To Inspect Or Change
 
 - `packages/core/src/execute.ts` (new): primary home for statement types, validation, mutation compilation, RETURNING, and execution/result helpers.
-- `packages/core/src/query.ts`, `Expr.ts`, `Aliases.ts`, and `QueryParser.pruning.ts`: reuse read compilation, output descriptions, expression identity, and pruning; expose only the shared helpers needed by `execute.ts`.
+- `packages/core/src/query.ts`, `Expr.ts`, `Tables.ts`, and `QueryParser.pruning.ts`: reuse read compilation, output descriptions, expression identity, and pruning; expose only the shared helpers needed by `execute.ts`. Keep `Aliases.ts` focused on `em.find` domain predicates.
 - `packages/core/src/EntityManager.ts` and `FlushLock.ts`: thin execution entry point, error context, and EM-private permission checks; inspect existing transaction, refresh, and recalc semantics without moving mutation compilation here.
 - `packages/core/src/drivers/Driver.ts`, `packages/orm/src/drivers/PostgresDriver.ts`, and `packages/drivers/bun-pg/src/BunPgDriver.ts`: required result envelope and unsupported behavior.
 - `packages/core/src/serde.ts` and `drivers/EntityWriter.ts`: write encoding versus filter/decode behavior; the latter is a reference, not a mutation execution path.
@@ -319,7 +327,7 @@ Record blocked checks and their actual errors; do not mask schema drift by weake
 
 - Most statement logic lives in `execute.ts`; EntityManager remains a thin wrapper and read compilation is reused rather than duplicated.
 - All four statement forms work with inferred stable envelopes, real driver counts, schema-aware inputs, guarded writes, and the stated empty-input policy.
-- INSERT SELECT stays entirely in SQL and preserves ordered domain-key mapping, storage compatibility, source behavior, and duplicate rows.
+- INSERT SELECT stays entirely in SQL and preserves ordered physical-column-key mapping, storage compatibility, source behavior, and duplicate rows.
 - Value writes use real write encoding; RETURNING shares PR1 decoders without entity hydration; existing read/filter/entity-write APIs remain intact.
 - Permission, transaction, autocommit decode-failure, soft-delete, and cache-staleness behavior is tested and documented without rollback or repair overpromises.
 - Runtime/type rejection covers excluded forms; generated physical-schema facts and fixture changes are reviewed for unrelated churn.

@@ -61,49 +61,37 @@ import {
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
 export interface BookAdvanceFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  status: { kind: "enum"; type: AdvanceStatus; nullable: never };
+  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
+}
+
+export interface BookAdvanceColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  status: {
-    kind: "enum";
-    type: AdvanceStatus;
-    nullable: never;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  book: {
-    kind: "m2o";
-    type: Book;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  publisher: {
-    kind: "m2o";
-    type: Publisher;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
+  "status_id": { kind: "enum"; type: AdvanceStatus; nullable: false; insert: "required"; update: true };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
+  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookAdvanceOpts {
@@ -187,6 +175,7 @@ declare module "joist-core" {
       orderType: BookAdvanceOrder;
       optsType: BookAdvanceOpts;
       fieldsType: BookAdvanceFields;
+      columnsType: BookAdvanceColumns;
       supportsEmExecute: true;
       optIdsType: BookAdvanceIdsOpts;
       factoryExtrasType: BookAdvanceFactoryExtras;

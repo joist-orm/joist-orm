@@ -72,113 +72,20 @@ import {
 export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  title: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  order: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  notes: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  acknowledgements: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  authorsNickNames: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  search: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  deletedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  prequel: {
-    kind: "m2o";
-    type: Book;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  author: {
-    kind: "m2o";
-    type: Author;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  reviewer: {
-    kind: "m2o";
-    type: Author;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  randomComment: {
-    kind: "m2o";
-    type: Comment;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  authorsNickNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   advances: { kind: "o2m"; type: BookAdvance };
   reviews: { kind: "o2m"; type: BookReview };
@@ -187,6 +94,95 @@ export interface BookFields {
   currentDraftAuthor: { kind: "o2o"; type: Author };
   favoriteAuthor: { kind: "o2o"; type: Author };
   image: { kind: "o2o"; type: Image };
+}
+
+export interface BookColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "order": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "notes": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "acknowledgements": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "authors_nick_names": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "search": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "deleted_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "prequel_id": { kind: "m2o"; type: Book; derived: false; nullable: true; insert: "optional"; update: true };
+  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
+  "reviewer_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
+  "random_comment_id": { kind: "m2o"; type: Comment; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface BookOpts {
@@ -327,6 +323,7 @@ declare module "joist-core" {
       orderType: BookOrder;
       optsType: BookOpts;
       fieldsType: BookFields;
+      columnsType: BookColumns;
       supportsEmExecute: true;
       optIdsType: BookIdsOpts;
       factoryExtrasType: BookFactoryExtras;

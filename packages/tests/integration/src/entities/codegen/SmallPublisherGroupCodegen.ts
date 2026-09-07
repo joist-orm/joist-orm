@@ -39,6 +39,7 @@ import {
   type Entity,
   newSmallPublisherGroup,
   PublisherGroup,
+  type PublisherGroupColumns,
   type PublisherGroupFields,
   type PublisherGroupFilter,
   type PublisherGroupGraphQLFilter,
@@ -54,22 +55,22 @@ import {
 export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "id"> {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  smallName: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  publishers: { kind: "o2m"; type: SmallPublisher };
+}
+
+export interface SmallPublisherGroupColumns extends Omit<PublisherGroupColumns, "id" | "small_name"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "small_name": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  publishers: { kind: "o2m"; type: SmallPublisher };
 }
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {
@@ -118,6 +119,7 @@ declare module "joist-core" {
       orderType: SmallPublisherGroupOrder;
       optsType: SmallPublisherGroupOpts;
       fieldsType: SmallPublisherGroupFields;
+      columnsType: SmallPublisherGroupColumns;
       supportsEmExecute: false;
       optIdsType: SmallPublisherGroupIdsOpts;
       factoryExtrasType: SmallPublisherGroupFactoryExtras;

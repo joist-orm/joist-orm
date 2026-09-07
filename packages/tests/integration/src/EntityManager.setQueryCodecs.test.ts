@@ -1,4 +1,4 @@
-import { KeySerde, alias, aliases, getMetadata, query } from "joist-orm";
+import { KeySerde, getMetadata, query, table, tables } from "joist-orm";
 import { Author, Book, Comment } from "src/entities";
 import { insertAuthor, insertBook, insertComment } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
@@ -28,12 +28,12 @@ describe("EntityManager.setQueryCodecs", () => {
         // And an unmodeled key subclass whose inherited conversions still read and bind Author ids
         field.serde = new UnmodeledKeySerde("a", field.fieldName, source === "primary key" ? "id" : "author_id", "int");
         // And fresh aliases that read the temporarily replaced field serde
-        const [a, b, c] = aliases(Author, Book, Comment);
+        const [a, b, c] = tables(Author, Book, Comment);
         // And an ordinary scalar subquery selecting Alice through the chosen PK or FK field
         const ids =
           source === "primary key"
             ? query({ from: a, where: a.id.eq("a:1"), select: a.id })
-            : query({ from: b, select: b.author });
+            : query({ from: b, select: b.author_id });
         // When the selected alias metadata supplies the polymorphic target despite the absent output codec
         const rows = await em.query({ from: c, where: c.parent.in(ids), select: { text: c.text } });
         // Then only the Author component matches, independently of which entity owns the selected field
@@ -55,12 +55,12 @@ describe("EntityManager.setQueryCodecs", () => {
         // And an unmodeled key subclass that cannot establish compound codec compatibility
         field.serde = new UnmodeledKeySerde("a", field.fieldName, source === "primary key" ? "id" : "author_id", "int");
         // And fresh aliases for the unknown key branch and the Comment parent predicate
-        const [a, b, c] = aliases(Author, Book, Comment);
+        const [a, b, c] = tables(Author, Book, Comment);
         // And a POJO branch whose unknown codec, not its row shape, makes it invalid in a compound
         const branch =
           source === "primary key"
             ? query({ from: a, select: { id: a.id } })
-            : query({ from: b, select: { id: b.author } });
+            : query({ from: b, select: { id: b.author_id } });
         // And isolated query recording to detect accidental execution during validation
         resetQueryCount();
         // When a compound of those ordinary reads is supplied to polymorphic IN
@@ -80,9 +80,9 @@ describe("EntityManager.setQueryCodecs", () => {
 
   it("still rejects an ordinary id expression as a polymorphic IN subquery", () => {
     // Given a Comment alias whose parent condition requires an actual subquery
-    const c = alias(Comment);
+    const c = table(Comment);
     // And an Author-id alias expression with known metadata but no subquery identity
-    const a = alias(Author);
+    const a = table(Author);
     // When passing the id expression directly instead of a scalar query value
     // Then the metadata fallback does not remove the actual-query guard
     expect(() => c.parent.in(a.id)).toThrow(

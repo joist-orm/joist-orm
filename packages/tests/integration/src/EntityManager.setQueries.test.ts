@@ -7,10 +7,10 @@ import {
   PrimitiveSerde,
   type Query,
   ZonedDateTimeSerde,
-  alias,
-  aliases,
   query,
   sql,
+  table,
+  tables,
 } from "joist-orm";
 import {
   Author,
@@ -39,12 +39,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for comparing those names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When combining both names with an empty right operand
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
         ],
       });
       // Then duplicates from the left operand collapse even without a match on the right
@@ -56,14 +56,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for the repeated name
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author insert
       resetQueryCount();
       // When both operands contribute Alice
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then PostgreSQL returns one copy in one query
@@ -82,12 +82,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When each operand selects one Alice
       const rows = await em.query({
         union: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
         orderBy: { age: "ASC" },
       });
@@ -103,7 +103,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When both operands contribute that NULL
       const rows = await em.query({
         union: [
@@ -119,7 +119,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When combining two empty projections
       const rows = await em.query({
         union: [
@@ -140,12 +140,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for those names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When combining both names with an empty right operand
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
         ],
       });
       // Then both left-side copies remain
@@ -157,14 +157,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for the repeated name
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author insert
       resetQueryCount();
       // When each operand contributes one Alice
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then both copies are returned by one query
@@ -183,12 +183,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When each operand contributes one complete row
       const rows = await em.query({
         unionAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
         orderBy: { age: "ASC" },
       });
@@ -204,7 +204,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When each operand contributes that NULL
       const rows = await em.query({
         unionAll: [
@@ -220,7 +220,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When appending two empty projections
       const rows = await em.query({
         unionAll: [
@@ -237,13 +237,13 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for that name
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When each operand contributes one copy
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then the third operand contributes a third copy
@@ -261,14 +261,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Carol" });
       // And an Author query for their names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author inserts
       resetQueryCount();
       // When intersecting Alice/Bob with Bob/Carol
       const rows = await em.query({
         intersect: [
-          { from: a, where: a.id.ne("a:3"), select: { name: a.firstName } },
-          { from: a, where: a.id.ne("a:1"), select: { name: a.firstName } },
+          { from: a, where: a.id.ne("a:3"), select: { name: a.first_name } },
+          { from: a, where: a.id.ne("a:1"), select: { name: a.first_name } },
         ],
       });
       // Then only the shared name survives
@@ -287,12 +287,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for those names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When both operands contain both copies
       const rows = await em.query({
         intersect: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then INTERSECT removes multiplicity from the matching row
@@ -306,12 +306,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When comparing the two complete rows
       const rows = await em.query({
         intersect: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
       });
       // Then matching names alone do not produce a matching row
@@ -323,7 +323,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When intersecting two copies of that NULL
       const rows = await em.query({
         intersect: [
@@ -339,7 +339,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When intersecting two empty projections
       const rows = await em.query({
         intersect: [
@@ -356,7 +356,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query with an empty left projection
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When the right row has no left match
       const rows = await em.query({
         intersect: [
@@ -373,7 +373,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query with an empty right projection
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When the left row has no right match
       const rows = await em.query({
         intersect: [
@@ -393,7 +393,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the grouped set expression
       const em = newEntityManager();
       // And an Author alias for each independent branch
-      const a = alias(Author);
+      const a = table(Author);
       // And a reusable query selecting only a1
       const one = query({ from: a, where: a.id.eq("a:1"), select: { id: a.id } });
       // And a reusable query selecting only a2
@@ -421,12 +421,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for the equal names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When the left has one copy and the right has two
       const rows = await em.query({
         intersectAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then only the smaller left count survives
@@ -440,12 +440,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for the equal names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When the left has two copies and the right has one
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
         ],
       });
       // Then only the smaller right count survives
@@ -459,14 +459,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query for those names
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author inserts
       resetQueryCount();
       // When both left copies have a matching right copy
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then ALL retains both copies instead of deduplicating them
@@ -485,12 +485,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When comparing the two complete rows
       const rows = await em.query({
         intersectAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
       });
       // Then ALL changes counts, not whole-row equality
@@ -504,7 +504,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Bob", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When both NULL copies have a corresponding right copy
       const rows = await em.query({
         intersectAll: [
@@ -520,7 +520,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When intersecting two empty projections
       const rows = await em.query({
         intersectAll: [
@@ -537,7 +537,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query with an empty right projection
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When the left has one copy and the right has zero
       const rows = await em.query({
         intersectAll: [
@@ -557,15 +557,15 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the three-way intersection
       const em = newEntityManager();
       // And an Author alias for independent branch filters
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the fixture inserts
       resetQueryCount();
       // When the first two operands contribute two copies and the third contributes one
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
         ],
       });
       // Then the minimum count is one, not the first pair's count of two
@@ -587,14 +587,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query selecting only one copy on the right
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author insert
       resetQueryCount();
       // When one right copy matches both left copies
       const rows = await em.query({
         except: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
         ],
       });
       // Then EXCEPT removes the name entirely rather than subtracting only one copy
@@ -613,12 +613,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query with no matching right rows
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting an empty operand from two equal left rows
       const rows = await em.query({
         except: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
         ],
       });
       // Then the unmatched name survives only once
@@ -630,7 +630,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query whose left operand is empty
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting Alice from no left rows
       const rows = await em.query({
         except: [
@@ -649,12 +649,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting the older Alice from the younger Alice
       const rows = await em.query({
         except: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
       });
       // Then a matching name alone does not remove the left row
@@ -666,7 +666,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting one NULL row from another
       const rows = await em.query({
         except: [
@@ -682,7 +682,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting one empty projection from another
       const rows = await em.query({
         except: [
@@ -699,7 +699,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query reused at each level
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       const one = query({ from: a, select: { id: a.id } });
       // And recording isolated from the Author insert
       resetQueryCount();
@@ -723,14 +723,14 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query selecting only one copy on the right
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author inserts
       resetQueryCount();
       // When subtracting one matching copy from two
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
         ],
       });
       // Then one unmatched copy remains
@@ -749,12 +749,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query selecting only one copy on the left
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting two copies from one
       const rows = await em.query({
         exceptAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
       });
       // Then excess right copies do not become result rows
@@ -768,12 +768,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice" });
       // And an Author query with an empty right operand
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When no right row subtracts either left copy
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
         ],
       });
       // Then ALL retains both unmatched copies
@@ -787,12 +787,12 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author query selecting both name and age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting the older Alice from the younger Alice
       const rows = await em.query({
         exceptAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
         ],
       });
       // Then ALL changes counts, not whole-row equality
@@ -804,7 +804,7 @@ describe("EntityManager.setQueries", () => {
       await insertAuthor({ first_name: "Alice", age: null });
       // And an Author query projecting only age
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting one NULL row from another
       const rows = await em.query({
         exceptAll: [
@@ -820,7 +820,7 @@ describe("EntityManager.setQueries", () => {
       // Given no Authors
       // And an Author query over the empty table
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // When subtracting one empty projection from another
       const rows = await em.query({
         exceptAll: [
@@ -840,15 +840,15 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the compound read
       const em = newEntityManager();
       // And an Author alias for all three operands
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from the Author inserts
       resetQueryCount();
       // When each later operand subtracts one copy from the accumulated left result
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name } },
         ],
       });
       // Then no copies remain, rather than the two copies from right association
@@ -869,12 +869,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the compound read
       const em = newEntityManager();
       // And an Author alias local to each branch
-      const a = alias(Author);
+      const a = table(Author);
       // And a reversed reusable projection with DISTINCT and pagination owned by its branch
       const reversed = query({
         from: a,
-        select: { name: a.firstName, count: sql<number>`random()`.count() },
-        groupBy: [a.firstName],
+        select: { name: a.first_name, count: sql<number>`random()`.count() },
+        groupBy: [a.first_name],
         distinct: true,
         orderBy: { count: "DESC" },
         limit: 1,
@@ -887,8 +887,8 @@ describe("EntityManager.setQueries", () => {
           {
             from: a,
             where: a.id.eq("a:0"),
-            groupBy: [a.firstName],
-            select: { count: a.id.count(), name: a.firstName },
+            groupBy: [a.first_name],
+            select: { count: a.id.count(), name: a.first_name },
           },
           reversed,
         ],
@@ -904,19 +904,19 @@ describe("EntityManager.setQueries", () => {
 
     it("resolves a nested multi-column projection once per output traversal", () => {
       // Given an Author projection with eight independent named columns
-      const a = alias(Author);
+      const a = table(Author);
       // And a projection proxy that counts output enumeration without changing its columns
       let enumerations = 0;
       const select = new Proxy(
         {
           id: a.id,
-          name: a.firstName,
-          lastName: a.lastName,
+          name: a.first_name,
+          lastName: a.last_name,
           age: a.age,
-          createdAt: a.createdAt,
-          updatedAt: a.updatedAt,
+          createdAt: a.created_at,
+          updatedAt: a.updated_at,
           initials: a.initials,
-          popular: a.isPopular,
+          popular: a.is_popular,
         },
         {
           ownKeys(target) {
@@ -942,9 +942,9 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the compound read
       const em = newEntityManager();
       // And an Author alias for the reusable projection
-      const a = alias(Author);
+      const a = table(Author);
       // And a table-shaped query whose select property is a column, not a query clause
-      const names = query({ from: a, select: { select: a.firstName } });
+      const names = query({ from: a, select: { select: a.first_name } });
       // And a named compound that orders by that output key
       const combined = query({ union: [names, names], orderBy: { select: "ASC" }, as: "names" });
       // When using the compound as an ordinary derived source
@@ -961,14 +961,14 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the combined read
       const em = newEntityManager();
       // And separate Author and Book aliases
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And an immutable first projection defining the canonical output order
-      const author = Object.freeze({ from: a, select: Object.freeze({ name: a.firstName, detail: a.lastName }) });
+      const author = Object.freeze({ from: a, select: Object.freeze({ name: a.first_name, detail: a.last_name }) });
       // And an immutable second projection with the opposite key insertion order
       const book = Object.freeze({
         from: b,
-        join: [{ inner: a, on: b.author.eq(a.id) }],
-        select: Object.freeze({ detail: a.firstName, name: b.title }),
+        join: [{ inner: a, on: b.author_id.eq(a.id) }],
+        select: Object.freeze({ detail: a.first_name, name: b.title }),
       });
       // And an immutable tuple owned by the caller
       const operands = Object.freeze([author, book] as const);
@@ -1003,11 +1003,11 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the reusable branch read
       const em = newEntityManager();
       // And an Author alias for both branches
-      const a = alias(Author);
+      const a = table(Author);
       // And a named branch whose reversed projection has its own DISTINCT, ordering, limit, and offset
       const page = query({
         from: a,
-        select: { detail: a.lastName, name: a.firstName },
+        select: { detail: a.last_name, name: a.first_name },
         distinct: true,
         orderBy: { name: "ASC" },
         limit: 1,
@@ -1018,7 +1018,7 @@ describe("EntityManager.setQueries", () => {
       resetQueryCount();
       // When combining an inline a1 branch with the paginated reusable branch
       const rows = await em.query({
-        unionAll: [{ from: a, where: a.id.eq("a:1"), select: { name: a.firstName, detail: a.lastName } }, page],
+        unionAll: [{ from: a, where: a.id.eq("a:1"), select: { name: a.first_name, detail: a.last_name } }, page],
         orderBy: { name: "ASC" },
       });
       // Then reordering output columns does not move the page or DISTINCT into the outer scope
@@ -1041,7 +1041,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for nested reusable compounds
       const em = newEntityManager();
       // And an Author alias shared by independent branches
-      const a = alias(Author);
+      const a = table(Author);
       // And a named compound whose descending one-row page contains only a2
       const latest = query({
         union: [
@@ -1081,7 +1081,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the paginated compound
       const em = newEntityManager();
       // And aliases for the two branch sources
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a call-through driver spy exposing the actual ordered bindings
       const execute = jest.spyOn(testDriver.driver, "executeQuery");
       // And SQL recording isolated from the fixture inserts
@@ -1092,8 +1092,8 @@ describe("EntityManager.setQueries", () => {
           unionAll: [
             {
               from: a,
-              where: a.firstName.ne("absent author"),
-              select: { name: a.firstName },
+              where: a.first_name.ne("absent author"),
+              select: { name: a.first_name },
               orderBy: { name: "ASC" },
               limit: 2,
               offset: 1,
@@ -1136,9 +1136,9 @@ describe("EntityManager.setQueries", () => {
         // And an EntityManager for keyed compound ordering
         const em = newEntityManager();
         // And an Author alias for the readonly branches
-        const a = alias(Author);
+        const a = table(Author);
         // And a quoted display key that must remain one output identifier
-        const select = { 'Display "Name"': a.firstName, age: a.age, union: a.firstName };
+        const select = { 'Display "Name"': a.first_name, age: a.age, union: a.first_name };
         // And an absent optional name direction, leaving age as the only sort
         const byName: "ASC" | undefined = undefined;
         // When the age sort is the only supplied direction, with explicit NULLS FIRST
@@ -1166,12 +1166,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for direct query-value execution
       const em = newEntityManager();
       // And an Author alias for both branches
-      const a = alias(Author);
+      const a = table(Author);
       // And a named compound with an output column that is also an operation keyword
       const names = query({
         union: [
-          { from: a, select: { union: a.firstName } },
-          { from: a, select: { union: a.firstName } },
+          { from: a, select: { union: a.first_name } },
+          { from: a, select: { union: a.first_name } },
         ],
         as: "names",
       });
@@ -1197,11 +1197,11 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the outer query
       const em = newEntityManager();
       // And Author and Book aliases for the compound branches
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a compound name containing a quote and SQL punctuation that must remain one identifier
       const names = query({
         union: [
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
           { from: b, select: { name: b.title } },
         ],
         as: 'names" --',
@@ -1236,11 +1236,11 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for direct POJO results
       const em = newEntityManager();
       // And Author and Book aliases whose selected keys have separate serde instances
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a PK branch selecting a1
       const pk = { from: a, where: a.id.eq("a:1"), select: { id: a.id } } satisfies Query;
       // And an FK branch selecting a2
-      const fk = { from: b, select: { id: b.author } } satisfies Query;
+      const fk = { from: b, select: { id: b.author_id } } satisfies Query;
       // When combining the same Author-id domain in either order
       const rows = await em.query({ union: order === "PK first" ? [pk, fk] : [fk, pk], orderBy: { id: "ASC" } });
       // Then neither output is tagged as a Book id and the first decoder does not change the results
@@ -1256,11 +1256,11 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the outer derived-table query
       const em = newEntityManager();
       // And aliases for compatible Author-id branches
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a named compound with the FK branch first
       const ids = query({
         union: [
-          { from: b, select: { id: b.author } },
+          { from: b, select: { id: b.author_id } },
           { from: a, select: { id: a.id } },
         ],
         as: "author_ids",
@@ -1295,14 +1295,14 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the outer join
       const em = newEntityManager();
       // And aliases for the outer source and compound branches
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a separate Author alias local to the PK branch
-      const inner = alias(Author, "inner_author");
+      const inner = table(Author, "inner_author");
       // And a compound containing only a1
       const ids = query({
         union: [
           { from: inner, where: inner.id.eq("a:1"), select: { id: inner.id } },
-          { from: b, select: { id: b.author } },
+          { from: b, select: { id: b.author_id } },
         ],
         as: "author_ids",
       });
@@ -1315,7 +1315,7 @@ describe("EntityManager.setQueries", () => {
         const rows = await em.query({
           from: a,
           join: [{ left: ids, on: ids.id.eq(a.id) }],
-          select: { name: a.firstName, id: ids.id, fallback: ids.id.coalesce("a:9") },
+          select: { name: a.first_name, id: ids.id, fallback: ids.id.coalesce("a:9") },
           orderBy: { name: "ASC" },
         });
         // Then the absent row remains NULL and only coalesce produces the encoded Author-id fallback
@@ -1357,11 +1357,11 @@ describe("EntityManager.setQueries", () => {
         // And an EntityManager for the polymorphic predicate
         const em = newEntityManager();
         // And separate aliases for the Comment source and both POJO branches
-        const [c, a, b] = aliases(Comment, Author, Book);
+        const [c, a, b] = tables(Comment, Author, Book);
         // And a POJO PK query selecting a1
         const pk = query({ from: a, where: a.id.eq("a:1"), select: { id: a.id } });
         // And a compatible POJO FK query selecting a2 through its Book
-        const fk = query({ from: b, select: { id: b.author } });
+        const fk = query({ from: b, select: { id: b.author_id } });
         // And a compound whose agreed target domain must not depend on which branch owns the first column
         const ids = query({ union: order === "PK first" ? [pk, fk] : [fk, pk], as: "author_ids" });
         // When filtering Comment parents with an ordinary scalar projection of the compound id
@@ -1384,15 +1384,15 @@ describe("EntityManager.setQueries", () => {
         // And an EntityManager for the nullable union
         const em = newEntityManager();
         // And Author and Book aliases with different sources but compatible varchar outputs
-        const [a, b] = aliases(Author, Book);
+        const [a, b] = tables(Author, Book);
         // And a nullable projection of the missing left-joined Book
         const nullable = {
           from: a,
-          join: [{ left: b, on: b.author.eq(a.id) }],
+          join: [{ left: b, on: b.author_id.eq(a.id) }],
           select: { name: b.title },
         } satisfies Query;
         // And a nonnullable projection of the Author's own name
-        const required = { from: a, select: { name: a.firstName } } satisfies Query;
+        const required = { from: a, select: { name: a.first_name } } satisfies Query;
         // When either branch can be the first branch supplying the output schema
         const rows = await em.query({
           union: order === "nullable first" ? [nullable, required] : [required, nullable],
@@ -1409,7 +1409,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for NULL-only but physically typed branches
       const em = newEntityManager();
       // And independent Author aliases with the same known int4 domain
-      const [a, other] = aliases(Author, Author);
+      const [a, other] = tables(Author, Author);
       // When combining two NULL age projections
       const rows = await em.query({
         union: [
@@ -1429,7 +1429,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for aggregate decoding
       const em = newEntityManager();
       // And independent Author aliases whose SUM expressions share int8 and Number codecs
-      const [a, other] = aliases(Author, Author);
+      const [a, other] = tables(Author, Author);
       // When both branches select SUM rather than mixing SUM with an int4 age column
       const rows = await em.query({
         union: [
@@ -1450,11 +1450,11 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for matching aggregate output types
       const em = newEntityManager();
       // And Author and Book aliases whose raw varchar fields are not themselves operands here
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // When both aggregates return text even though their input columns are varchar
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.firstName.min() } },
+          { from: a, select: { name: a.first_name.min() } },
           { from: b, select: { name: b.title.max() } },
         ],
         orderBy: { name: "ASC" },
@@ -1477,28 +1477,28 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the decoded compound
       const em = newEntityManager();
       // And two separate aliases whose fields share logical domains, not expression identity
-      const [a, other] = aliases(Author, Author);
+      const [a, other] = tables(Author, Author);
       // When UNION compares the same physical rows from both aliases
       const rows = await em.query({
         union: [
           {
             from: a,
             select: {
-              name: a.firstName,
-              range: a.rangeOfBooks,
-              shape: a.favoriteShape,
-              address: a.businessAddress,
-              createdAt: a.createdAt,
+              name: a.first_name,
+              range: a.range_of_books,
+              shape: a.favorite_shape,
+              address: a.business_address,
+              createdAt: a.created_at,
             },
           },
           {
             from: other,
             select: {
-              name: other.firstName,
-              range: other.rangeOfBooks,
-              shape: other.favoriteShape,
-              address: other.businessAddress,
-              createdAt: other.createdAt,
+              name: other.first_name,
+              range: other.range_of_books,
+              shape: other.favorite_shape,
+              address: other.business_address,
+              createdAt: other.created_at,
             },
           },
         ],
@@ -1525,12 +1525,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for set equality before decoding
       const em = newEntityManager();
       // And an Author alias for both address branches
-      const a = alias(Author);
+      const a = table(Author);
       // When UNION compares physically unequal JSONB rows before the schema strips extra keys
       const rows = await em.query({
         union: [
-          { from: a, where: a.id.eq("a:1"), select: { address: a.businessAddress } },
-          { from: a, where: a.id.eq("a:2"), select: { address: a.businessAddress } },
+          { from: a, where: a.id.eq("a:1"), select: { address: a.business_address } },
+          { from: a, where: a.id.eq("a:2"), select: { address: a.business_address } },
         ],
       });
       // Then both SQL rows survive even though their decoded JavaScript values are equal
@@ -1543,12 +1543,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for result decoding
       const em = newEntityManager();
       // And an Author alias with a known schema codec in both branches
-      const a = alias(Author);
+      const a = table(Author);
       // When executing a codec-compatible compound over invalid stored JSON
       const result = em.query({
         union: [
-          { from: a, select: { address: a.businessAddress } },
-          { from: a, select: { address: a.businessAddress } },
+          { from: a, select: { address: a.business_address } },
+          { from: a, select: { address: a.business_address } },
         ],
       });
       // Then runtime schema validation is retained after the set operation
@@ -1565,7 +1565,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the custom-domain compound
       const em = newEntityManager();
       // And independent User aliases sharing the same custom mapper
-      const [u, other] = aliases(User, User);
+      const [u, other] = tables(User, User);
       // And a derived compound retaining the password's custom encoder and decoder
       const passwords = query({
         union: [
@@ -1608,16 +1608,16 @@ describe("EntityManager.setQueries", () => {
       newUser(em, { passwordHistory: [older, password] });
       await em.flush();
       // And independent aliases sharing the generated password-history codec
-      const [u, other] = aliases(User, User);
+      const [u, other] = tables(User, User);
       const histories = query({
         union: [
-          { from: u, select: { history: u.passwordHistory } },
-          { from: other, select: { history: other.passwordHistory } },
+          { from: u, select: { history: u.password_history } },
+          { from: other, select: { history: other.password_history } },
         ],
         as: "histories",
       });
       // When filtering both a physical alias and the compound's derived array column
-      const direct = await em.query({ from: u, where: u.passwordHistory.eq(history), select: u.passwordHistory });
+      const direct = await em.query({ from: u, where: u.password_history.eq(history), select: u.password_history });
       const combined = await em.query({ from: histories, where: histories.history.eq(history), select: histories });
       const found = await em.find(User, { passwordHistory: { eq: history } });
       // Then each path encodes elements, preserves SQL NULL, and decodes the same domain array
@@ -1637,12 +1637,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for primitive-array set equality
       const em = newEntityManager();
       // And independent Author aliases for the physical and aggregate representations
-      const [a, other] = aliases(Author, Author);
+      const [a, other] = tables(Author, Author);
       // When combining a physical varchar array with array_agg(varchar)
       const rows = await em.query({
         union: [
-          { from: a, select: { names: a.nickNames } },
-          { from: other, select: { names: other.firstName.arrayAgg() } },
+          { from: a, select: { names: a.nick_names } },
+          { from: other, select: { names: other.first_name.arrayAgg() } },
         ],
       });
       // Then compatible array domains deduplicate and decode without converting the elements
@@ -1657,12 +1657,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the array projection
       const em = newEntityManager();
       // And an Author alias for both branches
-      const a = alias(Author);
+      const a = table(Author);
       // When combining both array representations without entity getter defaults
       const rows = await em.query({
         union: [
-          { from: a, select: { names: a.nickNames } },
-          { from: a, select: { names: a.nickNames } },
+          { from: a, select: { names: a.nick_names } },
+          { from: a, select: { names: a.nick_names } },
         ],
         orderBy: { names: "ASC NULLS LAST" },
       });
@@ -1678,12 +1678,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for aggregate array decoding
       const em = newEntityManager();
       // And aliases for the two Author-id aggregate sources
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And an empty aggregate compound for exercising an Author-id array fallback
       const empty = query({
         union: [
           { from: a, where: a.id.eq("a:9"), select: { ids: a.id.arrayAgg() } },
-          { from: b, where: b.id.eq("b:9"), select: { ids: b.author.arrayAgg() } },
+          { from: b, where: b.id.eq("b:9"), select: { ids: b.author_id.arrayAgg() } },
         ],
         as: "empty_ids",
       });
@@ -1691,7 +1691,7 @@ describe("EntityManager.setQueries", () => {
       const ids = query({
         union: [
           { from: a, select: { ids: a.id.arrayAgg() } },
-          { from: b, select: { ids: b.author.arrayAgg() } },
+          { from: b, select: { ids: b.author_id.arrayAgg() } },
         ],
         as: "author_ids",
       });
@@ -1726,7 +1726,7 @@ describe("EntityManager.setQueries", () => {
       (operation) => {
         it.each([0, 1])("rejects %i operands at construction and execution", async (length) => {
           // Given an Author alias for an otherwise valid read operand
-          const a = alias(Author);
+          const a = table(Author);
           // And an EntityManager to check the untyped execution boundary
           const em = newEntityManager();
           // And an invalid operand list containing fewer than two reads
@@ -1744,7 +1744,7 @@ describe("EntityManager.setQueries", () => {
           "rejects mixed Author/Book id domains with %s",
           async (order) => {
             // Given Author and Book aliases whose primary keys share int4 storage but not an id domain
-            const [a, b] = aliases(Author, Book);
+            const [a, b] = tables(Author, Book);
             // And an EntityManager for untyped runtime validation
             const em = newEntityManager();
             // And a primary-key branch in the Author-id domain
@@ -1765,7 +1765,7 @@ describe("EntityManager.setQueries", () => {
 
         it.each(["age first", "sum first"] as const)("rejects int4 age versus int8 SUM with %s", async (order) => {
           // Given an Author alias whose age column and sum have different physical numeric representations
-          const a = alias(Author);
+          const a = table(Author);
           // And an EntityManager for untyped runtime validation
           const em = newEntityManager();
           // And a number-valued int4 age column
@@ -1787,7 +1787,7 @@ describe("EntityManager.setQueries", () => {
 
     it.each([undefined, null, false])("rejects a %p first EXCEPT operand instead of omitting it", async (operand) => {
       // Given an Author alias for the two valid later branches
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And an invalid first operand whose omission would change which rows EXCEPT subtracts from
@@ -1803,7 +1803,7 @@ describe("EntityManager.setQueries", () => {
 
     it.each([undefined, null, false])("rejects a %p later UNION operand instead of omitting it", async (operand) => {
       // Given an Author alias for two valid initial branches
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And an invalid third operand even though the first two already satisfy minimum arity
@@ -1833,7 +1833,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects multiple root operation keys", async () => {
       // Given an Author alias for valid operand shapes
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And a valid pair of read operands
@@ -1856,7 +1856,7 @@ describe("EntityManager.setQueries", () => {
       "rejects compound-level %s instead of applying it to a branch",
       async (clause) => {
         // Given an Author alias for valid ordinary branch clauses
-        const a = alias(Author);
+        const a = table(Author);
         // And an EntityManager for untyped execution
         const em = newEntityManager();
         // And ordinary SELECT clauses that are illegal on a compound root
@@ -1891,15 +1891,15 @@ describe("EntityManager.setQueries", () => {
 
     it.each(["missing", "extra"] as const)("rejects a later POJO projection with %s keys", async (shape) => {
       // Given an Author alias for known compatible field codecs
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped projection validation
       const em = newEntityManager();
       // And a later branch whose key set differs from the first branch's name/age contract
-      const select = shape === "missing" ? { name: a.firstName } : { name: a.firstName, age: a.age, id: a.id };
+      const select = shape === "missing" ? { name: a.first_name } : { name: a.first_name, age: a.age, id: a.id };
       // And an invalid compound whose first branch defines the name/age contract
       const invalid = {
         union: [
-          { from: a, select: { name: a.firstName, age: a.age } },
+          { from: a, select: { name: a.first_name, age: a.age } },
           { from: a, select },
         ],
       };
@@ -1914,13 +1914,13 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects different keys hidden inside reusable query values", async () => {
       // Given an Author alias for independently valid named projections
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And a reusable branch exposing name rather than title
-      const names = query({ from: a, select: { name: a.firstName } });
+      const names = query({ from: a, select: { name: a.first_name } });
       // And another reusable branch with the same codec but a different output key
-      const titles = query({ from: a, select: { title: a.firstName } });
+      const titles = query({ from: a, select: { title: a.first_name } });
       // And recording isolated from SQL
       resetQueryCount();
       // When reusable values with unequal key sets become set operands
@@ -1933,7 +1933,7 @@ describe("EntityManager.setQueries", () => {
     describe.each(["inline", "query value"] as const)("%s scalar operands", (form) => {
       it.each(["left", "right", "both"] as const)("rejects scalar operands on %s sides", async (side) => {
         // Given an Author alias with a known id codec shared by both row shapes
-        const a = alias(Author);
+        const a = table(Author);
         // And an EntityManager for untyped execution
         const em = newEntityManager();
         // And a scalar read that is valid outside a set operation
@@ -1957,7 +1957,7 @@ describe("EntityManager.setQueries", () => {
 
       it.each(["left", "right", "both"] as const)("rejects nested scalar operands on %s sides", async (side) => {
         // Given an Author alias with a known id codec for the nested projection
-        const a = alias(Author);
+        const a = table(Author);
         // And an EntityManager for recursive runtime validation
         const em = newEntityManager();
         // And a scalar read that must remain invalid inside a nested set operation
@@ -1984,7 +1984,7 @@ describe("EntityManager.setQueries", () => {
 
     it.each(["inline", "query value"] as const)("rejects %s entity-mode operands", async (form) => {
       // Given an Author alias whose bare select requests entity hydration
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And an entity-mode operand rather than a POJO read
@@ -2004,7 +2004,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects CTI entity-mode operands with expanded physical columns", async () => {
       // Given a Publisher alias whose entity projection spans its CTI hierarchy
-      const p = alias(Publisher);
+      const p = table(Publisher);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And a reusable CTI entity query, valid only as an ordinary entity read
@@ -2024,7 +2024,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects ordinary Expr values as operands even when their codecs are known", async () => {
       // Given an Author alias with an ordinary scalar field expression, not a scalar query value
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And recording isolated from SQL
@@ -2038,7 +2038,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects direct execution of an arbitrary Expr", async () => {
       // Given an Author alias whose id is not a scalar query value
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for direct untyped execution
       const em = newEntityManager();
       // And recording isolated from SQL
@@ -2051,7 +2051,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects raw sql outputs even when both branches reuse the exact same expression", async () => {
       // Given an Author alias for an otherwise ordinary read
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped codec validation
       const em = newEntityManager();
       // And one raw expression whose number annotation does not declare a runtime codec
@@ -2074,7 +2074,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects raw NULL-only operands instead of inferring a precise codec from sql generics", async () => {
       // Given an Author alias for raw NULL projections
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for untyped validation
       const em = newEntityManager();
       // And raw NULL expressions with type annotations but no declared physical or logical domains
@@ -2099,7 +2099,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects incompatible codecs inside a non-first nested compound", async () => {
       // Given Author and Book aliases with different id domains
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And an EntityManager for recursive runtime validation
       const em = newEntityManager();
       // And a valid first branch followed by a nested branch that mixes Author and Book ids
@@ -2125,14 +2125,14 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects physical enum arrays even when both operands use the same field", async () => {
       // Given an Author alias whose favoriteColors is a physical array of enum ids
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for conservative array validation
       const em = newEntityManager();
       // And matching expressions whose physical array codec is deliberately unsupported
       const invalid = {
         union: [
-          { from: a, select: { colors: a.favoriteColors } },
-          { from: a, select: { colors: a.favoriteColors } },
+          { from: a, select: { colors: a.favorite_colors } },
+          { from: a, select: { colors: a.favorite_colors } },
         ],
       };
       // And recording isolated from SQL
@@ -2146,14 +2146,14 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects different schema JSON domains even with identical JSONB storage", async () => {
       // Given an Author alias with Superstruct address and Zod businessAddress codecs
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for codec-domain validation
       const em = newEntityManager();
       // And equal output keys whose JSONB representations have different schema validators
       const invalid = {
         union: [
           { from: a, select: { address: a.address } },
-          { from: a, select: { address: a.businessAddress } },
+          { from: a, select: { address: a.business_address } },
         ],
       };
       // And recording isolated from SQL
@@ -2167,7 +2167,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects custom passwords mixed with primitive varchar values", async () => {
       // Given a User alias whose name and password use varchar with different logical domains
-      const u = alias(User);
+      const u = table(User);
       // And an EntityManager for untyped codec validation
       const em = newEntityManager();
       // And a custom PasswordValue projection mixed with an ordinary string projection
@@ -2188,13 +2188,13 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects scalar enums mixed with primitive integers", async () => {
       // Given an Author alias whose BookRange ids and ages use int4 with different domains
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for runtime codec validation
       const em = newEntityManager();
       // And an enum projection mixed with a numeric projection under the same key
       const invalid = {
         union: [
-          { from: a, select: { value: a.rangeOfBooks } },
+          { from: a, select: { value: a.range_of_books } },
           { from: a, select: { value: a.age } },
         ],
       };
@@ -2211,21 +2211,21 @@ describe("EntityManager.setQueries", () => {
       "rejects compound ordering by %s",
       async (kind) => {
         // Given an Author alias exposing only name in each branch
-        const a = alias(Author);
+        const a = table(Author);
         // And an EntityManager for untyped ordering validation
         const em = newEntityManager();
         // And invalid sorts that either leave the output-key scope or contain SQL punctuation
         const sorts = {
           "missing key": { age: "ASC" },
-          "branch column": [{ asc: a.firstName }],
-          expression: [{ asc: sql<string>`lower(${a.firstName})` }],
+          "branch column": [{ asc: a.first_name }],
+          expression: [{ asc: sql<string>`lower(${a.first_name})` }],
           "invalid direction": { name: "ASC; DROP TABLE authors" },
         };
         // And a compound with one of those invalid root orderings
         const invalid = {
           union: [
-            { from: a, select: { name: a.firstName } },
-            { from: a, select: { name: a.firstName } },
+            { from: a, select: { name: a.first_name } },
+            { from: a, select: { name: a.first_name } },
           ],
           orderBy: sorts[kind],
         };
@@ -2241,14 +2241,14 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects sibling alias leakage", async () => {
       // Given separate Author and Book aliases, neither an enclosing source for the other
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And an EntityManager for execution-time alias scope validation
       const em = newEntityManager();
       // And a second branch illegally referencing the first branch's Author alias
       const invalid = {
         union: [
-          { from: a, select: { name: a.firstName } },
-          { from: b, where: b.author.eq(a.id), select: { name: b.title } },
+          { from: a, select: { name: a.first_name } },
+          { from: b, where: b.author_id.eq(a.id), select: { name: b.title } },
         ],
       };
       // And recording isolated from SQL
@@ -2267,12 +2267,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the ordinary derived-table join
       const em = newEntityManager();
       // And aliases for the outer Author and inner Book branches
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a compound whose second branch references the outer Author from a derived-table source
       const books = query({
         union: [
-          { from: b, where: b.title.eq("absent"), select: { authorId: b.author } },
-          { from: b, where: b.author.eq(a.id), select: { authorId: b.author } },
+          { from: b, where: b.title.eq("absent"), select: { authorId: b.author_id } },
+          { from: b, where: b.author_id.eq(a.id), select: { authorId: b.author_id } },
         ],
         as: "books",
       });
@@ -2288,12 +2288,12 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects polymorphic IN compounds with a non-id domain", () => {
       // Given Comment and Author aliases for a polymorphic parent predicate
-      const [c, a] = aliases(Comment, Author);
+      const [c, a] = tables(Comment, Author);
       // And a valid POJO compound of Author names rather than Author ids
       const names = query({
         union: [
-          { from: a, select: { name: a.firstName } },
-          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.first_name } },
         ],
         as: "author_names",
       });
@@ -2306,7 +2306,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects polymorphic IN compounds with an unsupported id target", () => {
       // Given Comment and Tag aliases, where Tag is not a Comment parent component
-      const [c, t] = aliases(Comment, Tag);
+      const [c, t] = tables(Comment, Tag);
       // And a compatible Tag-id POJO compound that still cannot identify a Comment parent component
       const ids = query({
         union: [
@@ -2322,7 +2322,7 @@ describe("EntityManager.setQueries", () => {
 
     it("rejects mutation-shaped operands instead of treating RETURNING as a read", async () => {
       // Given an Author alias for a read and a mutation-shaped object
-      const a = alias(Author);
+      const a = table(Author);
       // And an EntityManager for the untyped read boundary
       const em = newEntityManager();
       // And a DELETE-shaped operand whose RETURNING projection does not make it an inline read
@@ -2388,9 +2388,9 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the correlated read
       const em = newEntityManager();
       // And an Author alias reused in outer and nested source scopes
-      const a = alias(Author);
+      const a = table(Author);
       // And one condition object shared by all occurrences, not a new condition per scope
-      const shared = a.firstName.ne("absent");
+      const shared = a.first_name.ne("absent");
       // And a POJO branch that resolves that condition under its own Author alias
       const branch = { from: a, where: shared, select: { id: a.id } };
       // And either the ordinary subquery or a compound containing two copies of that branch
@@ -2404,7 +2404,7 @@ describe("EntityManager.setQueries", () => {
       const rows = await em.query({
         from: a,
         where: { and: [shared, a.id.in(query({ from: ids, select: ids.id }))] },
-        select: { name: a.firstName },
+        select: { name: a.first_name },
       });
       // Then each occurrence uses its local alias and the outer condition is not overwritten
       expect(rows).toEqual([{ name: "Alice" }]);
@@ -2437,13 +2437,18 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the aggregate compound
       const em = newEntityManager();
       // And Author and Book aliases local to their branch scopes
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And recording isolated from the fixtures
       resetQueryCount();
       // When combining prolific Authors with Authors whose left-joined Book count is zero
       const rows = await em.query({
         unionAll: [
-          { from: b, groupBy: [b.author], having: b.id.count().gt(1), select: { id: b.author, count: b.id.count() } },
+          {
+            from: b,
+            groupBy: [b.author_id],
+            having: b.id.count().gt(1),
+            select: { id: b.author_id, count: b.id.count() },
+          },
           {
             from: a,
             join: [a.books.as(b)],
@@ -2479,7 +2484,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the correlated outer query
       const em = newEntityManager();
       // And aliases for the outer Author/Book and inner Comment
-      const [a, b, c] = aliases(Author, Book, Comment);
+      const [a, b, c] = tables(Author, Book, Comment);
       // And a POJO compound with a correlation only in its second branch
       const ids = query({
         union: [
@@ -2494,7 +2499,7 @@ describe("EntityManager.setQueries", () => {
       const rows = await em.query({
         from: a,
         join: [a.books.as(b)],
-        select: { name: a.firstName, comment: query({ from: ids, select: ids.id }) },
+        select: { name: a.first_name, comment: query({ from: ids, select: ids.id }) },
         orderBy: { name: "ASC" },
       });
       // Then the join survives pruning and the unmatched Author receives SQL NULL
@@ -2518,9 +2523,9 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for independent parse contexts
       const em = newEntityManager();
       // And outer Author and inner Book aliases
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a reusable cross-column condition tied to alias handles rather than SQL alias strings
-      const author = b.author.eq(a.id);
+      const author = b.author_id.eq(a.id);
       // And a reusable compound containing that condition
       const ids = query({
         union: [
@@ -2532,7 +2537,7 @@ describe("EntityManager.setQueries", () => {
       // And an ordinary scalar projection reused in both outer query contexts
       const book = query({ from: ids, select: ids.id });
       // And a different Book alias that will occupy the outer scope only in the second parse
-      const outerBook = alias(Book, "outer_book");
+      const outerBook = table(Book, "outer_book");
       // And recording isolated for the first parse
       resetQueryCount();
       // When executing without an outer Book join
@@ -2577,17 +2582,17 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for branch-local policies
       const em = newEntityManager();
       // And aliases for the Author source and potentially unused Book join
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And recording isolated from setup
       resetQueryCount();
       // When one branch prunes its unused join and the other retains it and includes soft-deleted Authors
       const rows = await em.query({
         unionAll: [
-          { from: a, join: [a.books.inner(b)], select: { name: a.firstName } },
+          { from: a, join: [a.books.inner(b)], select: { name: a.first_name } },
           {
             from: a,
             join: [a.books.inner(b)],
-            select: { name: a.firstName },
+            select: { name: a.first_name },
             pruneJoins: false,
             softDeletes: "include",
           },
@@ -2612,7 +2617,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the two join policies
       const em = newEntityManager();
       // And Author and Book aliases reused in sibling scopes
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And recording isolated from fixtures
       resetQueryCount();
       // When one branch excludes deleted join rows and the other includes them
@@ -2641,14 +2646,14 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for scalar-field projections rather than entity hydration
       const em = newEntityManager();
       // And subtype aliases that must independently filter the shared table
-      const [tn, to] = aliases(TaskNew, TaskOld);
+      const [tn, to] = tables(TaskNew, TaskOld);
       // And recording isolated from the Task inserts
       resetQueryCount();
       // When combining each subtype's duration without deduplication
       const rows = await em.query({
         unionAll: [
-          { from: tn, select: { days: tn.durationInDays } },
-          { from: to, select: { days: to.durationInDays } },
+          { from: tn, select: { days: tn.duration_in_days } },
+          { from: to, select: { days: to.duration_in_days } },
         ],
         orderBy: { days: "ASC" },
       });
@@ -2672,7 +2677,7 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for direct scalar execution
       const em = newEntityManager();
       // And an Author alias for the scalar query
-      const a = alias(Author);
+      const a = table(Author);
       // And recording isolated from fixture inserts
       resetQueryCount();
       // When executing an inline scalar read ordered within its own ordinary SELECT
@@ -2699,14 +2704,14 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the ordinary outer entity query
       const em = newEntityManager();
       // And aliases for the outer Author and inner read sources
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a separate Author alias local to the PK membership branch
-      const inner = alias(Author, "inner_author");
+      const inner = table(Author, "inner_author");
       // And compatible POJO Author-id branches, one PK and one FK
       const ids = query({
         union: [
           { from: inner, where: inner.id.eq("a:1"), select: { id: inner.id } },
-          query({ from: b, select: { id: b.author } }),
+          query({ from: b, select: { id: b.author_id } }),
         ],
         as: "author_ids",
       });
@@ -2717,7 +2722,7 @@ describe("EntityManager.setQueries", () => {
         from: a,
         where: a.id.in(query({ from: ids, select: ids.id })),
         select: a,
-        orderBy: { firstName: "ASC" },
+        orderBy: { first_name: "ASC" },
       });
       // Then membership hydrates only the selected Authors in one database query
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
@@ -2737,12 +2742,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for scalar expression execution
       const em = newEntityManager();
       // And aliases for the outer Author and inner Book
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And a POJO compound with one nonempty branch
       const ids = query({
         union: [
-          { from: b, where: b.id.eq("b:1"), select: { id: b.author } },
-          { from: b, where: b.id.eq("b:9"), select: { id: b.author } },
+          { from: b, where: b.id.eq("b:1"), select: { id: b.author_id } },
+          { from: b, where: b.id.eq("b:9"), select: { id: b.author_id } },
         ],
         as: "author_ids",
       });
@@ -2758,12 +2763,12 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the outer scalar projection
       const em = newEntityManager();
       // And aliases for the outer Author and inner Book
-      const [a, b] = aliases(Author, Book);
+      const [a, b] = tables(Author, Book);
       // And an empty POJO compound whose known domain is Author ids
       const ids = query({
         union: [
-          { from: b, select: { id: b.author } },
-          { from: b, select: { id: b.author } },
+          { from: b, select: { id: b.author_id } },
+          { from: b, select: { id: b.author_id } },
         ],
         as: "author_ids",
       });
@@ -2798,9 +2803,9 @@ describe("EntityManager.setQueries", () => {
       // And an EntityManager for the outer SELECT
       const em = newEntityManager();
       // And an Author alias for the outer query
-      const a = alias(Author);
+      const a = table(Author);
       // And an independent Author alias for both POJO branches
-      const inner = alias(Author, "inner_author");
+      const inner = table(Author, "inner_author");
       // And a valid POJO compound returning both Author ids
       const ids = query({
         union: [

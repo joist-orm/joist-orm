@@ -1,4 +1,4 @@
-import { Deferred, ReadOnlyError, alias, query } from "joist-orm";
+import { Deferred, ReadOnlyError, query, table } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
@@ -12,7 +12,7 @@ describe("EntityManager.execute.execution", () => {
       async (mode) => {
         // Given a fresh EntityManager and a Tag mutation target
         const em = newEntityManager();
-        const t = alias(Tag);
+        const t = table(Tag);
         // And the selected mode does not permit immediate SQL writes
         em.mode = mode;
         // And each statement is otherwise valid, including the empty import shortcut
@@ -40,7 +40,7 @@ describe("EntityManager.execute.execution", () => {
       // Given a persisted Tag that can be read without writing any entities
       await insertTag({ name: "Readable" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the EntityManager disallows SQL mutations but still permits database reads
       em.mode = mode;
       resetQueryCount();
@@ -77,7 +77,7 @@ describe("EntityManager.execute.execution", () => {
       const schedule = newAuthorSchedule(em);
       // And the fixture's opt-in rule runs before its AuthorSchedule has been inserted
       schedule.transientFields.tryFindInRegularRule = true;
-      const s = alias(AuthorSchedule);
+      const s = table(AuthorSchedule);
       // And the existing rule's find call is routed through execute instead of changing fixture configuration
       const find = jest.spyOn(em, "find").mockImplementation(async () => {
         resetQueryCount();
@@ -108,8 +108,8 @@ describe("EntityManager.execute.execution", () => {
       const author = await em.load(Author, "a:1");
       // And the pending value must remain in memory until the Author hook completes
       author.firstName = "Flushed";
-      const a = alias(Author);
-      const t = alias(Tag);
+      const a = table(Author);
+      const t = table(Tag);
       // And the existing beforeFlush API hook pauses deterministically without a timer
       const entered = new Deferred<void>();
       const release = new Deferred<void>();
@@ -141,7 +141,7 @@ describe("EntityManager.execute.execution", () => {
         expect(queries).toMatchInlineSnapshot(`[]`);
 
         // When a read executes during the hook rather than during a validation rule
-        const read = await em.execute({ from: a, select: a.firstName });
+        const read = await em.execute({ from: a, select: a.first_name });
 
         // Then it sees persisted state without flushing the pending name
         expect(read).toEqual({ rowCount: 1, rows: ["Original"] });
@@ -177,7 +177,7 @@ describe("EntityManager.execute.execution", () => {
       await insertTag({ name: "Readable" });
       // And a separate driver records this EntityManager's result envelopes
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       em.driver = new PostgresDriver(pool, { onQuery: recordQuery });
       const execute = jest.spyOn(em.driver, "executeQuery");
       resetQueryCount();
@@ -226,7 +226,7 @@ describe("EntityManager.execute.execution", () => {
       async (rowCount) => {
         // Given a native PostgreSQL response whose count is invalid despite returning one Tag name
         const em = newEntityManager();
-        const t = alias(Tag);
+        const t = table(Tag);
         // And only the native response is replaced, leaving the real EM and PostgresDriver checks in place
         const native = jest.spyOn(pool, "query").mockImplementationOnce(async () => ({
           command: "UPDATE",
@@ -263,7 +263,7 @@ describe("EntityManager.execute.execution", () => {
       // Given a persisted Tag and an EntityManager without an active transaction
       await insertTag({ name: "Original" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the native pool and transaction entry point are observed without replacing their behavior
       const native = jest.spyOn(pool, "query");
       const transaction = jest.spyOn(em.driver, "transaction");
@@ -309,7 +309,7 @@ describe("EntityManager.execute.execution", () => {
       // Given a persisted Tag whose committed name is visible to other connections
       await insertTag({ name: "Original" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And a separate EntityManager has neither this transaction nor any cached Tags
       const observer = newEntityManager();
       resetQueryCount();
@@ -380,7 +380,7 @@ describe("EntityManager.execute.execution", () => {
       // Given an Author whose persisted address has a numeric street instead of AddressSchema's required string
       await insertAuthor({ first_name: "Original", business_address: { street: 123 } });
       const em = newEntityManager();
-      const a = alias(Author);
+      const a = table(Author);
       // And the native client is observed after BEGIN so rollback is visible even though onQuery does not log it
       let native: jest.SpyInstance | undefined;
       em.afterBegin((_, txn) => {
@@ -393,9 +393,9 @@ describe("EntityManager.execute.execution", () => {
         const result = em.transaction(async () => {
           await em.execute({
             update: a,
-            set: { firstName: "Rolled back" },
+            set: { first_name: "Rolled back" },
             where: a.id.eq("a:1"),
-            returning: a.businessAddress,
+            returning: a.business_address,
           });
         });
 
@@ -429,14 +429,14 @@ describe("EntityManager.execute.execution", () => {
 
       // Then a separate connection confirms rollback without hydrating the still-invalid address
       expect(await select("authors")).toMatchObject([{ first_name: "Original", business_address: { street: 123 } }]);
-      expect(await newEntityManager().query({ from: a, select: a.firstName })).toEqual(["Original"]);
+      expect(await newEntityManager().query({ from: a, select: a.first_name })).toEqual(["Original"]);
     });
 
     it("does not flush during execute but retains the existing transaction-end flush", async () => {
       // Given a persisted Tag that will be updated by immediate SQL
       await insertTag({ name: "Original" });
       const em = newEntityManager();
-      const t = alias(Tag);
+      const t = table(Tag);
       // And a new Tag has an assigned id but has not been inserted into the database
       const pending = em.create(Tag, { id: "t:10", name: "Pending" });
       // And flush is observed without replacing its normal transaction-end behavior
@@ -488,7 +488,7 @@ describe("EntityManager.execute.execution", () => {
       const em = newEntityManager();
       // And the Tag is loaded before its managed name diverges from its stored name
       const loaded = await em.load(Tag, "t:1");
-      const t = alias(Tag);
+      const t = table(Tag);
       // And the managed Tag has a pending name that differs from the immediate SQL assignment
       loaded.name = "Pending edit";
       // And an unflushed Author violates the first-name/last-name rule if execute were to trigger validation
@@ -531,7 +531,7 @@ describe("EntityManager.execute.execution", () => {
       // And the Book initially matches the title that will be cached by find
       await insertBook({ title: "Original", author_id: 1 });
       const em = newEntityManager();
-      const b = alias(Book);
+      const b = table(Book);
       // And the Author's collection already contains the managed Book
       const author = await em.load(Author, "a:1", "books");
       const book = author.books.get[0];

@@ -1,4 +1,4 @@
-import { Temporal, aliases, query } from "joist-orm";
+import { Temporal, query, tables } from "joist-orm";
 import { Author, Book, newAuthor, newBook } from "src/entities";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/setupDbTests";
 import {
@@ -26,7 +26,7 @@ describe("EntityManager.setQueries", () => {
       .into("authors");
     // And an EntityManager recording PostgreSQL queries from independent Author aliases
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const [a, other] = aliases(Author, Author);
+    const [a, other] = tables(Author, Author);
     // And recording isolated from the Author inserts
     resetQueryCount();
 
@@ -67,14 +67,14 @@ describe("EntityManager.setQueries", () => {
     newBook(em, { author, publishedAt: jan2DateTime });
     await em.flush();
     // And independent Book aliases with recording isolated from persistence
-    const [b, other] = aliases(Book, Book);
+    const [b, other] = tables(Book, Book);
     resetQueryCount();
 
     // When subtracting one Book's publication instant from all publication instants
     const rows = await em.query({
       except: [
-        { from: b, select: { publishedAt: b.publishedAt } },
-        { from: other, where: other.id.eq(removed.id), select: { publishedAt: other.publishedAt } },
+        { from: b, select: { publishedAt: b.published_at } },
+        { from: other, where: other.id.eq(removed.id), select: { publishedAt: other.published_at } },
       ],
     });
 
@@ -112,18 +112,18 @@ describe("EntityManager.setQueries", () => {
       .into("authors");
     // And a recorded EntityManager with independent aliases for the same four Temporal fields
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const [a, other] = aliases(Author, Author);
+    const [a, other] = tables(Author, Author);
     // And a named compound exposing the agreed field codecs to the outer query
     const dates = query({
       union: [
-        { from: a, select: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.createdAt } },
+        { from: a, select: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.created_at } },
         {
           from: other,
           select: {
             birthday: other.birthday,
             time: other.time,
             timestamp: other.timestamp,
-            createdAt: other.createdAt,
+            createdAt: other.created_at,
           },
         },
       ],
@@ -183,7 +183,7 @@ describe("EntityManager.setQueries", () => {
 
   it("rejects Temporal arrayAgg outputs before SQL", async () => {
     // Given Author and Book aliases for each scalar Temporal arrayAgg
-    const [a, b] = aliases(Author, Book);
+    const [a, b] = tables(Author, Book);
     // And a recorded EntityManager to detect execution before codec validation
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
     // And same-field branches for all four unsupported Temporal array domains
@@ -191,7 +191,7 @@ describe("EntityManager.setQueries", () => {
       { from: a, select: { value: a.birthday.arrayAgg() } },
       { from: a, select: { value: a.time.arrayAgg() } },
       { from: a, select: { value: a.timestamp.arrayAgg() } },
-      { from: b, select: { value: b.publishedAt.arrayAgg() } },
+      { from: b, select: { value: b.published_at.arrayAgg() } },
     ] as const;
     // And isolated recording so an empty log proves rejection before PostgreSQL
     resetQueryCount();

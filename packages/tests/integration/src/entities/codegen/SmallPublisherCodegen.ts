@@ -52,6 +52,7 @@ import {
   type Image,
   newSmallPublisher,
   Publisher,
+  type PublisherColumns,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -72,53 +73,63 @@ import {
 export type SmallPublisherId = Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "group"> {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  city: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  sharedColumn: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  allAuthorNames: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: true;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  selfReferential: {
-    kind: "m2o";
-    type: SmallPublisher;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  group: {
-    kind: "m2o";
-    type: SmallPublisherGroup;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
+  group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
   smallPublishers: { kind: "o2m"; type: SmallPublisher };
   users: { kind: "o2m"; type: User };
+}
+
+export interface SmallPublisherColumns
+  extends
+    Omit<PublisherColumns, "id" | "city" | "shared_column" | "all_author_names" | "self_referential_id" | "group_id"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "city": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "shared_column": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "all_author_names": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "self_referential_id": {
+    kind: "m2o";
+    type: SmallPublisher;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "group_id": {
+    kind: "m2o";
+    type: SmallPublisherGroup;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
@@ -198,6 +209,7 @@ declare module "joist-core" {
       orderType: SmallPublisherOrder;
       optsType: SmallPublisherOpts;
       fieldsType: SmallPublisherFields;
+      columnsType: SmallPublisherColumns;
       supportsEmExecute: false;
       optIdsType: SmallPublisherIdsOpts;
       factoryExtrasType: SmallPublisherFactoryExtras;

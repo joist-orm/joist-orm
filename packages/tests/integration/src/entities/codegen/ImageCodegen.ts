@@ -64,64 +64,49 @@ import {
 export type ImageId = Flavor<string, "Image">;
 
 export interface ImageFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  fileName: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  type: { kind: "enum"; type: ImageType; nullable: never };
+  author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+}
+
+export interface ImageColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "file_name": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  createdAt: {
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updated_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  type: {
-    kind: "enum";
-    type: ImageType;
-    nullable: never;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  author: {
-    kind: "m2o";
-    type: Author;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  book: {
-    kind: "m2o";
-    type: Book;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  publisher: {
-    kind: "m2o";
-    type: Publisher;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  "type_id": { kind: "enum"; type: ImageType; nullable: false; insert: "required"; update: true };
+  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: true; insert: "optional"; update: true };
+  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface ImageOpts {
@@ -214,6 +199,7 @@ declare module "joist-core" {
       orderType: ImageOrder;
       optsType: ImageOpts;
       fieldsType: ImageFields;
+      columnsType: ImageColumns;
       supportsEmExecute: true;
       optIdsType: ImageIdsOpts;
       factoryExtrasType: ImageFactoryExtras;

@@ -1,17 +1,4 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
-import {
-  type Alias,
-  type AliasBrand,
-  type AliasMgmt,
-  JoinTableHandle,
-  type M2mJoinTable,
-  aliasMgmt,
-  collectionJoin,
-  getAliasMetadata,
-  getAliasMgmt,
-  isAlias,
-  m2mJoinTable,
-} from "./Aliases.ts";
 import { ConditionBuilder } from "./ConditionBuilder.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
@@ -49,6 +36,19 @@ import {
   lazyExcludedSelects,
   stiSubtypeFilter,
 } from "./QueryParser.ts";
+import {
+  JoinTableHandle,
+  type M2mJoinTable,
+  type Table,
+  type TableBrand,
+  type TableMgmt,
+  collectionJoin,
+  getTableMetadata,
+  getTableMgmt,
+  isTable,
+  m2mJoinTable,
+  tableMgmt,
+} from "./Tables.ts";
 import { fail } from "./utils.ts";
 
 /**
@@ -57,25 +57,25 @@ import { fail } from "./utils.ts";
  * A query is data, a `Query<S, J>` POJO, `{ from, join, where, groupBy, having, select, orderBy, ... }`
  * in SQL evaluation order:
  *
- *   const [a, b] = aliases(Author, Book);
- *   const bookStats = query({ from: b, groupBy: [b.author], select: { authorId: b.author, n: b.id.count() } });
+ *   const [a, b] = tables(Author, Book);
+ *   const bookStats = query({ from: b, groupBy: [b.author_id], select: { authorId: b.author_id, n: b.id.count() } });
  *   const rows = await em.query({
  *     from: a,
  *     join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
- *     select: { name: a.firstName, n: bookStats.n },
+ *     select: { name: a.first_name, n: bookStats.n },
  *     orderBy: { n: "DESC" },
  *   });
  *   // rows: { name: string; n: number | null }[]   (null because of the LEFT join)
  *
- * `em.query(pojo)` runs it. `select` decides the row type: a bare alias returns entities, a
+ * `em.query(pojo)` runs it. `select` decides the row type: a bare table returns entities, a
  * `{ key: expr }` object returns typed POJOs, a bare subquery returns that subquery's rows.
  *
  * `query(pojo)` turns the *same* POJO into a value: a derived table with typed columns, a scalar
- * expression, or an entity list. It is the one non-POJO step, and the subquery analog of `alias(Author)`:
+ * expression, or an entity list. It is the one non-POJO step, and the subquery analog of `table(Author)`:
  * to reference a query's columns, the outer query needs *values* for them, and no POJO can manufacture
  * values keyed off its own `select` keys.
  *
- * `alias()`/`aliases()` and `query()` are the only free functions a query needs, plus the `sql` tagged
+ * `table()`/`tables()` and `query()` are the only free functions a query needs, plus the `sql` tagged
  * template as the escape hatch for SQL with no modeled shape. Everything else is in-DSL: join kinds and
  * sort directions are keyword keys (`{ left: b, on }`, `{ desc: x }`), SQL functions are methods on
  * expressions (`b.id.count()`, `b.title.max()`, `x.coalesce(0)`), conditions are methods
@@ -98,9 +98,9 @@ export interface SubqueryBrand<R, Name extends string> {
   readonly __name: Name;
 }
 
-/** Anything that can be a source or be joined: an entity alias or a table-shaped subquery. */
+/** Anything that can be a source or be joined: an entity table or a table-shaped subquery. */
 export type QuerySource =
-  | { readonly [aliasMgmt]: AliasBrand<any, string> }
+  | { readonly [tableMgmt]: TableBrand<any, string> }
   | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
 
 /**
@@ -143,9 +143,9 @@ export type OrderByDirection =
  * An `undefined` direction prunes the entry, like any other condition. For expressions that are not
  * in `select`, mix in `{ asc: expr }` / `{ desc: expr }` entries in the array form.
  */
-export type OrderByKeys<S> = S extends { readonly [aliasMgmt]: { readonly __entity: infer T } }
+export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
   ? T extends Entity
-    ? { readonly [K in keyof Alias<T> as Alias<T>[K] extends ExprLike<any> ? K : never]?: OrderByDirection | undefined }
+    ? { readonly [K in keyof Table<T> as Table<T>[K] extends ExprLike<any> ? K : never]?: OrderByDirection | undefined }
     : never
   : S extends { readonly [exprBrand]: any }
     ? never
@@ -222,7 +222,7 @@ export type SetOperand =
  * ```ts
  * const names = {
  *   union: [
- *     { from: a, select: { name: a.firstName } },
+ *     { from: a, select: { name: a.first_name } },
  *     { from: b, select: { name: b.title } },
  *   ],
  *   orderBy: { name: "ASC" },
@@ -460,8 +460,8 @@ export type CheckReadQuery<Q> = SetOperand extends Q
 // Result-row types
 // =====================================================================================================
 
-/** The type-level name of an alias or subquery, i.e. `"Author"` or `"book_stats"`. */
-export type NameOf<A> = A extends { readonly [aliasMgmt]: { readonly __name: infer N } }
+/** The type-level name of a table or subquery, i.e. `"Author"` or `"book_stats"`. */
+export type NameOf<A> = A extends { readonly [tableMgmt]: { readonly __name: infer N } }
   ? N
   : A extends { readonly [subqueryBrand]: { readonly __name: infer N } }
     ? N
@@ -501,7 +501,7 @@ export type MaybeNull<R, Src extends string, J extends QueryJoins> = string exte
  * - single expression (`select: b.id.count()`) is that expression's value, used by scalar subqueries
  * - POJO mode is a mapped type over the select keys, with left-join nullability applied
  */
-export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [aliasMgmt]: { readonly __entity: infer T } }
+export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
   ? T
   : S extends { readonly [subqueryBrand]: { readonly __row: infer R } }
     ? R
@@ -519,8 +519,8 @@ export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [alias
 
 /**
  * A table-shaped query: one `Expr` per select key, each tagged with the table's name as its `Src`,
- * plus a brand carrying the row type. This is the direct analog of `Alias<T>`: `Alias<T>` maps entity
- * fields to expressions, `Subquery<Row, Name>` maps the inner query's select keys to expressions.
+ * plus a brand carrying the row type. This is the direct analog of `Table<T>`: `Table<T>` maps physical
+ * columns to expressions, `Subquery<Row, Name>` maps the inner query's select keys to expressions.
  */
 export type Subquery<R, Name extends string> = {
   readonly [subqueryBrand]: SubqueryBrand<R, Name>;
@@ -540,14 +540,14 @@ export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { rea
  * error at all.
  *
  * A widened `S` is the only kind of `S` the whole `QuerySelect` union is assignable to (a POJO, an
- * `Expr`, or an `Alias` never is), so `QuerySelect extends S` detects it, and intersecting the parameter
+ * `Expr`, or a `Table` never is), so `QuerySelect extends S` detects it, and intersecting the parameter
  * with `{ select: "<message>" }` fails the call on `select` with that message, for `query()` and
  * `em.query()` alike:
  *
- *   const narrow = { from: a, select: { name: a.firstName } } satisfies Query;
+ *   const narrow = { from: a, select: { name: a.first_name } } satisfies Query;
  *   query(narrow); // Subquery<{ name: string }, "?">
  *
- *   const widened: Query = { from: a, select: { name: a.firstName } };
+ *   const widened: Query = { from: a, select: { name: a.first_name } };
  *   query(widened);
  *   // error: Type 'QuerySelect' is not assignable to type
  *   //   '"select was typed too generically; use `satisfies Query` instead of `: Query`"'
@@ -561,7 +561,7 @@ export type NotWidened<S> = QuerySelect extends S
 
 /** What `query()` returns, by select shape: an entity list, a scalar/list subquery, or a derived table. */
 export type QueryValue<S, J extends QueryJoins, Name extends string> = S extends {
-  readonly [aliasMgmt]: { readonly __entity: infer T extends Entity };
+  readonly [tableMgmt]: { readonly __entity: infer T extends Entity };
 }
   ? EntityQuery<T>
   : S extends { readonly [exprBrand]: ExprBrand<unknown, any> }
@@ -583,8 +583,8 @@ type InScope<F, J extends QueryJoins> = NameOf<F> | JoinedName<J[number]>;
  * Because `Expr` already carries `Src`, this is nearly free: for each select key, if `Src` is tracked
  * and any of its names is outside `InScope`, intersect that key's type with an error string, so the
  * caller sees `Type 'Expr<number, "book_stats">' is not assignable to type '... is not in from/join'`.
- * Untracked (`string`) and source-less (`never`) expressions always pass. Aliases with the same
- * type-level name (two bare `alias(Author)`, or two anonymous tables) cannot be told apart, so a miss
+ * Untracked (`string`) and source-less (`never`) expressions always pass. Tables with the same
+ * type-level name (two bare `table(Author)`, or two anonymous tables) cannot be told apart, so a miss
  * there goes unreported; the check never gives a false positive, only false negatives on collisions.
  *
  * `[S] extends [...]` keeps this non-distributive, and `never` is skipped outright: `query()` defaults
@@ -609,7 +609,7 @@ export type CheckScope<S, F, J extends QueryJoins> = [S] extends [never]
                 ? unknown
                 : [Exclude<Src, InScope<F, J>>] extends [never]
                   ? unknown
-                  : `alias '${Exclude<Src, InScope<F, J>> & string}' is not in from/join`
+                  : `table '${Exclude<Src, InScope<F, J>> & string}' is not in from/join`
               : unknown;
           };
         }
@@ -630,14 +630,14 @@ export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends Que
  *
  * - a single expression is a scalar subquery or an IN list (`Expr<R | null>`; a scalar subquery can
  *   return no row, so use `.coalesce(0)` when the SQL guarantees a value, i.e. an ungrouped `count`)
- * - an entity alias is an entity list, runnable via `em.query`
+ * - an entity table is an entity list, runnable via `em.query`
  * - a POJO is a derived table whose columns are `Expr`s; it can be a source, be joined, or be run
  *
  * `as` is the SQL alias and the type-level identity, the same role the second argument of
- * `alias(Author, "m")` plays. Without it the SQL alias is generated, like `alias(Author)`, and all
+ * `table(Author, "m")` plays. Without it the SQL alias is generated, like `table(Author)`, and all
  * anonymous tables share the type-level identity `"?"`: precise against every named alias, and
  * conservative (a left-joined anonymous table nullifies every anonymous table's columns) only among
- * themselves. This is the same collision two bare `alias(Author)` have.
+ * themselves. This is the same collision two bare `table(Author)` have.
  *
  * Ordinary SELECT shapes share one signature: separate scalar/entity/POJO overloads hid `as` from
  * completions and cost 15-28% check time. The separate compound root has one additional signature;
@@ -782,7 +782,7 @@ export interface QueryOutput {
   columns: readonly (readonly [string, BaseExpr])[];
 }
 
-/** The runtime identity of a `query(...)` value; `Ctx.aliasFor` keys on it, like an alias's `AliasMgmt`. */
+/** The runtime identity of a `query(...)` value; `Ctx.aliasFor` keys on it, like a table's `TableMgmt`. */
 export class SubqueryHandle {
   constructor(readonly q: AnyReadQuery) {}
 
@@ -937,11 +937,11 @@ function isPlainSelect(select: unknown): select is Record<string, ExprLike<any>>
   );
 }
 
-/** Returns the runtime identity of a source: an alias's `AliasMgmt` or a subquery's handle. */
-function handleOf(source: unknown): AliasMgmt | SubqueryHandle {
-  if (isAlias(source)) return getAliasMgmt(source);
+/** Returns the runtime identity of a source: a table's `TableMgmt` or a subquery's handle. */
+function handleOf(source: unknown): TableMgmt | SubqueryHandle {
+  if (isTable(source)) return getTableMgmt(source);
   if (isSubqueryValue(source)) return readValueHandle(source);
-  return fail(`Expected an alias or a query(...) value, got ${source}`);
+  return fail(`Expected a table or a query(...) value, got ${source}`);
 }
 
 // =====================================================================================================
@@ -1105,7 +1105,7 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
     return { kind: first.kind, columns };
   }
   const { select } = q;
-  if (isAlias(select)) return { kind: "entity", columns: [] };
+  if (isTable(select)) return { kind: "entity", columns: [] };
   if (isSubqueryValue(select)) return readValueHandle(select).output();
   return joinedOutput(projectionOutput(select), q.join);
 }
@@ -1277,12 +1277,12 @@ export class Ctx implements ExprContext {
 function describeHandle(handle: object): string {
   if (handle instanceof SubqueryHandle) return `Subquery ${handle.describe()}`;
   if (handle instanceof JoinTableHandle) return `Join table ${handle.joinTableName}`;
-  if ("tableName" in handle) return `Alias for ${(handle as AliasMgmt).tableName}`;
-  return "Alias";
+  if ("tableName" in handle) return `Table for ${(handle as TableMgmt).tableName}`;
+  return "Table";
 }
 
 interface ParsedSource {
-  handle: AliasMgmt | SubqueryHandle | JoinTableHandle;
+  handle: TableMgmt | SubqueryHandle | JoinTableHandle;
   alias: string;
   /** `table AS alias` or `(SELECT ...) AS alias`. */
   sql: string;
@@ -1319,11 +1319,11 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   validateReadQuery(q);
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
   const ctx = new Ctx(assigner, parent);
-  const selectedAlias = isAlias(q.select) ? getAliasMgmt(q.select) : undefined;
+  const selectedTable = isTable(q.select) ? getTableMgmt(q.select) : undefined;
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
 
   // 1. Register every source before generating SQL, so conditions can resolve their aliases.
-  const parseFrom = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedAlias);
+  const parseFrom = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedTable);
   const pendingJoins = joinEntries.flatMap((j) => {
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
     const alias = kind === "inner" ? j.inner : j.left;
@@ -1441,7 +1441,7 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
       };
     };
   } else {
-    const meta = getAliasMetadata(source as any);
+    const meta = getTableMetadata(source as any);
     const alias = assigner.getAlias(meta.tableName);
     ctx.register(handle, alias);
     // Record the physical CTI table aliases this source emits (i.e. `sp_b0`), so `refsOf` can credit
@@ -1479,7 +1479,7 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
 /**
  * em.find's per-source injections: `alias.deleted_at IS NULL` for a soft-deletable entity (CTI
  * subtypes are skipped, like em.find; see `filterSoftDeletes`), and the `type_id = X` discriminator
- * for an STI subtype, so `from: alias(TaskNew)` only sees (and a joined subtype only matches)
+ * for an STI subtype, so `from: table(TaskNew)` only sees (and a joined subtype only matches)
  * TaskNew rows.
  *
  * The conditions go into the from's WHERE or the join's ON, and never keep an otherwise unreferenced
@@ -1532,14 +1532,14 @@ function selectsToSql(
   from: ParsedSource,
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
-  if (isAlias(select)) {
+  if (isTable(select)) {
     // Entity mode: `a.*` (plus CTI columns), hydrated through the identity map. Only the from is
     // hydratable: a joined alias would need null-row skipping and left-join nullability (see TODO.md)
-    if (from.handle !== getAliasMgmt(select)) {
-      fail("Selecting a joined alias is not supported yet; select the from alias, or select its columns individually");
+    if (from.handle !== getTableMgmt(select)) {
+      fail("Selecting a joined table is not supported yet; select the from table, or select its columns individually");
     }
-    const alias = ctx.aliasFor(getAliasMgmt(select));
-    const meta = getAliasMetadata(select);
+    const alias = ctx.aliasFor(getTableMgmt(select));
+    const meta = getTableMetadata(select);
     const selects = from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
     return {
       selects,
@@ -1619,9 +1619,9 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
       // The direction is interpolated into the SQL, so never trust it, i.e. it might be a request param
       if (!ORDER_BY_DIRECTIONS.includes(dir as string)) return fail(`Invalid orderBy direction '${dir}'`);
       // Entity mode orders by the alias's column; POJO/subquery selects order by the output column name
-      if (isAlias(select)) {
+      if (isTable(select)) {
         const column = (select as any)[key];
-        if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable field of the entity`);
+        if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable column of the table`);
         const fragment = asNode(column).toSql(ctx);
         result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
       } else {
@@ -1816,7 +1816,7 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
 
 function asExpr(value: unknown, where: string): BaseExpr {
   if (value instanceof BaseExpr) return value;
-  return fail(`${where} must be an expression, i.e. an alias column, aggregate, sql\`...\`, or scalar query(...)`);
+  return fail(`${where} must be an expression, i.e. a table column, aggregate, sql\`...\`, or scalar query(...)`);
 }
 
 function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {

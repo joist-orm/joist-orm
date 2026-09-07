@@ -1,9 +1,8 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
-import { type AliasFor, aliasMgmt, getAliasMgmt, isAlias } from "./Aliases.ts";
 import { type DriverQueryResult } from "./drivers/Driver.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionCondition } from "./EntityFilter.ts";
-import type { IdOf } from "./EntityManager.ts";
+import { type IdOf } from "./EntityManager.ts";
 import { type EntityMetadata, type Field } from "./EntityMetadata.ts";
 import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "./Expr.ts";
 import { keyToTaggedId, toTaggedId } from "./keys.ts";
@@ -32,7 +31,8 @@ import {
   projectionToSql,
   subqueryBrand,
 } from "./query.ts";
-import { type FieldsOf, type TypeMapEntry } from "./typeMap.ts";
+import { type TableFor, getTableMgmt, isTable, tableMgmt } from "./Tables.ts";
+import { type ColumnsOf, type TypeMapEntry } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /** The native command count and decoded rows from one immediate SQL statement. */
@@ -43,7 +43,7 @@ export interface ExecuteResult<R> {
 
 /** RETURNING never hydrates entities or exposes a table-shaped read value. */
 export type MutationReturning = (ExprLike<unknown> | Readonly<Record<string, ExprLike<unknown>>>) & {
-  readonly [aliasMgmt]?: never;
+  readonly [tableMgmt]?: never;
   readonly [subqueryBrand]?: never;
   readonly [entityQueryBrand]?: never;
 };
@@ -118,10 +118,10 @@ export type MutationStatement<
 
 /** Inference starts with the literal POJO; CheckMutation checks its target and every supplied key. */
 export type MutationInput = (
-  | { readonly insert: AliasFor<Entity>; readonly values: object | readonly object[]; readonly from?: never }
-  | { readonly insert: AliasFor<Entity>; readonly from: SetOperand; readonly values?: never }
-  | { readonly update: AliasFor<Entity>; readonly set: object }
-  | { readonly delete: AliasFor<Entity> }
+  | { readonly insert: TableFor<Entity>; readonly values: object | readonly object[]; readonly from?: never }
+  | { readonly insert: TableFor<Entity>; readonly from: SetOperand; readonly values?: never }
+  | { readonly update: TableFor<Entity>; readonly set: object }
+  | { readonly delete: TableFor<Entity> }
 ) & { readonly returning?: MutationReturning } & MutationFilter;
 
 /** Without RETURNING the row type is never; scalar expressions produce scalar rows. */
@@ -139,7 +139,7 @@ export type CheckMutation<M> = M extends unknown
     ? TypeMapEntry<T, "supportsEmExecute"> extends true
       ? { readonly [K in keyof M]: K extends MutationClause<M> ? unknown : never } & {
           readonly returning?: M extends { readonly returning?: infer R }
-            ? CheckReturning<R, NameOf<TargetAlias<M>>>
+            ? CheckReturning<R, NameOf<TargetTable<M>>>
             : never;
         } & (
             | (M extends { readonly values: infer V } ? { readonly values: CheckValues<T, V> } : never)
@@ -147,7 +147,7 @@ export type CheckMutation<M> = M extends unknown
                 ? { readonly from: CheckInsertSource<T, Q> }
                 : never)
             | (M extends { readonly set: infer V }
-                ? { readonly set: CheckAssignments<V, UpdateValues<T>, NameOf<TargetAlias<M>>> }
+                ? { readonly set: CheckAssignments<V, UpdateValues<T>, NameOf<TargetTable<M>>> }
                 : never)
             | (M extends { readonly delete: unknown } ? unknown : never)
           )
@@ -182,8 +182,8 @@ export function parseStatement(arg: unknown): Plan | undefined {
       : [operation, "where", "allowAll", "softDeletes", "returning", ...(operation === "update" ? ["set"] : [])];
   checkPojo(statement, allowed, `SQL ${operation}`);
   const target = statement[operation];
-  if (!isAlias(target)) fail("A mutation target must be an entity alias");
-  const mgmt = getAliasMgmt(target);
+  if (!isTable(target)) fail("A mutation target must be an entity table");
+  const mgmt = getTableMgmt(target);
   const meta = mgmt.meta;
   if (meta.inheritanceType || meta.baseType || meta.baseTypes.length || meta.subTypes.length) {
     fail("SQL mutations do not support CTI/STI targets or inherited table families");
@@ -211,17 +211,19 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const entries = rows.map((row) => assignments(meta, row, "insert"));
       for (const row of entries) {
         for (const field of required) {
-          if (!row.some((entry) => entry[0] === field.fieldName))
-            fail(`INSERT requires ${meta.type}.${field.fieldName}`);
+          if (!row.some((entry) => entry[0] === field.serde.columns[0].columnName))
+            fail(`INSERT requires ${meta.type}.${field.serde.columns[0].columnName}`);
         }
       }
       if (rows.length === 0) return undefined;
-      const keys = fields.filter((field) => entries.some((row) => row.some((entry) => entry[0] === field.fieldName)));
+      const keys = fields.filter((field) =>
+        entries.some((row) => row.some((entry) => entry[0] === field.serde.columns[0].columnName)),
+      );
       sql += ` (${keys.map((field) => kq(field.serde.columns[0].columnName)).join(", ")}) VALUES `;
       sql += entries
         .map((row) => {
           const cells = keys.map((field) => {
-            const entry = row.find((entry) => entry[0] === field.fieldName);
+            const entry = row.find((entry) => entry[0] === field.serde.columns[0].columnName);
             if (!entry) return "DEFAULT";
             const cell = assignmentToSql(meta, field, entry[1], valuesCtx);
             bindings.push(...cell.bindings);
@@ -235,8 +237,8 @@ export function parseStatement(arg: unknown): Plan | undefined {
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
       const columns = source.output.columns;
       for (const field of required) {
-        if (!columns.some((column) => column[0] === field.fieldName))
-          fail(`INSERT requires ${meta.type}.${field.fieldName}`);
+        if (!columns.some((column) => column[0] === field.serde.columns[0].columnName))
+          fail(`INSERT requires ${meta.type}.${field.serde.columns[0].columnName}`);
       }
       for (const [key, expr] of columns) {
         const field = writableField(meta, key, "insert");
@@ -255,9 +257,9 @@ export function parseStatement(arg: unknown): Plan | undefined {
         if (!field.serde.columns[0].sqlNullable && expr.sqlNullable === true)
           fail(`INSERT SELECT ${meta.type}.${key} cannot accept a nullable output`);
       }
-      const keys = fields.filter((field) => columns.some((column) => column[0] === field.fieldName));
+      const keys = fields.filter((field) => columns.some((column) => column[0] === field.serde.columns[0].columnName));
       const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
-      sql += ` (${keys.map((field) => kq(field.serde.columns[0].columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.fieldName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
+      sql += ` (${keys.map((field) => kq(field.serde.columns[0].columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.serde.columns[0].columnName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
       bindings.push(...source.bindings);
     }
   } else {
@@ -319,7 +321,7 @@ export function decodeStatementResult(
   return { rowCount: result.rowCount, rows: plan.decodeRows(em, result.rows) };
 }
 
-type MutationTarget<T extends Entity> = AliasFor<T> &
+type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
 type MutationFilter = {
   readonly where?: ExpressionCondition | ExprLike<boolean>;
@@ -352,28 +354,28 @@ type NoMutationReadClauses = Partial<
   >
 >;
 type InsertKey<T> = {
-  [K in keyof FieldsOf<T>]: FieldsOf<T>[K] extends { columns: [{ insert: "required" | "optional" }] } ? K : never;
-}[keyof FieldsOf<T>];
+  [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" | "optional" } ? K : never;
+}[keyof ColumnsOf<T>];
 type RequiredInsertKey<T> = {
-  [K in keyof FieldsOf<T>]: FieldsOf<T>[K] extends { columns: [{ insert: "required" }] } ? K : never;
-}[keyof FieldsOf<T>];
+  [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" } ? K : never;
+}[keyof ColumnsOf<T>];
 type UpdateKey<T> = {
-  [K in keyof FieldsOf<T>]: FieldsOf<T>[K] extends { columns: [{ update: true }] } ? K : never;
-}[keyof FieldsOf<T>];
-type DomainValue<T, K extends keyof FieldsOf<T>> = K extends "id"
+  [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { update: true } ? K : never;
+}[keyof ColumnsOf<T>];
+type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
   ? IdOf<T>
-  : FieldsOf<T>[K] extends { kind: "m2o"; type: infer U }
+  : ColumnsOf<T>[K] extends { kind: "m2o"; type: infer U }
     ? IdOf<U>
-    : FieldsOf<T>[K] extends { type: infer V }
+    : ColumnsOf<T>[K] extends { type: infer V }
       ? V
       : never;
-type SqlValue<T, K extends keyof FieldsOf<T>> =
+type SqlValue<T, K extends keyof ColumnsOf<T>> =
   | DomainValue<T, K>
-  | (FieldsOf<T>[K] extends { columns: [{ nullable: true }] } ? null : never);
-type Assignment<T, K extends keyof FieldsOf<T>> =
+  | (ColumnsOf<T>[K] extends { nullable: true } ? null : never);
+type Assignment<T, K extends keyof ColumnsOf<T>> =
   | SqlValue<T, K>
   | ExprLike<SqlValue<T, K>>
-  | (FieldsOf<T>[K] extends { kind: "m2o"; type: infer U } ? U : never);
+  | (ColumnsOf<T>[K] extends { kind: "m2o"; type: infer U } ? U : never);
 type InsertSourceRow<T> = { [K in RequiredInsertKey<T>]: SqlValue<T, K> } & {
   [K in Exclude<InsertKey<T>, RequiredInsertKey<T>>]?: SqlValue<T, K>;
 };
@@ -424,12 +426,12 @@ type CheckInsertSource<T, Q extends SetOperand> = SetOperand extends Q
       : "INSERT SELECT has unknown target fields"
     : "INSERT SELECT requires compatible values for all SQL-required fields";
 type TargetEntity<M> = M extends
-  | { readonly insert: AliasFor<infer T> }
-  | { readonly update: AliasFor<infer T> }
-  | { readonly delete: AliasFor<infer T> }
+  | { readonly insert: TableFor<infer T> }
+  | { readonly update: TableFor<infer T> }
+  | { readonly delete: TableFor<infer T> }
   ? T
   : never;
-type TargetAlias<M> = M extends
+type TargetTable<M> = M extends
   | { readonly insert: infer A }
   | { readonly update: infer A }
   | { readonly delete: infer A }
@@ -468,7 +470,7 @@ function requireColumnMetadata(meta: EntityMetadata, field: StoredField): void {
     typeof column.hasDefault !== "boolean" ||
     typeof column.isGenerated !== "boolean"
   )
-    fail(`Missing physical metadata for ${meta.type}.${field.fieldName}; run codegen`);
+    fail(`Missing physical metadata for ${meta.type}.${column.columnName}; run codegen`);
 }
 
 /** Validates every supplied key, including undefined fields, before pruning omitted values. */
@@ -477,7 +479,7 @@ function assignments(meta: EntityMetadata, value: unknown, operation: "insert" |
     fail(`${operation} assignments must be a field POJO`);
   const entries = Object.entries(value);
   for (const [key] of entries) writableField(meta, key, operation);
-  checkPojo(value, Object.keys(meta.allFields), `${operation} assignments`);
+  checkPojo(value, Object.keys(meta.columns), `${operation} assignments`);
   const defined = entries.filter((entry) => entry[1] !== undefined);
   if (!defined.length) fail(`${operation} requires at least one defined field; empty rows/sets are not DEFAULT VALUES`);
   return defined;
@@ -485,7 +487,8 @@ function assignments(meta: EntityMetadata, value: unknown, operation: "insert" |
 
 /** Applies physical write restrictions, not ORM-derived, protected, or business-immutable flags. */
 function writableField(meta: EntityMetadata, key: string, operation: "insert" | "update"): StoredField {
-  const field = Object.hasOwn(meta.allFields, key) ? meta.allFields[key] : undefined;
+  const column = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
+  const field = column ? meta.allFields[column.fieldName] : undefined;
   if (!field || !isStoredField(field)) fail(`Unsupported SQL mutation field ${meta.type}.${key}`);
   requireColumnMetadata(meta, field);
   if (operation === "update" && field.kind === "primaryKey") fail("UPDATE primary-key assignments are not supported");
@@ -500,7 +503,8 @@ function writableField(meta: EntityMetadata, key: string, operation: "insert" | 
 function assignmentToSql(meta: EntityMetadata, field: StoredField, value: unknown, ctx: Ctx): SqlFragment {
   if (isExpr(value)) return asNode(value).toSql(ctx);
   if (value === null) {
-    if (!field.serde.columns[0].sqlNullable) fail(`${meta.type}.${field.fieldName} is physically NOT NULL`);
+    if (!field.serde.columns[0].sqlNullable)
+      fail(`${meta.type}.${field.serde.columns[0].columnName} is physically NOT NULL`);
     return { sql: "NULL", bindings: [], refs: [] };
   }
   if (field.kind === "m2o" || field.kind === "primaryKey") {
@@ -521,7 +525,7 @@ function assignmentToSql(meta: EntityMetadata, field: StoredField, value: unknow
     }
   }
   const column = field.serde.columns[0];
-  if (!column.mapToDbValue) fail(`The codec for ${meta.type}.${field.fieldName} does not support SQL value writes`);
+  if (!column.mapToDbValue) fail(`The codec for ${meta.type}.${column.columnName} does not support SQL value writes`);
   return { sql: "?", bindings: [column.mapToDbValue(value)], refs: [] };
 }
 

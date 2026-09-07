@@ -4,10 +4,10 @@ import {
   type ExecuteResult,
   PlainTimeSerde,
   Temporal,
-  alias,
   getMetadata,
   query,
   sql,
+  table,
 } from "joist-orm";
 import { Author, Book } from "src/entities";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/setupDbTests";
@@ -32,17 +32,17 @@ describe("EntityManager.execute", () => {
       updated: "2018-01-02T11:00:00.654321",
     },
     {
-      field: "timeToMicros" as const,
-      values: { timeToMicros: Temporal.PlainTime.from("10:01:00.12345678") },
-      set: { timeToMicros: Temporal.PlainTime.from("11:02:00.65432149") },
+      field: "time_to_micros" as const,
+      values: { time_to_micros: Temporal.PlainTime.from("10:01:00.12345678") },
+      set: { time_to_micros: Temporal.PlainTime.from("11:02:00.65432149") },
       type: Temporal.PlainTime,
       inserted: "10:01:00.123457",
       updated: "11:02:00.654321",
     },
     {
-      field: "createdAt" as const,
-      values: { createdAt: Temporal.ZonedDateTime.from("2018-01-01T10:00:00.123456-08:00[America/Los_Angeles]") },
-      set: { createdAt: Temporal.ZonedDateTime.from("2018-07-01T10:00:00.654321-07:00[America/Los_Angeles]") },
+      field: "created_at" as const,
+      values: { created_at: Temporal.ZonedDateTime.from("2018-01-01T10:00:00.123456-08:00[America/Los_Angeles]") },
+      set: { created_at: Temporal.ZonedDateTime.from("2018-07-01T10:00:00.654321-07:00[America/Los_Angeles]") },
       type: Temporal.ZonedDateTime,
       inserted: "2018-01-01T18:00:00.123456+00:00[UTC]",
       updated: "2018-07-01T17:00:00.654321+00:00[UTC]",
@@ -50,7 +50,7 @@ describe("EntityManager.execute", () => {
   ])("round-trips Author.$field through VALUES, UPDATE, and scalar RETURNING", async (testCase) => {
     // Given a fresh Author import with the physical firstName and birthday requirements
     const em = newEntityManager();
-    const a = alias(Author);
+    const a = table(Author);
     // And the selected Temporal field has distinct insert and update values
     const returning = a[testCase.field];
 
@@ -82,14 +82,14 @@ describe("EntityManager.execute", () => {
   it("writes and returns Author's physical date, time, and local timestamp arrays", async () => {
     // Given a fresh Author import with two distinct elements in each Temporal array
     const em = newEntityManager();
-    const a = alias(Author);
+    const a = table(Author);
     const returning = {
-      birthdays: a.childrenBirthdays,
-      maybeBirthdays: a.maybeBirthdays,
+      birthdays: a.children_birthdays,
+      maybeBirthdays: a.maybe_birthdays,
       times: a.times,
-      maybeTimes: a.maybeTimes,
+      maybeTimes: a.maybe_times,
       timestamps: a.timestamps,
-      maybeTimestamps: a.maybeTimestamps,
+      maybeTimestamps: a.maybe_timestamps,
     };
 
     // When VALUES receives physical arrays rather than scalar filter parameters
@@ -98,12 +98,12 @@ describe("EntityManager.execute", () => {
       values: {
         firstName: "Arrays",
         birthday: jan1,
-        childrenBirthdays: [jan1, jan2],
-        maybeBirthdays: [jan2, jan3],
+        children_birthdays: [jan1, jan2],
+        maybe_birthdays: [jan2, jan3],
         times: [ten01AndMicros, ten02],
-        maybeTimes: [ten02, ten01AndMicros],
+        maybe_times: [ten02, ten01AndMicros],
         timestamps: [jan1at10am, jan1at11am],
-        maybeTimestamps: [jan1at11am, jan1at10am],
+        maybe_timestamps: [jan1at11am, jan1at10am],
       },
       returning,
     });
@@ -143,7 +143,7 @@ describe("EntityManager.execute", () => {
       from: a,
       where: {
         and: [
-          a.childrenBirthdays.eq([jan1, jan2]),
+          a.children_birthdays.eq([jan1, jan2]),
           a.times.eq([ten01AndMicros, ten02]),
           a.timestamps.eq([jan1at10am, jan1at11am]),
         ],
@@ -172,12 +172,12 @@ describe("EntityManager.execute", () => {
     const updated = await em.execute({
       update: a,
       set: {
-        childrenBirthdays: [jan3],
-        maybeBirthdays: [jan1],
+        children_birthdays: [jan3],
+        maybe_birthdays: [jan1],
         times: [ten02],
-        maybeTimes: [ten01AndMicros],
+        maybe_times: [ten01AndMicros],
         timestamps: [jan1at11am],
-        maybeTimestamps: [jan1at10am],
+        maybe_timestamps: [jan1at10am],
       },
       where: a.id.eq("a:1"),
       returning,
@@ -226,19 +226,19 @@ describe("EntityManager.execute", () => {
     const winter = Temporal.ZonedDateTime.from("2018-01-01T10:00:00.123456-08:00[America/Los_Angeles]");
     const summer = Temporal.ZonedDateTime.from("2018-07-01T10:00:00.654321-07:00[America/Los_Angeles]");
     const em = newEntityManager();
-    const b = alias(Book);
+    const b = table(Book);
 
     // When inserting the ZonedDateTime scalar and both physical array fields
     const inserted = await em.execute({
       insert: b,
       values: {
         title: "Timezones",
-        author: "a:1",
-        publishedAt: winter,
-        timestampTzs: [winter, summer],
-        maybeTimestampTzs: [summer, winter],
+        author_id: "a:1",
+        published_at: winter,
+        timestamp_tzs: [winter, summer],
+        maybe_timestamp_tzs: [summer, winter],
       },
-      returning: { publishedAt: b.publishedAt, instants: b.timestampTzs, maybeInstants: b.maybeTimestampTzs },
+      returning: { publishedAt: b.published_at, instants: b.timestamp_tzs, maybeInstants: b.maybe_timestamp_tzs },
     });
 
     // Then PostgreSQL preserves each instant while RETURNING uses the session's UTC zone
@@ -263,9 +263,9 @@ describe("EntityManager.execute", () => {
     ]);
 
     // When a physical and a derived compound predicate compare zoned array elements
-    const branch = { from: b, select: { instants: b.timestampTzs } };
+    const branch = { from: b, select: { instants: b.timestamp_tzs } };
     const instants = query({ union: [branch, branch], as: "instants" });
-    const direct = await em.query({ from: b, where: b.timestampTzs.eq([winter, summer]), select: b.timestampTzs });
+    const direct = await em.query({ from: b, where: b.timestamp_tzs.eq([winter, summer]), select: b.timestamp_tzs });
     const combined = await em.query({
       from: instants,
       where: instants.instants.eq([winter, summer]),
@@ -279,9 +279,9 @@ describe("EntityManager.execute", () => {
     // When updating the scalar and both arrays with different instants
     const updated = await em.execute({
       update: b,
-      set: { publishedAt: summer, timestampTzs: [summer], maybeTimestampTzs: [winter] },
+      set: { published_at: summer, timestamp_tzs: [summer], maybe_timestamp_tzs: [winter] },
       where: b.id.eq("b:1"),
-      returning: b.timestampTzs,
+      returning: b.timestamp_tzs,
     });
 
     // Then scalar array RETURNING is an array-valued row, not a flattened or wrapped projection
@@ -300,7 +300,7 @@ describe("EntityManager.execute", () => {
   it("distinguishes Author bulk VALUES nulls, empty arrays, omission, undefined, and SQL DEFAULT", async () => {
     // Given imports whose nullable Temporal fields have real midnight and empty-array SQL defaults
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const a = alias(Author);
+    const a = table(Author);
     resetQueryCount();
 
     // When rows deliberately supply different keys in one VALUES statement
@@ -311,37 +311,37 @@ describe("EntityManager.execute", () => {
           firstName: "Null",
           birthday: jan1,
           time: null,
-          maybeBirthdays: null,
-          maybeTimes: null,
-          maybeTimestamps: null,
+          maybe_birthdays: null,
+          maybe_times: null,
+          maybe_timestamps: null,
         },
-        { firstName: "Empty", birthday: jan1, maybeBirthdays: [], maybeTimes: [], maybeTimestamps: [] },
+        { firstName: "Empty", birthday: jan1, maybe_birthdays: [], maybe_times: [], maybe_timestamps: [] },
         { firstName: "Omitted", birthday: jan1 },
         {
           firstName: "Undefined",
           birthday: jan1,
           time: undefined,
           timestamp: undefined,
-          maybeBirthdays: undefined,
-          maybeTimes: undefined,
-          maybeTimestamps: undefined,
+          maybe_birthdays: undefined,
+          maybe_times: undefined,
+          maybe_timestamps: undefined,
         },
         {
           firstName: "Default",
           birthday: jan1,
           time: sql<Temporal.PlainTime>`DEFAULT`,
-          maybeBirthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
-          maybeTimes: sql<Temporal.PlainTime[]>`DEFAULT`,
-          maybeTimestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
+          maybe_birthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
+          maybe_times: sql<Temporal.PlainTime[]>`DEFAULT`,
+          maybe_timestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
         },
       ],
       returning: {
         time: a.time,
-        birthdays: a.maybeBirthdays,
-        times: a.maybeTimes,
-        timestamps: a.maybeTimestamps,
+        birthdays: a.maybe_birthdays,
+        times: a.maybe_times,
+        timestamps: a.maybe_timestamps,
         timestamp: a.timestamp,
-        createdAt: a.createdAt,
+        createdAt: a.created_at,
       },
     });
 
@@ -435,24 +435,24 @@ describe("EntityManager.execute", () => {
     // Given a persisted Author for Books whose zoned arrays default to empty arrays
     await knex("authors").insert({ firstName: "Owner", birthday: "2018-01-01" });
     const em = newEntityManager();
-    const b = alias(Book);
+    const b = table(Book);
 
     // When importing null, empty, omitted, and undefined zoned arrays in one statement
     const result = await em.execute({
       insert: b,
       values: [
-        { title: "Null", author: "a:1", publishedAt: jan2DateTime, maybeTimestampTzs: null, deletedAt: null },
-        { title: "Empty", author: "a:1", publishedAt: jan2DateTime, timestampTzs: [], maybeTimestampTzs: [] },
-        { title: "Omitted", author: "a:1", publishedAt: jan2DateTime },
+        { title: "Null", author_id: "a:1", published_at: jan2DateTime, maybe_timestamp_tzs: null, deleted_at: null },
+        { title: "Empty", author_id: "a:1", published_at: jan2DateTime, timestamp_tzs: [], maybe_timestamp_tzs: [] },
+        { title: "Omitted", author_id: "a:1", published_at: jan2DateTime },
         {
           title: "Undefined",
-          author: "a:1",
-          publishedAt: jan2DateTime,
-          timestampTzs: undefined,
-          maybeTimestampTzs: undefined,
+          author_id: "a:1",
+          published_at: jan2DateTime,
+          timestamp_tzs: undefined,
+          maybe_timestamp_tzs: undefined,
         },
       ],
-      returning: { instants: b.timestampTzs, maybeInstants: b.maybeTimestampTzs, deletedAt: b.deletedAt },
+      returning: { instants: b.timestamp_tzs, maybeInstants: b.maybe_timestamp_tzs, deletedAt: b.deleted_at },
     });
 
     // Then SQL NULL stays distinct from both explicitly empty and server-defaulted arrays
@@ -474,21 +474,21 @@ describe("EntityManager.execute", () => {
   });
 
   it.each([
-    { field: "maybeBirthdays" as const, value: "2018-01-02" },
-    { field: "maybeTimes" as const, value: "10:01:00.123456" },
-    { field: "maybeTimestamps" as const, value: "2018-01-01T11:00:00" },
+    { field: "maybe_birthdays" as const, value: "2018-01-02" },
+    { field: "maybe_times" as const, value: "10:01:00.123456" },
+    { field: "maybe_timestamps" as const, value: "2018-01-01T11:00:00" },
   ])("preserves scalar array RETURNING and UPDATE omission, null, and DEFAULT for Author.$field", async (testCase) => {
     // Given an Author with nonempty values in each nullable physical Temporal array
     const em = newEntityManager();
-    const a = alias(Author);
+    const a = table(Author);
     const inserted = await em.execute({
       insert: a,
       values: {
         firstName: "Arrays",
         birthday: jan1,
-        maybeBirthdays: [jan2],
-        maybeTimes: [ten01AndMicros],
-        maybeTimestamps: [jan1at11am],
+        maybe_birthdays: [jan2],
+        maybe_times: [ten01AndMicros],
+        maybe_timestamps: [jan1at11am],
       },
       returning: a[testCase.field],
     });
@@ -498,14 +498,14 @@ describe("EntityManager.execute", () => {
     // When replacing the selected array with an empty domain array
     const empty = await em.execute({
       update: a,
-      set: { maybeBirthdays: [], maybeTimes: [], maybeTimestamps: [] },
+      set: { maybe_birthdays: [], maybe_times: [], maybe_timestamps: [] },
       where: a.id.eq("a:1"),
       returning,
     });
     // And a later update explicitly stores SQL NULL instead of the column's empty-array default
     const absent = await em.execute({
       update: a,
-      set: { maybeBirthdays: null, maybeTimes: null, maybeTimestamps: null },
+      set: { maybe_birthdays: null, maybe_times: null, maybe_timestamps: null },
       where: a.id.eq("a:1"),
       returning,
     });
@@ -514,9 +514,9 @@ describe("EntityManager.execute", () => {
       update: a,
       set: {
         firstName: "Retained null",
-        maybeBirthdays: undefined,
-        maybeTimes: undefined,
-        maybeTimestamps: undefined,
+        maybe_birthdays: undefined,
+        maybe_times: undefined,
+        maybe_timestamps: undefined,
       },
       where: a.id.eq("a:1"),
       returning,
@@ -525,9 +525,9 @@ describe("EntityManager.execute", () => {
     const defaulted = await em.execute({
       update: a,
       set: {
-        maybeBirthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
-        maybeTimes: sql<Temporal.PlainTime[]>`DEFAULT`,
-        maybeTimestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
+        maybe_birthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
+        maybe_times: sql<Temporal.PlainTime[]>`DEFAULT`,
+        maybe_timestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
       },
       where: a.id.eq("a:1"),
       returning,
@@ -548,39 +548,39 @@ describe("EntityManager.execute", () => {
     await knex("authors").insert({ firstName: "Owner", birthday: "2018-01-01" });
     // And the Book starts with a concrete publication instant in the nullable array
     const em = newEntityManager();
-    const b = alias(Book);
+    const b = table(Book);
     await em.execute({
       insert: b,
-      values: { title: "Instants", author: "a:1", publishedAt: jan2DateTime, maybeTimestampTzs: [jan2DateTime] },
+      values: { title: "Instants", author_id: "a:1", published_at: jan2DateTime, maybe_timestamp_tzs: [jan2DateTime] },
     });
 
     // When replacing the nullable array with an empty array
     const empty = await em.execute({
       update: b,
-      set: { maybeTimestampTzs: [] },
+      set: { maybe_timestamp_tzs: [] },
       where: b.id.eq("b:1"),
-      returning: b.maybeTimestampTzs,
+      returning: b.maybe_timestamp_tzs,
     });
     // And a second UPDATE stores SQL NULL instead of an array
     const absent = await em.execute({
       update: b,
-      set: { maybeTimestampTzs: null },
+      set: { maybe_timestamp_tzs: null },
       where: b.id.eq("b:1"),
-      returning: b.maybeTimestampTzs,
+      returning: b.maybe_timestamp_tzs,
     });
     // And an undefined assignment leaves that SQL NULL unchanged
     const omitted = await em.execute({
       update: b,
-      set: { title: "Retained null", maybeTimestampTzs: undefined },
+      set: { title: "Retained null", maybe_timestamp_tzs: undefined },
       where: b.id.eq("b:1"),
-      returning: b.maybeTimestampTzs,
+      returning: b.maybe_timestamp_tzs,
     });
     // And explicit SQL DEFAULT restores the database's empty array
     const defaulted = await em.execute({
       update: b,
-      set: { maybeTimestampTzs: sql<Temporal.ZonedDateTime[]>`DEFAULT` },
+      set: { maybe_timestamp_tzs: sql<Temporal.ZonedDateTime[]>`DEFAULT` },
       where: b.id.eq("b:1"),
-      returning: b.maybeTimestampTzs,
+      returning: b.maybe_timestamp_tzs,
     });
 
     // Then scalar RETURNING preserves the zoned-array type and its SQL nullability
@@ -596,7 +596,7 @@ describe("EntityManager.execute", () => {
     // Given an Author with a nondefault microsecond time
     await knex("authors").insert({ firstName: "Time", birthday: "2018-01-01", time: "10:01:00.123456" });
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const a = alias(Author);
+    const a = table(Author);
     resetQueryCount();
 
     // When updating another field while time is undefined
@@ -643,14 +643,14 @@ describe("EntityManager.execute", () => {
       created_at: "2018-01-01T10:00:00.123456-08:00",
     });
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const source = alias(Author);
-    const target = alias(Author);
-    // And the source deliberately orders domain keys differently from the target's physical columns
+    const source = table(Author);
+    const target = table(Author);
+    // And the source deliberately orders projection keys differently from the target's physical columns
     const read = {
       from: source,
       where: source.id.eq("a:1"),
       select: {
-        createdAt: source.createdAt,
+        created_at: source.created_at,
         time: source.time,
         timestamp: source.timestamp,
         birthday: source.birthday,
@@ -667,7 +667,7 @@ describe("EntityManager.execute", () => {
         birthday: target.birthday,
         time: target.time,
         timestamp: target.timestamp,
-        createdAt: target.createdAt,
+        createdAt: target.created_at,
       },
     });
 
@@ -683,9 +683,9 @@ describe("EntityManager.execute", () => {
     ]);
     expect(result.rows[0].time!.toString()).toBe("10:01:00.123456");
     expect(queries).toMatchInlineSnapshot(`
-      [
-        "INSERT INTO authors AS a (\"firstName\", birthday, timestamp, time, created_at) SELECT sq.\"firstName\", sq.birthday, sq.timestamp, sq.time, sq.\"createdAt\" FROM (SELECT a.created_at AS \"createdAt\", a.time AS time, a.timestamp AS timestamp, a.birthday AS birthday, a.\"firstName\" AS \"firstName\" FROM authors AS a WHERE a.id = $1) AS sq RETURNING a.birthday AS birthday, a.time AS time, a.timestamp AS timestamp, a.created_at AS \"createdAt\"",
-      ]
+     [
+       "INSERT INTO authors AS a ("firstName", birthday, timestamp, time, created_at) SELECT sq."firstName", sq.birthday, sq.timestamp, sq.time, sq.created_at FROM (SELECT a.created_at AS created_at, a.time AS time, a.timestamp AS timestamp, a.birthday AS birthday, a."firstName" AS "firstName" FROM authors AS a WHERE a.id = $1) AS sq RETURNING a.birthday AS birthday, a.time AS time, a.timestamp AS timestamp, a.created_at AS "createdAt"",
+     ]
     `);
     expect(em.entities).toEqual([]);
   });
@@ -705,9 +705,9 @@ describe("EntityManager.execute", () => {
       { firstName: "Null", birthday: "2018-01-01" },
     ]);
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const source = alias(Author, "source");
-    const paired = alias(Author, "paired");
-    const target = alias(Author);
+    const source = table(Author, "source");
+    const paired = table(Author, "paired");
+    const target = table(Author);
     // And a reusable read whose LEFT join and scalar subquery both produce SQL NULL for the last Author
     const arrays = query({
       from: source,
@@ -715,10 +715,10 @@ describe("EntityManager.execute", () => {
       select: {
         firstName: source.firstName,
         birthday: source.birthday,
-        childrenBirthdays: source.childrenBirthdays,
+        childrenBirthdays: source.children_birthdays,
         times: source.times,
         timestamps: source.timestamps,
-        maybeBirthdays: paired.childrenBirthdays,
+        maybeBirthdays: paired.children_birthdays,
         maybeTimestamps: paired.timestamps,
         maybeTimes: query({
           from: paired,
@@ -742,12 +742,12 @@ describe("EntityManager.execute", () => {
           select: {
             firstName: arrays.firstName,
             birthday: arrays.birthday,
-            childrenBirthdays: arrays.childrenBirthdays,
+            children_birthdays: arrays.childrenBirthdays,
             times: arrays.times,
             timestamps: arrays.timestamps,
-            maybeBirthdays: arrays.maybeBirthdays,
-            maybeTimes: arrays.maybeTimes,
-            maybeTimestamps: arrays.maybeTimestamps,
+            maybe_birthdays: arrays.maybeBirthdays,
+            maybe_times: arrays.maybeTimes,
+            maybe_timestamps: arrays.maybeTimestamps,
           },
           orderBy: [{ asc: arrays.firstName }],
         },
@@ -761,7 +761,7 @@ describe("EntityManager.execute", () => {
       expect(filter).not.toHaveBeenCalled();
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO authors AS a ("firstName", birthday, children_birthdays, maybe_birthdays, timestamps, maybe_timestamps, times, maybe_times) SELECT sq."firstName", sq.birthday, sq."childrenBirthdays", sq."maybeBirthdays", sq.timestamps, sq."maybeTimestamps", sq.times, sq."maybeTimes" FROM (SELECT arrays."firstName" AS "firstName", arrays.birthday AS birthday, arrays."childrenBirthdays" AS "childrenBirthdays", arrays.times AS times, arrays.timestamps AS timestamps, arrays."maybeBirthdays" AS "maybeBirthdays", arrays."maybeTimes" AS "maybeTimes", arrays."maybeTimestamps" AS "maybeTimestamps" FROM (SELECT a."firstName" AS "firstName", a.birthday AS birthday, a.children_birthdays AS "childrenBirthdays", a.times AS times, a.timestamps AS timestamps, a1.children_birthdays AS "maybeBirthdays", a1.timestamps AS "maybeTimestamps", (SELECT a2.times AS value FROM authors AS a2 WHERE a2.id = a.id AND a2.id != $1) AS "maybeTimes" FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a1.id = a.id AND a1.id != $2) AS arrays ORDER BY arrays."firstName" ASC) AS sq RETURNING a.id AS value",
+         "INSERT INTO authors AS a ("firstName", birthday, children_birthdays, maybe_birthdays, timestamps, maybe_timestamps, times, maybe_times) SELECT sq."firstName", sq.birthday, sq.children_birthdays, sq.maybe_birthdays, sq.timestamps, sq.maybe_timestamps, sq.times, sq.maybe_times FROM (SELECT arrays."firstName" AS "firstName", arrays.birthday AS birthday, arrays."childrenBirthdays" AS children_birthdays, arrays.times AS times, arrays.timestamps AS timestamps, arrays."maybeBirthdays" AS maybe_birthdays, arrays."maybeTimes" AS maybe_times, arrays."maybeTimestamps" AS maybe_timestamps FROM (SELECT a."firstName" AS "firstName", a.birthday AS birthday, a.children_birthdays AS "childrenBirthdays", a.times AS times, a.timestamps AS timestamps, a1.children_birthdays AS "maybeBirthdays", a1.timestamps AS "maybeTimestamps", (SELECT a2.times AS value FROM authors AS a2 WHERE a2.id = a.id AND a2.id != $1) AS "maybeTimes" FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a1.id = a.id AND a1.id != $2) AS arrays ORDER BY arrays."firstName" ASC) AS sq RETURNING a.id AS value",
        ]
       `);
       expect(
@@ -831,17 +831,17 @@ describe("EntityManager.execute", () => {
       },
     ]);
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const source = alias(Book);
-    const target = alias(Book);
+    const source = table(Book);
+    const target = table(Book);
     // And the read retains the required Author-id domain alongside both native array columns
     const read = {
       from: source,
       select: {
-        author: source.author,
-        publishedAt: source.publishedAt,
+        author_id: source.author_id,
+        published_at: source.published_at,
         title: source.title,
-        timestampTzs: source.timestampTzs,
-        maybeTimestampTzs: source.maybeTimestampTzs,
+        timestamp_tzs: source.timestamp_tzs,
+        maybe_timestamp_tzs: source.maybe_timestamp_tzs,
       },
       orderBy: [{ asc: source.id }],
     };
@@ -861,7 +861,7 @@ describe("EntityManager.execute", () => {
       expect(filter).not.toHaveBeenCalled();
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO book AS b (title, published_at, timestamp_tzs, maybe_timestamp_tzs, author_id) SELECT sq.title, sq."publishedAt", sq."timestampTzs", sq."maybeTimestampTzs", sq.author FROM (SELECT b.author_id AS author, b.published_at AS "publishedAt", b.title AS title, b.timestamp_tzs AS "timestampTzs", b.maybe_timestamp_tzs AS "maybeTimestampTzs" FROM book AS b WHERE b.deleted_at IS NULL ORDER BY b.id ASC) AS sq RETURNING b.id AS value",
+         "INSERT INTO book AS b (title, published_at, timestamp_tzs, maybe_timestamp_tzs, author_id) SELECT sq.title, sq.published_at, sq.timestamp_tzs, sq.maybe_timestamp_tzs, sq.author_id FROM (SELECT b.author_id AS author_id, b.published_at AS published_at, b.title AS title, b.timestamp_tzs AS timestamp_tzs, b.maybe_timestamp_tzs AS maybe_timestamp_tzs FROM book AS b WHERE b.deleted_at IS NULL ORDER BY b.id ASC) AS sq RETURNING b.id AS value",
        ]
       `);
       expect(
@@ -889,10 +889,10 @@ describe("EntityManager.execute", () => {
   it.each(["domain", "storage"] as const)("rejects native array %s mismatches before SQL", async (mismatch) => {
     // Given a source projection that retains the actual PlainTime[] column metadata
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const source = alias(Author);
+    const source = table(Author);
     const read = {
       from: source,
-      select: { firstName: source.firstName, birthday: source.birthday, maybeTimes: source.maybeTimes },
+      select: { firstName: source.firstName, birthday: source.birthday, maybe_times: source.maybe_times },
     };
     // And a target that differs either in mapper identity for time[] or in SQL storage for the same PlainTime mapper
     const columns = getMetadata(Author).fields.maybeTimes.serde!.columns;
@@ -921,8 +921,8 @@ describe("EntityManager.execute", () => {
     try {
       // When copying the source array despite deliberately incompatible target metadata
       // Then compatibility fails before PostgreSQL receives a read or write statement
-      await expect(em.execute({ insert: alias(Author), from: read })).rejects.toThrow(
-        "INSERT SELECT Author.maybeTimes has incompatible or unknown storage codecs",
+      await expect(em.execute({ insert: table(Author), from: read })).rejects.toThrow(
+        "INSERT SELECT Author.maybe_times has incompatible or unknown storage codecs",
       );
       expect(queries).toEqual([]);
     } finally {
@@ -936,8 +936,8 @@ describe("EntityManager.execute", () => {
     // And a Book with a non-UTC publication instant and microsecond precision
     await knex("book").insert({ title: "Source", author_id: 1, published_at: "2018-07-01T10:00:00.123456-07:00" });
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const source = alias(Book);
-    const target = alias(Book);
+    const source = table(Book);
+    const target = table(Book);
     resetQueryCount();
 
     // When INSERT SELECT copies only scalar source fields and lets the array columns use SQL defaults
@@ -946,9 +946,9 @@ describe("EntityManager.execute", () => {
       from: {
         from: source,
         where: source.id.eq("b:1"),
-        select: { author: source.author, publishedAt: source.publishedAt, title: source.title },
+        select: { author_id: source.author_id, published_at: source.published_at, title: source.title },
       },
-      returning: target.publishedAt,
+      returning: target.published_at,
     });
 
     // Then scalar RETURNING decodes the copied instant and the SQL retains the required foreign key
@@ -959,7 +959,7 @@ describe("EntityManager.execute", () => {
     });
     expect(queries).toMatchInlineSnapshot(`
      [
-       "INSERT INTO book AS b (title, published_at, author_id) SELECT sq.title, sq."publishedAt", sq.author FROM (SELECT b.author_id AS author, b.published_at AS "publishedAt", b.title AS title FROM book AS b WHERE b.id = $1 AND b.deleted_at IS NULL) AS sq RETURNING b.published_at AS value",
+       "INSERT INTO book AS b (title, published_at, author_id) SELECT sq.title, sq.published_at, sq.author_id FROM (SELECT b.author_id AS author_id, b.published_at AS published_at, b.title AS title FROM book AS b WHERE b.id = $1 AND b.deleted_at IS NULL) AS sq RETURNING b.published_at AS value",
      ]
     `);
     expect(await knex("book").select("author_id", "timestamp_tzs", "maybe_timestamp_tzs").orderBy("id")).toEqual([
@@ -978,19 +978,19 @@ describe("EntityManager.execute", () => {
       created_at: "2018-01-02T00:00:00Z",
     });
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
-    const a = alias(Author);
+    const a = table(Author);
     // And the same alias handle belongs to each subquery's lexical source, not the new target row
     const birthday = query({ from: a, where: a.id.eq("a:1"), select: a.birthday }).coalesce(jan1);
     const time = query({ from: a, where: a.id.eq("a:1"), select: a.time });
     const timestamp = query({ from: a, where: a.id.eq("a:1"), select: a.timestamp }).coalesce(jan1at10am);
-    const createdAt = query({ from: a, where: a.id.eq("a:1"), select: a.createdAt }).coalesce(jan2DateTime);
+    const createdAt = query({ from: a, where: a.id.eq("a:1"), select: a.created_at }).coalesce(jan2DateTime);
     resetQueryCount();
 
     // When VALUES assigns all four kinds from ordinary scalar subqueries
     const inserted = await em.execute({
       insert: a,
-      values: { firstName: "Copied", birthday, time, timestamp, createdAt },
-      returning: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.createdAt },
+      values: { firstName: "Copied", birthday, time, timestamp, created_at: createdAt },
+      returning: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.created_at },
     });
 
     // Then RETURNING decodes the new row's Temporal columns, not raw strings or managed entities

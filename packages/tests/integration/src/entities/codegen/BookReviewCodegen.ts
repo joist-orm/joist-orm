@@ -69,78 +69,78 @@ import {
 export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  rating: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  isPublic: {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  isTest: {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  isTestChain: {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  book: {
-    kind: "m2o";
-    type: Book;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  critic: {
-    kind: "m2o";
-    type: Critic;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
+  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
+  isTestChain: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
+  critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   bestReviewAuthors: { kind: "m2m"; type: Author };
   comment: { kind: "o2o"; type: Comment };
+}
+
+export interface BookReviewColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "rating": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_public": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_test": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_test_chain": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
+  "critic_id": { kind: "m2o"; type: Critic; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface BookReviewOpts {
@@ -234,6 +234,7 @@ declare module "joist-core" {
       orderType: BookReviewOrder;
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
+      columnsType: BookReviewColumns;
       supportsEmExecute: true;
       optIdsType: BookReviewIdsOpts;
       factoryExtrasType: BookReviewFactoryExtras;

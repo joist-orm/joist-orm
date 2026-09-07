@@ -540,19 +540,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Runs a SQL-shaped query written as an object literal, and returns typed rows.
    *
    * ```ts
-   * const [a, b] = aliases(Author, Book);
+   * const [a, b] = tables(Author, Book);
    * const rows = await em.query({
    *   from: a,
-   *   join: [{ left: b, on: b.author.eq(a.id) }],
+   *   join: [{ left: b, on: b.author_id.eq(a.id) }],
    *   where: { and: [a.age.gte(minAge)] },
-   *   groupBy: [a.firstName],
-   *   select: { name: a.firstName, bookCount: b.id.count() },
+   *   groupBy: [a.first_name],
+   *   select: { name: a.first_name, bookCount: b.id.count() },
    *   orderBy: { bookCount: "DESC" },
    * });
    * // → { name: string; bookCount: number }[]
    * ```
    *
-   * `select` decides the row type: a bare alias (`select: a`) returns entities through the identity
+   * `select` decides the row type: a bare table (`select: a`) returns entities through the identity
    * map, a `{ key: expr }` object returns typed POJOs, and a `query(...)` value returns its rows. Joins
    * are pruned like `em.find`: an `undefined` condition drops out, and a join nothing references
    * anymore drops with it. See `query.ts` for the full DSL, and `query()` for composing subqueries.

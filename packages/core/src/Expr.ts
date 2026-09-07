@@ -1,18 +1,26 @@
-import type { AliasMgmt } from "./Aliases.ts";
+import { type AliasResolver, deferredAliasSym, isDeferredAliasCondition, skipCondition } from "./DeferredAlias.ts";
+export {
+  type AliasResolver,
+  type DeferredAliasCondition,
+  deferredAliasSym,
+  isDeferredAliasCondition,
+  skipCondition,
+  withDeferredAlias,
+} from "./DeferredAlias.ts";
 import type { ExpressionCondition } from "./EntityFilter.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
-import type { ColumnCondition, RawCondition } from "./QueryParser.ts";
+import type { RawCondition } from "./QueryParser.ts";
 
 /**
  * The shared expression protocol for `em.query`.
  *
- * Alias columns (`a.firstName`), aggregates (`b.id.count()`), `sql` templates, subquery columns
+ * Table columns (`a.first_name`), aggregates (`b.id.count()`), `sql` templates, subquery columns
  * (`bookStats.bookCount`), and scalar subqueries all implement it, so any of them can appear in
  * `select`, `where`, `groupBy`, `having`, `orderBy`, and inside other expressions.
  *
- * This module is a leaf on purpose: `Aliases.ts` extends `BaseExpr` at load time, so nothing here may
- * import (at runtime) a module that leads back to `Aliases.ts`. Anything that needs metadata, alias
+ * This module is a leaf on purpose: `Tables.ts` extends `BaseExpr` at load time, so nothing here may
+ * import (at runtime) a module that leads back to `Tables.ts`. Anything that needs metadata, alias
  * binding, or SQL generation for conditions is reached through the `ExprContext` the query parser passes in.
  */
 
@@ -24,8 +32,8 @@ export const exprBrand: unique symbol = Symbol("joist.expr");
  * `R` is the decoded result type.
  *
  * `Src` is the expression's *source key*: the type-level identity of the table it reads from. An entity
- * alias's key is its type name (`alias(Author)` gives `"Author"`) or the explicit name in
- * `alias(Author, "m")`; a subquery's key is its `as: "book_stats"`, or the shared sentinel `"?"` when it
+ * table's key is its type name (`table(Author)` gives `"Author"`) or the explicit name in
+ * `table(Author, "m")`; a subquery's key is its `as: "book_stats"`, or the shared sentinel `"?"` when it
  * has no `as`. Exactly two questions are asked of a source key, and nothing else:
  *
  * - `MaybeNull` asks "is my source key among the LEFT-joined sources in this query's join list?" If yes,
@@ -51,7 +59,7 @@ export interface ExprBrand<R, Src extends string> {
  * coalesce fallbacks. We must check every operand before reusing the first operand's conversions:
  * TypeScript result types are erased, and equal SQL storage types do not imply equal logical domains.
  *
- * I.e. Author.id and Book.author are compatible Author IDs despite having separate serdes, while
+ * I.e. Author.id and Book.author_id are compatible Author IDs despite having separate serdes, while
  * Book.id must not compare or decode as an Author ID just because both use int4. Conversely, Author.age
  * and Author.age.sum() both expose TypeScript numbers but produce int4 and int8 driver values. Without
  * their SQL type information, accepting them could make decoding depend on which operand comes first.
@@ -76,13 +84,13 @@ export interface ExprOutputType {
  *
  * Method parameters use this instead of `Expr<R>` so that `Expr` stays covariant in `R`: checking
  * `Expr<AuthorId>` against `Expr<AuthorId | null>` then only compares the phantom `__result`, not every
- * method's parameter list (which would make `Expr` invariant, and break `select: b.author` dispatch and
+ * method's parameter list (which would make `Expr` invariant, and break `select: b.author_id` dispatch and
  * polymorphic joins).
  */
 export type ExprLike<R> = { readonly [exprBrand]: ExprBrand<R, any> };
 
 /**
- * A typed SQL expression: an alias column, an aggregate, a `sql` template, or a scalar subquery.
+ * A typed SQL expression: a table column, an aggregate, a `sql` template, or a scalar subquery.
  *
  * Conditions and SQL functions are methods, so they need no import. Aggregates keep `Src` so scope
  * checking still sees through `bs.x.max()`; `count` is source-less because `count(x)` is 0, not null,
@@ -115,22 +123,6 @@ export interface Expr<R, Src extends string = string> {
 }
 
 /**
- * A marker condition that `eq`/`in`/etc. return for an `undefined` value, so the condition prunes away.
- *
- * It lives here (not `QueryParser.ts`) so `Expr.ts` stays a runtime leaf: `Aliases.ts` extends `BaseExpr`
- * at load time, so this module must not (transitively) load `Aliases.ts` back. For the same reason its
- * `QueryParser.ts`/`EntityFilter.ts` imports use `import type`, which is fully erased - a `{ type X }`
- * import keeps a side-effect module load under `verbatimModuleSyntax`.
- */
-export const skipCondition: ColumnCondition = {
-  kind: "column",
-  alias: "skip",
-  column: "skip",
-  dbType: "skip",
-  cond: undefined as any,
-};
-
-/**
  * A join entry: the join kind is the key, the joined source is the value, plus `on`. `inner?: never` /
  * `left?: never` keep an entry to one kind (the `ExpressionFilter` `and`/`or` trick).
  *
@@ -138,7 +130,7 @@ export const skipCondition: ColumnCondition = {
  * `keep: true` pins a join that would otherwise prune, i.e. an inner join used as an existence filter,
  * the way em.find's `keepAliases` does. It is a boolean so callers can pass a flag.
  *
- * Declared here (not `query.ts`) so the relation join factories in `Aliases.ts` (i.e. `a.books.as(b)`) can
+ * Declared here (not `query.ts`) so the relation join factories in `Tables.ts` (i.e. `a.books.as(b)`) can
  * return them without importing `query.ts`; `query.ts` re-constrains `A` to its `QuerySource`.
  */
 export interface InnerJoin<A> {
@@ -180,46 +172,6 @@ export function isExpr(value: unknown): value is ExprLike<any> {
 /** Every `Expr` is a `BaseExpr` at runtime; this cast keeps `isExpr` a plain type guard so unions narrow. */
 export function asNode(expr: ExprLike<any>): BaseExpr {
   return expr as any as BaseExpr;
-}
-
-export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
-
-/** Resolves an alias handle (its `AliasMgmt`) to this parse's binding: the bound meta and SQL alias. */
-export type AliasResolver = (handle: AliasMgmt) => { meta: EntityMetadata; alias: string };
-
-/**
- * A `ColumnCondition`/`RawCondition` whose alias(es) are re-resolved on every parse.
- *
- * Alias columns create conditions before any parser assigns SQL aliases, so the condition carries a
- * resolve function instead of a baked-in alias: `em.find` resolves with its join-literal bindings, and
- * `em.query` resolves through the `ExprContext`, whose `aliasFor` also records the ref for pruning and
- * correlation. Resolving recomputes from scratch, so one condition works across queries whose alias
- * assignments differ.
- */
-export interface DeferredAliasCondition<C = ColumnCondition | RawCondition> {
-  [deferredAliasSym]: (resolve: AliasResolver) => C;
-}
-
-export function isDeferredAliasCondition<C>(cond: C): cond is C & DeferredAliasCondition<C> {
-  return typeof cond === "object" && cond !== null && deferredAliasSym in cond;
-}
-
-/**
- * Tags `cond` with its per-parse resolve function, non-enumerable so the condition still deep-equals as data.
- * The callback receives a fresh shallow copy; it must not write to the original captured condition.
- */
-export function withDeferredAlias<C extends object>(
-  cond: C,
-  resolve: (r: AliasResolver, copy: C) => void,
-): C & DeferredAliasCondition<C> {
-  return Object.defineProperty(cond, deferredAliasSym, {
-    value: (r: AliasResolver) => {
-      const copy = { ...cond };
-      resolve(r, copy);
-      return copy;
-    },
-    enumerable: false,
-  }) as C & DeferredAliasCondition<C>;
 }
 
 export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
@@ -771,7 +723,7 @@ function minMaxOutputType(outputType: ExprOutputType | undefined): ExprOutputTyp
 
 /** An `AliasResolver` backed by an `ExprContext`; a handle's bound meta is its own (`em.query` sources are their own tables). */
 function ctxResolver(ctx: ExprContext): AliasResolver {
-  return function resolve(handle: AliasMgmt) {
+  return function resolve(handle) {
     return { meta: handle.meta, alias: ctx.aliasFor(handle) };
   };
 }

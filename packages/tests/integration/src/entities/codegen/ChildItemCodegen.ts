@@ -54,50 +54,58 @@ import {
 export type ChildItemId = Flavor<string, "ChildItem">;
 
 export interface ChildItemFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  childGroup: { kind: "m2o"; type: ChildGroup; nullable: never; derived: false };
+  parentItem: { kind: "m2o"; type: ParentItem; nullable: never; derived: false };
+}
+
+export interface ChildItemColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
     kind: "primitive";
     type: string;
     unique: false;
-    nullable: undefined;
     derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
+    nullable: true;
+    insert: "optional";
+    update: true;
   };
-  createdAt: {
+  "created_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  updatedAt: {
+  "updated_at": {
     kind: "primitive";
     type: Date;
     unique: false;
-    nullable: never;
     derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
+    nullable: false;
+    insert: "optional";
+    update: true;
   };
-  childGroup: {
+  "child_group_id": {
     kind: "m2o";
     type: ChildGroup;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
-  parentItem: {
+  "parent_item_id": {
     kind: "m2o";
     type: ParentItem;
-    nullable: never;
     derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
+    nullable: false;
+    insert: "required";
+    update: true;
   };
 }
 
@@ -167,6 +175,7 @@ declare module "joist-core" {
       orderType: ChildItemOrder;
       optsType: ChildItemOpts;
       fieldsType: ChildItemFields;
+      columnsType: ChildItemColumns;
       supportsEmExecute: true;
       optIdsType: ChildItemIdsOpts;
       factoryExtrasType: ChildItemFactoryExtras;

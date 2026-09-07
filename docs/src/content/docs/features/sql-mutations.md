@@ -8,11 +8,11 @@ sidebar:
 `em.execute` runs immediate SQL `INSERT`, `UPDATE`, and `DELETE` statements, outside the entity [unit of work](/advanced/unit-of-work/). Statements are reusable POJOs with exactly one operation key:
 
 ```ts
-const b = alias(Book);
+const b = table(Book);
 
 const insert = {
   insert: b,
-  values: { title: "Imported Book", author: "a:1", notes: "Imported without hooks" },
+  values: { title: "Imported Book", author_id: "a:1", notes: "Imported without hooks" },
   returning: { id: b.id, title: b.title },
 } satisfies InsertStatement<Book>;
 const inserted = await em.execute(insert);
@@ -44,14 +44,16 @@ Every call returns `{ rowCount: number; rows: R[] }`. `rowCount` is the database
 
 ## Values and insert sources
 
-`values` accepts one field POJO or an array. Use domain field names (`author`, not `author_id`) and domain values, which use the fields' write codecs, or typed SQL expressions. Owning references accept the correct ID type or a persisted entity, not nested creation options or new/unflushed entities, even with preassigned IDs. ID-only references rely on database FK checks.
+`values` accepts one column POJO or an array. Use physical column names (`author_id`, not `author`; `first_name`, not `firstName`) in both `values` and UPDATE `set`. Values remain domain values encoded by the existing write codecs, or typed SQL expressions. Owning FK columns accept the correct ID type or a persisted entity, not nested creation options or new/unflushed entities, even with preassigned IDs. ID-only references rely on database FK checks. Use `table`/`tables` for all SQL statements; `alias`/`aliases` are only for `em.find`.
 
 - Missing or `undefined` INSERT fields use SQL defaults, including per-row `DEFAULT` cells in bulk inserts. Missing/`undefined` UPDATE fields leave columns unchanged.
 - Explicit `null` means SQL `NULL`, checked against physical nullability before codecs run. For a stored JSON `null`, use a suitably typed expression such as `` sql<object>`'null'::jsonb` `` instead.
 - Explicit SQL defaults use expressions such as `` sql<string>`DEFAULT` ``. PostgreSQL validates supplied expressions/defaults; Joist does not apply entity configuration defaults.
 - A standalone `values: []` checks statement validity and write permissions, then returns `{ rowCount: 0, rows: [] }` without SQL or requiring driver count support. This shortcut is only for standalone execution, not CTE composition. `values: {}`, any row with no defined fields, and an empty/pruned UPDATE `set` fail; none means `DEFAULT VALUES`.
 
-Required columns must appear in every VALUES row or INSERT source projection. In this schema, Book requires `title`, `author`, and `notes`, despite ORM defaults for the latter two; Author requires `firstName` and the derived `numberOfBooks`.
+Required columns must appear in every VALUES row or INSERT source projection. In this schema, Book requires `title`, `author_id`, and `notes`, despite ORM defaults for the latter two; Author requires `first_name` and the derived `number_of_books`.
+
+Generated `BookColumns`/`AuthorColumns` and `ColumnsOf<T>` supply physical keys, value types, nullability, and insert/update policies for SQL inputs. They are separate from domain `BookFields`/`AuthorFields` and `OptsOf<T>`: entity defaults and setters do not define SQL requiredness. `TypeMap.columnsType` connects these types to the entity, and runtime `EntityMetadata.columns` maps physical keys to their owning domain fields and existing serde columns. See [Tables and generated columns](/features/queries-raw/#tables-and-generated-columns) for the read-side split, relationship sugar, and entity hydration.
 
 Run codegen before using mutations. Each entry in the existing `FieldSerde.columns` array carries physical `sqlNullable`, `hasDefault`, and `isGenerated` facts. Generated metadata passes these facts as the final serde constructor argument. Built-in single-column serdes initialize the properties on their existing column (`this`), without replacing column objects or codecs. Mutation checks do not infer these facts from entity requirements or codec defaults. Older custom columns remain valid for reads, but mutations fail clearly when physical facts are missing.
 
@@ -60,19 +62,19 @@ The examples omit timestamps according to Joist's existing `createdAt`/`updatedA
 For `INSERT SELECT`, use `from` **instead of** `values`, with a named-POJO read or its `query()` value:
 
 ```ts
-const source = alias(Book);
+const source = table(Book);
 await em.execute({
   insert: b,
   from: {
     from: source,
     where: source.id.eq("b:1"),
-    select: { title: source.title, author: source.author, notes: source.notes },
+    select: { title: source.title, author_id: source.author_id, notes: source.notes },
   },
   returning: { id: b.id },
 });
 ```
 
-Output keys map to target domain fields regardless of object key order; they must include required fields and have compatible storage codecs, domains, IDs, and nullability. Scalar/entity sources and unknown target keys are rejected. Compatible [compound reads](/features/queries-raw/#set-operations) work too, preserving `unionAll` duplicates, ordering, and pagination. The source stays entirely in SQL, with no JavaScript decode/re-encode round trip.
+INSERT SELECT output keys must match target physical column names regardless of object key order; they must include required columns and have compatible storage codecs, domains, IDs, and nullability. Ordinary read and RETURNING output keys remain freely chosen, i.e. `returning: { authorId: b.author_id }`; only an INSERT source must name its target columns. Scalar/entity sources and unknown target keys are rejected. Compatible [compound reads](/features/queries-raw/#set-operations) work too, preserving `unionAll` duplicates, ordering, and pagination. The source stays entirely in SQL, with no JavaScript decode/re-encode round trip.
 
 INSERT SELECT sources can copy compatible custom-mapped arrays and Temporal arrays directly in SQL, with the same [codec compatibility requirements as compound reads](/features/queries-raw/#output-compatibility-and-codecs). Physical enum-table arrays and custom numeric arrays are unsupported INSERT SELECT outputs; bound VALUES and UPDATE assignments remain supported. For explicit annotations of joined or compound sources, use `InsertStatement<T, Returning, typeof source>` to retain the source's concrete output and join types.
 
@@ -80,9 +82,9 @@ INSERT SELECT sources can copy compatible custom-mapped arrays and Temporal arra
 
 UPDATE and DELETE require a user `where` that survives [condition pruning](/features/queries-raw/#condition--join-pruning), unless `allowAll: true` is explicit. An absent or fully pruned guard fails before SQL; injected soft-delete filters do not count as consent. This is not general tautology detection. `allowAll` neither removes an existing predicate nor disables soft-delete filtering.
 
-Both default to `softDeletes: "exclude"`; use `"include"` to reach soft-deleted rows. **DELETE physically deletes rows**, rather than setting `deletedAt`. Database constraints, triggers, and database-defined cascades still apply.
+Both default to `softDeletes: "exclude"`; use `"include"` to reach soft-deleted rows. **DELETE physically deletes rows**, rather than setting `deleted_at`. Database constraints, triggers, and database-defined cascades still apply.
 
-The target alias is in scope for UPDATE `set`, mutation predicates, and `returning`. Existing read subqueries work in expressions, without adding mutation joins. INSERT VALUES cannot directly read target columns because no existing row exists; its scalar subqueries have their own sources. An INSERT SELECT source has an independent scope from target `returning`.
+The target table is in scope for UPDATE `set`, mutation predicates, and `returning`. Existing read subqueries work in expressions, without adding mutation joins. INSERT VALUES cannot directly read target columns because no existing row exists; its scalar subqueries have their own sources. An INSERT SELECT source has an independent scope from target `returning`.
 
 ## Transactions and entity state
 

@@ -78,113 +78,123 @@ export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is Us
 }
 
 export interface UserFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  email: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  ipAddress: {
-    kind: "primitive";
-    type: IpAddress;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  password: {
-    kind: "primitive";
-    type: PasswordValue;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  bio: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  originalEmail: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  trialPeriod: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  passwordHistory: {
-    kind: "primitive";
-    type: PasswordValue[];
-    unique: false;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  manager: {
-    kind: "m2o";
-    type: User;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  authorManyToOne: {
-    kind: "m2o";
-    type: Author;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  passwordHistory: { kind: "primitive"; type: PasswordValue[]; unique: false; nullable: undefined; derived: false };
+  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
+  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
   parents: { kind: "m2m"; type: User };
   children: { kind: "m2m"; type: User };
   createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
+}
+
+export interface UserColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "email": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "ip_address": {
+    kind: "primitive";
+    type: IpAddress;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "password": {
+    kind: "primitive";
+    type: PasswordValue;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "bio": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "original_email": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "trial_period": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "password_history": {
+    kind: "primitive";
+    type: PasswordValue[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "manager_id": { kind: "m2o"; type: User; derived: false; nullable: true; insert: "optional"; update: true };
+  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
+  "favorite_publisher_large_id": { kind: "m2o"; type: LargePublisher; nullable: true; insert: "never"; update: false };
+  "favorite_publisher_small_id": { kind: "m2o"; type: SmallPublisher; nullable: true; insert: "never"; update: false };
 }
 
 export interface UserOpts {
@@ -327,6 +337,7 @@ declare module "joist-core" {
       orderType: UserOrder;
       optsType: UserOpts;
       fieldsType: UserFields;
+      columnsType: UserColumns;
       supportsEmExecute: false;
       optIdsType: UserIdsOpts;
       factoryExtrasType: UserFactoryExtras;

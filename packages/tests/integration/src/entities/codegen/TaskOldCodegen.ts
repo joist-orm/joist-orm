@@ -52,6 +52,7 @@ import {
   type PublisherId,
   type Tag,
   Task,
+  type TaskColumns,
   type TaskFields,
   type TaskFilter,
   type TaskGraphQLFilter,
@@ -67,40 +68,38 @@ import {
 export type TaskOldId = Flavor<string, "Task">;
 
 export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  specialOldField: {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  parentOldTask: {
-    kind: "m2o";
-    type: TaskOld;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
-  copiedFrom: {
-    kind: "m2o";
-    type: TaskOld;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   publishers: { kind: "m2m"; type: Publisher };
   comments: { kind: "o2m"; type: Comment };
   oldTaskTaskItems: { kind: "o2m"; type: TaskItem };
   tasks: { kind: "o2m"; type: TaskOld };
   copiedTo: { kind: "o2m"; type: TaskOld };
+}
+
+export interface TaskOldColumns
+  extends Omit<TaskColumns, "id" | "special_old_field" | "parent_old_task_id" | "copied_from_id"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "special_old_field": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "parent_old_task_id": {
+    kind: "m2o";
+    type: TaskOld;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "copied_from_id": { kind: "m2o"; type: TaskOld; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskOldOpts extends TaskOpts {
@@ -179,6 +178,7 @@ declare module "joist-core" {
       orderType: TaskOldOrder;
       optsType: TaskOldOpts;
       fieldsType: TaskOldFields;
+      columnsType: TaskOldColumns;
       supportsEmExecute: false;
       optIdsType: TaskOldIdsOpts;
       factoryExtrasType: TaskOldFactoryExtras;

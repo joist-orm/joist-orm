@@ -50,47 +50,46 @@ import { type Employee, employeeMeta, type Entity, EntityManager, newEmployee } 
 export type EmployeeId = Flavor<string, "Employee">;
 
 export interface EmployeeFields {
-  id: {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    nullable: never;
-    columns: [{ nullable: false; insert: "optional"; update: false }];
-  };
-  name: {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    nullable: never;
-    derived: false;
-    columns: [{ nullable: false; insert: "required"; update: true }];
-  };
-  createdAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  updatedAt: {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    nullable: never;
-    derived: true;
-    columns: [{ nullable: false; insert: "optional"; update: true }];
-  };
-  manager: {
-    kind: "m2o";
-    type: Employee;
-    nullable: undefined;
-    derived: false;
-    columns: [{ nullable: true; insert: "optional"; update: true }];
-  };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  manager: { kind: "m2o"; type: Employee; nullable: undefined; derived: false };
   managersClosure: { kind: "m2m"; type: Employee };
   managerOfClosure: { kind: "m2m"; type: Employee };
   reports: { kind: "o2m"; type: Employee };
+}
+
+export interface EmployeeColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "manager_id": { kind: "m2o"; type: Employee; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface EmployeeOpts {
@@ -160,6 +159,7 @@ declare module "joist-core" {
       orderType: EmployeeOrder;
       optsType: EmployeeOpts;
       fieldsType: EmployeeFields;
+      columnsType: EmployeeColumns;
       supportsEmExecute: true;
       optIdsType: EmployeeIdsOpts;
       factoryExtrasType: EmployeeFactoryExtras;

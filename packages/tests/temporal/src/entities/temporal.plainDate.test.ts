@@ -1,4 +1,4 @@
-import { JsonAggregatePreloader, PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
+import { JsonAggregatePreloader, PrimitiveField, Temporal, alias, getMetadata, table } from "joist-orm";
 import { knex, newEntityManager } from "src/setupDbTests";
 import { jan1, jan2, jan3 } from "src/utils";
 
@@ -58,11 +58,11 @@ describe("plainDate", () => {
     // And Author a2 keeps the required array's empty default but stores SQL NULL for the optional array
     await knex.insert({ firstName: "a2", birthday: "2018-01-02", maybe_birthdays: null }).into("authors");
     const em = newEntityManager();
-    const a = alias(Author);
+    const a = table(Author);
     // When projecting each Author's birthday and birthday arrays
     const rows = await em.query({
       from: a,
-      select: { birthday: a.birthday, childrenBirthdays: a.childrenBirthdays, maybeBirthdays: a.maybeBirthdays },
+      select: { birthday: a.birthday, childrenBirthdays: a.children_birthdays, maybeBirthdays: a.maybe_birthdays },
       orderBy: [{ asc: a.firstName }],
     });
     // Then dates decode to PlainDate values while empty arrays and SQL NULL remain distinct

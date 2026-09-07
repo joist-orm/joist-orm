@@ -10,16 +10,24 @@ Tracking issue: [#1989](https://github.com/joist-orm/joist-orm/issues/1989). The
 
 At exploration time, ordinary `em.query`/`query` support is on `main`; set operations are not implemented. Reinspect the checkout and repository instructions before starting. Use Jujutsu, preserve unrelated work, and do not assume permission to commit, push, or open a PR merely from this handoff.
 
+## Table Cutover Contract
+
+The reviewed table cutover supersedes the original shared-alias API in this handoff. SQL-shaped `em.query`, `query`, and `em.execute` use `table`/`tables` and `Table<T>` with physical column keys such as `first_name` and `author_id`. `alias`/`aliases` and `Alias<T>` are only for `em.find` domain filters. Ordinary read and RETURNING output keys remain freely chosen; INSERT SELECT output keys must match the target physical columns. This explicitly supersedes PR2's old **DOMAIN field-name assignment requirement**: VALUES and UPDATE SET also use physical keys, not `author` or `firstName`.
+
+Generated `AuthorColumns`/`BookColumns`, exposed through `TypeMap.columnsType` and `ColumnsOf<T>`, describe physical value types and column policies separately from domain `Fields` types. Runtime `EntityMetadata.columns` maps physical names to owning `fieldName` entries and reuses existing serde columns/codecs. `Tables.ts` owns SQL expressions and relationship joins; `Aliases.ts` retains find-domain predicates. Preserve `b.author.as(a)`, `a.books.as(b)`, and polymorphic `c.parent.eq/ne/in` predicate sugar; relation names are not selectable FK columns or mutation assignment keys.
+
+Selecting the root table (`select: a`) still hydrates entities through the identity map. This does not enable entity-mode set operands, entity RETURNING, polymorphic writes, or any PR3 features. Earlier exploration notes below are historical; inspect the current implementation before changing it.
+
 ## API To Add
 
 A compound query is a separate root shape, not an extra clause on an ordinary SELECT:
 
 ```ts
-const [a, b] = aliases(Author, Book);
+const [a, b] = tables(Author, Book);
 
 const authorNames = {
   from: a,
-  select: { name: a.firstName },
+  select: { name: a.first_name },
 };
 const bookNames = {
   from: b,
@@ -104,7 +112,7 @@ Require the same POJO key set in every operand. The first operand determines can
 
 ```ts
 // Compatible despite differing insertion order:
-const authorSelect = { name: a.firstName, detail: a.lastName };
+const authorSelect = { name: a.first_name, detail: a.last_name };
 const bookSelect = { detail: b.notes, name: b.title };
 ```
 
@@ -122,7 +130,7 @@ Use each operand's actual `QueryRow`, including left-join nullability:
 
 The first operand chooses names, not an unchecked decoder. Establish compatible logical domains and SQL representations for each output column:
 
-- `a.id` and `b.author` are compatible Author IDs, despite different expression/serde instances.
+- `a.id` and `b.author_id` are compatible Author IDs, despite different expression/serde instances.
 - `a.id` and `b.id` are not compatible: identical integer storage does not make Author IDs and Book IDs interchangeable. Do not tag Book values as Author IDs or deduplicate those domains as equal integers.
 - `a.age` and `a.age.sum()` expose similar TypeScript number types but can produce int4 versus int8 driver values. Blindly selecting the first decoder can return strings or make behavior operand-order dependent.
 - Enums, custom types, JSON schemas, arrays, and Temporal values also need meaningful codec compatibility, not just identical `dbType` strings or serde object identity.
@@ -147,7 +155,7 @@ For membership, build a named ID compound and select its column through an ordin
 const ids = query({
   union: [
     { from: a, select: { id: a.id } },
-    { from: b, select: { id: b.author } },
+    { from: b, select: { id: b.author_id } },
   ],
 });
 // Subquery<{ id: AuthorId }, "?">
@@ -198,7 +206,7 @@ Do not add INSERT/UPDATE/DELETE, CTEs, DISTINCT ON, window/FILTER APIs, entity-p
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `packages/core/src/query.ts`                                            | POJO-only set-query inputs/results, ordinary scalar subqueries, parser dispatch, output columns, scope, SQL, compound ordering, decoding. Revisit SubqueryHandle methods that currently assume `q.select`. |
 | `packages/core/src/Expr.ts`                                             | Preserve ordinary scalar expression typing/protocol and expression output-codec information. Preserve its intentional type-only imports/load-order constraints.                                      |
-| `packages/core/src/Aliases.ts`                                          | Modeled field/key/codec information if needed; do not undertake an unrelated alias-binding rewrite.                                                                                        |
+| `packages/core/src/Tables.ts`                                           | Physical column/key/codec information and SQL relationship sugar; keep `Aliases.ts` restricted to find-domain predicates.                                                                  |
 | `packages/core/src/serde.ts`                                            | Semantic codec information when needed. Reuse `Column.mapFromDb`; do not recreate fake RowData adapters.                                                                                   |
 | `packages/core/src/EntityManager.ts`                                    | Set-query execution overloads/inference, preserving existing read restrictions and return conventions.                                                                                     |
 | `packages/core/src/index.ts`                                            | Public type exports. `packages/orm/src/index.ts` reexports core; verify rather than duplicate exports.                                                                                     |

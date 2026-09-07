@@ -74,6 +74,9 @@ export interface Expr<R, Src extends string = string> {
   in(values: readonly R[] | ExprLike<R | null> | undefined): ExpressionCondition;
   nin(values: readonly R[] | ExprLike<R | null> | undefined): ExpressionCondition;
 
+  /** Prefixes this expression and a space to a raw predicate; write .is`IS NULL`, not .is`NULL`. */
+  is(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition;
+
   /** `count(x)::int`; `count(a.id)` is `count(*)` for the FROM table, and the matched-row count for a left-joined one. */
   count(): Expr<number, never>;
   countDistinct(): Expr<number, never>;
@@ -278,6 +281,12 @@ export abstract class BaseExpr {
 
   nin(values: unknown): ExpressionCondition {
     return this.inList("NOT IN", values);
+  }
+
+  /** Prefixes this expression to a SQL template, retaining bindings and referenced aliases. */
+  is(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {
+    const suffix = new TemplateExpr(strings, values);
+    return deferredCondition((ctx) => joinFragments([this.toSql(ctx), suffix.toSql(ctx)], " "));
   }
 
   count(): Expr<number, never> {

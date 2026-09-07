@@ -517,6 +517,16 @@ where: {
 
 Interpolated expressions and conditions render with the alias Joist assigned and participate in join pruning; every other interpolated value becomes a query binding, never string concatenation.
 
+For a predicate that starts with an expression, `.is` prefixes that expression and a space to the template:
+
+```ts
+a.first_name.is`ILIKE ${pattern}`;
+a.age.is`BETWEEN ${min} AND ${max}`;
+sql.ref(ts, "range").is`@> ${asOf}::timestamptz`;
+```
+
+This is shorthand for `sql.condition` with the receiver as its first interpolation. It works on columns, subquery columns, and computed expressions, with the same bindings and join tracking. It does not insert the SQL keyword `IS`: write ``a.age.is`IS NULL` ``, not ``a.age.is`NULL` ``.
+
 ## Not (Yet) Supported
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead

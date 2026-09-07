@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -64,38 +65,13 @@ export interface ParentItemFields {
 }
 
 export interface ParentItemColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<ParentItem>; entity: ParentItem; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
   "parent_group_id": {
-    kind: "m2o";
-    type: ParentGroup;
-    derived: false;
+    type: IdOf<ParentGroup>;
+    entity: ParentGroup;
     nullable: false;
     insert: "required";
     update: true;

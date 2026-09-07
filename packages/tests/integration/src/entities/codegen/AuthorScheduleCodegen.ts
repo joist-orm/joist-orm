@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -59,35 +60,11 @@ export interface AuthorScheduleFields {
 }
 
 export interface AuthorScheduleColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "overview": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
+  "id": { type: IdOf<AuthorSchedule>; entity: AuthorSchedule; nullable: false; insert: "optional"; update: false };
+  "overview": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "author_id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: true };
 }
 
 export interface AuthorScheduleOpts {

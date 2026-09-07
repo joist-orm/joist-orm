@@ -100,101 +100,33 @@ export interface UserFields {
 }
 
 export interface UserColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "email": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "ip_address": {
-    kind: "primitive";
-    type: IpAddress;
-    unique: false;
-    derived: false;
+  "id": { type: IdOf<User>; entity: User; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: false; insert: "required"; update: true };
+  "email": { type: string; nullable: false; insert: "required"; update: true };
+  "ip_address": { type: IpAddress; nullable: true; insert: "optional"; update: true };
+  "password": { type: PasswordValue; nullable: true; insert: "optional"; update: true };
+  "bio": { type: string; nullable: false; insert: "optional"; update: true };
+  "original_email": { type: string; nullable: false; insert: "required"; update: true };
+  "trial_period": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "password_history": { type: PasswordValue[]; nullable: true; insert: "optional"; update: true };
+  "manager_id": { type: IdOf<User>; entity: User; nullable: true; insert: "optional"; update: true };
+  "author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "favorite_publisher_large_id": {
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
     nullable: true;
-    insert: "optional";
-    update: true;
+    insert: "never";
+    update: false;
   };
-  "password": {
-    kind: "primitive";
-    type: PasswordValue;
-    unique: false;
-    derived: false;
+  "favorite_publisher_small_id": {
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
     nullable: true;
-    insert: "optional";
-    update: true;
+    insert: "never";
+    update: false;
   };
-  "bio": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "original_email": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "trial_period": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "password_history": {
-    kind: "primitive";
-    type: PasswordValue[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "manager_id": { kind: "m2o"; type: User; derived: false; nullable: true; insert: "optional"; update: true };
-  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
-  "favorite_publisher_large_id": { kind: "m2o"; type: LargePublisher; nullable: true; insert: "never"; update: false };
-  "favorite_publisher_small_id": { kind: "m2o"; type: SmallPublisher; nullable: true; insert: "never"; update: false };
 }
 
 export interface UserOpts {

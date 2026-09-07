@@ -7,6 +7,7 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,151 +57,23 @@ export interface AuthorStatFields {
 }
 
 export interface AuthorStatColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "smallint": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "integer": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "nullable_integer": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "bigint": {
-    kind: "primitive";
-    type: bigint;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "decimal": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "real": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "smallserial": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "serial": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "bigserial": {
-    kind: "primitive";
-    type: bigint;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "double_precision": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "nullable_text": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "json": {
-    kind: "primitive";
-    type: Object;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "decimal_samples": {
-    kind: "primitive";
-    type: number[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "bigint_samples": {
-    kind: "primitive";
-    type: bigint[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<AuthorStat>; entity: AuthorStat; nullable: false; insert: "optional"; update: false };
+  "smallint": { type: number; nullable: false; insert: "required"; update: true };
+  "integer": { type: number; nullable: false; insert: "required"; update: true };
+  "nullable_integer": { type: number; nullable: true; insert: "optional"; update: true };
+  "bigint": { type: bigint; nullable: false; insert: "required"; update: true };
+  "decimal": { type: number; nullable: false; insert: "required"; update: true };
+  "real": { type: number; nullable: false; insert: "required"; update: true };
+  "smallserial": { type: number; nullable: false; insert: "optional"; update: true };
+  "serial": { type: number; nullable: false; insert: "optional"; update: true };
+  "bigserial": { type: bigint; nullable: false; insert: "optional"; update: true };
+  "double_precision": { type: number; nullable: false; insert: "required"; update: true };
+  "nullable_text": { type: string; nullable: true; insert: "optional"; update: true };
+  "json": { type: Object; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "decimal_samples": { type: number[]; nullable: true; insert: "optional"; update: true };
+  "bigint_samples": { type: bigint[]; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorStatOpts {

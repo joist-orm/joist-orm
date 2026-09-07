@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -57,17 +58,9 @@ export interface T5BookReviewFields {
 }
 
 export interface T5BookReviewColumns {
-  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
-  "title": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "book_id": { kind: "m2o"; type: T5Book; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<T5BookReview>; entity: T5BookReview; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; nullable: false; insert: "required"; update: true };
+  "book_id": { type: IdOf<T5Book>; entity: T5Book; nullable: true; insert: "optional"; update: true };
 }
 
 export interface T5BookReviewOpts {

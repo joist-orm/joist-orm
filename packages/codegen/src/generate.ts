@@ -11,7 +11,7 @@ import { generateEntityFile } from "./generateEntityFile.ts";
 import { generateEntityTestFile } from "./generateEntityTestFile.ts";
 import { generateEnumFile } from "./generateEnumFile.ts";
 import { generateFactoriesFiles } from "./generateFactoriesFiles.ts";
-import { generateMetadataFile } from "./generateMetadataFile.ts";
+import { generateColumnDeclarations, generateMetadataFile } from "./generateMetadataFile.ts";
 import { generatePgEnumFile } from "./generatePgEnumFile.ts";
 import { type Config, type DbMetadata } from "./index.ts";
 import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols.ts";
@@ -124,6 +124,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         em: EntityManager;
       }
 
+      ${entities.map((meta) => generateColumnDeclarations(config, dbMeta, meta))}
       ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}
 
       export const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];

@@ -1,114 +1,45 @@
 import { createRequire } from "node:module";
 
-import { type InsertFixup } from "./drivers/EntityWriter.ts";
-import { type Field, type PolymorphicField, type SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
-import { type ExprOutputType, arrayOutputType, canonicalDbType } from "./Expr.ts";
-import {
-  type Entity,
-  type EntityMetadata,
-  getConstructorFromTaggedId,
-  isDefined,
-  isEntity,
-  keyToNumber,
-  keyToTaggedId,
-  maybeResolveReferenceToId,
-} from "./index.ts";
-import { type RowData } from "./RowData.ts";
+import { isDefined, keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "./index.ts";
 import { getRuntimeConfig } from "./runtimeConfig.ts";
 import { type Temporal, requireTemporal } from "./temporal.ts";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers.ts";
-import { groupBy } from "./utils.ts";
+import { type TypeInfo, arrayOutputType, canonicalDbType } from "./TypeInfo.ts";
 
 const runtimeRequire = createRequire(import.meta.url);
 
-export function hasSerde(field: Field): field is SerdeField {
-  return !!field.serde;
-}
-
-/**
- * The database/column serialization / deserialization details of a given field.
- *
- * Most implementations will have just a single column in `columns`, but some logical
- * domain fields can be mapped to multiple physical database columns, i.e. polymorphic
- * references.
- */
-export interface FieldSerde {
-  /** A single field might persist to multiple columns, i.e. polymorphic references. */
-  columns: Column[];
-
-  /**
-   * Reads the field's column(s) from the entity's `(rowData, rowIndex)` query result and sets
-   * the domain value(s) into the `__orm.data`.
-   *
-   * Reading via `rowData.get(rowIndex, columnName)` (instead of a materialized POJO row) lets
-   * lazy results like `WireRowData` decode only the cells that are actually accessed.
-   *
-   * Originally used in `EntityManager.hydrate` to set db values into the entity, although
-   * now we invoke it lazily in `getField` to avoid copying data until it's actually needed.
-   */
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void;
-}
-
-/**
- * An interface that generalizes our Date-vs-Temporal support.
- *
- * @typeParam T - The domain type, i.e. `Date` or `Temporal.ZonedDateTime`.
- */
-export interface TimestampSerde<T> extends FieldSerde {
-  /** Given business logic that wants to "set this value to 'now'", converts its Date to our T. */
-  mapFromNow(now: Date): T;
-  /** Used for reading oplock values. */
-  dbValue(data: any): any;
-}
-
-/** A specific physical column of a logical field. */
-export interface Column {
-  columnName: string;
+/** Scalar conversion only: no field names, entity hydration, or FK fixups. */
+export interface ScalarCodec {
   dbType: string;
-  /** Physical nullability, independent of codec null/default handling. */
-  sqlNullable?: boolean;
-  /** Whether PostgreSQL supplies a default when this column is omitted. */
-  hasDefault?: boolean;
-  /** Whether PostgreSQL generates this column instead of accepting assignments. */
-  isGenerated?: boolean;
-  /** Internal compatibility metadata for the column's mapFromDb/mapToDb, absent for unknown codecs. */
-  readonly outputType?: ExprOutputType;
-  /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
-  dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
+  isArray: boolean;
+  /** Compatibility evidence for scalar conversion, absent for unknown codecs. */
+  readonly outputType?: TypeInfo;
+  /** Encodes a domain value for a filter, i.e. an em.find WHERE parameter. */
+  mapToDb(value: any): any;
   /**
-   * Encodes one domain value for a write without an owning entity or FK fixups.
+   * Encodes a domain value for an INSERT or UPDATE binding.
    *
-   * Callers must handle omission/undefined, SQL NULL, and SQL expressions before encoding. This retains
-   * entity-write defaults and JSON serialization, so null is not necessarily encoded as SQL NULL.
-   * Direct mutation callers must validate reference target types and reject new/unflushed entities before encoding.
+   * Callers must handle omission, SQL NULL, and SQL expressions before encoding. JSON null and
+   * codec defaults can differ from SQL NULL. Direct mutations must validate reference targets
+   * and reject new or unflushed entities before encoding.
    */
   mapToDbValue?(value: unknown): unknown;
-  /**
-   * Used by `fork`, `importEntity`, and `run` to create an __orm.row from an __orm.data. Should output what we would
-   * expect from a db query
-   */
-  rowValue(data: any): any;
-  /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
-  mapToDb(value: any): any;
-  /** Converts one driver-level column value to its domain value, including entity null/default handling. */
+  /** Converts a driver value to its domain value, including the codec's null/default handling. */
   mapFromDb(value: unknown): unknown;
   /**
-   * For converting `json_agg`-preloaded JSON values into *ResultSet* type.
+   * Converts a json_agg cell to a driver-row value, not a domain value.
    *
-   * I.e. our `#orm.row` hash always wants the db-side value, as-is coming from the database driver.
-   * During `getField`, we always expect the ResultSet value, b/c we lazy call
-   * `setOnEntityFromRowData` to go from db-value to domain-value.
-   *
-   * So `mapFromJsonAgg` is for preloading that needs to go from json-value *only to db-value*.
-   *
-   * I.e. for types like temporal, which we keep as strings in `row`, the json-value will match
-   * the db-value, so `mapFromJsonAgg` can be a noop. But (at one point...) `Date`s we store as
-   * `Date`s in `row`, so then `mapFromJsonAgg` needs to convert string json-value value into a `Date`.
+   * Lazy field hydration subsequently calls mapFromDb. I.e. Date codecs reconstruct a Date
+   * from the JSON string, while Temporal codecs retain the driver's string representation.
    */
   mapFromJsonAgg(value: any): any;
-  isArray: boolean;
-  /** Used by `unnest_arrays`. */
-  isNullableArray: boolean;
+  /** Reconstructs a driver value from a domain value, not a SQL binding. */
+  mapToRow(value: any): any;
+}
+
+/** Converts the ORM clock to the timestamp's domain representation. */
+export interface TimestampCodec<T> extends ScalarCodec {
+  mapFromNow(now: Date): T;
 }
 
 /**
@@ -122,33 +53,19 @@ export interface CustomSerde<DomainType, DbType> {
   fromDb(value: DbType): DomainType;
 }
 
-export class CustomSerdeAdapter implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
-  columns = [this];
+export class CustomSerdeAdapter implements ScalarCodec {
   isArray: boolean = false;
-  isNullableArray: boolean = false;
 
-  public constructor(
-    protected fieldName: string,
-    public columnName: string,
+  constructor(
     public dbType: string,
     private mapper: CustomSerde<any, any>,
-    // Allow subtypes to override isArray
     isArray?: boolean,
-    isNullableArray = false, // only set for nullable arrays
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
   ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
     if (isArray !== undefined) this.isArray = isArray;
-    this.isNullableArray = isNullableArray;
   }
 
   /** Only known adapters share their mapper's identity and elementwise array conversion. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     if (
       this.isArray !== this.dbType.endsWith("[]") ||
       (this.constructor !== CustomSerdeAdapter &&
@@ -170,14 +87,6 @@ export class CustomSerdeAdapter implements FieldSerde {
       : undefined;
   }
 
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any): any {
-    return this.mapToDbValue(data[this.fieldName]);
-  }
-
   /** Encodes each physical array element once. */
   mapToDbValue(value: unknown): unknown {
     return value !== undefined
@@ -187,8 +96,8 @@ export class CustomSerdeAdapter implements FieldSerde {
       : undefined;
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any): any {
@@ -227,27 +136,14 @@ export class CustomSerdeAdapter implements FieldSerde {
  * `string[]`s can be mapped 1:1. See `CustomSerdeAdapter` a good base class
  * that will handle converting individual elements.
  */
-export class PrimitiveSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
-  columns = [this];
-
+export class PrimitiveSerde implements ScalarCodec {
   constructor(
-    protected fieldName: string,
-    public columnName: string,
     public dbType: string,
     public isArray = false,
-    public isNullableArray = false, // only set for nullable arrays
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  ) {}
 
   /** Exact-class checks prevent an unknown subclass's overridden converters from sharing this codec. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     if (this.constructor !== PrimitiveSerde) return undefined;
     const dbType = canonicalDbType(this.dbType);
     const elementType = dbType.endsWith("[]") ? dbType.slice(0, -2) : dbType;
@@ -260,21 +156,13 @@ export class PrimitiveSerde implements FieldSerde {
     return this.isArray ? arrayOutputType(outputType) : outputType;
   }
 
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
-  }
-
   /** Primitive writes share their scalar/filter conversion, including subclass overrides. */
   mapToDbValue(value: unknown): unknown {
     return this.mapToDb(value);
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -291,9 +179,9 @@ export class PrimitiveSerde implements FieldSerde {
   }
 }
 
-export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
+export class DateSerde extends PrimitiveSerde implements TimestampCodec<Date> {
   /** Date bindings use ISO strings; mapToDb does not support physical Date arrays. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === DateSerde && !this.isArray && !this.dbType.endsWith("[]")
       ? { dbType: canonicalDbType(this.dbType), domain: DateSerde }
       : undefined;
@@ -312,12 +200,12 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
   /**
    * Returns the `Date` a driver hands back on a read, and not `mapToDb`'s ISO string.
    *
-   * Otherwise callers that round-trip a row through `rowValue` and back through `setOnEntity` (i.e.
+   * Otherwise callers that round-trip a row through `rowValue` and back through `fromRow` (i.e.
    * `RunPlugin` mirroring writes into the test em) turn every date into a string, because our
-   * `setOnEntity` assigns the row value as-is.
+   * `mapFromDb` returns the row value as-is.
    */
-  rowValue(data: any): any {
-    return data[this.fieldName];
+  mapToRow(value: any): any {
+    return value;
   }
 
   mapToDb(value: Date) {
@@ -328,43 +216,22 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
 
 /** Converts `DATE`s `Temporal.PlainDate`s. */
 export class PlainDateSerde extends CustomSerdeAdapter {
-  constructor(
-    fieldName: string,
-    columnName: string,
-    dbType: string,
-    isArray = false,
-    isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    super(fieldName, columnName, dbType, plainDateMapper, isArray, isNullableArray, column);
+  constructor(dbType: string, isArray = false) {
+    super(dbType, plainDateMapper, isArray);
   }
 }
 
 /** Converts `TIME`s to `Temporal.PlainTime`s. */
 export class PlainTimeSerde extends CustomSerdeAdapter {
-  constructor(
-    fieldName: string,
-    columnName: string,
-    dbType: string,
-    isArray = false,
-    isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    super(fieldName, columnName, dbType, plainTimeMapper, isArray, isNullableArray, column);
+  constructor(dbType: string, isArray = false) {
+    super(dbType, plainTimeMapper, isArray);
   }
 }
 
 /** Converts `TIMESTAMP`s to `Temporal.PlainDateTime`s. */
-export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
-  constructor(
-    fieldName: string,
-    columnName: string,
-    dbType: string,
-    isArray = false,
-    isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    super(fieldName, columnName, dbType, plainDateTimeMapper, isArray, isNullableArray, column);
+export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampCodec<Temporal.PlainDateTime> {
+  constructor(dbType: string, isArray = false) {
+    super(dbType, plainDateTimeMapper, isArray);
   }
 
   mapFromNow(now: Date): Temporal.PlainDateTime {
@@ -374,16 +241,9 @@ export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampS
 }
 
 /** Converts `TIMESTAMP WITH TIME ZONE`s to `Temporal.ZonedDateTime`s. */
-export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
-  constructor(
-    fieldName: string,
-    columnName: string,
-    dbType: string,
-    isArray = false,
-    isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    super(fieldName, columnName, dbType, zonedDateTimeMapper, isArray, isNullableArray, column);
+export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampCodec<Temporal.ZonedDateTime> {
+  constructor(dbType: string, isArray = false) {
+    super(dbType, zonedDateTimeMapper, isArray);
   }
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {
@@ -392,39 +252,18 @@ export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampS
   }
 }
 
-export class BigIntSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
-  columns = [this];
+export class BigIntSerde implements ScalarCodec {
   dbType: string;
 
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    public isArray = false,
-    public isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
+  constructor(public isArray = false) {
     this.dbType = isArray ? "bigint[]" : "bigint";
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
   }
 
   /** BigInt conversion is distinct from both the driver's int8 value and Number aggregates. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     if (this.constructor !== BigIntSerde) return undefined;
     const elementType = { dbType: "int8", domain: BigIntSerde, arrayElementSafe: true };
     return this.isArray ? arrayOutputType(elementType) : elementType;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Drivers accept native bigint values without conversion. */
@@ -433,8 +272,8 @@ export class BigIntSerde implements FieldSerde {
     return value;
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -465,39 +304,18 @@ export class BigIntSerde implements FieldSerde {
  * Also note that knex/pg accept `number`s as input, so we only need
  * to handle from-database -> to JS translation.
  */
-export class DecimalToNumberSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class DecimalToNumberSerde implements ScalarCodec {
   dbType: string;
-  columns = [this];
 
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    public isArray = false,
-    public isNullableArray = false,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
+  constructor(public isArray = false) {
     this.dbType = isArray ? "numeric[]" : "decimal";
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
   }
 
   /** Numeric aggregates use the same Number conversion and identity binding encoder. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     if (this.constructor !== DecimalToNumberSerde) return undefined;
     const elementType = { dbType: "numeric", domain: Number, arrayElementSafe: true };
     return this.isArray ? arrayOutputType(elementType) : elementType;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Drivers accept decimal numbers without conversion. */
@@ -506,8 +324,8 @@ export class DecimalToNumberSerde implements FieldSerde {
     return value;
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -530,13 +348,9 @@ export class DecimalToNumberSerde implements FieldSerde {
 }
 
 /** Maps physical integer keys to logical string IDs "because GraphQL". */
-export class KeySerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class KeySerde implements ScalarCodec {
   isArray = false;
-  isNullableArray = false;
-  columns = [this];
+
   private meta: {
     tagName: string;
     idDbType: "bigint" | "int" | "uuid" | "text";
@@ -544,14 +358,8 @@ export class KeySerde implements FieldSerde {
 
   constructor(
     tagName: string,
-    private fieldName: string,
-    public columnName: string,
     public dbType: "bigint" | "int" | "uuid" | "text",
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
   ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
     this.meta = {
       tagName,
       idDbType: dbType,
@@ -559,35 +367,10 @@ export class KeySerde implements FieldSerde {
   }
 
   /** PKs and FKs share a tag and SQL representation; the alias supplies the exact target idMeta. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === KeySerde && !this.isArray
       ? { dbType: canonicalDbType(this.dbType), domain: `key:${this.meta.tagName}`, arrayElementSafe: true }
       : undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined) {
-    const value = data[this.fieldName];
-    if (
-      fixups &&
-      isEntity(value) &&
-      value.isNewEntity &&
-      getMetadata(value).nonDeferredFkOrder &&
-      getMetadata(entity).nonDeferredFkOrder &&
-      getMetadata(value).nonDeferredFkOrder! >= getMetadata(entity).nonDeferredFkOrder!
-    ) {
-      fixups.push({
-        entity,
-        tableName,
-        column: this,
-        value: this.mapToDbValue(maybeResolveReferenceToId(value)),
-      });
-      return null;
-    }
-    return this.mapToDbValue(maybeResolveReferenceToId(value));
   }
 
   /** Resolves references and tagged, untagged, or numeric ids using the column's tag and storage type. */
@@ -600,9 +383,9 @@ export class KeySerde implements FieldSerde {
     );
   }
 
-  rowValue(data: any): any {
+  mapToRow(value: any): any {
     // we don't have any fixups since we are trying to recreate what comes out of the db, so this is safe
-    return this.dbValue(data, undefined!, undefined!, undefined);
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -622,118 +405,19 @@ export class KeySerde implements FieldSerde {
   }
 }
 
-export class PolymorphicKeySerde implements FieldSerde {
-  constructor(
-    private meta: () => EntityMetadata,
-    private fieldName: string,
-    // Physical descriptors must keep their original components after domain specialization.
-    private storageColumn?: string,
-  ) {}
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    for (const column of this.columns) {
-      const value = rowData.get(rowIndex, column.columnName);
-      if (value) data[this.fieldName] ??= column.mapFromDb(value);
-    }
-  }
-
-  // Lazy b/c we use PolymorphicField which we can't access in our cstr
-  get columns(): Array<Column & { otherMetadata: () => EntityMetadata }> {
-    const { fieldName } = this;
-
-    // If our poly has multiple components from the same base type, i.e.
-    // `parent_small_publisher_id` and `parent_large_publisher_id`, then we
-    // need slightly different logic...
-    const hasMultipleComponentsWithSameBaseType = [
-      ...groupBy(this.field.components, (comp) => getBaseMeta(comp.otherMetadata()).type).values(),
-    ].some((group) => group.length > 1);
-
-    return this.field.components.map((comp) => ({
-      columnName: comp.columnName,
-      dbType: comp.otherMetadata().idDbType,
-      isArray: false,
-      isNullableArray: false,
-      otherMetadata: comp.otherMetadata,
-      dbValue(data: any): any {
-        return this.mapToDbValue(data[fieldName]);
-      },
-      /** Encodes only references belonging to this physical component, preserving subtype selection. */
-      mapToDbValue(value: unknown): unknown {
-        const id = maybeResolveReferenceToId(value as Parameters<typeof maybeResolveReferenceToId>[0]);
-        const cstr = isEntity(value) ? getMetadata(value).cstr : id ? getConstructorFromTaggedId(id) : undefined;
-        // We'll have multiple columns, i.e. [parent_author_id, parent_book_id], and each column
-        // will only return a value if the `id` matches its type, i.e. `parent_author_id=a:1` will
-        // return 1, but `parent_book_id` will return null.
-        const otherMeta = comp.otherMetadata();
-        const idAppliesToThisColumn = hasMultipleComponentsWithSameBaseType
-          ? cstr === otherMeta.cstr
-          : cstr === otherMeta.cstr ||
-            cstr === getBaseMeta(otherMeta).cstr ||
-            otherMeta.subTypes.some((subTypeMeta) => cstr === subTypeMeta.cstr);
-        return idAppliesToThisColumn ? keyToNumber(comp.otherMetadata(), id) : undefined;
-      },
-      mapToDb(value: any): any {
-        return keyToNumber(comp.otherMetadata(), typeof value === "number" ? value : maybeResolveReferenceToId(value));
-      },
-      /** Converts this component's foreign key to its target entity's tagged id. */
-      mapFromDb(value: unknown): string | undefined {
-        return keyToTaggedId(comp.otherMetadata(), value as string | number);
-      },
-      mapFromJsonAgg(value: any): any {
-        return value === null ? value : value;
-      },
-      rowValue(data: any): any {
-        return this.dbValue(data);
-      },
-    }));
-  }
-
-  get columnName(): string {
-    throw new Error("Unsupported");
-  }
-
-  // Lazy b/c we use PolymorphicField which we can't access in our cstr
-  private get field(): PolymorphicField {
-    const meta = this.meta();
-    return (
-      this.storageColumn ? meta.columns[this.storageColumn].field : meta.fields[this.fieldName]
-    ) as PolymorphicField;
-  }
-}
-
-export class EnumFieldSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class EnumFieldSerde implements ScalarCodec {
   isArray = false;
-  isNullableArray = false;
-  columns = [this];
 
   constructor(
-    private fieldName: string,
-    public columnName: string,
     public dbType: "int" | "uuid",
     private enumObject: any,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  ) {}
 
   /** Separate fields of the same generated enum share its code/id mapping. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === EnumFieldSerde && !this.isArray
       ? { dbType: canonicalDbType(this.dbType), domain: this.enumObject, arrayElementSafe: true }
       : undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Resolves the enum code to its stored id, leaving an unknown code unset. */
@@ -741,8 +425,8 @@ export class EnumFieldSerde implements FieldSerde {
     return this.enumObject.findByCode(value)?.id;
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -759,37 +443,17 @@ export class EnumFieldSerde implements FieldSerde {
   }
 }
 
-export class EnumArrayFieldSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class EnumArrayFieldSerde implements ScalarCodec {
   isArray = true;
-  columns = [this];
 
   constructor(
-    private fieldName: string,
-    public columnName: string,
     public dbType: "int[]" | "uuid[]",
-    public isNullableArray: boolean,
     private enumObject: any,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  ) {}
 
   /** Physical enum arrays reject null elements, unlike scalar enum arrayAgg; leave them unknown. */
   get outputType(): undefined {
     return undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Resolves each enum code to its stored id, retaining the entity's empty-array default. */
@@ -797,8 +461,8 @@ export class EnumArrayFieldSerde implements FieldSerde {
     return (value as readonly unknown[] | null | undefined)?.map((code) => this.enumObject.getByCode(code).id) || [];
   }
 
-  rowValue(data: any): any {
-    return this.dbValue(data);
+  mapToRow(value: any): any {
+    return this.mapToDbValue(value);
   }
 
   mapToDb(value: any) {
@@ -816,43 +480,21 @@ export class EnumArrayFieldSerde implements FieldSerde {
 }
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
-export class SuperstructSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class SuperstructSerde implements ScalarCodec {
   dbType = "jsonb";
   isArray = false;
-  isNullableArray = false;
-  columns = [this];
 
   // Use a dynamic require so that downstream projects don't have to depend on superstruct
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
   private assert = runtimeRequire("superstruct").assert;
 
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    private superstruct: any,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  constructor(private superstruct: any) {}
 
   /** JSON schemas describe a jsonb value, even when that value is a JSON array. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === SuperstructSerde && !this.isArray
       ? { dbType: canonicalDbType(this.dbType), domain: this.superstruct, arrayElementSafe: true }
       : undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Serializes the domain JSON value without running the read-time schema validation. */
@@ -863,8 +505,8 @@ export class SuperstructSerde implements FieldSerde {
   // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
   // JsonSerde, we can assume that superstruct would have parsed any complex types in the json correctly so we don't
   // need to do a round trip through JSON.stringify.
-  rowValue(data: any): any {
-    return data[this.fieldName];
+  mapToRow(value: any): any {
+    return value;
   }
 
   mapToDb(value: any) {
@@ -883,38 +525,17 @@ export class SuperstructSerde implements FieldSerde {
   }
 }
 
-export class JsonSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class JsonSerde implements ScalarCodec {
   dbType = "jsonb";
   isArray = false;
-  isNullableArray = false;
-  columns = [this];
 
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  constructor() {}
 
   /** Unvalidated JSON uses its own encoder, not a primitive or schema-specific codec. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === JsonSerde && !this.isArray
       ? { dbType: canonicalDbType(this.dbType), domain: JsonSerde, arrayElementSafe: true }
       : undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Serializes the whole JSON value, including JSON arrays and custom toJSON methods. */
@@ -925,8 +546,8 @@ export class JsonSerde implements FieldSerde {
   // JSON is returned by postgres already parsed, so if we are trying to recreate then we need to stringify, then parse.
   // It's necessary to do this instead of just returning the object directly because any complex types in the json need
   // to be stringified to correctly reflect the db value.
-  rowValue(data: any): any {
-    const json = JSON.stringify(data[this.fieldName]);
+  mapToRow(value: any): any {
+    const json = JSON.stringify(value);
     return isDefined(json) ? JSON.parse(json) : undefined;
   }
 
@@ -945,40 +566,17 @@ export class JsonSerde implements FieldSerde {
 }
 
 /** Similar to SimpleSerde, but applies the zod's `parse` function when reading values from the db. */
-export class ZodSerde implements FieldSerde {
-  sqlNullable?: boolean;
-  hasDefault?: boolean;
-  isGenerated?: boolean;
+export class ZodSerde implements ScalarCodec {
   dbType = "jsonb";
   isArray = false;
-  isNullableArray = false;
-  columns = [this];
 
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    private zodSchema: any,
-    column?: Pick<Column, "sqlNullable" | "hasDefault" | "isGenerated">,
-  ) {
-    this.sqlNullable = column?.sqlNullable;
-    this.hasDefault = column?.hasDefault;
-    this.isGenerated = column?.isGenerated;
-  }
+  constructor(private zodSchema: any) {}
 
   /** Parsing and transformations are compatible only for the same schema object. */
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.constructor === ZodSerde && !this.isArray
       ? { dbType: canonicalDbType(this.dbType), domain: this.zodSchema, arrayElementSafe: true }
       : undefined;
-  }
-
-  setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
-    data[this.fieldName] = this.mapFromDb(rowData.get(rowIndex, this.columnName));
-  }
-
-  dbValue(data: any) {
-    // assume the data is already valid b/c it came from the entity
-    return this.mapToDbValue(data[this.fieldName]);
   }
 
   /** Serializes the domain JSON value without running the read-time Zod parser or transforms. */
@@ -989,8 +587,8 @@ export class ZodSerde implements FieldSerde {
   // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
   // JsonSerde, we can assume that zod would have parsed any complex types in the json correctly so we don't need to
   // do a round trip through JSON.stringify.
-  rowValue(data: any): any {
-    return data[this.fieldName];
+  mapToRow(value: any): any {
+    return value;
   }
 
   mapToDb(value: any) {

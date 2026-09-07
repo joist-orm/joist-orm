@@ -19,6 +19,7 @@ import {
   hasOne,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -89,118 +90,23 @@ export interface TaskFields {
 }
 
 export interface TaskColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "duration_in_days": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "special_new_field": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "special_old_field": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "deleted_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "sync_default": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "async_default_1": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "async_default_2": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "sync_derived": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "async_derived": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "type_id": { kind: "enum"; type: TaskType; nullable: true; insert: "optional"; update: true };
-  "copied_from_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
-  "parent_old_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
-  "self_referential_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
-  "special_new_author_id": {
-    kind: "m2o";
-    type: Author;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
+  "duration_in_days": { type: number; nullable: false; insert: "required"; update: true };
+  "special_new_field": { type: number; nullable: true; insert: "optional"; update: true };
+  "special_old_field": { type: number; nullable: true; insert: "optional"; update: true };
+  "deleted_at": { type: Date; nullable: true; insert: "optional"; update: true };
+  "sync_default": { type: string; nullable: true; insert: "optional"; update: true };
+  "async_default_1": { type: string; nullable: true; insert: "optional"; update: true };
+  "async_default_2": { type: string; nullable: true; insert: "optional"; update: true };
+  "sync_derived": { type: string; nullable: true; insert: "optional"; update: true };
+  "async_derived": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "type_id": { type: TaskType; nullable: true; insert: "optional"; update: true };
+  "copied_from_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "parent_old_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "self_referential_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "special_new_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskOpts {

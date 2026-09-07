@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -70,28 +71,12 @@ export interface BookAdvanceFields {
 }
 
 export interface BookAdvanceColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "status_id": { kind: "enum"; type: AdvanceStatus; nullable: false; insert: "required"; update: true };
-  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
-  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: false; insert: "required"; update: true };
+  "id": { type: IdOf<BookAdvance>; entity: BookAdvance; nullable: false; insert: "optional"; update: false };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "status_id": { type: AdvanceStatus; nullable: false; insert: "required"; update: true };
+  "book_id": { type: IdOf<Book>; entity: Book; nullable: false; insert: "required"; update: true };
+  "publisher_id": { type: IdOf<Publisher>; entity: Publisher; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookAdvanceOpts {

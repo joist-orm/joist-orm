@@ -16,6 +16,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -66,52 +67,12 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "firstName": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "lastName": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "delete": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "createdAt": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updatedAt": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "firstName": { type: string; nullable: false; insert: "required"; update: true };
+  "lastName": { type: string; nullable: true; insert: "optional"; update: true };
+  "delete": { type: boolean; nullable: true; insert: "optional"; update: true };
+  "createdAt": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updatedAt": { type: Date; nullable: false; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

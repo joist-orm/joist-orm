@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -51,43 +52,11 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
-  "first_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "last_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; nullable: false; insert: "required"; update: true };
+  "last_name": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

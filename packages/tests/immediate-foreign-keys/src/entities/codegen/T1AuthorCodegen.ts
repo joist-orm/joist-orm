@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,16 +57,8 @@ export interface T1AuthorFields {
 }
 
 export interface T1AuthorColumns {
-  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
-  "first_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
+  "id": { type: IdOf<T1Author>; entity: T1Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; nullable: false; insert: "required"; update: true };
 }
 
 export interface T1AuthorOpts {

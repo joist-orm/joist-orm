@@ -1,11 +1,12 @@
 import { getInstanceData } from "./BaseEntity.ts";
+import { type Column, type ColumnDescriptors } from "./columns.ts";
 import { type ConfigApi, type Reactable, type ReactiveRule } from "./config.ts";
 import { getMetadataForType } from "./configure.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "./EntityManager.ts";
 import { type EnumMetadata } from "./EnumMetadata.ts";
+import { type FieldSerde, type PolymorphicKeySerde } from "./fieldSerde.ts";
 import { type DeepNew } from "./loadHints.ts";
-import { type FieldSerde, type PolymorphicKeySerde } from "./serde.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
@@ -61,8 +62,8 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
-  /** Physical column names mapped to original storage fields, without CTI base columns. */
-  columns: Record<string, { fieldName: string; field: Field }>;
+  /** Physical storage descriptors, without CTI base columns; STI metadata shares its base table. */
+  columns: ColumnDescriptors;
   allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
@@ -276,6 +277,7 @@ export type PolymorphicFieldComponent = {
   otherMetadata: () => EntityMetadata;
   otherFieldName: string; // eg `comment` or `comments`
   columnName: string; // eg `parent_book_id` or `parent_book_review_id`
+  column: Column;
 };
 
 export function isOneToManyField(ormField: Field): ormField is OneToManyField {

@@ -18,6 +18,7 @@ import {
   hasOneToOne,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -97,92 +98,20 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "title": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "order": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "notes": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "acknowledgements": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "authors_nick_names": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "search": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "deleted_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "prequel_id": { kind: "m2o"; type: Book; derived: false; nullable: true; insert: "optional"; update: true };
-  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
-  "reviewer_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
-  "random_comment_id": { kind: "m2o"; type: Comment; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; nullable: false; insert: "required"; update: true };
+  "order": { type: number; nullable: false; insert: "optional"; update: true };
+  "notes": { type: string; nullable: false; insert: "required"; update: true };
+  "acknowledgements": { type: string; nullable: true; insert: "optional"; update: true };
+  "authors_nick_names": { type: string; nullable: true; insert: "optional"; update: true };
+  "search": { type: string; nullable: true; insert: "optional"; update: true };
+  "deleted_at": { type: Date; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "prequel_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "optional"; update: true };
+  "author_id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: true };
+  "reviewer_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "random_comment_id": { type: IdOf<Comment>; entity: Comment; nullable: true; insert: "optional"; update: true };
 }
 
 export interface BookOpts {

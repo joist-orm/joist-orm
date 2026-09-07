@@ -18,6 +18,7 @@ import {
   hasOne,
   hasOneToOne,
   hasReactiveManyToManyOtherSide,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -84,63 +85,15 @@ export interface BookReviewFields {
 }
 
 export interface BookReviewColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "rating": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "is_public": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "is_test": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "is_test_chain": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
-  "critic_id": { kind: "m2o"; type: Critic; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<BookReview>; entity: BookReview; nullable: false; insert: "optional"; update: false };
+  "rating": { type: number; nullable: false; insert: "required"; update: true };
+  "is_public": { type: boolean; nullable: false; insert: "required"; update: true };
+  "is_test": { type: boolean; nullable: false; insert: "required"; update: true };
+  "is_test_chain": { type: boolean; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "book_id": { type: IdOf<Book>; entity: Book; nullable: false; insert: "required"; update: true };
+  "critic_id": { type: IdOf<Critic>; entity: Critic; nullable: true; insert: "optional"; update: true };
 }
 
 export interface BookReviewOpts {

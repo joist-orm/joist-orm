@@ -60,36 +60,12 @@ export interface CommentFields {
 }
 
 export interface CommentColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
-  "text": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "parent_author_id": { kind: "m2o"; type: Author; nullable: true; insert: "never"; update: false };
-  "parent_book_id": { kind: "m2o"; type: Book; nullable: true; insert: "never"; update: false };
+  "id": { type: IdOf<Comment>; entity: Comment; nullable: false; insert: "required"; update: false };
+  "text": { type: string; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "parent_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "never"; update: false };
+  "parent_book_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "never"; update: false };
 }
 
 export interface CommentOpts {

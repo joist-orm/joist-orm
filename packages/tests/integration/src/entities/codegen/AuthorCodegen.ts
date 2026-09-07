@@ -21,6 +21,7 @@ import {
   hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -155,281 +156,43 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "first_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "last_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "ssn": {
-    kind: "primitive";
-    type: string;
-    unique: true;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "initials": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "number_of_books": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "book_comments": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "is_popular": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "age": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "graduated": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "nick_names": {
-    kind: "primitive";
-    type: string[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "nick_names_upper": {
-    kind: "primitive";
-    type: string[];
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "was_ever_popular": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "is_funny": {
-    kind: "primitive";
-    type: boolean;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "mentor_names": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "mentee_names": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "address": {
-    kind: "primitive";
-    type: Address;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "business_address": {
-    kind: "primitive";
-    type: z.input<typeof AddressSchema>;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "quotes": {
-    kind: "primitive";
-    type: Quotes;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "number_of_atoms": {
-    kind: "primitive";
-    type: bigint;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "deleted_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "number_of_public_reviews": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "numberOfPublicReviews2": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "tags_of_all_books": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "search": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "image_file_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "certificate": {
-    kind: "primitive";
-    type: Uint8Array;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "range_of_books": { kind: "enum"; type: BookRange; nullable: true; insert: "optional"; update: true };
-  "favorite_colors": { kind: "enum"; type: Color[]; nullable: true; insert: "optional"; update: true };
-  "favorite_shape": {
-    kind: "enum";
-    type: FavoriteShape;
-    native: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "mentor_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
-  "root_mentor_id": { kind: "m2o"; type: Author; derived: true; nullable: true; insert: "optional"; update: true };
-  "current_draft_book_id": {
-    kind: "m2o";
-    type: Book;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "favorite_book_id": { kind: "m2o"; type: Book; derived: true; nullable: true; insert: "optional"; update: true };
-  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; nullable: false; insert: "required"; update: true };
+  "last_name": { type: string; nullable: true; insert: "optional"; update: true };
+  "ssn": { type: string; nullable: true; insert: "optional"; update: true };
+  "initials": { type: string; nullable: false; insert: "optional"; update: true };
+  "number_of_books": { type: number; nullable: false; insert: "required"; update: true };
+  "book_comments": { type: string; nullable: true; insert: "optional"; update: true };
+  "is_popular": { type: boolean; nullable: true; insert: "optional"; update: true };
+  "age": { type: number; nullable: true; insert: "optional"; update: true };
+  "graduated": { type: Date; nullable: true; insert: "optional"; update: true };
+  "nick_names": { type: string[]; nullable: true; insert: "optional"; update: true };
+  "nick_names_upper": { type: string[]; nullable: true; insert: "optional"; update: true };
+  "was_ever_popular": { type: boolean; nullable: true; insert: "optional"; update: true };
+  "is_funny": { type: boolean; nullable: false; insert: "optional"; update: true };
+  "mentor_names": { type: string; nullable: true; insert: "optional"; update: true };
+  "mentee_names": { type: string; nullable: true; insert: "optional"; update: true };
+  "address": { type: Address; nullable: true; insert: "optional"; update: true };
+  "business_address": { type: z.input<typeof AddressSchema>; nullable: true; insert: "optional"; update: true };
+  "quotes": { type: Quotes; nullable: true; insert: "optional"; update: true };
+  "number_of_atoms": { type: bigint; nullable: true; insert: "optional"; update: true };
+  "deleted_at": { type: Date; nullable: true; insert: "optional"; update: true };
+  "number_of_public_reviews": { type: number; nullable: true; insert: "optional"; update: true };
+  "numberOfPublicReviews2": { type: number; nullable: true; insert: "optional"; update: true };
+  "tags_of_all_books": { type: string; nullable: true; insert: "optional"; update: true };
+  "search": { type: string; nullable: true; insert: "optional"; update: true };
+  "image_file_name": { type: string; nullable: true; insert: "optional"; update: true };
+  "certificate": { type: Uint8Array; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "range_of_books": { type: BookRange; nullable: true; insert: "optional"; update: true };
+  "favorite_colors": { type: Color[]; nullable: true; insert: "optional"; update: true };
+  "favorite_shape": { type: FavoriteShape; nullable: true; insert: "optional"; update: true };
+  "mentor_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "root_mentor_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "current_draft_book_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "optional"; update: true };
+  "favorite_book_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "optional"; update: true };
+  "publisher_id": { type: IdOf<Publisher>; entity: Publisher; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

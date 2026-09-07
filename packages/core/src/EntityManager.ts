@@ -38,7 +38,6 @@ import {
 import { getField, setField } from "./fields.ts";
 import { FlushLock } from "./FlushLock.ts";
 import {
-  type Column,
   CustomCollection,
   CustomReference,
   type DeepPartialOrNull,
@@ -47,6 +46,7 @@ import {
   type EnumField,
   type ExpressionFilter,
   type Field,
+  type FieldColumn,
   FieldLogger,
   type FieldLoggerWatch,
   type FindFilter,
@@ -2431,21 +2431,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           const changedFields: string[] = instanceData.isNewEntity
             ? (entity as any).changes.fieldsWithoutRelations
             : Object.keys(instanceData.originalData);
-          if (changedFields.length === 0) {
-            for (const fieldName of dataKeys) {
-              if (fieldName === "id") continue;
-              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntityFromRowData(data, rowData, i);
-            }
-          } else {
-            for (const fieldName of dataKeys) {
-              if (fieldName === "id") continue;
-              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntityFromRowData(data, rowData, i);
-              // Make the field look not-dirty
-              if (changedFields.includes(fieldName)) {
-                instanceData.markFieldClean(fieldName);
-              }
+          for (const fieldName of dataKeys) {
+            if (fieldName === "id") continue;
+            const field = allFields[fieldName];
+            const serde = field.serde ?? fail(`Missing serde for ${fieldName}`);
+            data[fieldName] = serde.fromRow(rowData, i);
+            // Make the field look not-dirty
+            if (changedFields.includes(fieldName)) {
+              instanceData.markFieldClean(fieldName);
             }
           }
         }
@@ -3677,7 +3670,7 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
     : console.log;
 }
 
-const fieldMap: Record<string, [Field, Column][]> = {};
+const fieldMap: Record<string, [Field, FieldColumn][]> = {};
 // Generates what a row from the db would look like for a given entity
 export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: boolean } = {}) {
   const { preferOriginalData = true } = opts;

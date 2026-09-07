@@ -1,5 +1,6 @@
 import { groupBy } from "joist-utils";
 
+import { type Column } from "./columns.ts";
 // Load configure first: relations must not evaluate before their base classes exist.
 import { getConstructorFromTaggedId } from "./configure.ts";
 import { withDeferredAlias } from "./DeferredAlias.ts";
@@ -16,7 +17,6 @@ import {
 } from "./EntityMetadata.ts";
 import { maybeResolveReferenceToId } from "./keys.ts";
 import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
-import { type Column } from "./serde.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { type FieldsOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";

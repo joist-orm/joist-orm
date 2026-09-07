@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -83,38 +84,13 @@ export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "grou
 }
 
 export interface SmallPublisherColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "city": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "shared_column": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "all_author_names": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<SmallPublisher>; entity: SmallPublisher; nullable: false; insert: "optional"; update: false };
+  "city": { type: string; nullable: false; insert: "required"; update: true };
+  "shared_column": { type: string; nullable: true; insert: "optional"; update: true };
+  "all_author_names": { type: string; nullable: true; insert: "optional"; update: true };
   "self_referential_id": {
-    kind: "m2o";
-    type: SmallPublisher;
-    derived: false;
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
     nullable: true;
     insert: "optional";
     update: true;

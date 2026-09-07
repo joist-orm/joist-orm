@@ -9,8 +9,8 @@ import {
   getMetadata,
 } from "../EntityMetadata.ts";
 import { getField, isChangeableField } from "../fields.ts";
+import { type FieldColumn, type TimestampSerde, hasSerde } from "../fieldSerde.ts";
 import { keyToNumber } from "../keys.ts";
-import { type Column, type TimestampSerde, hasSerde } from "../serde.ts";
 import { type Todo } from "../Todo.ts";
 import { groupBy } from "../utils.ts";
 
@@ -270,7 +270,7 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity
   return [...entitiesByType.entries()];
 }
 
-type BindingColumn = OpColumn & Pick<Column, "dbValue">;
+type BindingColumn = OpColumn & Pick<FieldColumn, "dbValue">;
 type EntityWithData = Entity & { __data: { data: Record<string, unknown> } };
 
 /**

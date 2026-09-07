@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasManyToMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -62,16 +63,8 @@ export interface TagFields {
 }
 
 export interface TagColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "title": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
+  "id": { type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; nullable: false; insert: "required"; update: true };
 }
 
 export interface TagOpts {

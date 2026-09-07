@@ -1,8 +1,35 @@
+import { getInstanceData } from "joist-orm";
 import { ParentGroup } from "src/entities";
 import { insertParentGroup } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("LazyField", () => {
+  it("distinguishes an unloaded column from a loaded SQL NULL", async () => {
+    // Given a ParentGroup with no optional bulk data
+    await insertParentGroup({ name: "pg1" });
+    // And a hydrated ParentGroup whose lazy column was excluded from the SELECT
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+    const { data } = getInstanceData(pg);
+    // When inspecting bulkData before loading the lazy column
+    // Then the column is unloaded and has no cached value
+    expect(pg.bulkData.isLoaded).toBe(false);
+    expect("bulkData" in data).toBe(false);
+
+    // When loading bulkData from its SQL NULL column
+    // Then the field is loaded with an explicitly cached undefined
+    expect(await pg.bulkData.load()).toBeUndefined();
+    expect(pg.bulkData.isLoaded).toBe(true);
+    expect("bulkData" in data).toBe(true);
+    expect(data.bulkData).toBeUndefined();
+    // And query tracking starts again after the first lazy load
+    resetQueryCount();
+    // When loading bulkData again
+    // Then the cached undefined is returned without another query
+    expect(await pg.bulkData.load()).toBeUndefined();
+    expect(queries).toEqual([]);
+  });
+
   it("is excluded from the entity's default SELECT", async () => {
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
     const em = newEntityManager();

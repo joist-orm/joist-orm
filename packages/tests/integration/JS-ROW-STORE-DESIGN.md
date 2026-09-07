@@ -75,7 +75,7 @@ Two facts make this design _simpler_ than its native cousin:
 ("column faulting") because each N-API crossing costs ~20-50 ns and is opaque to TurboFan. In
 pure JS, a cell fault is just a function call plus `buffer.toString("utf8", start, end)` — which
 is itself a heavily-optimized native-backed path. Per-cell lazy decode, the exact granularity of
-today's `getField` → `serde.setOnEntity` laziness, becomes the natural default rather than a
+today's `getField` → `serde.fromRow` laziness, becomes the natural default rather than a
 compromise.
 
 **Node Buffers already are "native data structures" as far as V8 is concerned.** A `Buffer`'s
@@ -204,24 +204,24 @@ index. (Practically we would keep one `rowIndex` int slot, or reuse `entityIndex
 
 ## 6. The field-access path
 
+The current implementation uses `RowData` and separates decoding from entity assignment:
+
 ```ts
-// fields.ts getField — unchanged shape, store-backed miss path
+// fields.ts getField — unchanged shape, RowData-backed miss path (plugin handling omitted)
 export function getField(entity: Entity, fieldName: string): any {
   const instanceData = getInstanceData(entity);
   const { data } = instanceData;
   if (fieldName in data) return data[fieldName]; // warm path: identical to today
   if (!entity.isNewEntity) {
-    const serde = getMetadata(entity).allFields[fieldName].serde;
-    // was: serde.setOnEntity(data, row) reading row[columnName]
-    serde.setOnEntity(data, instanceData.store, instanceData.rowIndex);
+    const field = getMetadata(entity).allFields[fieldName];
+    data[fieldName] = field.serde!.fromRow(instanceData.rowData, instanceData.rowIndex);
   }
   return data[fieldName];
 }
 
-// serde.ts — each of the 16 setOnEntity bodies changes mechanically, e.g. PrimitiveSerde:
-setOnEntity(data: any, store: RowStore, row: number): void {
-  // store.getValue: rowStart -> scan to column ordinal -> utf8Slice -> pg-types parse (by oid)
-  data[this.fieldName] = maybeNullToUndefined(store.getValue(row, this.columnOrdinal));
+// fieldSerde.ts — SimpleFieldSerde delegates scalar decoding to its physical column:
+fromRow(rowData: RowData, rowIndex: number): unknown {
+  return this.column.mapFromDb(rowData.get(rowIndex, this.column.columnName));
 }
 ```
 
@@ -631,10 +631,12 @@ pg-types returns the raw `{...}` literal string — an improvement, asserted exp
   bounded leftover bytes it would save), so duplicate-heavy results no longer pin query history. Sidecar _columns_ (`_tags`, preload aggregates)
   still live inside retained rows' payloads — stripping cells requires rewriting row payloads
   and remains a follow-up.
-- **Extension compat (High 5)**: initially `FieldSerde.setOnEntity(data, row)` was restored as
-  the public contract with `setOnEntityFromRowData` as an optional fast path, but we later
-  (2026-07-22) accepted the breaking change: `setOnEntityFromRowData(data, rowData, rowIndex)`
-  is now the sole, required contract and the legacy method + `applySetOnEntity` dispatch helper
+- **Extension compat (High 5)**: `FieldSerde.fromRow(rowData, rowIndex): unknown` is the sole,
+  required hydration contract. It returns one decoded domain value without mutating entity data.
+  Callers own assignment and caching: scalar SQL NULL and empty polymorphic references are
+  cached as `undefined`. Refresh and run synchronization replace cached polymorphic data,
+  including clearing the parent or changing its type. Polymorphic decoding selects the first truthy
+  component with a non-nullish decoded ID. The legacy mutation methods and dispatch helper
   are deleted (custom serdes fail loudly at compile time; a one-row `PojoRowData` recreates the
   old shape where needed, e.g. `RunPlugin`). `PreloadHydrator` receives plain row arrays
   everywhere except lazy mode; `InstanceData.row` is back as a deprecated materializing getter

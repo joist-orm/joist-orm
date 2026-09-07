@@ -95,7 +95,7 @@ import {
   updatePartial,
 } from "./symbols.ts";
 import { tsdocComments } from "./tsdoc.ts";
-import { assertNever, fail, uncapitalize } from "./utils.ts";
+import { assertNever, fail, q, uncapitalize } from "./utils.ts";
 
 const { plural } = pluralize;
 
@@ -186,7 +186,7 @@ export function generateEntityCodegenFile(
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
   const physical = meta.physicalMetadata ?? meta;
   const sharedTable = meta.inheritanceType === "sti" && baseEntity;
-  const columns = sharedTable ? {} : generateColumnsType(physical, idType);
+  const columns = sharedTable ? {} : generateColumnsType(physical);
   const maybeBaseColumns = sharedTable ? code`extends ${imp(`t:${baseEntity.name}Columns@./entities.ts`)}` : "";
   const maybeBaseIdOpts = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
@@ -621,28 +621,26 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
  * I.e. Comment.parent_book_id is an optional Book reference, not the CommentParent union.
  * Polymorphic component writes remain unsupported, so their policies are conservative.
  */
-function generateColumnsType(meta: EntityDbMetadata, idType: "string" | "number"): Record<string, Code> {
+function generateColumnsType(meta: EntityDbMetadata): Record<string, Code> {
   const columns: Record<string, Code> = {
-    id: code`{ kind: "primitive"; type: ${idType}; unique: true; ${columnPolicyType(meta, meta.primaryKey)} }`,
+    id: code`{ type: ${IdOf}<${meta.entity.type}>; entity: ${meta.entity.type}; ${columnPolicyType(meta, meta.primaryKey)} }`,
   };
   for (const field of [...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes]) {
     const policy = columnPolicyType(meta, field);
     if (field.kind === "primitive") {
-      columns[field.columnName] =
-        code`{ kind: "primitive"; type: ${field.fieldType}; unique: ${field.unique}; derived: ${field.derived !== false}; ${policy} }`;
+      columns[field.columnName] = code`{ type: ${field.fieldType}; ${policy} }`;
     } else if (field.kind === "m2o") {
       columns[field.columnName] =
-        code`{ kind: "m2o"; type: ${field.otherEntity.type}; derived: ${field.derived !== false}; ${policy} }`;
+        code`{ type: ${IdOf}<${field.otherEntity.type}>; entity: ${field.otherEntity.type}; ${policy} }`;
     } else {
       const array = field.kind === "enum" && field.isArray ? "[]" : "";
-      const native = field.kind === "pg-enum" ? "native: true;" : "";
-      columns[field.columnName] = code`{ kind: "enum"; type: ${field.enumType}${array}; ${native} ${policy} }`;
+      columns[field.columnName] = code`{ type: ${field.enumType}${array}; ${policy} }`;
     }
   }
   for (const field of meta.polymorphics) {
     for (const component of field.components) {
       columns[component.columnName] =
-        code`{ kind: "m2o"; type: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
+        code`{ type: ${IdOf}<${component.otherEntity.type}>; entity: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
     }
   }
   return columns;

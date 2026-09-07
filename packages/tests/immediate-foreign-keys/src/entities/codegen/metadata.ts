@@ -1,4 +1,4 @@
-import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
+import { Column, type ColumnDescriptors, configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig, SimpleFieldSerde } from "joist-orm";
 import type { Context } from "src/context";
 import { T1Author } from "../T1Author";
 import { T1Book } from "../T1Book";
@@ -22,6 +22,50 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
+const t1AuthorMetaColumns = { "id": new Column("id", false, false, false, false, true, () => t1AuthorMeta, new KeySerde("ta", "int")), "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")) } satisfies ColumnDescriptors;
+const t1BookMetaColumns = { "id": new Column("id", false, false, false, false, true, () => t1BookMeta, new KeySerde("tb", "int")), "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")), "author_id": new Column("author_id", false, false, false, false, true, () => t1AuthorMeta, new KeySerde("ta", "int")) } satisfies ColumnDescriptors;
+const t2AuthorMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t2AuthorMeta, new KeySerde("t2Author", "int")),
+  "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "favorite_book_id": new Column("favorite_book_id", true, false, false, false, true, () => t2BookMeta, new KeySerde("t2Book", "int")),
+} satisfies ColumnDescriptors;
+const t2BookMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t2BookMeta, new KeySerde("t2Book", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "author_id": new Column("author_id", false, false, false, false, true, () => t2AuthorMeta, new KeySerde("t2Author", "int")),
+} satisfies ColumnDescriptors;
+const t3AuthorMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t3AuthorMeta, new KeySerde("t3Author", "int")),
+  "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "favorite_book_id": new Column("favorite_book_id", false, false, false, false, true, () => t3BookMeta, new KeySerde("t3Book", "int")),
+} satisfies ColumnDescriptors;
+const t3BookMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t3BookMeta, new KeySerde("t3Book", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "author_id": new Column("author_id", false, false, false, false, true, () => t3AuthorMeta, new KeySerde("t3Author", "int")),
+} satisfies ColumnDescriptors;
+const t4AuthorMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t4AuthorMeta, new KeySerde("t4Author", "int")),
+  "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "favorite_book_id": new Column("favorite_book_id", false, false, false, false, true, () => t4BookMeta, new KeySerde("t4Book", "int")),
+} satisfies ColumnDescriptors;
+const t4BookMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t4BookMeta, new KeySerde("t4Book", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "author_id": new Column("author_id", false, false, false, false, true, () => t4AuthorMeta, new KeySerde("t4Author", "int")),
+} satisfies ColumnDescriptors;
+const t5AuthorMetaColumns = { "id": new Column("id", false, false, false, false, true, () => t5AuthorMeta, new KeySerde("t5Author", "int")), "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")) } satisfies ColumnDescriptors;
+const t5BookMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t5BookMeta, new KeySerde("t5Book", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "author_id": new Column("author_id", false, false, false, false, true, () => t5AuthorMeta, new KeySerde("t5Author", "int")),
+} satisfies ColumnDescriptors;
+const t5BookReviewMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => t5BookReviewMeta, new KeySerde("tbr", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "book_id": new Column("book_id", true, false, false, false, true, () => t5BookMeta, new KeySerde("t5Book", "int")),
+} satisfies ColumnDescriptors;
+
 export const t1AuthorMeta: EntityMetadata<T1Author> = {
   cstr: T1Author,
   type: "T1Author",
@@ -32,11 +76,11 @@ export const t1AuthorMeta: EntityMetadata<T1Author> = {
   tableName: "t1_authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("ta", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t1AuthorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", t1AuthorMetaColumns["first_name"]), immutable: false },
     "t1Books": { kind: "o2m", fieldName: "t1Books", fieldIdName: "t1BookIds", required: false, otherMetadata: () => t1BookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t1AuthorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -46,9 +90,6 @@ export const t1AuthorMeta: EntityMetadata<T1Author> = {
   subTypes: [],
   nonDeferredFkOrder: 1,
 };
-
-t1AuthorMeta.columns["id"] = { fieldName: "id", field: t1AuthorMeta.fields["id"] };
-t1AuthorMeta.columns["first_name"] = { fieldName: "firstName", field: t1AuthorMeta.fields["firstName"] };
 
 (T1Author as any).metadata = t1AuthorMeta;
 
@@ -62,11 +103,11 @@ export const t1BookMeta: EntityMetadata<T1Book> = {
   tableName: "t1_books",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("tb", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => t1AuthorMeta, otherFieldName: "t1Books", serde: new KeySerde("ta", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t1BookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t1BookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: t1BookMetaColumns["author_id"].idMetadata!, otherFieldName: "t1Books", serde: new SimpleFieldSerde("author", t1BookMetaColumns["author_id"]), immutable: false },
   },
-  columns: {},
+  columns: t1BookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -76,10 +117,6 @@ export const t1BookMeta: EntityMetadata<T1Book> = {
   subTypes: [],
   nonDeferredFkOrder: 2,
 };
-
-t1BookMeta.columns["id"] = { fieldName: "id", field: t1BookMeta.fields["id"] };
-t1BookMeta.columns["title"] = { fieldName: "title", field: t1BookMeta.fields["title"] };
-t1BookMeta.columns["author_id"] = { fieldName: "author", field: t1BookMeta.fields["author"] };
 
 (T1Book as any).metadata = t1BookMeta;
 
@@ -93,12 +130,12 @@ export const t2AuthorMeta: EntityMetadata<T2Author> = {
   tableName: "t2_authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t2Author", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: false, otherMetadata: () => t2BookMeta, otherFieldName: "t2Authors", serde: new KeySerde("t2Book", "favoriteBook", "favorite_book_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t2AuthorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", t2AuthorMetaColumns["first_name"]), immutable: false },
+    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: false, otherMetadata: t2AuthorMetaColumns["favorite_book_id"].idMetadata!, otherFieldName: "t2Authors", serde: new SimpleFieldSerde("favoriteBook", t2AuthorMetaColumns["favorite_book_id"]), immutable: false },
     "t2Books": { kind: "o2m", fieldName: "t2Books", fieldIdName: "t2BookIds", required: false, otherMetadata: () => t2BookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t2AuthorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -108,10 +145,6 @@ export const t2AuthorMeta: EntityMetadata<T2Author> = {
   subTypes: [],
   nonDeferredFkOrder: 1,
 };
-
-t2AuthorMeta.columns["id"] = { fieldName: "id", field: t2AuthorMeta.fields["id"] };
-t2AuthorMeta.columns["first_name"] = { fieldName: "firstName", field: t2AuthorMeta.fields["firstName"] };
-t2AuthorMeta.columns["favorite_book_id"] = { fieldName: "favoriteBook", field: t2AuthorMeta.fields["favoriteBook"] };
 
 (T2Author as any).metadata = t2AuthorMeta;
 
@@ -125,12 +158,12 @@ export const t2BookMeta: EntityMetadata<T2Book> = {
   tableName: "t2_books",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t2Book", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => t2AuthorMeta, otherFieldName: "t2Books", serde: new KeySerde("t2Author", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t2BookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t2BookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: t2BookMetaColumns["author_id"].idMetadata!, otherFieldName: "t2Books", serde: new SimpleFieldSerde("author", t2BookMetaColumns["author_id"]), immutable: false },
     "t2Authors": { kind: "o2m", fieldName: "t2Authors", fieldIdName: "t2AuthorIds", required: false, otherMetadata: () => t2AuthorMeta, otherFieldName: "favoriteBook", otherColumnName: "favorite_book_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t2BookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -140,10 +173,6 @@ export const t2BookMeta: EntityMetadata<T2Book> = {
   subTypes: [],
   nonDeferredFkOrder: 2,
 };
-
-t2BookMeta.columns["id"] = { fieldName: "id", field: t2BookMeta.fields["id"] };
-t2BookMeta.columns["title"] = { fieldName: "title", field: t2BookMeta.fields["title"] };
-t2BookMeta.columns["author_id"] = { fieldName: "author", field: t2BookMeta.fields["author"] };
 
 (T2Book as any).metadata = t2BookMeta;
 
@@ -157,12 +186,12 @@ export const t3AuthorMeta: EntityMetadata<T3Author> = {
   tableName: "t3_authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t3Author", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: true, otherMetadata: () => t3BookMeta, otherFieldName: "t3Authors", serde: new KeySerde("t3Book", "favoriteBook", "favorite_book_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t3AuthorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", t3AuthorMetaColumns["first_name"]), immutable: false },
+    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: true, otherMetadata: t3AuthorMetaColumns["favorite_book_id"].idMetadata!, otherFieldName: "t3Authors", serde: new SimpleFieldSerde("favoriteBook", t3AuthorMetaColumns["favorite_book_id"]), immutable: false },
     "t3Books": { kind: "o2m", fieldName: "t3Books", fieldIdName: "t3BookIds", required: false, otherMetadata: () => t3BookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t3AuthorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -172,10 +201,6 @@ export const t3AuthorMeta: EntityMetadata<T3Author> = {
   subTypes: [],
   nonDeferredFkOrder: 2,
 };
-
-t3AuthorMeta.columns["id"] = { fieldName: "id", field: t3AuthorMeta.fields["id"] };
-t3AuthorMeta.columns["first_name"] = { fieldName: "firstName", field: t3AuthorMeta.fields["firstName"] };
-t3AuthorMeta.columns["favorite_book_id"] = { fieldName: "favoriteBook", field: t3AuthorMeta.fields["favoriteBook"] };
 
 (T3Author as any).metadata = t3AuthorMeta;
 
@@ -189,12 +214,12 @@ export const t3BookMeta: EntityMetadata<T3Book> = {
   tableName: "t3_books",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t3Book", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => t3AuthorMeta, otherFieldName: "t3Books", serde: new KeySerde("t3Author", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t3BookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t3BookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: t3BookMetaColumns["author_id"].idMetadata!, otherFieldName: "t3Books", serde: new SimpleFieldSerde("author", t3BookMetaColumns["author_id"]), immutable: false },
     "t3Authors": { kind: "o2m", fieldName: "t3Authors", fieldIdName: "t3AuthorIds", required: false, otherMetadata: () => t3AuthorMeta, otherFieldName: "favoriteBook", otherColumnName: "favorite_book_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t3BookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -204,10 +229,6 @@ export const t3BookMeta: EntityMetadata<T3Book> = {
   subTypes: [],
   nonDeferredFkOrder: 1,
 };
-
-t3BookMeta.columns["id"] = { fieldName: "id", field: t3BookMeta.fields["id"] };
-t3BookMeta.columns["title"] = { fieldName: "title", field: t3BookMeta.fields["title"] };
-t3BookMeta.columns["author_id"] = { fieldName: "author", field: t3BookMeta.fields["author"] };
 
 (T3Book as any).metadata = t3BookMeta;
 
@@ -221,12 +242,12 @@ export const t4AuthorMeta: EntityMetadata<T4Author> = {
   tableName: "t4_authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t4Author", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: true, otherMetadata: () => t4BookMeta, otherFieldName: "t4Authors", serde: new KeySerde("t4Book", "favoriteBook", "favorite_book_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t4AuthorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", t4AuthorMetaColumns["first_name"]), immutable: false },
+    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: false, required: true, otherMetadata: t4AuthorMetaColumns["favorite_book_id"].idMetadata!, otherFieldName: "t4Authors", serde: new SimpleFieldSerde("favoriteBook", t4AuthorMetaColumns["favorite_book_id"]), immutable: false },
     "t4Books": { kind: "o2m", fieldName: "t4Books", fieldIdName: "t4BookIds", required: false, otherMetadata: () => t4BookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t4AuthorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -236,10 +257,6 @@ export const t4AuthorMeta: EntityMetadata<T4Author> = {
   subTypes: [],
   nonDeferredFkOrder: 2,
 };
-
-t4AuthorMeta.columns["id"] = { fieldName: "id", field: t4AuthorMeta.fields["id"] };
-t4AuthorMeta.columns["first_name"] = { fieldName: "firstName", field: t4AuthorMeta.fields["firstName"] };
-t4AuthorMeta.columns["favorite_book_id"] = { fieldName: "favoriteBook", field: t4AuthorMeta.fields["favoriteBook"] };
 
 (T4Author as any).metadata = t4AuthorMeta;
 
@@ -253,12 +270,12 @@ export const t4BookMeta: EntityMetadata<T4Book> = {
   tableName: "t4_books",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t4Book", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => t4AuthorMeta, otherFieldName: "t4Books", serde: new KeySerde("t4Author", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t4BookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t4BookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: t4BookMetaColumns["author_id"].idMetadata!, otherFieldName: "t4Books", serde: new SimpleFieldSerde("author", t4BookMetaColumns["author_id"]), immutable: false },
     "t4Authors": { kind: "o2m", fieldName: "t4Authors", fieldIdName: "t4AuthorIds", required: false, otherMetadata: () => t4AuthorMeta, otherFieldName: "favoriteBook", otherColumnName: "favorite_book_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t4BookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -268,10 +285,6 @@ export const t4BookMeta: EntityMetadata<T4Book> = {
   subTypes: [],
   nonDeferredFkOrder: 1,
 };
-
-t4BookMeta.columns["id"] = { fieldName: "id", field: t4BookMeta.fields["id"] };
-t4BookMeta.columns["title"] = { fieldName: "title", field: t4BookMeta.fields["title"] };
-t4BookMeta.columns["author_id"] = { fieldName: "author", field: t4BookMeta.fields["author"] };
 
 (T4Book as any).metadata = t4BookMeta;
 
@@ -285,11 +298,11 @@ export const t5AuthorMeta: EntityMetadata<T5Author> = {
   tableName: "t5_authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t5Author", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t5AuthorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", t5AuthorMetaColumns["first_name"]), immutable: false },
     "t5Books": { kind: "o2m", fieldName: "t5Books", fieldIdName: "t5BookIds", required: false, otherMetadata: () => t5BookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t5AuthorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -299,9 +312,6 @@ export const t5AuthorMeta: EntityMetadata<T5Author> = {
   subTypes: [],
   nonDeferredFkOrder: 1,
 };
-
-t5AuthorMeta.columns["id"] = { fieldName: "id", field: t5AuthorMeta.fields["id"] };
-t5AuthorMeta.columns["first_name"] = { fieldName: "firstName", field: t5AuthorMeta.fields["firstName"] };
 
 (T5Author as any).metadata = t5AuthorMeta;
 
@@ -315,12 +325,12 @@ export const t5BookMeta: EntityMetadata<T5Book> = {
   tableName: "t5_books",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t5Book", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => t5AuthorMeta, otherFieldName: "t5Books", serde: new KeySerde("t5Author", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t5BookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t5BookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: t5BookMetaColumns["author_id"].idMetadata!, otherFieldName: "t5Books", serde: new SimpleFieldSerde("author", t5BookMetaColumns["author_id"]), immutable: false },
     "reviews": { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => t5BookReviewMeta, otherFieldName: "book", otherColumnName: "book_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: t5BookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -330,10 +340,6 @@ export const t5BookMeta: EntityMetadata<T5Book> = {
   subTypes: [],
   nonDeferredFkOrder: 2,
 };
-
-t5BookMeta.columns["id"] = { fieldName: "id", field: t5BookMeta.fields["id"] };
-t5BookMeta.columns["title"] = { fieldName: "title", field: t5BookMeta.fields["title"] };
-t5BookMeta.columns["author_id"] = { fieldName: "author", field: t5BookMeta.fields["author"] };
 
 (T5Book as any).metadata = t5BookMeta;
 
@@ -347,11 +353,11 @@ export const t5BookReviewMeta: EntityMetadata<T5BookReview> = {
   tableName: "t5_book_reviews",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("tbr", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: false, otherMetadata: () => t5BookMeta, otherFieldName: "reviews", serde: new KeySerde("t5Book", "book", "book_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", t5BookReviewMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", t5BookReviewMetaColumns["title"]), immutable: false },
+    "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: false, otherMetadata: t5BookReviewMetaColumns["book_id"].idMetadata!, otherFieldName: "reviews", serde: new SimpleFieldSerde("book", t5BookReviewMetaColumns["book_id"]), immutable: false },
   },
-  columns: {},
+  columns: t5BookReviewMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -361,10 +367,6 @@ export const t5BookReviewMeta: EntityMetadata<T5BookReview> = {
   subTypes: [],
   nonDeferredFkOrder: 3,
 };
-
-t5BookReviewMeta.columns["id"] = { fieldName: "id", field: t5BookReviewMeta.fields["id"] };
-t5BookReviewMeta.columns["title"] = { fieldName: "title", field: t5BookReviewMeta.fields["title"] };
-t5BookReviewMeta.columns["book_id"] = { fieldName: "book", field: t5BookReviewMeta.fields["book"] };
 
 (T5BookReview as any).metadata = t5BookReviewMeta;
 

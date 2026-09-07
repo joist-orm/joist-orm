@@ -211,6 +211,8 @@ export {
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig.ts";
 export { nowUTC } from "./nowUTC.ts";
 export * from "./serde.ts";
+export * from "./columns.ts";
+export * from "./fieldSerde.ts";
 export * from "./scopes.ts";
 export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal.ts";
 export * from "./temporalMappers.ts";
@@ -250,8 +252,8 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  * APIs were an input of `undefined` means "do not set / noop" and `null` means "unset".
  *
  * Note that constructors _always_ call this method, but if the call is coming from `em.hydrate`, we
- * use `values` being a primary key to short-circuit and let `hydrate` set the fields via the serde
- * `setOnEntityFromRowData` methods.
+ * use `values` being a primary key to short-circuit and let hydration callers assign the values
+ * returned by the serde `fromRow` methods.
  */
 export function setOpts<T extends Entity>(
   entity: T,

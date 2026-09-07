@@ -148,7 +148,7 @@ function lazyColumnBatchLoader(em: EntityManager, meta: EntityMetadata, fieldNam
     const rowData = new PojoRowData(rows);
     for (let i = 0; i < rows.length; i++) {
       const entity = em.findExistingInstance(tagId(meta, rows[i].id));
-      if (entity) field.serde.setOnEntityFromRowData(getInstanceData(entity).data, rowData, i);
+      if (entity) getInstanceData(entity).data[fieldName] = field.serde.fromRow(rowData, i);
     }
   });
 }

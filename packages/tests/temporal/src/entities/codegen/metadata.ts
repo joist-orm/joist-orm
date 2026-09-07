@@ -40,23 +40,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "firstName": { "fieldName": "firstName" },
-    "lastName": { "fieldName": "lastName" },
-    "birthday": { "fieldName": "birthday" },
-    "children_birthdays": { "fieldName": "childrenBirthdays" },
-    "maybe_birthdays": { "fieldName": "maybeBirthdays" },
-    "timestamp": { "fieldName": "timestamp" },
-    "timestamps": { "fieldName": "timestamps" },
-    "maybe_timestamps": { "fieldName": "maybeTimestamps" },
-    "time": { "fieldName": "time" },
-    "times": { "fieldName": "times" },
-    "maybe_times": { "fieldName": "maybeTimes" },
-    "time_to_micros": { "fieldName": "timeToMicros" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -65,6 +49,22 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
+authorMeta.columns["firstName"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
+authorMeta.columns["lastName"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
+authorMeta.columns["birthday"] = { fieldName: "birthday", field: authorMeta.fields["birthday"] };
+authorMeta.columns["children_birthdays"] = { fieldName: "childrenBirthdays", field: authorMeta.fields["childrenBirthdays"] };
+authorMeta.columns["maybe_birthdays"] = { fieldName: "maybeBirthdays", field: authorMeta.fields["maybeBirthdays"] };
+authorMeta.columns["timestamp"] = { fieldName: "timestamp", field: authorMeta.fields["timestamp"] };
+authorMeta.columns["timestamps"] = { fieldName: "timestamps", field: authorMeta.fields["timestamps"] };
+authorMeta.columns["maybe_timestamps"] = { fieldName: "maybeTimestamps", field: authorMeta.fields["maybeTimestamps"] };
+authorMeta.columns["time"] = { fieldName: "time", field: authorMeta.fields["time"] };
+authorMeta.columns["times"] = { fieldName: "times", field: authorMeta.fields["times"] };
+authorMeta.columns["maybe_times"] = { fieldName: "maybeTimes", field: authorMeta.fields["maybeTimes"] };
+authorMeta.columns["time_to_micros"] = { fieldName: "timeToMicros", field: authorMeta.fields["timeToMicros"] };
+authorMeta.columns["created_at"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
+authorMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -88,17 +88,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("deletedAt", "deleted_at", "timestamp with time zone", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "title": { "fieldName": "title" },
-    "published_at": { "fieldName": "publishedAt" },
-    "timestamp_tzs": { "fieldName": "timestampTzs" },
-    "maybe_timestamp_tzs": { "fieldName": "maybeTimestampTzs" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "deleted_at": { "fieldName": "deletedAt" },
-    "author_id": { "fieldName": "author" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -107,6 +97,16 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
+bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
+bookMeta.columns["published_at"] = { fieldName: "publishedAt", field: bookMeta.fields["publishedAt"] };
+bookMeta.columns["timestamp_tzs"] = { fieldName: "timestampTzs", field: bookMeta.fields["timestampTzs"] };
+bookMeta.columns["maybe_timestamp_tzs"] = { fieldName: "maybeTimestampTzs", field: bookMeta.fields["maybeTimestampTzs"] };
+bookMeta.columns["created_at"] = { fieldName: "createdAt", field: bookMeta.fields["createdAt"] };
+bookMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookMeta.fields["updatedAt"] };
+bookMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: bookMeta.fields["deletedAt"] };
+bookMeta.columns["author_id"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 

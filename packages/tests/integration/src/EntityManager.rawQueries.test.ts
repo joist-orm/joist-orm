@@ -16,7 +16,6 @@ import {
   Task,
   TaskItem,
   TaskNew,
-  TaskOld,
   User,
 } from "src/entities";
 import {
@@ -234,39 +233,96 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([{ id: "a:1", name: "a1" }]);
     });
 
-    it("hydrates CTI subtypes in entity mode", async () => {
+    it("selects CTI base rows without implicit subtype joins", async () => {
       // Given a SmallPublisher with its name stored on the Publisher base table
       await insertPublisher({ id: 1, name: "small" });
       // And a LargePublisher with a base-table name and a subtype-table country
       await insertLargePublisher({ id: 2, name: "large", country: "us" });
       const em = newEntityManager();
       const [p] = tables(Publisher);
-      const publishers = await em.query({ from: p, select: p, orderBy: [{ asc: p.id }] });
-      expect(publishers[0]).toBeInstanceOf(SmallPublisher);
-      expect(publishers[1]).toBeInstanceOf(LargePublisher);
-      // The base table's own columns must be selected too, not just the sub-table columns + __class
-      expect(publishers[0]).toMatchEntity({ name: "small" });
-      expect(publishers[1] as LargePublisher).toMatchEntity({ country: "us" });
+      resetQueryCount();
+      const publishers = await em.query({ from: p, select: { name: p.name }, orderBy: [{ asc: p.id }] });
+      expect(publishers).toEqual([{ name: "small" }, { name: "large" }]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT p.name AS name FROM publishers AS p WHERE p.deleted_at IS NULL ORDER BY p.id ASC",
+       ]
+      `);
     });
 
-    it("hydrates a CTI subtype from with its own and base fields", async () => {
-      // Given a SmallPublisher with name on publishers and city on small_publishers; both must hydrate
+    it("selects CTI subtype and base fields through an explicit join", async () => {
+      // Given a SmallPublisher with name on publishers and city on small_publishers; both must project
       await insertPublisher({ id: 1, name: "p1", city: "sf" });
       const em = newEntityManager();
-      const sp = table(SmallPublisher);
-      const [publisher] = await em.query({ from: sp, select: sp });
-      expect(publisher).toBeInstanceOf(SmallPublisher);
-      expect(publisher).toMatchEntity({ name: "p1", city: "sf" });
+      const [sp, p] = tables(SmallPublisher, Publisher);
+      resetQueryCount();
+      const rows = await em.query({
+        from: sp,
+        join: [{ inner: p, on: sp.id.eq(p.id) }],
+        select: { name: p.name, city: sp.city },
+      });
+      expect(rows).toEqual([{ name: "p1", city: "sf" }]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT p.name AS name, sp.city AS city FROM small_publishers AS sp JOIN publishers AS p ON sp.id = p.id",
+       ]
+      `);
     });
 
-    it("can filter a CTI subtype alias on a base-table field", async () => {
-      // Given two SmallPublishers distinguished by names stored on the Publisher base table
+    it("filters a CTI base field through an explicit subtype join", async () => {
+      // Given a SmallPublisher excluded by its base-table name
       await insertPublisher({ id: 1, name: "p1" });
-      await insertPublisher({ id: 2, name: "p2" });
+      // And a SmallPublisher matching the requested base-table name
+      await insertPublisher({ id: 2, name: "p2", city: "sf" });
       const em = newEntityManager();
-      const [sp] = tables(SmallPublisher);
-      const rows = await em.query({ from: sp, where: { and: [sp.name.eq("p2")] }, select: { name: sp.name } });
-      expect(rows).toEqual([{ name: "p2" }]);
+      const [p, sp] = tables(Publisher, SmallPublisher);
+      resetQueryCount();
+      const rows = await em.query({
+        from: p,
+        join: [p.smallPublisher.inner(sp)],
+        where: p.name.eq("p2"),
+        select: { name: p.name, city: sp.city },
+      });
+      expect(rows).toEqual([{ name: "p2", city: "sf" }]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT p.name AS name, sp.city AS city FROM publishers AS p JOIN small_publishers AS sp ON p.id = sp.id WHERE p.name = $1 AND p.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("rejects inherited CTI columns and relationships on a physical subtype handle", () => {
+      // Given a SmallPublisher handle whose name and authors belong to publishers
+      const sp = table(SmallPublisher);
+      resetQueryCount();
+      expect(() => Reflect.get(sp, "name")).toThrow(
+        "No physical field name on SmallPublisher; join its base table explicitly",
+      );
+      expect(() => Reflect.get(sp, "authors")).toThrow(
+        "No physical field authors on SmallPublisher; join its base table explicitly",
+      );
+      expect(queries).toMatchInlineSnapshot(`[]`);
+    });
+
+    it("rejects entity selects from physical CTI and STI handles before SQL", async () => {
+      // Given physical base and subtype handles that cannot provide complete entities
+      const [p, sp, t, tn] = tables(Publisher, SmallPublisher, Task, TaskNew);
+      const em = newEntityManager();
+      resetQueryCount();
+      // The casts cross the static rejection to verify the runtime guard for untyped callers.
+      await expect(em.query({ from: p, select: p } as any)).rejects.toThrow(
+        "Inherited table Publisher cannot be selected as entities; select its columns individually",
+      );
+      await expect(em.query({ from: sp, select: sp } as any)).rejects.toThrow(
+        "Inherited table SmallPublisher cannot be selected as entities; select its columns individually",
+      );
+      await expect(em.query({ from: t, select: t } as any)).rejects.toThrow(
+        "Inherited table Task cannot be selected as entities; select its columns individually",
+      );
+      await expect(em.query({ from: tn, select: tn } as any)).rejects.toThrow(
+        "Inherited table TaskNew cannot be selected as entities; select its columns individually",
+      );
+      expect(queries).toMatchInlineSnapshot(`[]`);
     });
 
     it("rejects selecting a joined alias or subquery", async () => {
@@ -356,32 +412,33 @@ describe("EntityManager.rawQueries", () => {
       ]);
     });
 
-    it("adds CTI physical-table joins only as needed", async () => {
-      // Given an Author whose publisher is a SmallPublisher with its name on the Publisher base table
-      await insertPublisher({ name: "p1" });
+    it("joins only the explicitly requested CTI physical tables", async () => {
+      // Given a SmallPublisher with its name on the Publisher base table
+      await insertPublisher({ name: "p1", city: "sf" });
+      // And an Author referencing that Publisher
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
       const [a, p] = tables(Author, Publisher);
       const sp = table(SmallPublisher);
       resetQueryCount();
-      // Joining the CTI base adds no subtype joins; those only serve entity-mode hydration of a `from`
+      // Joining the CTI base adds no subtype joins.
       const viaBase = await em.query({
         from: a,
         join: [{ inner: p, on: a.publisher_id.eq(p.id) }],
         select: { name: p.name },
       });
       expect(viaBase).toEqual([{ name: "p1" }]);
-      // Joining a CTI subtype adds just its base-table join, so base-declared columns (name) resolve
+      // Joining a CTI subtype does not add its base table.
       const viaSubtype = await em.query({
         from: a,
         join: [{ inner: sp, on: a.publisher_id.eq(sp.id) }],
-        select: { name: sp.name },
+        select: { city: sp.city },
       });
-      expect(viaSubtype).toEqual([{ name: "p1" }]);
+      expect(viaSubtype).toEqual([{ city: "sf" }]);
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.name AS name FROM authors AS a JOIN publishers AS p ON a.publisher_id = p.id WHERE a.deleted_at IS NULL",
-         "SELECT sp_b0.name AS name FROM authors AS a JOIN (small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id) ON a.publisher_id = sp_b0.id WHERE a.deleted_at IS NULL",
+         "SELECT sp.city AS city FROM authors AS a JOIN small_publishers AS sp ON a.publisher_id = sp.id WHERE a.deleted_at IS NULL",
        ]
       `);
     });
@@ -452,6 +509,38 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("relationship join sugar", () => {
+    it("retains Authors when a Publisher or its SmallPublisher row is missing", async () => {
+      // Given a SmallPublisher with a subtype city
+      await insertPublisher({ id: 1, name: "small", city: "sf" });
+      // And a LargePublisher without a small_publishers row
+      await insertLargePublisher({ id: 2, name: "large" });
+      // And an Author referencing the SmallPublisher
+      await insertAuthor({ first_name: "small", publisher_id: 1 });
+      // And an Author referencing the LargePublisher
+      await insertAuthor({ first_name: "large", publisher_id: 2 });
+      // And an Author without any Publisher
+      await insertAuthor({ first_name: "none" });
+      const em = newEntityManager();
+      const [a, p, sp] = tables(Author, Publisher, SmallPublisher);
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.publisher.as(p), p.smallPublisher(sp)],
+        select: { author: a.first_name, publisher: p.name, city: sp.city },
+        orderBy: [{ asc: a.id }],
+      });
+      expect(rows).toEqual([
+        { author: "small", publisher: "small", city: "sf" },
+        { author: "large", publisher: "large", city: null },
+        { author: "none", publisher: null, city: null },
+      ]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS author, p.name AS publisher, sp.city AS city FROM authors AS a LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id LEFT OUTER JOIN small_publishers AS sp ON p.id = sp.id WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
     it("joins a large collection like any o2m", async () => {
       await insertPublisherGroup({ name: "pg1" });
       await insertCritic({ name: "c1", group_id: 1 });
@@ -1022,32 +1111,33 @@ describe("EntityManager.rawQueries", () => {
       `);
     });
 
-    it("keeps a joined SmallPublisher only for its base-field predicate and prunes omitted filters", async () => {
-      // Given an Author with a SmallPublisher whose name is stored on publishers
-      await insertPublisher({ name: "Selected" });
+    it("keeps a CTI relationship chain for its subtype predicate and prunes omitted filters", async () => {
+      // Given a SmallPublisher whose city is stored on small_publishers
+      await insertPublisher({ name: "Selected", city: "sf" });
+      // And an Author referencing that SmallPublisher
       await insertAuthor({ first_name: "Published", publisher_id: 1 });
-      // And an Author without a Publisher, excluded only when the inner join survives
+      // And an Author without a Publisher, excluded only when the city predicate survives
       await insertAuthor({ first_name: "Unpublished" });
       const em = newEntityManager();
-      const [a, sp] = tables(Author, SmallPublisher);
+      const [a, p, sp] = tables(Author, Publisher, SmallPublisher);
       resetQueryCount();
       const filtered = await em.query({
         from: a,
-        join: [a.publisher.inner(sp)],
-        where: sp.name.eq("Selected"),
+        join: [a.publisher.as(p), p.smallPublisher(sp)],
+        where: sp.city.eq("sf"),
         select: a.first_name,
       });
       const omitted = await em.query({
         from: a,
-        join: [a.publisher.inner(sp)],
-        where: { and: [sp.name.eq(undefined), sp.name.search(""), sp.name.between(undefined, "Z")] },
+        join: [a.publisher.as(p), p.smallPublisher(sp)],
+        where: { and: [sp.city.eq(undefined), sp.city.search(""), sp.city.between(undefined, "Z")] },
         select: a.first_name,
         orderBy: [{ asc: a.id }],
       });
       const prunedGroup = await em.query({
         from: a,
-        join: [a.publisher.inner(sp)],
-        where: { and: [sp.name.eq("Selected"), sp.name.search(undefined)], pruneIfUndefined: "any" },
+        join: [a.publisher.as(p), p.smallPublisher(sp)],
+        where: { and: [sp.city.eq("sf"), sp.city.search(undefined)], pruneIfUndefined: "any" },
         select: a.first_name,
         orderBy: [{ asc: a.id }],
       });
@@ -1056,7 +1146,7 @@ describe("EntityManager.rawQueries", () => {
       expect(prunedGroup).toEqual(["Published", "Unpublished"]);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT a.first_name AS value FROM authors AS a JOIN (small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id) ON a.publisher_id = sp_b0.id WHERE sp_b0.name = $1 AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id LEFT OUTER JOIN small_publishers AS sp ON p.id = sp.id WHERE sp.city = $1 AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -2034,31 +2124,41 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("single table inheritance", () => {
-    it("filters an STI subtype from to its discriminator", async () => {
+    it("reads the shared STI table without an implicit discriminator", async () => {
       // Given a TaskNew row with its subtype-specific field populated
       await insertTask({ type: "NEW", special_new_field: 1 });
-      // And a TaskOld row in the same tasks table, excluded by the TaskNew discriminator
+      // And a TaskOld row in the same tasks table, included by the physical TaskNew handle
       await insertTask({ type: "OLD", special_old_field: 2 });
       const em = newEntityManager();
       const tn = table(TaskNew);
       resetQueryCount();
-      const tasks = await em.query({ from: tn, select: tn });
-      expect(tasks).toMatchEntity([{ specialNewField: 1 }]);
-      expect(tasks[0]).toBeInstanceOf(TaskNew);
+      const tasks = await em.query({
+        from: tn,
+        select: { id: tn.id, special: tn.special_new_field },
+        orderBy: [{ asc: tn.id }],
+      });
+      expect(tasks).toEqual([
+        { id: "task:1", special: 1 },
+        { id: "task:2", special: null },
+      ]);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL AND t.type_id = $1",
+         "SELECT t.id AS id, t.special_new_field AS special FROM tasks AS t WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
        ]
       `);
     });
 
-    it("filters a joined STI subtype in its join ON", async () => {
-      // Given a TaskNew row and a TaskItem with a valid newTask reference to it
-      // The cast only supplies new_task_id missing from the insert helper's type; the stored subtype is valid
+    it("does not implicitly filter an STI relationship target", async () => {
+      // Given a TaskNew row
       await insertTask({ id: 1, type: "NEW" });
+      // And a TaskItem with a valid newTask reference; the cast supplies the helper's missing new_task_id
       await insertTaskItem({ new_task_id: 1 } as any);
       // And a TaskItem with no newTask, which the left join must retain with a null Task id
       await insertTaskItem({});
+      // And a TaskOld row that a drifted new_task_id references instead of a valid TaskNew
+      await insertTask({ id: 2, type: "OLD" });
+      // And a TaskItem with that drifted reference, which the physical join must still resolve
+      await insertTaskItem({ new_task_id: 2 } as any);
       const em = newEntityManager();
       const [ti, tn] = tables(TaskItem, TaskNew);
       resetQueryCount();
@@ -2071,29 +2171,36 @@ describe("EntityManager.rawQueries", () => {
       expect(rows).toEqual([
         { item: "ti:1", task: "task:1" },
         { item: "ti:2", task: null },
+        { item: "ti:3", task: "task:2" },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT ti.id AS item, t.id AS task FROM task_items AS ti LEFT OUTER JOIN tasks AS t ON ti.new_task_id = t.id AND t.type_id = $1 ORDER BY item ASC",
+         "SELECT ti.id AS item, t.id AS task FROM task_items AS ti LEFT OUTER JOIN tasks AS t ON ti.new_task_id = t.id ORDER BY item ASC",
        ]
       `);
     });
 
-    it("returns mixed subtypes for a base STI from", async () => {
+    it("filters an explicit STI subtype join in ON without dropping other Tasks", async () => {
       // Given a TaskNew row in the base tasks table
       await insertTask({ type: "NEW" });
-      // And a TaskOld row in the same table, so the base Task query must hydrate both subtypes
+      // And a TaskOld row in the same table, retained with no matching TaskNew
       await insertTask({ type: "OLD" });
       const em = newEntityManager();
-      const t = table(Task);
+      const [t, tn] = tables(Task, TaskNew);
       resetQueryCount();
-      const tasks = await em.query({ from: t, select: t, orderBy: { id: "ASC" } });
-      expect(tasks[0]).toBeInstanceOf(TaskNew);
-      expect(tasks[1]).toBeInstanceOf(TaskOld);
-      // The base type has no discriminator value, so no type_id filter is injected
+      const tasks = await em.query({
+        from: t,
+        join: [t.taskNew(tn)],
+        select: { id: t.id, newId: tn.id },
+        orderBy: [{ asc: t.id }],
+      });
+      expect(tasks).toEqual([
+        { id: "task:1", newId: "task:1" },
+        { id: "task:2", newId: null },
+      ]);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
+         "SELECT t.id AS id, t1.id AS "newId" FROM tasks AS t LEFT OUTER JOIN tasks AS t1 ON t.id = t1.id AND t1.type_id = $1 WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
        ]
       `);
     });
@@ -2183,18 +2290,18 @@ describe("EntityManager.rawQueries", () => {
     });
 
     it("does not inject into non-soft-deletable tables or CTI subtypes", async () => {
-      // Given a LargePublisher, a CTI subtype where soft-delete filtering is unsupported, like em.find
-      await insertLargePublisher({ id: 1, name: "lp1" });
+      // Given a LargePublisher whose physical subtype table has no deleted_at column
+      await insertLargePublisher({ id: 1, name: "lp1", country: "us" });
       const em = newEntityManager();
       // And a Tag alias whose table has no deleted_at column
       const [t, lp] = tables(Tag, LargePublisher);
       resetQueryCount();
-      await em.query({ from: t, select: { name: t.name } });
-      await em.query({ from: lp, select: { name: lp.name } });
+      expect(await em.query({ from: t, select: { name: t.name } })).toEqual([]);
+      expect(await em.query({ from: lp, select: { country: lp.country } })).toEqual([{ country: "us" }]);
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT t.name AS name FROM tags AS t",
-         "SELECT lp_b0.name AS name FROM large_publishers AS lp LEFT OUTER JOIN publishers AS lp_b0 ON lp.id = lp_b0.id",
+         "SELECT lp.country AS country FROM large_publishers AS lp",
        ]
       `);
     });

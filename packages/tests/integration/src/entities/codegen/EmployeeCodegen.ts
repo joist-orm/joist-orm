@@ -160,6 +160,7 @@ declare module "joist-core" {
       optsType: EmployeeOpts;
       fieldsType: EmployeeFields;
       columnsType: EmployeeColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: EmployeeIdsOpts;
       factoryExtrasType: EmployeeFactoryExtras;

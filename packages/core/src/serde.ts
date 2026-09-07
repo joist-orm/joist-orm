@@ -626,6 +626,8 @@ export class PolymorphicKeySerde implements FieldSerde {
   constructor(
     private meta: () => EntityMetadata,
     private fieldName: string,
+    // Physical descriptors must keep their original components after domain specialization.
+    private storageColumn?: string,
   ) {}
 
   setOnEntityFromRowData(data: any, rowData: RowData, rowIndex: number): void {
@@ -692,7 +694,10 @@ export class PolymorphicKeySerde implements FieldSerde {
 
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
   private get field(): PolymorphicField {
-    return this.meta().fields[this.fieldName] as PolymorphicField;
+    const meta = this.meta();
+    return (
+      this.storageColumn ? meta.columns[this.storageColumn].field : meta.fields[this.fieldName]
+    ) as PolymorphicField;
   }
 }
 

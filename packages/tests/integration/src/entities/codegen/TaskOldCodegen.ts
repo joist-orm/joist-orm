@@ -79,27 +79,7 @@ export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   copiedTo: { kind: "o2m"; type: TaskOld };
 }
 
-export interface TaskOldColumns
-  extends Omit<TaskColumns, "id" | "special_old_field" | "parent_old_task_id" | "copied_from_id"> {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "special_old_field": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "parent_old_task_id": {
-    kind: "m2o";
-    type: TaskOld;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "copied_from_id": { kind: "m2o"; type: TaskOld; derived: false; nullable: true; insert: "optional"; update: true };
+export interface TaskOldColumns extends TaskColumns {
 }
 
 export interface TaskOldOpts extends TaskOpts {
@@ -179,6 +159,7 @@ declare module "joist-core" {
       optsType: TaskOldOpts;
       fieldsType: TaskOldFields;
       columnsType: TaskOldColumns;
+      inheritanceType: "sti";
       supportsEmExecute: false;
       optIdsType: TaskOldIdsOpts;
       factoryExtrasType: TaskOldFactoryExtras;

@@ -10,8 +10,36 @@ import {
 } from "./EntityDbMetadata.ts";
 import { fail } from "./utils.ts";
 
+/** Preserves physical storage metadata, then applies domain inheritance specialization. */
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
+  // Preserve storage domains before STI moves fields or rewrites relationship targets.
+  for (const meta of entities) {
+    meta.physicalMetadata = {
+      ...meta,
+      name: meta.name,
+      primitives: meta.primitives.map((field) => ({ ...field })),
+      enums: meta.enums.map((field) => ({ ...field })),
+      pgEnums: meta.pgEnums.map((field) => ({ ...field })),
+      manyToOnes: meta.manyToOnes.map((field) => ({ ...field })),
+      oneToManys: meta.oneToManys.map((field) => ({ ...field })),
+      largeOneToManys: meta.largeOneToManys.map((field) => ({ ...field })),
+      oneToOnes: meta.oneToOnes.map((field) => ({ ...field })),
+      manyToManys: meta.manyToManys.map((field) => ({ ...field })),
+      largeManyToManys: meta.largeManyToManys.map((field) => ({ ...field })),
+      polymorphics: meta.polymorphics.map((field) => ({
+        ...field,
+        components: field.components.map((component) => ({ ...component })),
+      })),
+      nonDeferredFks: meta.nonDeferredFks,
+      nonDeferredManyToManyFks: meta.nonDeferredManyToManyFks,
+    };
+    for (const timestamp of ["createdAt", "updatedAt", "deletedAt"] as const) {
+      meta.physicalMetadata[timestamp] = meta.physicalMetadata.primitives.find(
+        (field) => field.fieldName === meta[timestamp]?.fieldName,
+      );
+    }
+  }
   setClassTableInheritance(entities, entitiesByName);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
@@ -153,6 +181,7 @@ function expandSingleTableInheritance(
           name: subTypeName,
           entity: makeEntity(subTypeName),
           tableName: entity.tableName,
+          physicalMetadata: entity.physicalMetadata,
           primaryKey: entity.primaryKey,
           primitives: entity.primitives.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
           enums: entity.enums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),

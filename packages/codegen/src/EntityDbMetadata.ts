@@ -331,6 +331,8 @@ export class EntityDbMetadata {
   uniqueConstraints?: string[][];
   /** Gates mutation targets, not reads; false when required columns or array storage have no supported mutation mapping. */
   supportsEmExecute?: boolean;
+  /** Original table fields, captured before inheritance partitions or specializes them. */
+  physicalMetadata?: EntityDbMetadata;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -1059,6 +1061,9 @@ export function canonicalizeOtherEntities(db: DbMetadata): void {
     }
     for (const poly of meta.polymorphics) {
       for (const comp of poly.components) comp.otherEntity = canonical(comp.otherEntity);
+    }
+    if (meta.physicalMetadata) {
+      canonicalizeOtherEntities({ ...db, entities: [meta.physicalMetadata] });
     }
   }
 }

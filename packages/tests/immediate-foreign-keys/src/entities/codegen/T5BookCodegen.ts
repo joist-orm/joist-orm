@@ -132,6 +132,7 @@ declare module "joist-core" {
       optsType: T5BookOpts;
       fieldsType: T5BookFields;
       columnsType: T5BookColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: T5BookIdsOpts;
       factoryExtrasType: T5BookFactoryExtras;

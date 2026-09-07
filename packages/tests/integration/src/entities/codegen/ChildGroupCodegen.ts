@@ -178,6 +178,7 @@ declare module "joist-core" {
       optsType: ChildGroupOpts;
       fieldsType: ChildGroupFields;
       columnsType: ChildGroupColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: ChildGroupIdsOpts;
       factoryExtrasType: ChildGroupFactoryExtras;

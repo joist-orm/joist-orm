@@ -34,7 +34,7 @@ export const artistMeta: EntityMetadata<Artist> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "paintings": { kind: "o2m", fieldName: "paintings", fieldIdName: "paintingIds", required: false, otherMetadata: () => paintingMeta, otherFieldName: "artist", otherColumnName: "artistId", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "firstName": { "fieldName": "firstName" }, "lastName": { "fieldName": "lastName" }, "createdAt": { "fieldName": "createdAt" }, "updatedAt": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -43,6 +43,12 @@ export const artistMeta: EntityMetadata<Artist> = {
   baseTypes: [],
   subTypes: [],
 };
+
+artistMeta.columns["id"] = { fieldName: "id", field: artistMeta.fields["id"] };
+artistMeta.columns["firstName"] = { fieldName: "firstName", field: artistMeta.fields["firstName"] };
+artistMeta.columns["lastName"] = { fieldName: "lastName", field: artistMeta.fields["lastName"] };
+artistMeta.columns["createdAt"] = { fieldName: "createdAt", field: artistMeta.fields["createdAt"] };
+artistMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: artistMeta.fields["updatedAt"] };
 
 (Artist as any).metadata = artistMeta;
 
@@ -65,7 +71,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["authorId", "tagId"], hasJoinTableId: true },
   },
-  columns: { "id": { "fieldName": "id" }, "firstName": { "fieldName": "firstName" }, "lastName": { "fieldName": "lastName" }, "delete": { "fieldName": "delete" }, "createdAt": { "fieldName": "createdAt" }, "updatedAt": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -74,6 +80,13 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
+authorMeta.columns["firstName"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
+authorMeta.columns["lastName"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
+authorMeta.columns["delete"] = { fieldName: "delete", field: authorMeta.fields["delete"] };
+authorMeta.columns["createdAt"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
+authorMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -92,7 +105,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined, immutable: false, joinTableName: "book_to_tags", columnNames: ["bookId", "tagId"], hasJoinTableId: false },
   },
-  columns: { "id": { "fieldName": "id" }, "title": { "fieldName": "title" }, "authorId": { "fieldName": "author" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -101,6 +114,10 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
+bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
+bookMeta.columns["authorId"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 
@@ -118,7 +135,7 @@ export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
     "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "databaseOwners", serde: undefined, immutable: false, joinTableName: "database_owner_to_tags", columnNames: ["databaseOwnerId", "tagId"], hasJoinTableId: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -127,6 +144,9 @@ export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
   baseTypes: [],
   subTypes: [],
 };
+
+databaseOwnerMeta.columns["id"] = { fieldName: "id", field: databaseOwnerMeta.fields["id"] };
+databaseOwnerMeta.columns["name"] = { fieldName: "name", field: databaseOwnerMeta.fields["name"] };
 
 (DatabaseOwner as any).metadata = databaseOwnerMeta;
 
@@ -146,7 +166,7 @@ export const paintingMeta: EntityMetadata<Painting> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "artist": { kind: "m2o", fieldName: "artist", fieldIdName: "artistId", derived: false, required: true, otherMetadata: () => artistMeta, otherFieldName: "paintings", serde: new KeySerde("artist", "artist", "artistId", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "title": { "fieldName": "title" }, "createdAt": { "fieldName": "createdAt" }, "updatedAt": { "fieldName": "updatedAt" }, "artistId": { "fieldName": "artist" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -155,6 +175,12 @@ export const paintingMeta: EntityMetadata<Painting> = {
   baseTypes: [],
   subTypes: [],
 };
+
+paintingMeta.columns["id"] = { fieldName: "id", field: paintingMeta.fields["id"] };
+paintingMeta.columns["title"] = { fieldName: "title", field: paintingMeta.fields["title"] };
+paintingMeta.columns["createdAt"] = { fieldName: "createdAt", field: paintingMeta.fields["createdAt"] };
+paintingMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: paintingMeta.fields["updatedAt"] };
+paintingMeta.columns["artistId"] = { fieldName: "artist", field: paintingMeta.fields["artist"] };
 
 (Painting as any).metadata = paintingMeta;
 
@@ -174,7 +200,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     "books": { kind: "m2m", fieldName: "books", fieldIdName: "bookIds", required: false, derived: false, otherMetadata: () => bookMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "book_to_tags", columnNames: ["tagId", "bookId"], hasJoinTableId: false },
     "databaseOwners": { kind: "m2m", fieldName: "databaseOwners", fieldIdName: "databaseOwnerIds", required: false, derived: false, otherMetadata: () => databaseOwnerMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "database_owner_to_tags", columnNames: ["tagId", "databaseOwnerId"], hasJoinTableId: false },
   },
-  columns: { "id": { "fieldName": "id" }, "title": { "fieldName": "title" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -183,6 +209,9 @@ export const tagMeta: EntityMetadata<Tag> = {
   baseTypes: [],
   subTypes: [],
 };
+
+tagMeta.columns["id"] = { fieldName: "id", field: tagMeta.fields["id"] };
+tagMeta.columns["title"] = { fieldName: "title", field: tagMeta.fields["title"] };
 
 (Tag as any).metadata = tagMeta;
 

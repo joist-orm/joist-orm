@@ -324,6 +324,7 @@ declare module "joist-core" {
       optsType: BookOpts;
       fieldsType: BookFields;
       columnsType: BookColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: BookIdsOpts;
       factoryExtrasType: BookFactoryExtras;

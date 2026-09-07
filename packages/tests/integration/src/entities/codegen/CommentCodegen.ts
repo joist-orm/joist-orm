@@ -59,6 +59,7 @@ import {
   EntityManager,
   newComment,
   Publisher,
+  type Task,
   TaskOld,
   type User,
   type UserId,
@@ -140,7 +141,7 @@ export interface CommentColumns {
   "parent_book_id": { kind: "m2o"; type: Book; nullable: true; insert: "never"; update: false };
   "parent_book_review_id": { kind: "m2o"; type: BookReview; nullable: true; insert: "never"; update: false };
   "parent_publisher_id": { kind: "m2o"; type: Publisher; nullable: true; insert: "never"; update: false };
-  "parent_task_id": { kind: "m2o"; type: TaskOld; nullable: true; insert: "never"; update: false };
+  "parent_task_id": { kind: "m2o"; type: Task; nullable: true; insert: "never"; update: false };
 }
 
 export interface CommentOpts {
@@ -237,6 +238,7 @@ declare module "joist-core" {
       optsType: CommentOpts;
       fieldsType: CommentFields;
       columnsType: CommentColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;

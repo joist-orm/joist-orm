@@ -130,6 +130,7 @@ declare module "joist-core" {
       optsType: T3BookOpts;
       fieldsType: T3BookFields;
       columnsType: T3BookColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: T3BookIdsOpts;
       factoryExtrasType: T3BookFactoryExtras;

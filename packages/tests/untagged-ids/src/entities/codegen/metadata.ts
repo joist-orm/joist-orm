@@ -34,7 +34,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "bookReviews": { kind: "o2m", fieldName: "bookReviews", fieldIdName: "bookReviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", otherColumnName: "book_id", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_author_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "first_name": { "fieldName": "firstName" }, "last_name": { "fieldName": "lastName" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -43,6 +43,12 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
+authorMeta.columns["first_name"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
+authorMeta.columns["last_name"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
+authorMeta.columns["created_at"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
+authorMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -63,7 +69,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_book_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "title": { "fieldName": "title" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "author_id": { "fieldName": "author" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -72,6 +78,12 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
+bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
+bookMeta.columns["created_at"] = { fieldName: "createdAt", field: bookMeta.fields["createdAt"] };
+bookMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookMeta.fields["updatedAt"] };
+bookMeta.columns["author_id"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 
@@ -89,7 +101,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     "rating": { kind: "primitive", fieldName: "rating", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("rating", "rating", "smallint", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "bookReviews", serde: new KeySerde("a", "book", "book_id", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "rating": { "fieldName": "rating" }, "book_id": { "fieldName": "book" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -98,6 +110,10 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookReviewMeta.columns["id"] = { fieldName: "id", field: bookReviewMeta.fields["id"] };
+bookReviewMeta.columns["rating"] = { fieldName: "rating", field: bookReviewMeta.fields["rating"] };
+bookReviewMeta.columns["book_id"] = { fieldName: "book", field: bookReviewMeta.fields["book"] };
 
 (BookReview as any).metadata = bookReviewMeta;
 
@@ -117,7 +133,7 @@ export const commentMeta: EntityMetadata<Comment> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "parent": { kind: "poly", fieldName: "parent", fieldIdName: "parentId", required: true, components: [{ otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" }, { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" }], serde: new PolymorphicKeySerde(() => commentMeta, "parent"), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "text": { "fieldName": "text" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "parent_author_id": { "fieldName": "parent" }, "parent_book_id": { "fieldName": "parent" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -126,6 +142,16 @@ export const commentMeta: EntityMetadata<Comment> = {
   baseTypes: [],
   subTypes: [],
 };
+
+commentMeta.columns["id"] = { fieldName: "id", field: commentMeta.fields["id"] };
+commentMeta.columns["text"] = { fieldName: "text", field: commentMeta.fields["text"] };
+commentMeta.columns["created_at"] = { fieldName: "createdAt", field: commentMeta.fields["createdAt"] };
+commentMeta.columns["updated_at"] = { fieldName: "updatedAt", field: commentMeta.fields["updatedAt"] };
+commentMeta.columns["parent_author_id"] = {
+  fieldName: "parent",
+  field: { kind: "poly", fieldName: "parent", fieldIdName: "parentId", required: true, components: [{ otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" }, { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" }], serde: new PolymorphicKeySerde(() => commentMeta, "parent", "parent_author_id"), immutable: false },
+};
+commentMeta.columns["parent_book_id"] = { fieldName: "parent", field: commentMeta.columns["parent_author_id"].field };
 
 (Comment as any).metadata = commentMeta;
 

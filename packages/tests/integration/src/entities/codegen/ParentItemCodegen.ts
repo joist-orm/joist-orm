@@ -166,6 +166,7 @@ declare module "joist-core" {
       optsType: ParentItemOpts;
       fieldsType: ParentItemFields;
       columnsType: ParentItemColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: ParentItemIdsOpts;
       factoryExtrasType: ParentItemFactoryExtras;

@@ -119,7 +119,7 @@ export const adminUserMeta: EntityMetadata<AdminUser> = {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("u", "id", "id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
     "role": { kind: "primitive", fieldName: "role", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("role", "role", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "role": { "fieldName": "role" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,
@@ -128,6 +128,9 @@ export const adminUserMeta: EntityMetadata<AdminUser> = {
   baseTypes: [],
   subTypes: [],
 };
+
+adminUserMeta.columns["id"] = { fieldName: "id", field: adminUserMeta.fields["id"] };
+adminUserMeta.columns["role"] = { fieldName: "role", field: adminUserMeta.fields["role"] };
 
 (AdminUser as any).metadata = adminUserMeta;
 
@@ -192,45 +195,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
     "userOneToOne": { kind: "o2o", fieldName: "userOneToOne", fieldIdName: "userOneToOneId", required: false, otherMetadata: () => userMeta, otherFieldName: "authorManyToOne", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "first_name": { "fieldName": "firstName" },
-    "last_name": { "fieldName": "lastName" },
-    "ssn": { "fieldName": "ssn" },
-    "initials": { "fieldName": "initials" },
-    "number_of_books": { "fieldName": "numberOfBooks" },
-    "book_comments": { "fieldName": "bookComments" },
-    "is_popular": { "fieldName": "isPopular" },
-    "age": { "fieldName": "age" },
-    "graduated": { "fieldName": "graduated" },
-    "nick_names": { "fieldName": "nickNames" },
-    "nick_names_upper": { "fieldName": "nickNamesUpper" },
-    "was_ever_popular": { "fieldName": "wasEverPopular" },
-    "is_funny": { "fieldName": "isFunny" },
-    "mentor_names": { "fieldName": "mentorNames" },
-    "mentee_names": { "fieldName": "menteeNames" },
-    "address": { "fieldName": "address" },
-    "business_address": { "fieldName": "businessAddress" },
-    "quotes": { "fieldName": "quotes" },
-    "number_of_atoms": { "fieldName": "numberOfAtoms" },
-    "deleted_at": { "fieldName": "deletedAt" },
-    "number_of_public_reviews": { "fieldName": "numberOfPublicReviews" },
-    "numberOfPublicReviews2": { "fieldName": "numberOfPublicReviews2" },
-    "tags_of_all_books": { "fieldName": "tagsOfAllBooks" },
-    "search": { "fieldName": "search" },
-    "image_file_name": { "fieldName": "imageFileName" },
-    "certificate": { "fieldName": "certificate" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "range_of_books": { "fieldName": "rangeOfBooks" },
-    "favorite_colors": { "fieldName": "favoriteColors" },
-    "favorite_shape": { "fieldName": "favoriteShape" },
-    "mentor_id": { "fieldName": "mentor" },
-    "root_mentor_id": { "fieldName": "rootMentor" },
-    "current_draft_book_id": { "fieldName": "currentDraftBook" },
-    "favorite_book_id": { "fieldName": "favoriteBook" },
-    "publisher_id": { "fieldName": "publisher" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -240,6 +205,44 @@ export const authorMeta: EntityMetadata<Author> = {
   subTypes: [],
   uniqueBy: [["ssn"], ["currentDraftBook"]],
 };
+
+authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
+authorMeta.columns["first_name"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
+authorMeta.columns["last_name"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
+authorMeta.columns["ssn"] = { fieldName: "ssn", field: authorMeta.fields["ssn"] };
+authorMeta.columns["initials"] = { fieldName: "initials", field: authorMeta.fields["initials"] };
+authorMeta.columns["number_of_books"] = { fieldName: "numberOfBooks", field: authorMeta.fields["numberOfBooks"] };
+authorMeta.columns["book_comments"] = { fieldName: "bookComments", field: authorMeta.fields["bookComments"] };
+authorMeta.columns["is_popular"] = { fieldName: "isPopular", field: authorMeta.fields["isPopular"] };
+authorMeta.columns["age"] = { fieldName: "age", field: authorMeta.fields["age"] };
+authorMeta.columns["graduated"] = { fieldName: "graduated", field: authorMeta.fields["graduated"] };
+authorMeta.columns["nick_names"] = { fieldName: "nickNames", field: { kind: "primitive", fieldName: "nickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNames", "nick_names", "character varying[]", true, true, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false, sanitize: false } };
+authorMeta.columns["nick_names_upper"] = { fieldName: "nickNamesUpper", field: authorMeta.fields["nickNamesUpper"] };
+authorMeta.columns["was_ever_popular"] = { fieldName: "wasEverPopular", field: authorMeta.fields["wasEverPopular"] };
+authorMeta.columns["is_funny"] = { fieldName: "isFunny", field: authorMeta.fields["isFunny"] };
+authorMeta.columns["mentor_names"] = { fieldName: "mentorNames", field: authorMeta.fields["mentorNames"] };
+authorMeta.columns["mentee_names"] = { fieldName: "menteeNames", field: authorMeta.fields["menteeNames"] };
+authorMeta.columns["address"] = { fieldName: "address", field: authorMeta.fields["address"] };
+authorMeta.columns["business_address"] = { fieldName: "businessAddress", field: authorMeta.fields["businessAddress"] };
+authorMeta.columns["quotes"] = { fieldName: "quotes", field: authorMeta.fields["quotes"] };
+authorMeta.columns["number_of_atoms"] = { fieldName: "numberOfAtoms", field: authorMeta.fields["numberOfAtoms"] };
+authorMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: authorMeta.fields["deletedAt"] };
+authorMeta.columns["number_of_public_reviews"] = { fieldName: "numberOfPublicReviews", field: authorMeta.fields["numberOfPublicReviews"] };
+authorMeta.columns["numberOfPublicReviews2"] = { fieldName: "numberOfPublicReviews2", field: authorMeta.fields["numberOfPublicReviews2"] };
+authorMeta.columns["tags_of_all_books"] = { fieldName: "tagsOfAllBooks", field: authorMeta.fields["tagsOfAllBooks"] };
+authorMeta.columns["search"] = { fieldName: "search", field: authorMeta.fields["search"] };
+authorMeta.columns["image_file_name"] = { fieldName: "imageFileName", field: authorMeta.fields["imageFileName"] };
+authorMeta.columns["certificate"] = { fieldName: "certificate", field: authorMeta.fields["certificate"] };
+authorMeta.columns["created_at"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
+authorMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
+authorMeta.columns["range_of_books"] = { fieldName: "rangeOfBooks", field: authorMeta.fields["rangeOfBooks"] };
+authorMeta.columns["favorite_colors"] = { fieldName: "favoriteColors", field: authorMeta.fields["favoriteColors"] };
+authorMeta.columns["favorite_shape"] = { fieldName: "favoriteShape", field: authorMeta.fields["favoriteShape"] };
+authorMeta.columns["mentor_id"] = { fieldName: "mentor", field: authorMeta.fields["mentor"] };
+authorMeta.columns["root_mentor_id"] = { fieldName: "rootMentor", field: authorMeta.fields["rootMentor"] };
+authorMeta.columns["current_draft_book_id"] = { fieldName: "currentDraftBook", field: authorMeta.fields["currentDraftBook"] };
+authorMeta.columns["favorite_book_id"] = { fieldName: "favoriteBook", field: authorMeta.fields["favoriteBook"] };
+authorMeta.columns["publisher_id"] = { fieldName: "publisher", field: authorMeta.fields["publisher"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -259,7 +262,7 @@ export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "schedules", serde: new KeySerde("a", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "overview": { "fieldName": "overview" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "author_id": { "fieldName": "author" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -268,6 +271,12 @@ export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorScheduleMeta.columns["id"] = { fieldName: "id", field: authorScheduleMeta.fields["id"] };
+authorScheduleMeta.columns["overview"] = { fieldName: "overview", field: authorScheduleMeta.fields["overview"] };
+authorScheduleMeta.columns["created_at"] = { fieldName: "createdAt", field: authorScheduleMeta.fields["createdAt"] };
+authorScheduleMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorScheduleMeta.fields["updatedAt"] };
+authorScheduleMeta.columns["author_id"] = { fieldName: "author", field: authorScheduleMeta.fields["author"] };
 
 (AuthorSchedule as any).metadata = authorScheduleMeta;
 
@@ -299,25 +308,7 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
     "decimalSamples": { kind: "primitive", fieldName: "decimalSamples", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new DecimalToNumberSerde("decimalSamples", "decimal_samples", true, true, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
     "bigintSamples": { kind: "primitive", fieldName: "bigintSamples", fieldIdName: undefined, derived: false, required: false, protected: false, type: "bigint", serde: new BigIntSerde("bigintSamples", "bigint_samples", true, true, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "smallint": { "fieldName": "smallint" },
-    "integer": { "fieldName": "integer" },
-    "nullable_integer": { "fieldName": "nullableInteger" },
-    "bigint": { "fieldName": "bigint" },
-    "decimal": { "fieldName": "decimal" },
-    "real": { "fieldName": "real" },
-    "smallserial": { "fieldName": "smallserial" },
-    "serial": { "fieldName": "serial" },
-    "bigserial": { "fieldName": "bigserial" },
-    "double_precision": { "fieldName": "doublePrecision" },
-    "nullable_text": { "fieldName": "nullableText" },
-    "json": { "fieldName": "json" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "decimal_samples": { "fieldName": "decimalSamples" },
-    "bigint_samples": { "fieldName": "bigintSamples" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -326,6 +317,24 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorStatMeta.columns["id"] = { fieldName: "id", field: authorStatMeta.fields["id"] };
+authorStatMeta.columns["smallint"] = { fieldName: "smallint", field: authorStatMeta.fields["smallint"] };
+authorStatMeta.columns["integer"] = { fieldName: "integer", field: authorStatMeta.fields["integer"] };
+authorStatMeta.columns["nullable_integer"] = { fieldName: "nullableInteger", field: authorStatMeta.fields["nullableInteger"] };
+authorStatMeta.columns["bigint"] = { fieldName: "bigint", field: authorStatMeta.fields["bigint"] };
+authorStatMeta.columns["decimal"] = { fieldName: "decimal", field: authorStatMeta.fields["decimal"] };
+authorStatMeta.columns["real"] = { fieldName: "real", field: authorStatMeta.fields["real"] };
+authorStatMeta.columns["smallserial"] = { fieldName: "smallserial", field: authorStatMeta.fields["smallserial"] };
+authorStatMeta.columns["serial"] = { fieldName: "serial", field: authorStatMeta.fields["serial"] };
+authorStatMeta.columns["bigserial"] = { fieldName: "bigserial", field: authorStatMeta.fields["bigserial"] };
+authorStatMeta.columns["double_precision"] = { fieldName: "doublePrecision", field: authorStatMeta.fields["doublePrecision"] };
+authorStatMeta.columns["nullable_text"] = { fieldName: "nullableText", field: authorStatMeta.fields["nullableText"] };
+authorStatMeta.columns["json"] = { fieldName: "json", field: authorStatMeta.fields["json"] };
+authorStatMeta.columns["created_at"] = { fieldName: "createdAt", field: authorStatMeta.fields["createdAt"] };
+authorStatMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorStatMeta.fields["updatedAt"] };
+authorStatMeta.columns["decimal_samples"] = { fieldName: "decimalSamples", field: authorStatMeta.fields["decimalSamples"] };
+authorStatMeta.columns["bigint_samples"] = { fieldName: "bigintSamples", field: authorStatMeta.fields["bigintSamples"] };
 
 (AuthorStat as any).metadata = authorStatMeta;
 
@@ -362,22 +371,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "favoriteAuthor": { kind: "o2o", fieldName: "favoriteAuthor", fieldIdName: "favoriteAuthorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "favoriteBook", otherColumnName: "favorite_book_id", serde: undefined, immutable: false },
     "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", otherColumnName: "book_id", serde: undefined, immutable: false },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "title": { "fieldName": "title" },
-    "order": { "fieldName": "order" },
-    "notes": { "fieldName": "notes" },
-    "acknowledgements": { "fieldName": "acknowledgements" },
-    "authors_nick_names": { "fieldName": "authorsNickNames" },
-    "search": { "fieldName": "search" },
-    "deleted_at": { "fieldName": "deletedAt" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "prequel_id": { "fieldName": "prequel" },
-    "author_id": { "fieldName": "author" },
-    "reviewer_id": { "fieldName": "reviewer" },
-    "random_comment_id": { "fieldName": "randomComment" },
-  },
+  columns: {},
   allFields: {},
   orderBy: "title",
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -387,6 +381,21 @@ export const bookMeta: EntityMetadata<Book> = {
   subTypes: [],
   uniqueBy: [["author", "title"], ["prequel"]],
 };
+
+bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
+bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
+bookMeta.columns["order"] = { fieldName: "order", field: { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int", false, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" } };
+bookMeta.columns["notes"] = { fieldName: "notes", field: { kind: "primitive", fieldName: "notes", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("notes", "notes", "text", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false } };
+bookMeta.columns["acknowledgements"] = { fieldName: "acknowledgements", field: bookMeta.fields["acknowledgements"] };
+bookMeta.columns["authors_nick_names"] = { fieldName: "authorsNickNames", field: { kind: "primitive", fieldName: "authorsNickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("authorsNickNames", "authors_nick_names", "text", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+bookMeta.columns["search"] = { fieldName: "search", field: bookMeta.fields["search"] };
+bookMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: bookMeta.fields["deletedAt"] };
+bookMeta.columns["created_at"] = { fieldName: "createdAt", field: bookMeta.fields["createdAt"] };
+bookMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookMeta.fields["updatedAt"] };
+bookMeta.columns["prequel_id"] = { fieldName: "prequel", field: bookMeta.fields["prequel"] };
+bookMeta.columns["author_id"] = { fieldName: "author", field: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false } };
+bookMeta.columns["reviewer_id"] = { fieldName: "reviewer", field: { kind: "m2o", fieldName: "reviewer", fieldIdName: "reviewerId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "reviewerBooks", serde: new KeySerde("a", "reviewer", "reviewer_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+bookMeta.columns["random_comment_id"] = { fieldName: "randomComment", field: bookMeta.fields["randomComment"] };
 
 (Book as any).metadata = bookMeta;
 
@@ -407,7 +416,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: true, otherMetadata: () => bookMeta, otherFieldName: "advances", serde: new KeySerde("b", "book", "book_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "publisher": { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", derived: false, required: true, otherMetadata: () => publisherMeta, otherFieldName: "bookAdvances", serde: new KeySerde("p", "publisher", "publisher_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "status_id": { "fieldName": "status" }, "book_id": { "fieldName": "book" }, "publisher_id": { "fieldName": "publisher" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -416,6 +425,13 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookAdvanceMeta.columns["id"] = { fieldName: "id", field: bookAdvanceMeta.fields["id"] };
+bookAdvanceMeta.columns["created_at"] = { fieldName: "createdAt", field: bookAdvanceMeta.fields["createdAt"] };
+bookAdvanceMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookAdvanceMeta.fields["updatedAt"] };
+bookAdvanceMeta.columns["status_id"] = { fieldName: "status", field: bookAdvanceMeta.fields["status"] };
+bookAdvanceMeta.columns["book_id"] = { fieldName: "book", field: bookAdvanceMeta.fields["book"] };
+bookAdvanceMeta.columns["publisher_id"] = { fieldName: "publisher", field: bookAdvanceMeta.fields["publisher"] };
 
 (BookAdvance as any).metadata = bookAdvanceMeta;
 
@@ -442,7 +458,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     "bestReviewAuthors": { kind: "m2m", fieldName: "bestReviewAuthors", fieldIdName: "bestReviewAuthorIds", required: false, derived: "otherSide", otherMetadata: () => authorMeta, otherFieldName: "bestReviews", serde: undefined, immutable: false, joinTableName: "authors_to_best_reviews", columnNames: ["book_review_id", "author_id"], hasJoinTableId: true },
     "comment": { kind: "o2o", fieldName: "comment", fieldIdName: "commentId", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_book_review_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "rating": { "fieldName": "rating" }, "is_public": { "fieldName": "isPublic" }, "is_test": { "fieldName": "isTest" }, "is_test_chain": { "fieldName": "isTestChain" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "book_id": { "fieldName": "book" }, "critic_id": { "fieldName": "critic" } },
+  columns: {},
   allFields: {},
   orderBy: "critic",
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -451,6 +467,16 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookReviewMeta.columns["id"] = { fieldName: "id", field: bookReviewMeta.fields["id"] };
+bookReviewMeta.columns["rating"] = { fieldName: "rating", field: bookReviewMeta.fields["rating"] };
+bookReviewMeta.columns["is_public"] = { fieldName: "isPublic", field: bookReviewMeta.fields["isPublic"] };
+bookReviewMeta.columns["is_test"] = { fieldName: "isTest", field: bookReviewMeta.fields["isTest"] };
+bookReviewMeta.columns["is_test_chain"] = { fieldName: "isTestChain", field: bookReviewMeta.fields["isTestChain"] };
+bookReviewMeta.columns["created_at"] = { fieldName: "createdAt", field: bookReviewMeta.fields["createdAt"] };
+bookReviewMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookReviewMeta.fields["updatedAt"] };
+bookReviewMeta.columns["book_id"] = { fieldName: "book", field: bookReviewMeta.fields["book"] };
+bookReviewMeta.columns["critic_id"] = { fieldName: "critic", field: bookReviewMeta.fields["critic"] };
 
 (BookReview as any).metadata = bookReviewMeta;
 
@@ -470,7 +496,7 @@ export const childMeta: EntityMetadata<Child> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "groups": { kind: "o2m", fieldName: "groups", fieldIdName: "groupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "childGroup", otherColumnName: "child_group_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -479,6 +505,11 @@ export const childMeta: EntityMetadata<Child> = {
   baseTypes: [],
   subTypes: [],
 };
+
+childMeta.columns["id"] = { fieldName: "id", field: childMeta.fields["id"] };
+childMeta.columns["name"] = { fieldName: "name", field: childMeta.fields["name"] };
+childMeta.columns["created_at"] = { fieldName: "createdAt", field: childMeta.fields["createdAt"] };
+childMeta.columns["updated_at"] = { fieldName: "updatedAt", field: childMeta.fields["updatedAt"] };
 
 (Child as any).metadata = childMeta;
 
@@ -500,7 +531,7 @@ export const childGroupMeta: EntityMetadata<ChildGroup> = {
     "parentGroup": { kind: "m2o", fieldName: "parentGroup", fieldIdName: "parentGroupId", derived: false, required: true, otherMetadata: () => parentGroupMeta, otherFieldName: "childGroups", serde: new KeySerde("parentGroup", "parentGroup", "parent_group_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "childItems": { kind: "o2m", fieldName: "childItems", fieldIdName: "childItemIds", required: false, otherMetadata: () => childItemMeta, otherFieldName: "childGroup", otherColumnName: "child_group_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "child_group_id": { "fieldName": "childGroup" }, "parent_group_id": { "fieldName": "parentGroup" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -509,6 +540,13 @@ export const childGroupMeta: EntityMetadata<ChildGroup> = {
   baseTypes: [],
   subTypes: [],
 };
+
+childGroupMeta.columns["id"] = { fieldName: "id", field: childGroupMeta.fields["id"] };
+childGroupMeta.columns["name"] = { fieldName: "name", field: childGroupMeta.fields["name"] };
+childGroupMeta.columns["created_at"] = { fieldName: "createdAt", field: childGroupMeta.fields["createdAt"] };
+childGroupMeta.columns["updated_at"] = { fieldName: "updatedAt", field: childGroupMeta.fields["updatedAt"] };
+childGroupMeta.columns["child_group_id"] = { fieldName: "childGroup", field: childGroupMeta.fields["childGroup"] };
+childGroupMeta.columns["parent_group_id"] = { fieldName: "parentGroup", field: childGroupMeta.fields["parentGroup"] };
 
 (ChildGroup as any).metadata = childGroupMeta;
 
@@ -529,7 +567,7 @@ export const childItemMeta: EntityMetadata<ChildItem> = {
     "childGroup": { kind: "m2o", fieldName: "childGroup", fieldIdName: "childGroupId", derived: false, required: true, otherMetadata: () => childGroupMeta, otherFieldName: "childItems", serde: new KeySerde("cg", "childGroup", "child_group_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "parentItem": { kind: "m2o", fieldName: "parentItem", fieldIdName: "parentItemId", derived: false, required: true, otherMetadata: () => parentItemMeta, otherFieldName: "childItems", serde: new KeySerde("pi", "parentItem", "parent_item_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "child_group_id": { "fieldName": "childGroup" }, "parent_item_id": { "fieldName": "parentItem" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -538,6 +576,13 @@ export const childItemMeta: EntityMetadata<ChildItem> = {
   baseTypes: [],
   subTypes: [],
 };
+
+childItemMeta.columns["id"] = { fieldName: "id", field: childItemMeta.fields["id"] };
+childItemMeta.columns["name"] = { fieldName: "name", field: childItemMeta.fields["name"] };
+childItemMeta.columns["created_at"] = { fieldName: "createdAt", field: childItemMeta.fields["createdAt"] };
+childItemMeta.columns["updated_at"] = { fieldName: "updatedAt", field: childItemMeta.fields["updatedAt"] };
+childItemMeta.columns["child_group_id"] = { fieldName: "childGroup", field: childItemMeta.fields["childGroup"] };
+childItemMeta.columns["parent_item_id"] = { fieldName: "parentItem", field: childItemMeta.fields["parentItem"] };
 
 (ChildItem as any).metadata = childItemMeta;
 
@@ -574,20 +619,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       immutable: false,
     },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "parent_tagged_id": { "fieldName": "parentTaggedId" },
-    "parent_tags": { "fieldName": "parentTags" },
-    "text": { "fieldName": "text" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "user_id": { "fieldName": "user" },
-    "parent_author_id": { "fieldName": "parent" },
-    "parent_book_id": { "fieldName": "parent" },
-    "parent_book_review_id": { "fieldName": "parent" },
-    "parent_publisher_id": { "fieldName": "parent" },
-    "parent_task_id": { "fieldName": "parent" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -596,6 +628,36 @@ export const commentMeta: EntityMetadata<Comment> = {
   baseTypes: [],
   subTypes: [],
 };
+
+commentMeta.columns["id"] = { fieldName: "id", field: commentMeta.fields["id"] };
+commentMeta.columns["parent_tagged_id"] = { fieldName: "parentTaggedId", field: commentMeta.fields["parentTaggedId"] };
+commentMeta.columns["parent_tags"] = { fieldName: "parentTags", field: commentMeta.fields["parentTags"] };
+commentMeta.columns["text"] = { fieldName: "text", field: commentMeta.fields["text"] };
+commentMeta.columns["created_at"] = { fieldName: "createdAt", field: commentMeta.fields["createdAt"] };
+commentMeta.columns["updated_at"] = { fieldName: "updatedAt", field: commentMeta.fields["updatedAt"] };
+commentMeta.columns["user_id"] = { fieldName: "user", field: commentMeta.fields["user"] };
+commentMeta.columns["parent_author_id"] = {
+  fieldName: "parent",
+  field: {
+    kind: "poly",
+    fieldName: "parent",
+    fieldIdName: "parentId",
+    required: true,
+    components: [
+      { otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" },
+      { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" },
+      { otherMetadata: () => bookReviewMeta, otherFieldName: "comment", columnName: "parent_book_review_id" },
+      { otherMetadata: () => publisherMeta, otherFieldName: "comments", columnName: "parent_publisher_id" },
+      { otherMetadata: () => taskMeta, otherFieldName: "comments", columnName: "parent_task_id" },
+    ],
+    serde: new PolymorphicKeySerde(() => commentMeta, "parent", "parent_author_id"),
+    immutable: false,
+  },
+};
+commentMeta.columns["parent_book_id"] = { fieldName: "parent", field: commentMeta.columns["parent_author_id"].field };
+commentMeta.columns["parent_book_review_id"] = { fieldName: "parent", field: commentMeta.columns["parent_author_id"].field };
+commentMeta.columns["parent_publisher_id"] = { fieldName: "parent", field: commentMeta.columns["parent_author_id"].field };
+commentMeta.columns["parent_task_id"] = { fieldName: "parent", field: commentMeta.columns["parent_author_id"].field };
 
 (Comment as any).metadata = commentMeta;
 
@@ -618,7 +680,7 @@ export const criticMeta: EntityMetadata<Critic> = {
     "bookReviews": { kind: "o2m", fieldName: "bookReviews", fieldIdName: "bookReviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "critic", otherColumnName: "critic_id", serde: undefined, immutable: false, orderBy: { field: "critic", direction: "ASC" } },
     "criticColumn": { kind: "o2o", fieldName: "criticColumn", fieldIdName: "criticColumnId", required: false, otherMetadata: () => criticColumnMeta, otherFieldName: "critic", otherColumnName: "critic_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "favorite_large_publisher_id": { "fieldName": "favoriteLargePublisher" }, "group_id": { "fieldName": "group" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -627,6 +689,13 @@ export const criticMeta: EntityMetadata<Critic> = {
   baseTypes: [],
   subTypes: [],
 };
+
+criticMeta.columns["id"] = { fieldName: "id", field: criticMeta.fields["id"] };
+criticMeta.columns["name"] = { fieldName: "name", field: criticMeta.fields["name"] };
+criticMeta.columns["created_at"] = { fieldName: "createdAt", field: criticMeta.fields["createdAt"] };
+criticMeta.columns["updated_at"] = { fieldName: "updatedAt", field: criticMeta.fields["updatedAt"] };
+criticMeta.columns["favorite_large_publisher_id"] = { fieldName: "favoriteLargePublisher", field: criticMeta.fields["favoriteLargePublisher"] };
+criticMeta.columns["group_id"] = { fieldName: "group", field: criticMeta.fields["group"] };
 
 (Critic as any).metadata = criticMeta;
 
@@ -646,7 +715,7 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "critic": { kind: "m2o", fieldName: "critic", fieldIdName: "criticId", derived: false, required: true, otherMetadata: () => criticMeta, otherFieldName: "criticColumn", serde: new KeySerde("c", "critic", "critic_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "critic_id": { "fieldName": "critic" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -656,6 +725,12 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
   subTypes: [],
   uniqueBy: [["critic"]],
 };
+
+criticColumnMeta.columns["id"] = { fieldName: "id", field: criticColumnMeta.fields["id"] };
+criticColumnMeta.columns["name"] = { fieldName: "name", field: criticColumnMeta.fields["name"] };
+criticColumnMeta.columns["created_at"] = { fieldName: "createdAt", field: criticColumnMeta.fields["createdAt"] };
+criticColumnMeta.columns["updated_at"] = { fieldName: "updatedAt", field: criticColumnMeta.fields["updatedAt"] };
+criticColumnMeta.columns["critic_id"] = { fieldName: "critic", field: criticColumnMeta.fields["critic"] };
 
 (CriticColumn as any).metadata = criticColumnMeta;
 
@@ -678,7 +753,7 @@ export const employeeMeta: EntityMetadata<Employee> = {
     "managersClosure": { kind: "m2m", fieldName: "managersClosure", fieldIdName: "managersClosureIds", required: false, derived: "async", otherMetadata: () => employeeMeta, otherFieldName: "managerOfClosure", serde: undefined, immutable: false, joinTableName: "employee_to_managers_closure", columnNames: ["employee_id", "manager_id"], hasJoinTableId: true },
     "managerOfClosure": { kind: "m2m", fieldName: "managerOfClosure", fieldIdName: "managerOfClosureIds", required: false, derived: "otherSide", otherMetadata: () => employeeMeta, otherFieldName: "managersClosure", serde: undefined, immutable: false, joinTableName: "employee_to_managers_closure", columnNames: ["manager_id", "employee_id"], hasJoinTableId: true },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "manager_id": { "fieldName": "manager" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -687,6 +762,12 @@ export const employeeMeta: EntityMetadata<Employee> = {
   baseTypes: [],
   subTypes: [],
 };
+
+employeeMeta.columns["id"] = { fieldName: "id", field: employeeMeta.fields["id"] };
+employeeMeta.columns["name"] = { fieldName: "name", field: employeeMeta.fields["name"] };
+employeeMeta.columns["created_at"] = { fieldName: "createdAt", field: employeeMeta.fields["createdAt"] };
+employeeMeta.columns["updated_at"] = { fieldName: "updatedAt", field: employeeMeta.fields["updatedAt"] };
+employeeMeta.columns["manager_id"] = { fieldName: "manager", field: employeeMeta.fields["manager"] };
 
 (Employee as any).metadata = employeeMeta;
 
@@ -709,7 +790,7 @@ export const imageMeta: EntityMetadata<Image> = {
     "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: false, otherMetadata: () => bookMeta, otherFieldName: "image", serde: new KeySerde("b", "book", "book_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
     "publisher": { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", derived: false, required: false, otherMetadata: () => publisherMeta, otherFieldName: "images", serde: new KeySerde("p", "publisher", "publisher_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "file_name": { "fieldName": "fileName" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "type_id": { "fieldName": "type" }, "author_id": { "fieldName": "author" }, "book_id": { "fieldName": "book" }, "publisher_id": { "fieldName": "publisher" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -719,6 +800,15 @@ export const imageMeta: EntityMetadata<Image> = {
   subTypes: [],
   uniqueBy: [["author"], ["book"]],
 };
+
+imageMeta.columns["id"] = { fieldName: "id", field: imageMeta.fields["id"] };
+imageMeta.columns["file_name"] = { fieldName: "fileName", field: imageMeta.fields["fileName"] };
+imageMeta.columns["created_at"] = { fieldName: "createdAt", field: imageMeta.fields["createdAt"] };
+imageMeta.columns["updated_at"] = { fieldName: "updatedAt", field: imageMeta.fields["updatedAt"] };
+imageMeta.columns["type_id"] = { fieldName: "type", field: imageMeta.fields["type"] };
+imageMeta.columns["author_id"] = { fieldName: "author", field: imageMeta.fields["author"] };
+imageMeta.columns["book_id"] = { fieldName: "book", field: imageMeta.fields["book"] };
+imageMeta.columns["publisher_id"] = { fieldName: "publisher", field: imageMeta.fields["publisher"] };
 
 (Image as any).metadata = imageMeta;
 
@@ -741,7 +831,7 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
     "critics": { kind: "o2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "favoriteLargePublisher", otherColumnName: "favorite_large_publisher_id", serde: undefined, immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", otherColumnName: "favorite_publisher_large_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "shared_column": { "fieldName": "sharedColumn" }, "country": { "fieldName": "country" }, "rating": { "fieldName": "rating" }, "spotlight_author_id": { "fieldName": "spotlightAuthor" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,
@@ -750,6 +840,10 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
   baseTypes: [],
   subTypes: [],
 };
+
+largePublisherMeta.columns["id"] = { fieldName: "id", field: largePublisherMeta.fields["id"] };
+largePublisherMeta.columns["shared_column"] = { fieldName: "sharedColumn", field: largePublisherMeta.fields["sharedColumn"] };
+largePublisherMeta.columns["country"] = { fieldName: "country", field: largePublisherMeta.fields["country"] };
 
 (LargePublisher as any).metadata = largePublisherMeta;
 
@@ -772,7 +866,7 @@ export const parentGroupMeta: EntityMetadata<ParentGroup> = {
     "childGroups": { kind: "o2m", fieldName: "childGroups", fieldIdName: "childGroupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
     "parentItems": { kind: "o2m", fieldName: "parentItems", fieldIdName: "parentItemIds", required: false, otherMetadata: () => parentItemMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "bulk_data": { "fieldName": "bulkData" }, "required_data": { "fieldName": "requiredData" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -781,6 +875,13 @@ export const parentGroupMeta: EntityMetadata<ParentGroup> = {
   baseTypes: [],
   subTypes: [],
 };
+
+parentGroupMeta.columns["id"] = { fieldName: "id", field: parentGroupMeta.fields["id"] };
+parentGroupMeta.columns["name"] = { fieldName: "name", field: parentGroupMeta.fields["name"] };
+parentGroupMeta.columns["bulk_data"] = { fieldName: "bulkData", field: parentGroupMeta.fields["bulkData"] };
+parentGroupMeta.columns["required_data"] = { fieldName: "requiredData", field: parentGroupMeta.fields["requiredData"] };
+parentGroupMeta.columns["created_at"] = { fieldName: "createdAt", field: parentGroupMeta.fields["createdAt"] };
+parentGroupMeta.columns["updated_at"] = { fieldName: "updatedAt", field: parentGroupMeta.fields["updatedAt"] };
 
 (ParentGroup as any).metadata = parentGroupMeta;
 
@@ -801,7 +902,7 @@ export const parentItemMeta: EntityMetadata<ParentItem> = {
     "parentGroup": { kind: "m2o", fieldName: "parentGroup", fieldIdName: "parentGroupId", derived: false, required: true, otherMetadata: () => parentGroupMeta, otherFieldName: "parentItems", serde: new KeySerde("parentGroup", "parentGroup", "parent_group_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "childItems": { kind: "o2m", fieldName: "childItems", fieldIdName: "childItemIds", required: false, otherMetadata: () => childItemMeta, otherFieldName: "parentItem", otherColumnName: "parent_item_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "parent_group_id": { "fieldName": "parentGroup" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -810,6 +911,12 @@ export const parentItemMeta: EntityMetadata<ParentItem> = {
   baseTypes: [],
   subTypes: [],
 };
+
+parentItemMeta.columns["id"] = { fieldName: "id", field: parentItemMeta.fields["id"] };
+parentItemMeta.columns["name"] = { fieldName: "name", field: parentItemMeta.fields["name"] };
+parentItemMeta.columns["created_at"] = { fieldName: "createdAt", field: parentItemMeta.fields["createdAt"] };
+parentItemMeta.columns["updated_at"] = { fieldName: "updatedAt", field: parentItemMeta.fields["updatedAt"] };
+parentItemMeta.columns["parent_group_id"] = { fieldName: "parentGroup", field: parentItemMeta.fields["parentGroup"] };
 
 (ParentItem as any).metadata = parentItemMeta;
 
@@ -854,29 +961,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     "tasks": { kind: "m2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, derived: false, otherMetadata: () => taskOldMeta, otherFieldName: "publishers", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["publisher_id", "task_id"], hasJoinTableId: true },
     "logoColors": { kind: "m2mEnum", fieldName: "logoColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: undefined, immutable: false, joinTableName: "publisher_logo_colors", columnNames: ["publisher_id", "logo_color_id"], hasJoinTableId: true },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "name": { "fieldName": "name" },
-    "latitude": { "fieldName": "latitude" },
-    "longitude": { "fieldName": "longitude" },
-    "huge_number": { "fieldName": "hugeNumber" },
-    "number_of_book_reviews": { "fieldName": "numberOfBookReviews" },
-    "deleted_at": { "fieldName": "deletedAt" },
-    "titles_of_favorite_books": { "fieldName": "titlesOfFavoriteBooks" },
-    "book_advance_titles_snapshot": { "fieldName": "bookAdvanceTitlesSnapshot" },
-    "number_of_book_advances_snapshot": { "fieldName": "numberOfBookAdvancesSnapshot" },
-    "base_sync_default": { "fieldName": "baseSyncDefault" },
-    "base_async_default": { "fieldName": "baseAsyncDefault" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "favorite_author_name": { "fieldName": "favoriteAuthorName" },
-    "rating": { "fieldName": "rating" },
-    "size_id": { "fieldName": "size" },
-    "type_id": { "fieldName": "type" },
-    "favorite_author_id": { "fieldName": "favoriteAuthor" },
-    "group_id": { "fieldName": "group" },
-    "spotlight_author_id": { "fieldName": "spotlightAuthor" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -884,6 +969,34 @@ export const publisherMeta: EntityMetadata<Publisher> = {
   factory: newPublisher,
   baseTypes: [],
   subTypes: [],
+};
+
+publisherMeta.columns["id"] = { fieldName: "id", field: publisherMeta.fields["id"] };
+publisherMeta.columns["name"] = { fieldName: "name", field: publisherMeta.fields["name"] };
+publisherMeta.columns["latitude"] = { fieldName: "latitude", field: publisherMeta.fields["latitude"] };
+publisherMeta.columns["longitude"] = { fieldName: "longitude", field: publisherMeta.fields["longitude"] };
+publisherMeta.columns["huge_number"] = { fieldName: "hugeNumber", field: publisherMeta.fields["hugeNumber"] };
+publisherMeta.columns["number_of_book_reviews"] = { fieldName: "numberOfBookReviews", field: publisherMeta.fields["numberOfBookReviews"] };
+publisherMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: publisherMeta.fields["deletedAt"] };
+publisherMeta.columns["titles_of_favorite_books"] = { fieldName: "titlesOfFavoriteBooks", field: publisherMeta.fields["titlesOfFavoriteBooks"] };
+publisherMeta.columns["book_advance_titles_snapshot"] = { fieldName: "bookAdvanceTitlesSnapshot", field: publisherMeta.fields["bookAdvanceTitlesSnapshot"] };
+publisherMeta.columns["number_of_book_advances_snapshot"] = { fieldName: "numberOfBookAdvancesSnapshot", field: publisherMeta.fields["numberOfBookAdvancesSnapshot"] };
+publisherMeta.columns["base_sync_default"] = { fieldName: "baseSyncDefault", field: { kind: "primitive", fieldName: "baseSyncDefault", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("baseSyncDefault", "base_sync_default", "text", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false } };
+publisherMeta.columns["base_async_default"] = {
+  fieldName: "baseAsyncDefault",
+  field: { kind: "primitive", fieldName: "baseAsyncDefault", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("baseAsyncDefault", "base_async_default", "text", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+};
+publisherMeta.columns["created_at"] = { fieldName: "createdAt", field: publisherMeta.fields["createdAt"] };
+publisherMeta.columns["updated_at"] = { fieldName: "updatedAt", field: publisherMeta.fields["updatedAt"] };
+publisherMeta.columns["favorite_author_name"] = { fieldName: "favoriteAuthorName", field: publisherMeta.fields["favoriteAuthorName"] };
+publisherMeta.columns["rating"] = { fieldName: "rating", field: publisherMeta.fields["rating"] };
+publisherMeta.columns["size_id"] = { fieldName: "size", field: publisherMeta.fields["size"] };
+publisherMeta.columns["type_id"] = { fieldName: "type", field: { kind: "enum", fieldName: "type", fieldIdName: undefined, required: true, derived: false, enumDetailType: PublisherTypes, serde: new EnumFieldSerde("type", "type_id", "int", PublisherTypes, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" } };
+publisherMeta.columns["favorite_author_id"] = { fieldName: "favoriteAuthor", field: publisherMeta.fields["favoriteAuthor"] };
+publisherMeta.columns["group_id"] = { fieldName: "group", field: publisherMeta.fields["group"] };
+publisherMeta.columns["spotlight_author_id"] = {
+  fieldName: "spotlightAuthor",
+  field: { kind: "m2o", fieldName: "spotlightAuthor", fieldIdName: "spotlightAuthorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "spotlightAuthorPublishers", serde: new KeySerde("a", "spotlightAuthor", "spotlight_author_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
 };
 
 (Publisher as any).metadata = publisherMeta;
@@ -919,7 +1032,7 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
     "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "group", otherColumnName: "group_id", serde: undefined, immutable: false },
     "critics": { kind: "lo2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "group", otherColumnName: "group_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "number_of_book_reviews": { "fieldName": "numberOfBookReviews" }, "number_of_book_reviews_formatted": { "fieldName": "numberOfBookReviewsFormatted" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -928,6 +1041,16 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
   baseTypes: [],
   subTypes: [],
 };
+
+publisherGroupMeta.columns["id"] = { fieldName: "id", field: publisherGroupMeta.fields["id"] };
+publisherGroupMeta.columns["name"] = { fieldName: "name", field: publisherGroupMeta.fields["name"] };
+publisherGroupMeta.columns["number_of_book_reviews"] = { fieldName: "numberOfBookReviews", field: publisherGroupMeta.fields["numberOfBookReviews"] };
+publisherGroupMeta.columns["number_of_book_reviews_formatted"] = {
+  fieldName: "numberOfBookReviewsFormatted",
+  field: { kind: "primitive", fieldName: "numberOfBookReviewsFormatted", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("numberOfBookReviewsFormatted", "number_of_book_reviews_formatted", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+};
+publisherGroupMeta.columns["created_at"] = { fieldName: "createdAt", field: publisherGroupMeta.fields["createdAt"] };
+publisherGroupMeta.columns["updated_at"] = { fieldName: "updatedAt", field: publisherGroupMeta.fields["updatedAt"] };
 
 (PublisherGroup as any).metadata = publisherGroupMeta;
 
@@ -951,7 +1074,7 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
     "smallPublishers": { kind: "o2m", fieldName: "smallPublishers", fieldIdName: "smallPublisherIds", required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "selfReferential", otherColumnName: "self_referential_id", serde: undefined, immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", otherColumnName: "favorite_publisher_small_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "city": { "fieldName": "city" }, "shared_column": { "fieldName": "sharedColumn" }, "all_author_names": { "fieldName": "allAuthorNames" }, "self_referential_id": { "fieldName": "selfReferential" }, "group_id": { "fieldName": "group" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,
@@ -960,6 +1083,12 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   baseTypes: [],
   subTypes: [],
 };
+
+smallPublisherMeta.columns["id"] = { fieldName: "id", field: smallPublisherMeta.fields["id"] };
+smallPublisherMeta.columns["city"] = { fieldName: "city", field: smallPublisherMeta.fields["city"] };
+smallPublisherMeta.columns["shared_column"] = { fieldName: "sharedColumn", field: smallPublisherMeta.fields["sharedColumn"] };
+smallPublisherMeta.columns["all_author_names"] = { fieldName: "allAuthorNames", field: smallPublisherMeta.fields["allAuthorNames"] };
+smallPublisherMeta.columns["self_referential_id"] = { fieldName: "selfReferential", field: smallPublisherMeta.fields["selfReferential"] };
 
 (SmallPublisher as any).metadata = smallPublisherMeta;
 
@@ -978,7 +1107,7 @@ export const smallPublisherGroupMeta: EntityMetadata<SmallPublisherGroup> = {
     "smallName": { kind: "primitive", fieldName: "smallName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("smallName", "small_name", "text", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
     "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "group", otherColumnName: "group_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "small_name": { "fieldName": "smallName" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,
@@ -987,6 +1116,9 @@ export const smallPublisherGroupMeta: EntityMetadata<SmallPublisherGroup> = {
   baseTypes: [],
   subTypes: [],
 };
+
+smallPublisherGroupMeta.columns["id"] = { fieldName: "id", field: smallPublisherGroupMeta.fields["id"] };
+smallPublisherGroupMeta.columns["small_name"] = { fieldName: "smallName", field: smallPublisherGroupMeta.fields["smallName"] };
 
 (SmallPublisherGroup as any).metadata = smallPublisherGroupMeta;
 
@@ -1010,7 +1142,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     "publishers": { kind: "m2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, derived: false, otherMetadata: () => publisherMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "publishers_to_tags", columnNames: ["tag_id", "publisher_id"], hasJoinTableId: true },
     "tasks": { kind: "m2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, derived: false, otherMetadata: () => taskMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "task_to_tags", columnNames: ["tag_id", "task_id"], hasJoinTableId: true },
   },
-  columns: { "id": { "fieldName": "id" }, "name": { "fieldName": "name" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -1019,6 +1151,11 @@ export const tagMeta: EntityMetadata<Tag> = {
   baseTypes: [],
   subTypes: [],
 };
+
+tagMeta.columns["id"] = { fieldName: "id", field: tagMeta.fields["id"] };
+tagMeta.columns["name"] = { fieldName: "name", field: tagMeta.fields["name"] };
+tagMeta.columns["created_at"] = { fieldName: "createdAt", field: tagMeta.fields["createdAt"] };
+tagMeta.columns["updated_at"] = { fieldName: "updatedAt", field: tagMeta.fields["updatedAt"] };
 
 (Tag as any).metadata = tagMeta;
 
@@ -1050,20 +1187,7 @@ export const taskMeta: EntityMetadata<Task> = {
     "taskTaskItems": { kind: "o2m", fieldName: "taskTaskItems", fieldIdName: "taskTaskItemIds", required: false, otherMetadata: () => taskItemMeta, otherFieldName: "task", otherColumnName: "task_id", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "tasks", serde: undefined, immutable: false, joinTableName: "task_to_tags", columnNames: ["task_id", "tag_id"], hasJoinTableId: true },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "duration_in_days": { "fieldName": "durationInDays" },
-    "deleted_at": { "fieldName": "deletedAt" },
-    "sync_default": { "fieldName": "syncDefault" },
-    "async_default_1": { "fieldName": "asyncDefault_1" },
-    "async_default_2": { "fieldName": "asyncDefault_2" },
-    "sync_derived": { "fieldName": "syncDerived" },
-    "async_derived": { "fieldName": "asyncDerived" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "type_id": { "fieldName": "type" },
-    "copied_from_id": { "fieldName": "copiedFrom" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -1071,6 +1195,30 @@ export const taskMeta: EntityMetadata<Task> = {
   factory: newTask,
   baseTypes: [],
   subTypes: [],
+};
+
+taskMeta.columns["id"] = { fieldName: "id", field: taskMeta.fields["id"] };
+taskMeta.columns["duration_in_days"] = { fieldName: "durationInDays", field: { kind: "primitive", fieldName: "durationInDays", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("durationInDays", "duration_in_days", "int", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["special_new_field"] = { fieldName: "specialNewField", field: { kind: "primitive", fieldName: "specialNewField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("specialNewField", "special_new_field", "int", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["special_old_field"] = { fieldName: "specialOldField", field: { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("specialOldField", "special_old_field", "int", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: taskMeta.fields["deletedAt"] };
+taskMeta.columns["sync_default"] = { fieldName: "syncDefault", field: { kind: "primitive", fieldName: "syncDefault", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("syncDefault", "sync_default", "text", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["async_default_1"] = { fieldName: "asyncDefault_1", field: { kind: "primitive", fieldName: "asyncDefault_1", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("asyncDefault_1", "async_default_1", "text", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["async_default_2"] = { fieldName: "asyncDefault_2", field: { kind: "primitive", fieldName: "asyncDefault_2", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("asyncDefault_2", "async_default_2", "text", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["sync_derived"] = { fieldName: "syncDerived", field: taskMeta.fields["syncDerived"] };
+taskMeta.columns["async_derived"] = { fieldName: "asyncDerived", field: taskMeta.fields["asyncDerived"] };
+taskMeta.columns["created_at"] = { fieldName: "createdAt", field: taskMeta.fields["createdAt"] };
+taskMeta.columns["updated_at"] = { fieldName: "updatedAt", field: taskMeta.fields["updatedAt"] };
+taskMeta.columns["type_id"] = { fieldName: "type", field: taskMeta.fields["type"] };
+taskMeta.columns["copied_from_id"] = { fieldName: "copiedFrom", field: taskMeta.fields["copiedFrom"] };
+taskMeta.columns["parent_old_task_id"] = { fieldName: "parentOldTask", field: { kind: "m2o", fieldName: "parentOldTask", fieldIdName: "parentOldTaskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "tasks", serde: new KeySerde("task", "parentOldTask", "parent_old_task_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskMeta.columns["self_referential_id"] = {
+  fieldName: "selfReferential",
+  field: { kind: "m2o", fieldName: "selfReferential", fieldIdName: "selfReferentialId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "selfReferentialTasks", serde: new KeySerde("task", "selfReferential", "self_referential_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
+};
+taskMeta.columns["special_new_author_id"] = {
+  fieldName: "specialNewAuthor",
+  field: { kind: "m2o", fieldName: "specialNewAuthor", fieldIdName: "specialNewAuthorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "tasks", serde: new KeySerde("a", "specialNewAuthor", "special_new_author_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
 };
 
 (Task as any).metadata = taskMeta;
@@ -1092,7 +1240,7 @@ export const taskItemMeta: EntityMetadata<TaskItem> = {
     "oldTask": { kind: "m2o", fieldName: "oldTask", fieldIdName: "oldTaskId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "oldTaskTaskItems", serde: new KeySerde("task", "oldTask", "old_task_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
     "task": { kind: "m2o", fieldName: "task", fieldIdName: "taskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "taskTaskItems", serde: new KeySerde("task", "task", "task_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "created_at": { "fieldName": "createdAt" }, "updated_at": { "fieldName": "updatedAt" }, "new_task_id": { "fieldName": "newTask" }, "old_task_id": { "fieldName": "oldTask" }, "task_id": { "fieldName": "task" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -1101,6 +1249,13 @@ export const taskItemMeta: EntityMetadata<TaskItem> = {
   baseTypes: [],
   subTypes: [],
 };
+
+taskItemMeta.columns["id"] = { fieldName: "id", field: taskItemMeta.fields["id"] };
+taskItemMeta.columns["created_at"] = { fieldName: "createdAt", field: taskItemMeta.fields["createdAt"] };
+taskItemMeta.columns["updated_at"] = { fieldName: "updatedAt", field: taskItemMeta.fields["updatedAt"] };
+taskItemMeta.columns["new_task_id"] = { fieldName: "newTask", field: { kind: "m2o", fieldName: "newTask", fieldIdName: "newTaskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "newTaskTaskItems", serde: new KeySerde("task", "newTask", "new_task_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskItemMeta.columns["old_task_id"] = { fieldName: "oldTask", field: { kind: "m2o", fieldName: "oldTask", fieldIdName: "oldTaskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "oldTaskTaskItems", serde: new KeySerde("task", "oldTask", "old_task_id", "int", { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false } };
+taskItemMeta.columns["task_id"] = { fieldName: "task", field: taskItemMeta.fields["task"] };
 
 (TaskItem as any).metadata = taskItemMeta;
 
@@ -1143,23 +1298,7 @@ export const userMeta: EntityMetadata<User> = {
       immutable: false,
     },
   },
-  columns: {
-    "id": { "fieldName": "id" },
-    "name": { "fieldName": "name" },
-    "email": { "fieldName": "email" },
-    "ip_address": { "fieldName": "ipAddress" },
-    "password": { "fieldName": "password" },
-    "bio": { "fieldName": "bio" },
-    "original_email": { "fieldName": "originalEmail" },
-    "trial_period": { "fieldName": "trialPeriod" },
-    "created_at": { "fieldName": "createdAt" },
-    "updated_at": { "fieldName": "updatedAt" },
-    "password_history": { "fieldName": "passwordHistory" },
-    "manager_id": { "fieldName": "manager" },
-    "author_id": { "fieldName": "authorManyToOne" },
-    "favorite_publisher_large_id": { "fieldName": "favoritePublisher" },
-    "favorite_publisher_small_id": { "fieldName": "favoritePublisher" },
-  },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -1169,6 +1308,33 @@ export const userMeta: EntityMetadata<User> = {
   subTypes: [],
   uniqueBy: [["authorManyToOne"]],
 };
+
+userMeta.columns["id"] = { fieldName: "id", field: userMeta.fields["id"] };
+userMeta.columns["name"] = { fieldName: "name", field: userMeta.fields["name"] };
+userMeta.columns["email"] = { fieldName: "email", field: userMeta.fields["email"] };
+userMeta.columns["ip_address"] = { fieldName: "ipAddress", field: userMeta.fields["ipAddress"] };
+userMeta.columns["password"] = { fieldName: "password", field: userMeta.fields["password"] };
+userMeta.columns["bio"] = { fieldName: "bio", field: userMeta.fields["bio"] };
+userMeta.columns["original_email"] = { fieldName: "originalEmail", field: { kind: "primitive", fieldName: "originalEmail", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("originalEmail", "original_email", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false } };
+userMeta.columns["trial_period"] = { fieldName: "trialPeriod", field: userMeta.fields["trialPeriod"] };
+userMeta.columns["created_at"] = { fieldName: "createdAt", field: userMeta.fields["createdAt"] };
+userMeta.columns["updated_at"] = { fieldName: "updatedAt", field: userMeta.fields["updatedAt"] };
+userMeta.columns["password_history"] = { fieldName: "passwordHistory", field: userMeta.fields["passwordHistory"] };
+userMeta.columns["manager_id"] = { fieldName: "manager", field: userMeta.fields["manager"] };
+userMeta.columns["author_id"] = { fieldName: "authorManyToOne", field: userMeta.fields["authorManyToOne"] };
+userMeta.columns["favorite_publisher_large_id"] = {
+  fieldName: "favoritePublisher",
+  field: {
+    kind: "poly",
+    fieldName: "favoritePublisher",
+    fieldIdName: "favoritePublisherId",
+    required: false,
+    components: [{ otherMetadata: () => largePublisherMeta, otherFieldName: "users", columnName: "favorite_publisher_large_id" }, { otherMetadata: () => smallPublisherMeta, otherFieldName: "users", columnName: "favorite_publisher_small_id" }],
+    serde: new PolymorphicKeySerde(() => userMeta, "favoritePublisher", "favorite_publisher_large_id"),
+    immutable: false,
+  },
+};
+userMeta.columns["favorite_publisher_small_id"] = { fieldName: "favoritePublisher", field: userMeta.columns["favorite_publisher_large_id"].field };
 
 (User as any).metadata = userMeta;
 
@@ -1193,7 +1359,7 @@ export const taskNewMeta: EntityMetadata<TaskNew> = {
     "selfReferentialTasks": { kind: "o2m", fieldName: "selfReferentialTasks", fieldIdName: "selfReferentialTaskIds", required: false, otherMetadata: () => taskNewMeta, otherFieldName: "selfReferential", otherColumnName: "self_referential_id", serde: undefined, immutable: false },
     "copiedTo": { kind: "o2m", fieldName: "copiedTo", fieldIdName: "copiedToIds", required: false, otherMetadata: () => taskNewMeta, otherFieldName: "copiedFrom", otherColumnName: "copied_from_id", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "special_new_field": { "fieldName": "specialNewField" }, "self_referential_id": { "fieldName": "selfReferential" }, "special_new_author_id": { "fieldName": "specialNewAuthor" }, "copied_from_id": { "fieldName": "copiedFrom" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,
@@ -1227,7 +1393,7 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
     "copiedTo": { kind: "o2m", fieldName: "copiedTo", fieldIdName: "copiedToIds", required: false, otherMetadata: () => taskOldMeta, otherFieldName: "copiedFrom", otherColumnName: "copied_from_id", serde: undefined, immutable: false },
     "publishers": { kind: "m2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, derived: false, otherMetadata: () => publisherMeta, otherFieldName: "tasks", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["task_id", "publisher_id"], hasJoinTableId: true },
   },
-  columns: { "id": { "fieldName": "id" }, "special_old_field": { "fieldName": "specialOldField" }, "parent_old_task_id": { "fieldName": "parentOldTask" }, "copied_from_id": { "fieldName": "copiedFrom" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined,

@@ -317,6 +317,7 @@ declare module "joist-core" {
       optsType: AuthorStatOpts;
       fieldsType: AuthorStatFields;
       columnsType: AuthorStatColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: AuthorStatIdsOpts;
       factoryExtrasType: AuthorStatFactoryExtras;

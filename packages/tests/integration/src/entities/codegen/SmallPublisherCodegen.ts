@@ -52,7 +52,6 @@ import {
   type Image,
   newSmallPublisher,
   Publisher,
-  type PublisherColumns,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -83,9 +82,7 @@ export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "grou
   users: { kind: "o2m"; type: User };
 }
 
-export interface SmallPublisherColumns
-  extends
-    Omit<PublisherColumns, "id" | "city" | "shared_column" | "all_author_names" | "self_referential_id" | "group_id"> {
+export interface SmallPublisherColumns {
   "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
   "city": {
     kind: "primitive";
@@ -117,14 +114,6 @@ export interface SmallPublisherColumns
   "self_referential_id": {
     kind: "m2o";
     type: SmallPublisher;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "group_id": {
-    kind: "m2o";
-    type: SmallPublisherGroup;
     derived: false;
     nullable: true;
     insert: "optional";
@@ -210,6 +199,7 @@ declare module "joist-core" {
       optsType: SmallPublisherOpts;
       fieldsType: SmallPublisherFields;
       columnsType: SmallPublisherColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: SmallPublisherIdsOpts;
       factoryExtrasType: SmallPublisherFactoryExtras;

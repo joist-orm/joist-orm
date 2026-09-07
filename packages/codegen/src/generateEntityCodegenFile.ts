@@ -184,13 +184,10 @@ export function generateEntityCodegenFile(
         .map((field) => code` | "${field.fieldName}"`)}>`
     : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
-  const columns = generateColumnsType(meta, idType);
-  const maybeBaseColumns = baseEntity
-    ? code`extends Omit<${imp(`t:${baseEntity.name}Columns@./entities.ts`)}, ${joinCode(
-        Object.keys(columns).map((name) => code`${JSON.stringify(name)}`),
-        { on: " | " },
-      )}>`
-    : "";
+  const physical = meta.physicalMetadata ?? meta;
+  const sharedTable = meta.inheritanceType === "sti" && baseEntity;
+  const columns = sharedTable ? {} : generateColumnsType(physical, idType);
+  const maybeBaseColumns = sharedTable ? code`extends ${imp(`t:${baseEntity.name}Columns@./entities.ts`)}` : "";
   const maybeBaseIdOpts = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
     : "";
@@ -301,6 +298,7 @@ export function generateEntityCodegenFile(
           optsType: ${entity.optsName};
           fieldsType: ${entity.fieldsName};
           columnsType: ${entityName}Columns;
+          inheritanceType: ${meta.inheritanceType ? code`"${meta.inheritanceType}"` : "never"};
           supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true};
           optIdsType: ${entity.idsOptsName};
           factoryExtrasType: ${entity.factoryExtrasName};
@@ -596,7 +594,8 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
       notNull,
     )}, derived: ${derived !== false}; };`;
   });
-  const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
+  const polys = meta.polymorphics.map((field) => {
+    const { fieldName, notNull, fieldType } = field;
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {

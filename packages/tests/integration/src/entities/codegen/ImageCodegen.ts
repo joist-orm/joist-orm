@@ -200,6 +200,7 @@ declare module "joist-core" {
       optsType: ImageOpts;
       fieldsType: ImageFields;
       columnsType: ImageColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: ImageIdsOpts;
       factoryExtrasType: ImageFactoryExtras;

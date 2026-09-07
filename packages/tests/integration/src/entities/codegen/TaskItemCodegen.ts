@@ -85,8 +85,8 @@ export interface TaskItemColumns {
     insert: "optional";
     update: true;
   };
-  "new_task_id": { kind: "m2o"; type: TaskNew; derived: false; nullable: true; insert: "optional"; update: true };
-  "old_task_id": { kind: "m2o"; type: TaskOld; derived: false; nullable: true; insert: "optional"; update: true };
+  "new_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+  "old_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
   "task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
@@ -163,6 +163,7 @@ declare module "joist-core" {
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
       columnsType: TaskItemColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: TaskItemIdsOpts;
       factoryExtrasType: TaskItemFactoryExtras;

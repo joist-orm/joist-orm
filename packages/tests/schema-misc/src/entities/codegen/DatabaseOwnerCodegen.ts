@@ -118,6 +118,7 @@ declare module "joist-core" {
       optsType: DatabaseOwnerOpts;
       fieldsType: DatabaseOwnerFields;
       columnsType: DatabaseOwnerColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: DatabaseOwnerIdsOpts;
       factoryExtrasType: DatabaseOwnerFactoryExtras;

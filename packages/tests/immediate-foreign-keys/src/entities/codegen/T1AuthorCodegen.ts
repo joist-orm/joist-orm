@@ -118,6 +118,7 @@ declare module "joist-core" {
       optsType: T1AuthorOpts;
       fieldsType: T1AuthorFields;
       columnsType: T1AuthorColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: T1AuthorIdsOpts;
       factoryExtrasType: T1AuthorFactoryExtras;

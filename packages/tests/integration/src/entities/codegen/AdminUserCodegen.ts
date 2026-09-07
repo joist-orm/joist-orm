@@ -40,7 +40,6 @@ import {
   type Entity,
   newAdminUser,
   User,
-  type UserColumns,
   type UserFields,
   type UserFilter,
   type UserGraphQLFilter,
@@ -56,7 +55,7 @@ export interface AdminUserFields extends Omit<UserFields, "id"> {
   role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
 }
 
-export interface AdminUserColumns extends Omit<UserColumns, "id" | "role"> {
+export interface AdminUserColumns {
   "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
   "role": {
     kind: "primitive";
@@ -112,6 +111,7 @@ declare module "joist-core" {
       optsType: AdminUserOpts;
       fieldsType: AdminUserFields;
       columnsType: AdminUserColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: AdminUserIdsOpts;
       factoryExtrasType: AdminUserFactoryExtras;

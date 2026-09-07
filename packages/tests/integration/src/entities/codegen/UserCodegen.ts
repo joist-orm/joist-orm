@@ -338,6 +338,7 @@ declare module "joist-core" {
       optsType: UserOpts;
       fieldsType: UserFields;
       columnsType: UserColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: UserIdsOpts;
       factoryExtrasType: UserFactoryExtras;

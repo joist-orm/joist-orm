@@ -161,6 +161,7 @@ declare module "joist-core" {
       optsType: ArtistOpts;
       fieldsType: ArtistFields;
       columnsType: ArtistColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: ArtistIdsOpts;
       factoryExtrasType: ArtistFactoryExtras;

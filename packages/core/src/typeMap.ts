@@ -64,6 +64,9 @@ export type FieldsOf<T> = TypeMapEntry<T, "fieldsType">;
 /** Return the physical `FooColumns` type for the given `Foo` entity. */
 export type ColumnsOf<T> = TypeMapEntry<T, "columnsType">;
 
+/** Returns the inheritance strategy, or never for non-inherited entities. */
+export type InheritanceTypeOf<T> = TypeMapEntry<T, "inheritanceType">;
+
 export type OptIdsOf<T> = TypeMapEntry<T, "optIdsType">;
 
 /** Pulls the entity query type out of a given entity type T. */

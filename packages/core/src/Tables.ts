@@ -3,7 +3,6 @@ import { groupBy } from "joist-utils";
 // Load-order only: without this, the built cjs/esm module graph evaluates relations/* before their
 // base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
 import "./configure.ts";
-import { getMaybeCtiAlias } from "./Aliases.ts";
 import { buildValueCondition } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
 import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
@@ -17,6 +16,8 @@ import {
   type PolymorphicField,
   type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
+  getBaseMeta,
+  getBaseSelfAndSubMetas,
   getMetadata,
 } from "./EntityMetadata.ts";
 import {
@@ -39,7 +40,7 @@ import { kqDot } from "./keywords.ts";
 import { type ParsedValueFilter, makeLike, mapToDb } from "./QueryParser.ts";
 import { type Column, KeySerde, PolymorphicKeySerde } from "./serde.ts";
 import { skipCondition } from "./skipCondition.ts";
-import { type ColumnsOf, type FieldsOf, type RootTypeNameOf } from "./typeMap.ts";
+import { type ColumnsOf, type FieldsOf, type TypeMap, type TypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
@@ -98,10 +99,11 @@ export interface TableBrand<T, Name extends string> extends TableMgmt {
  * tree, while Table renders SQL expressions against explicit sources. Neither caches SQL names on
  * the reusable handle or predicate, so one parse cannot overwrite another parse's bindings.
  *
- * `Name` is the table's type-level source key, defaulting to the entity's root type name (see
- * `RootTypeNameOf`); `table(Author, "m")` gives a self-join table its own key.
+ * `Name` is the table's type-level source key, defaulting to the entity's own type name, so a
+ * LEFT-joined SmallPublisher does not make Publisher columns nullable. `table(Author, "m")`
+ * gives a self-join table its own key.
  */
-export type Table<T extends Entity, Name extends string = RootTypeNameOf<T>> = {
+export type Table<T extends Entity, Name extends string = TableNameOf<T>> = {
   readonly [tableMgmt]: TableBrand<T, Name>;
 } & {
   [P in keyof ColumnsOf<T>]: P extends "id"
@@ -125,7 +127,18 @@ export type Table<T extends Entity, Name extends string = RootTypeNameOf<T>> = {
       : FieldsOf<T>[P] extends { kind: "o2m" | "lo2m" | "m2m" | "o2o"; type: infer U extends Entity }
         ? CollectionJoin<U>
         : never;
+} & {
+  [
+    K in keyof TypeMap as TypeMap[K] extends {
+      entityType: infer U extends Entity & { __type: { 0: TypeNameOf<T>; 1: string } };
+    }
+      ? Uncapitalize<TypeNameOf<U> & string>
+      : never
+  ]: TypeMap[K] extends { entityType: infer U extends Entity } ? SubtypeJoin<U> : never;
 };
+
+/** Keeps explicit base and subtype sources independent, with generic entities untracked. */
+type TableNameOf<T> = T extends { __type: { 0: string } } ? TypeNameOf<T> & string : string;
 
 /** A relationship join factory, without a selectable FK expression. */
 export interface ReferenceJoin<U extends Entity, N extends null | never> {
@@ -151,6 +164,11 @@ export interface CollectionJoin<U extends Entity> {
   as<A extends TableFor<U>>(other: A): LeftJoin<A>;
   inner<A extends TableFor<U>>(other: A): InnerJoin<A>;
   left<A extends TableFor<U>>(other: A): LeftJoin<A>;
+}
+
+/** A named subtype join, defaulting to LEFT because a root row may belong to another subtype. */
+interface SubtypeJoin<U extends Entity> extends CollectionJoin<U> {
+  <A extends TableFor<U>>(other: A): LeftJoin<A>;
 }
 
 /**
@@ -254,8 +272,7 @@ export interface TableMgmt {
    *
    * It cannot be re-derived from `tableName`: STI subtypes share their base's table (`Task`, `TaskNew`,
    * and `TaskOld` are all `tasks`), so a `getMetadataForTable("tasks")` lookup can only return the base
-   * `Task`, and the alias would lose its subtype identity (its discriminator filter and its constructor
-   * for entity-mode hydration).
+   * `Task`, and the alias would lose its subtype identity for explicit subtype joins and entity hydration.
    */
   meta: EntityMetadata;
 }
@@ -270,6 +287,7 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   const meta = getMetadata(cstr);
   // The identity SQL queries bind to a source, retaining STI subtype metadata.
   const mgmt: TableMgmt = { tableName: meta.tableName, meta };
+  const subtypes = new Map(meta.subTypes.map((m) => [m.type[0].toLowerCase() + m.type.slice(1), m]));
   const proxy: any = new Proxy(cstr, {
     /** Create a physical column expression or a relation join factory. */
     get(_, key: PropertyKey): any {
@@ -279,14 +297,24 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       if (typeof key !== "string") return undefined;
       const descriptor = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
       if (descriptor) {
-        const field = meta.allFields[descriptor.fieldName] ?? fail(`No field ${descriptor.fieldName} on ${cstr.name}`);
+        const { field } = descriptor;
         const column =
           field.serde?.columns.find((c) => c.columnName === key) ?? fail(`No column ${key} on ${cstr.name}`);
         return field.kind === "m2o" || field.kind === "poly"
           ? new EntityColumnImpl(meta, field, column, mgmt)
           : new PrimitiveColumnImpl(meta, field, column, mgmt);
       }
-      const field = meta.allFields[key as string] ?? fail(`No field ${String(key)} on ${cstr.name}`);
+      const subtype = subtypes.get(key);
+      if (subtype) {
+        const join = new SubtypeJoinImpl(proxy, subtype);
+        return Object.assign(join.as.bind(join), {
+          as: join.as.bind(join),
+          inner: join.inner.bind(join),
+          left: join.left.bind(join),
+        });
+      }
+      const field =
+        physicalRelation(meta, key) ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
       switch (field.kind) {
         case "m2o":
           return new ReferenceJoinImpl(new EntityColumnImpl(meta, field, field.serde!.columns[0], mgmt));
@@ -306,7 +334,8 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
     has(_, key) {
       return (
         key === tableMgmt ||
-        (typeof key === "string" && (Object.hasOwn(meta.columns, key) || isRelation(meta.allFields[key])))
+        (typeof key === "string" &&
+          (Object.hasOwn(meta.columns, key) || !!physicalRelation(meta, key) || subtypes.has(key)))
       );
     },
   });
@@ -325,7 +354,7 @@ export function isTable(obj: unknown): obj is Table<any, any> {
 class TableColumn extends BaseExpr {
   public constructor(
     readonly meta: EntityMetadata,
-    readonly field: Field & { aliasSuffix: string },
+    readonly field: Field,
     readonly column: Column,
     readonly mgmt: TableMgmt,
   ) {
@@ -361,8 +390,7 @@ class TableColumn extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.mgmt);
-    const ctiAlias = getMaybeCtiAlias(this.meta, this.field, this.meta, alias);
-    return { sql: kqDot(ctiAlias, this.column.columnName), bindings: [], refs: [alias] };
+    return { sql: kqDot(alias, this.column.columnName), bindings: [], refs: [alias] };
   }
 
   /** Decodes result-set values with public PK/FK ids, while hydration keeps internal tagged ids. */
@@ -600,7 +628,7 @@ class PolyReferenceImpl<T extends Entity> {
   public constructor(
     private meta: EntityMetadata,
     private mgmt: TableMgmt,
-    private field: PolymorphicField & { aliasSuffix: string },
+    private field: PolymorphicField,
   ) {}
 
   /** Compares to a tagged id, an entity, or another table's id column, which picks the component (`c.parent.eq(a.id)`). */
@@ -709,8 +737,11 @@ class PolyReferenceImpl<T extends Entity> {
 
   /** Returns the physical FK expression for one polymorphic target. */
   private componentColumn(comp: PolymorphicFieldComponent): EntityColumnImpl<T> {
-    const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
-    return new EntityColumnImpl<T>(this.meta, this.field, column, this.mgmt);
+    const descriptor =
+      this.meta.columns[comp.columnName] ?? fail(`No physical column ${comp.columnName} on ${this.meta.type}`);
+    const column =
+      descriptor.field.serde?.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
+    return new EntityColumnImpl<T>(this.meta, descriptor.field, column, this.mgmt);
   }
 }
 
@@ -758,6 +789,38 @@ abstract class CollectionJoinImpl {
   protected abstract joinEntry(kind: JoinKind, other: TableFor<Entity>): object;
 }
 
+/** Joins a named subtype explicitly; only STI subtype sugar adds a discriminator to its ON. */
+class SubtypeJoinImpl extends CollectionJoinImpl {
+  constructor(
+    private proxy: TableFor<Entity>,
+    private subtype: EntityMetadata,
+  ) {
+    super();
+  }
+
+  protected joinEntry(kind: JoinKind, other: TableFor<Entity>): object {
+    if (getTableMetadata(other) !== this.subtype) {
+      return fail(`Expected table(${this.subtype.type}) for the explicit subtype join`);
+    }
+    const on = idColumnOf(this.proxy).eq(idColumnOf(other));
+    if (this.subtype.inheritanceType !== "sti" || this.subtype.stiDiscriminatorValue === undefined) {
+      return { [kind]: other, on };
+    }
+    const base = this.subtype.baseTypes.find((m) => m.stiDiscriminatorField !== undefined)!;
+    const columnName = base.fields[base.stiDiscriminatorField!].serde!.columns[0].columnName;
+    // Discriminator values are database enum ids, not domain enum values to pass through the field codec.
+    const discriminator = deferredCondition((ctx) => {
+      const alias = ctx.aliasFor(other[tableMgmt]);
+      return {
+        sql: `${kqDot(alias, columnName)} = ?`,
+        bindings: [this.subtype.stiDiscriminatorValue],
+        refs: [alias],
+      };
+    });
+    return { [kind]: other, on: { and: [on, discriminator] } };
+  }
+}
+
 /** An o2m/lo2m/o2o relation: the ON is the other side's FK (an m2o or a poly component) back to our id. */
 class OneToManyJoinImpl extends CollectionJoinImpl {
   constructor(
@@ -770,11 +833,16 @@ class OneToManyJoinImpl extends CollectionJoinImpl {
   protected joinEntry(kind: JoinKind, other: TableFor<Entity>): object {
     const { field } = this;
     const otherMeta = getTableMetadata(other);
-    const inverse = otherMeta.allFields[field.otherFieldName];
-    const column =
-      inverse.kind === "poly"
-        ? (other as any)[field.otherFieldName]
-        : (other as any)[inverse.serde!.columns[0].columnName];
+    const descriptor = otherMeta.columns[field.otherColumnName];
+    if (!descriptor) {
+      return fail(
+        `Cannot join ${getTableMetadata(this.proxy).type}.${field.fieldName} to ${otherMeta.type}: ` +
+          `${field.otherColumnName} is not physically present on ${otherMeta.tableName}; join the base table explicitly`,
+      );
+    }
+    const physicalColumn =
+      descriptor.field.serde?.columns.find((c) => c.columnName === field.otherColumnName) ?? fail("Missing column");
+    const column = new EntityColumnImpl(otherMeta, descriptor.field, physicalColumn, other[tableMgmt]);
     const on = column.eq(this.proxy.id);
     // Collections (o2m/lo2m) filter soft-deletes like em.find; o2o references resolve them
     const filtered = field.kind === "o2m" ? field.softDeletes !== "include" : field.kind === "lo2m";
@@ -855,4 +923,25 @@ class ReferenceJoinImpl {
 /** Identifies domain relationship keys exposed alongside physical columns. */
 function isRelation(field: Field | undefined): boolean {
   return field !== undefined && ["m2o", "poly", "o2m", "lo2m", "m2m", "o2o"].includes(field.kind);
+}
+
+/** Resolves relationship sugar only from domain fields owned by this physical table. */
+function physicalRelation(meta: EntityMetadata, key: string): Field | undefined {
+  const owners = [meta, ...getBaseSelfAndSubMetas(getBaseMeta(meta))];
+  const owner = owners.find((owner) => owner.tableName === meta.tableName && Object.hasOwn(owner.fields, key));
+  const field = owner?.fields[key];
+  if (!isRelation(field)) return undefined;
+  // I.e. TaskNew.copiedFrom uses Task's original FK domain, not its specialized TaskNew target.
+  if (field?.kind === "m2o" || field?.kind === "poly") {
+    const columnName = field.serde.columns[0].columnName;
+    const storage = meta.columns[columnName]?.field;
+    if (
+      !storage ||
+      storage.kind !== field.kind ||
+      !storage.serde!.columns.every((column) => Object.hasOwn(meta.columns, column.columnName))
+    )
+      return undefined;
+    return storage;
+  }
+  return field;
 }

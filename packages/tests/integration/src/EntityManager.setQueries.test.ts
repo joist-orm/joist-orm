@@ -23,6 +23,7 @@ import {
   Tag,
   TaskNew,
   TaskOld,
+  TaskType,
   User,
   newUser,
 } from "src/entities";
@@ -2043,22 +2044,25 @@ describe("EntityManager.setQueries", () => {
       expect(queries).toEqual([]);
     });
 
-    it("rejects CTI entity-mode operands with expanded physical columns", async () => {
-      // Given a Publisher alias whose entity projection spans its CTI hierarchy
+    it("rejects inherited entity selection before constructing a reusable query", async () => {
+      // Given a Publisher table that contains only its physical columns
       const p = table(Publisher);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
-      // And a reusable CTI entity query, valid only as an ordinary entity read
-      const publishers = query({ from: p, select: p });
+      // And an unsupported entity projection rather than explicit physical columns
+      const publishers = { from: p, select: p };
       // And recording isolated from SQL
       resetQueryCount();
-      // When CTI entity values become set operands
-      // Then hidden hydration columns are not used as a set projection schema
+      // When constructing a reusable read or nesting the unsupported projection
+      // Then incomplete physical rows cannot request entity hydration
+      expect(() => query(publishers as any)).toThrow(
+        "Inherited table Publisher cannot be selected as entities; select its columns individually",
+      );
       expect(() => query({ union: [publishers, publishers] } as any)).toThrow(
-        "Set operations do not support entity-mode operands",
+        "Inherited table Publisher cannot be selected as entities; select its columns individually",
       );
       await expect(em.query({ union: [publishers, publishers] } as any)).rejects.toThrow(
-        "Set operations do not support entity-mode operands",
+        "Inherited table Publisher cannot be selected as entities; select its columns individually",
       );
       expect(queries).toEqual([]);
     });
@@ -2679,22 +2683,32 @@ describe("EntityManager.setQueries", () => {
       `);
     });
 
-    it("preserves STI discriminator filters in each branch", async () => {
+    it("preserves explicit STI discriminator filters in each branch", async () => {
       // Given a TaskNew row with its own duration
       await insertTask({ type: "NEW", duration_in_days: 10 });
       // And a TaskOld row in the same physical table with a different duration
       await insertTask({ type: "OLD", duration_in_days: 20 });
       // And an EntityManager for scalar-field projections rather than entity hydration
       const em = newEntityManager();
-      // And subtype aliases that must independently filter the shared table
+      // And subtype handles that read the shared table without implicit filtering
       const [tn, to] = tables(TaskNew, TaskOld);
+      // When combining unfiltered subtype reads of the same physical table
+      const unfiltered = await em.query({
+        unionAll: [
+          { from: tn, select: { days: tn.duration_in_days } },
+          query({ from: to, select: { days: to.duration_in_days } }),
+        ],
+        orderBy: { days: "ASC" },
+      });
+      // Then each branch sees both Task rows regardless of the handle's subtype
+      expect(unfiltered).toEqual([{ days: 10 }, { days: 10 }, { days: 20 }, { days: 20 }]);
       // And recording isolated from the Task inserts
       resetQueryCount();
       // When combining each subtype's duration without deduplication
       const rows = await em.query({
         unionAll: [
-          { from: tn, select: { days: tn.duration_in_days } },
-          { from: to, select: { days: to.duration_in_days } },
+          { from: tn, where: tn.type_id.eq(TaskType.New), select: { days: tn.duration_in_days } },
+          query({ from: to, where: to.type_id.eq(TaskType.Old), select: { days: to.duration_in_days } }),
         ],
         orderBy: { days: "ASC" },
       });
@@ -2703,7 +2717,7 @@ describe("EntityManager.setQueries", () => {
       expect(queries).toHaveLength(1);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "(SELECT t.duration_in_days AS days FROM tasks AS t WHERE t.deleted_at IS NULL AND t.type_id = $1) UNION ALL (SELECT t1.duration_in_days AS days FROM tasks AS t1 WHERE t1.deleted_at IS NULL AND t1.type_id = $2) ORDER BY days ASC",
+         "(SELECT t.duration_in_days AS days FROM tasks AS t WHERE t.type_id = $1 AND t.deleted_at IS NULL) UNION ALL (SELECT t1.duration_in_days AS days FROM tasks AS t1 WHERE t1.type_id = $2 AND t1.deleted_at IS NULL) ORDER BY days ASC",
        ]
       `);
     });
@@ -2775,7 +2789,7 @@ describe("EntityManager.setQueries", () => {
       `);
     });
 
-    it("projects a one-row POJO compound as a scalar Expr with an Author-id fallback", async () => {
+    it("selects a one-row POJO compound as a scalar Expr with an Author-id fallback", async () => {
       // Given an Author projected by the outer SELECT
       await insertAuthor({ first_name: "a1" });
       // And a Book contributing exactly one Author id

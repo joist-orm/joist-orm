@@ -34,6 +34,26 @@ import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("EntityManager.execute", () => {
+  it.each([Publisher, SmallPublisher, LargePublisher, Task, TaskNew, TaskOld, User, AdminUser])(
+    "rejects inherited entity reads for %p before SQL",
+    async (entity) => {
+      // Given a physical table in a CTI or STI family
+      const source = table<Entity>(entity);
+      // And an EntityManager with no recorded fixture queries
+      const em = newEntityManager();
+      resetQueryCount();
+      // And an untyped caller requesting unsupported entity hydration
+      const input = { from: source, select: source };
+      const message = `Inherited table ${getMetadata<Entity>(entity).type} cannot be selected as entities; select its columns individually`;
+      // When constructing or executing the inherited bare selection
+      // Then every read entry point rejects it before issuing SQL
+      expect(() => query(input as any)).toThrow(message);
+      await expect(em.query(input as any)).rejects.toThrow(message);
+      await expect(em.execute(input as any)).rejects.toThrow(message);
+      expect(queries).toEqual([]);
+    },
+  );
+
   it("round-trips native numeric AuthorStat arrays through VALUES, SELECT, and UPDATE", async () => {
     // Given an AuthorStat import with fractional samples and bigint samples beyond Number's exact range
     const em = newEntityManager();

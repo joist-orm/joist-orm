@@ -176,6 +176,7 @@ declare module "joist-core" {
       optsType: BookAdvanceOpts;
       fieldsType: BookAdvanceFields;
       columnsType: BookAdvanceColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: BookAdvanceIdsOpts;
       factoryExtrasType: BookAdvanceFactoryExtras;

@@ -235,6 +235,7 @@ declare module "joist-core" {
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
       columnsType: BookReviewColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: BookReviewIdsOpts;
       factoryExtrasType: BookReviewFactoryExtras;

@@ -56,7 +56,6 @@ import {
   largePublisherMeta,
   newLargePublisher,
   Publisher,
-  type PublisherColumns,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -82,8 +81,7 @@ export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rati
   users: { kind: "o2m"; type: User };
 }
 
-export interface LargePublisherColumns
-  extends Omit<PublisherColumns, "id" | "shared_column" | "country" | "rating" | "spotlight_author_id"> {
+export interface LargePublisherColumns {
   "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
   "shared_column": {
     kind: "primitive";
@@ -98,23 +96,6 @@ export interface LargePublisherColumns
     kind: "primitive";
     type: string;
     unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "rating": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "spotlight_author_id": {
-    kind: "m2o";
-    type: Author;
     derived: false;
     nullable: true;
     insert: "optional";
@@ -189,6 +170,7 @@ declare module "joist-core" {
       optsType: LargePublisherOpts;
       fieldsType: LargePublisherFields;
       columnsType: LargePublisherColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: LargePublisherIdsOpts;
       factoryExtrasType: LargePublisherFactoryExtras;

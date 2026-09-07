@@ -151,6 +151,7 @@ declare module "joist-core" {
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
       columnsType: PaintingColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: PaintingIdsOpts;
       factoryExtrasType: PaintingFactoryExtras;

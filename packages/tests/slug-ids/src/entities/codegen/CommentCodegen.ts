@@ -155,6 +155,7 @@ declare module "joist-core" {
       optsType: CommentOpts;
       fieldsType: CommentFields;
       columnsType: CommentColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;

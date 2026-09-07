@@ -49,6 +49,7 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
+  type Author,
   type Entity,
   EntityManager,
   newTask,
@@ -96,6 +97,24 @@ export interface TaskColumns {
     derived: false;
     nullable: false;
     insert: "required";
+    update: true;
+  };
+  "special_new_field": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "special_old_field": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
     update: true;
   };
   "deleted_at": {
@@ -172,6 +191,16 @@ export interface TaskColumns {
   };
   "type_id": { kind: "enum"; type: TaskType; nullable: true; insert: "optional"; update: true };
   "copied_from_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+  "parent_old_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+  "self_referential_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+  "special_new_author_id": {
+    kind: "m2o";
+    type: Author;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface TaskOpts {
@@ -281,6 +310,7 @@ declare module "joist-core" {
       optsType: TaskOpts;
       fieldsType: TaskFields;
       columnsType: TaskColumns;
+      inheritanceType: "sti";
       supportsEmExecute: false;
       optIdsType: TaskIdsOpts;
       factoryExtrasType: TaskFactoryExtras;

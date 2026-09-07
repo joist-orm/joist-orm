@@ -201,6 +201,7 @@ declare module "joist-core" {
       optsType: PublisherGroupOpts;
       fieldsType: PublisherGroupFields;
       columnsType: PublisherGroupColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: PublisherGroupIdsOpts;
       factoryExtrasType: PublisherGroupFactoryExtras;

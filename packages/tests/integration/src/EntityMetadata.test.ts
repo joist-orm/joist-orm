@@ -1,12 +1,36 @@
 import { expectTypeOf } from "expect-type";
 import { type ColumnsOf, type FieldsOf, getMetadata } from "joist-orm";
 
-import { Author, Book, type BookColumns, Color, Comment, SmallPublisher, TaskOld } from "./entities";
+import {
+  Author,
+  Book,
+  type BookColumns,
+  Color,
+  Comment,
+  Publisher,
+  PublisherGroup,
+  SmallPublisher,
+  Task,
+  TaskNew,
+  TaskOld,
+} from "./entities";
 
 describe("EntityMetadata", () => {
   it("maps physical columns to their domain fields", () => {
-    expect(getMetadata(Book).columns.author_id).toEqual({ fieldName: "author" });
-    expect(getMetadata(Book).columns.created_at).toEqual({ fieldName: "createdAt" });
+    expect(getMetadata(Book).columns.author_id).toMatchObject({
+      fieldName: "author",
+      field: { kind: "m2o", fieldName: "author", required: true },
+    });
+    expect("default" in getMetadata(Book).columns.author_id.field).toBe(false);
+    expect(getMetadata(Book).columns.author_id.field.serde?.columns[0]).toMatchObject({
+      columnName: "author_id",
+      sqlNullable: false,
+      hasDefault: false,
+    });
+    expect(getMetadata(Book).columns.created_at).toEqual({
+      fieldName: "createdAt",
+      field: getMetadata(Book).fields.createdAt,
+    });
     expect(getMetadata(Book).columns.author).toBeUndefined();
     expect(getMetadata(Book).columns.reviews).toBeUndefined();
     expectTypeOf<ColumnsOf<Book>>().toEqualTypeOf<BookColumns>();
@@ -31,9 +55,13 @@ describe("EntityMetadata", () => {
 
   it("maps each polymorphic component to its owning field", () => {
     const meta = getMetadata(Comment);
-    expect(meta.columns.parent_book_id).toEqual({ fieldName: "parent" });
-    expect(meta.columns.parent_author_id).toEqual({ fieldName: "parent" });
-    const field = meta.allFields[meta.columns.parent_book_id.fieldName];
+    expect(meta.columns.parent_book_id).toMatchObject({
+      fieldName: "parent",
+      field: { kind: "poly", fieldName: "parent" },
+    });
+    expect(meta.columns.parent_author_id.field).toBe(meta.columns.parent_book_id.field);
+    expect(meta.columns.parent_author_id.fieldName).toBe("parent");
+    const field = meta.columns.parent_book_id.field;
     expect(field.serde?.columns.find((column) => column.columnName === "parent_book_id")?.columnName).toEqual(
       "parent_book_id",
     );
@@ -47,13 +75,23 @@ describe("EntityMetadata", () => {
     }>();
   });
 
-  it("inherits CTI and STI column mappings without strengthening database nullability", () => {
-    expect(getMetadata(SmallPublisher).columns.name).toEqual({ fieldName: "name" });
-    expect(getMetadata(SmallPublisher).columns.city).toEqual({ fieldName: "city" });
-    expect(getMetadata(SmallPublisher).columns.group_id).toEqual({ fieldName: "group" });
-    expect(getMetadata(TaskOld).columns.created_at).toEqual({ fieldName: "createdAt" });
-    expect(getMetadata(TaskOld).columns.special_old_field).toEqual({ fieldName: "specialOldField" });
-    expectTypeOf<ColumnsOf<SmallPublisher>["name"]["type"]>().toEqualTypeOf<string>();
+  it("keeps CTI columns local and STI columns shared without strengthening storage domains", () => {
+    expect(getMetadata(SmallPublisher).columns.name).toBeUndefined();
+    expect(getMetadata(SmallPublisher).columns.city).toEqual({
+      fieldName: "city",
+      field: getMetadata(SmallPublisher).fields.city,
+    });
+    expect(getMetadata(SmallPublisher).columns.group_id).toBeUndefined();
+    expect(getMetadata(Publisher).columns.group_id.field).toBe(getMetadata(Publisher).fields.group);
+    expect(getMetadata(TaskOld).columns).toEqual(getMetadata(Task).columns);
+    expect(getMetadata(TaskNew).columns).toEqual(getMetadata(Task).columns);
+    expect(getMetadata(TaskOld).columns.copied_from_id.field).toBe(getMetadata(Task).fields.copiedFrom);
+    expectTypeOf<Extract<keyof ColumnsOf<SmallPublisher>, "name" | "group_id">>().toEqualTypeOf<never>();
+    expectTypeOf<ColumnsOf<Publisher>["group_id"]["type"]>().toEqualTypeOf<PublisherGroup>();
+    expectTypeOf<ColumnsOf<TaskOld>>().toEqualTypeOf<ColumnsOf<Task>>();
+    expectTypeOf<ColumnsOf<TaskNew>>().toEqualTypeOf<ColumnsOf<Task>>();
+    expectTypeOf<ColumnsOf<TaskOld>["copied_from_id"]["type"]>().toEqualTypeOf<Task>();
+    expectTypeOf<FieldsOf<TaskOld>["copiedFrom"]["type"]>().toEqualTypeOf<TaskOld>();
     expectTypeOf<FieldsOf<TaskOld>["specialOldField"]["nullable"]>().toEqualTypeOf<never>();
     expectTypeOf<ColumnsOf<TaskOld>["special_old_field"]["nullable"]>().toEqualTypeOf<true>();
     expectTypeOf<ColumnsOf<TaskOld>["special_old_field"]["insert"]>().toEqualTypeOf<"optional">();

@@ -200,6 +200,7 @@ declare module "joist-core" {
       optsType: CriticOpts;
       fieldsType: CriticFields;
       columnsType: CriticColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: CriticIdsOpts;
       factoryExtrasType: CriticFactoryExtras;

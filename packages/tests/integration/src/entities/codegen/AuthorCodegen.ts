@@ -724,6 +724,7 @@ declare module "joist-core" {
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
       columnsType: AuthorColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;

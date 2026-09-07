@@ -10,7 +10,21 @@ import {
   table,
   tables,
 } from "joist-orm";
-import { Author, type AuthorId, Book, Comment, Publisher, type PublisherId } from "src/entities";
+import {
+  Author,
+  type AuthorId,
+  Book,
+  Comment,
+  LargePublisher,
+  Publisher,
+  type PublisherGroupId,
+  type PublisherId,
+  SmallPublisher,
+  Task,
+  type TaskId,
+  TaskNew,
+  TaskOld,
+} from "src/entities";
 import { newEntityManager } from "src/testEm";
 
 describe("EntityManager.rawQueries.types", () => {
@@ -43,7 +57,7 @@ async function typeAssertions() {
   expectTypeOf<ResultOf<typeof b.author_id>>().toEqualTypeOf<AuthorId>();
   // A nullable m2o FK is `| null`
   expectTypeOf<ResultOf<typeof a.publisher_id>>().toEqualTypeOf<PublisherId | null>();
-  // The default source key is the entity's root type name (so CTI subtype/base aliases share one key)
+  // The default source key is the entity's own type name
   expectTypeOf<SourceOf<typeof a.first_name>>().toEqualTypeOf<"Author">();
   // Aggregates are source-less (`never`): a left join can never make `count(...)` itself null
   expectTypeOf<SourceOf<ReturnType<typeof b.id.count>>>().toEqualTypeOf<never>();
@@ -201,6 +215,93 @@ async function typeAssertions() {
   const s = table(Book, "s");
   const withSequel = em.query({ from: b, join: [b.sequel.as(s)], select: { title: b.title, sequel: s.title } });
   expectTypeOf(withSequel).resolves.toEqualTypeOf<{ title: string; sequel: string | null }[]>();
+
+  // Given physical Publisher and SmallPublisher tables with independent source keys
+  const sp = table(SmallPublisher);
+  // And named subtype handles that must preserve their own LEFT/INNER nullability
+  const namedSmall = table(SmallPublisher, "small");
+  const lp = table(LargePublisher);
+  // When joining the subtype through the callable convenience or an explicit join
+  const subtypeLeft = em.query({ from: p, join: [p.smallPublisher(sp)], select: { name: p.name, city: sp.city } });
+  const subtypeInner = em.query({
+    from: p,
+    join: [p.smallPublisher.inner(sp)],
+    select: { name: p.name, city: sp.city },
+  });
+  const namedLeft = em.query({
+    from: p,
+    join: [p.smallPublisher(namedSmall)],
+    select: { name: p.name, city: namedSmall.city },
+  });
+  const namedInner = em.query({
+    from: p,
+    join: [p.smallPublisher.inner(namedSmall)],
+    select: { name: p.name, city: namedSmall.city },
+  });
+  const explicitLeft = em.query({
+    from: p,
+    join: [{ left: sp, on: p.id.eq(sp.id) }],
+    select: { name: p.name, city: sp.city },
+  });
+  // Then only the LEFT-joined subtype becomes nullable
+  expectTypeOf(subtypeLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf(subtypeInner).resolves.toEqualTypeOf<{ name: string; city: string }[]>();
+  expectTypeOf(namedLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf(namedInner).resolves.toEqualTypeOf<{ name: string; city: string }[]>();
+  expectTypeOf(explicitLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf<SourceOf<typeof sp.city>>().toEqualTypeOf<"SmallPublisher">();
+  expectTypeOf<SourceOf<typeof namedSmall.city>>().toEqualTypeOf<"small">();
+  expectTypeOf<ResultOf<typeof p.group_id>>().toEqualTypeOf<PublisherGroupId | null>();
+  // @ts-expect-error: callable subtype joins reject the wrong subtype
+  p.smallPublisher(lp);
+  // @ts-expect-error: INNER subtype joins also reject the wrong subtype
+  p.smallPublisher.inner(lp);
+  // @ts-expect-error: SmallPublisher's physical table has no inherited name column
+  sp.name;
+  // @ts-expect-error: specialized group storage still belongs to Publisher
+  sp.group_id;
+  // @ts-expect-error: Publisher's physical table has no subtype city column
+  p.city;
+  // @ts-expect-error: inherited root tables cannot hydrate entities
+  em.query({ from: p, select: p });
+  // @ts-expect-error: inherited subtype tables cannot hydrate entities
+  em.query({ from: sp, select: sp });
+  // @ts-expect-error: reusable reads also reject inherited entity selection
+  query({ from: p, select: p });
+  // @ts-expect-error: execute reads also reject inherited entity selection
+  em.execute({ from: sp, select: sp });
+
+  // Given STI handles that all expose the same physical tasks schema
+  const [task, oldTask, newTask] = tables(Task, TaskOld, TaskNew);
+  // When selecting sibling columns and specialized relationship storage from TaskOld
+  const shared = em.query({
+    from: oldTask,
+    select: {
+      old: oldTask.special_old_field,
+      newer: oldTask.special_new_field,
+      copied: oldTask.copied_from_id,
+      parent: oldTask.parent_old_task_id,
+      author: oldTask.special_new_author_id,
+    },
+  });
+  // Then SQL nullability and FK domains come from storage, not TaskOld's narrower entity fields
+  expectTypeOf(shared).resolves.toEqualTypeOf<
+    {
+      old: number | null;
+      newer: number | null;
+      copied: TaskId | null;
+      parent: TaskId | null;
+      author: AuthorId | null;
+    }[]
+  >();
+  expectTypeOf<ResultOf<typeof task.special_old_field>>().toEqualTypeOf<number | null>();
+  expectTypeOf<ResultOf<typeof newTask.special_old_field>>().toEqualTypeOf<number | null>();
+  // @ts-expect-error: STI roots cannot hydrate entities from a physical read
+  em.query({ from: task, select: task });
+  // @ts-expect-error: STI subtypes cannot hydrate entities from a reusable physical read
+  query({ from: oldTask, select: oldTask });
+  // @ts-expect-error: execute shares the STI entity-selection restriction
+  em.execute({ from: newTask, select: newTask });
 
   // === Mistakes that must not compile
   // Given a nonliteral Author read carrying an unsupported CTE clause

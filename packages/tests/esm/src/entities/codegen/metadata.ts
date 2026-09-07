@@ -32,7 +32,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", "int[]", true, Colors, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "firstName": { "fieldName": "firstName" }, "lastName": { "fieldName": "lastName" }, "delete": { "fieldName": "delete" }, "createdAt": { "fieldName": "createdAt" }, "updatedAt": { "fieldName": "updatedAt" }, "favorite_colors": { "fieldName": "favoriteColors" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -41,6 +41,14 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
+
+authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
+authorMeta.columns["firstName"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
+authorMeta.columns["lastName"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
+authorMeta.columns["delete"] = { fieldName: "delete", field: authorMeta.fields["delete"] };
+authorMeta.columns["createdAt"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
+authorMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
+authorMeta.columns["favorite_colors"] = { fieldName: "favoriteColors", field: authorMeta.fields["favoriteColors"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -58,7 +66,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
   },
-  columns: { "id": { "fieldName": "id" }, "title": { "fieldName": "title" }, "authorId": { "fieldName": "author" } },
+  columns: {},
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -67,6 +75,10 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
+
+bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
+bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
+bookMeta.columns["authorId"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 

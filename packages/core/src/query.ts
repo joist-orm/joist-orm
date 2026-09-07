@@ -29,11 +29,8 @@ import { deepFindConditions } from "./QueryParser.pruning.ts";
 import {
   type ColumnCondition,
   type ParsedExpressionFilter,
-  type ParsedFindQuery,
-  addTablePerClassJoinsAndClassTag,
   filterSoftDeletes,
   lazyExcludedSelects,
-  stiSubtypeFilter,
 } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import {
@@ -49,6 +46,7 @@ import {
   m2mJoinTable,
   tableMgmt,
 } from "./Tables.ts";
+import { type TypeMapEntry } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /**
@@ -170,7 +168,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   where?: ExpressionCondition;
   groupBy?: readonly ExprLike<any>[];
   having?: ExpressionCondition;
-  select: S;
+  select: S & CheckEntitySelect<S>;
   orderBy?: readonly (QueryOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
   limit?: number;
   offset?: number;
@@ -530,6 +528,16 @@ export type Subquery<R, Name extends string> = {
 export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } } & Partial<
   Record<MutationKey | "with" | "ctes", never>
 >;
+
+/** Physical inheritance tables cannot supply complete entities; select their columns instead. */
+type CheckEntitySelect<S> = [
+  Extract<
+    TypeMapEntry<S extends { readonly [tableMgmt]: { readonly __entity: infer T } } ? T : never, "inheritanceType">,
+    "cti" | "sti"
+  >,
+] extends [never]
+  ? unknown
+  : "Inherited tables cannot be selected as entities; select their columns individually";
 
 /**
  * Rejects a `select` that a `: Query` annotation widened to the whole `QuerySelect` union.
@@ -1005,6 +1013,12 @@ function validateReadQuery(arg: unknown): asserts arg is AnyReadQuery {
     validateQueryKeys(arg, READ_KEYS, "Read queries");
     if (!("from" in arg && "select" in arg))
       fail("em.query expects a { from, select, ... } object or a query(...) value");
+    if (isTable(arg.select)) {
+      const meta = getTableMetadata(arg.select);
+      if (meta.inheritanceType || meta.baseType || meta.baseTypes.length || meta.subTypes.length) {
+        fail(`Inherited table ${meta.type} cannot be selected as entities; select its columns individually`);
+      }
+    }
   }
   const options = arg as Record<string, unknown>;
   for (const key of ["limit", "offset"]) {
@@ -1243,15 +1257,11 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
 export class Ctx implements ExprContext {
   private aliases = new Map<object, string>();
   readonly outerRefs = new Set<string>();
-  /** Physical CTI table aliases (`sp_b0`) to their source alias (`sp`), shared across the whole parse. */
-  readonly ctiAliases: Map<string, string>;
 
   constructor(
     readonly assigner: AliasAssigner,
     private parent: Ctx | undefined,
-  ) {
-    this.ctiAliases = parent?.ctiAliases ?? new Map();
-  }
+  ) {}
 
   register(handle: object, alias: string): void {
     this.aliases.set(handle, alias);
@@ -1289,9 +1299,7 @@ interface ParsedSource {
   bindings: any[];
   /** Outer aliases a derived table references; PG rejects those without LATERAL, but pruning should still see them. */
   refs: string[];
-  /** CTI base/sub-table joins that travel with an entity alias. */
-  extraJoins: string[];
-  /** Entity-mode selects, i.e. `a.*` plus CTI columns and the `__class` tag. */
+  /** Entity-mode selects, i.e. `a.*` excluding lazy columns. */
   entitySelects: string[];
   meta: EntityMetadata | undefined;
 }
@@ -1301,7 +1309,7 @@ interface ParsedJoin {
   source: ParsedSource;
   /** The user's ON alone; `undefined` means it pruned away entirely, an error if the join is kept. */
   userOn: SqlFragment | undefined;
-  /** The ON to emit: the user's ON plus any injected soft-delete/STI-discriminator conditions. */
+  /** The ON to emit: the user's ON plus any injected soft-delete conditions. */
   fullOn: SqlFragment | undefined;
   keep: boolean;
 }
@@ -1319,11 +1327,10 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   validateReadQuery(q);
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
   const ctx = new Ctx(assigner, parent);
-  const selectedTable = isTable(q.select) ? getTableMgmt(q.select) : undefined;
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
 
   // 1. Register every source before generating SQL, so conditions can resolve their aliases.
-  const parseFrom = registerSource(q.from, ctx, assigner, handleOf(q.from) === selectedTable);
+  const parseFrom = registerSource(q.from, ctx, assigner);
   const pendingJoins = joinEntries.flatMap((j) => {
     const kind = "inner" in j && j.inner ? ("inner" as const) : ("left" as const);
     const alias = kind === "inner" ? j.inner : j.left;
@@ -1331,7 +1338,7 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
     // Only collection sugar joins (o2m/m2m) filter soft-deletes, em.find's relation semantics:
     // references (m2o/o2o/poly) resolve soft-deleted entities, and explicit joins are the user's own
     const softDeletes = (j as any)[collectionJoin] === true;
-    const target = { kind, keep, on: j.on, softDeletes, parseSource: registerSource(alias, ctx, assigner, false) };
+    const target = { kind, keep, on: j.on, softDeletes, parseSource: registerSource(alias, ctx, assigner) };
     // A sugar m2m join (`a.tags.as(t)`) carries a hidden join-table join; emit it first, with the same kind
     const m2m: M2mJoinTable | undefined = (j as any)[m2mJoinTable];
     if (!m2m) return [target];
@@ -1385,14 +1392,10 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   out.push({ sql: `SELECT ${q.distinct ? "DISTINCT " : ""}`, bindings: [], refs: [] });
   out.push(joinFragmentParts(selects, ", "));
   out.push({ sql: ` FROM ${from.sql}`, bindings: from.bindings, refs: [] });
-  for (const extra of from.extraJoins) out.push({ sql: ` ${extra}`, bindings: [], refs: [] });
   for (const j of kept) {
     const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
-    // A CTI subtype's physical base-table joins go *inside* a parenthesized join item: the ON can
-    // reference the base alias (i.e. `sp.id` renders as `sp_b0.id`), so the subtree must join first
-    const source = j.source.extraJoins.length > 0 ? `(${j.source.sql} ${j.source.extraJoins.join(" ")})` : j.source.sql;
     out.push({
-      sql: ` ${keyword} ${source} ON ${j.fullOn!.sql}`,
+      sql: ` ${keyword} ${j.source.sql} ON ${j.fullOn!.sql}`,
       bindings: [...j.source.bindings, ...j.fullOn!.bindings],
       refs: [],
     });
@@ -1418,11 +1421,10 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
 /**
  * Assigns a SQL alias to a source and returns a function that parses it after all sources are registered.
  *
- * Conditions resolve source identities through the context when their SQL is generated. CTI entities
- * get their base/sub-table joins from `addTablePerClassJoinsAndClassTag`, and the entity-mode `select`
- * gets that helper's selects too.
+ * Conditions resolve source identities through the context when their SQL is generated.
+ * Each entity source reads only its physical table, without inheritance joins or class tags.
  */
-function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPrimary: boolean): () => ParsedSource {
+function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () => ParsedSource {
   const handle = handleOf(source);
   if (handle instanceof SubqueryHandle) {
     const alias = handle.name ? assigner.getLiteralAlias(handle.name) : assigner.getLiteralAlias("sq");
@@ -1435,7 +1437,6 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
         sql: `(${inner.sql}) AS ${safeKq(alias)}`,
         bindings: inner.bindings,
         refs: inner.outerRefs,
-        extraJoins: [],
         entitySelects: [],
         meta: undefined,
       };
@@ -1444,31 +1445,15 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
     const meta = getTableMetadata(source as any);
     const alias = assigner.getAlias(meta.tableName);
     ctx.register(handle, alias);
-    // Record the physical CTI table aliases this source emits (i.e. `sp_b0`), so `refsOf` can credit
-    // their refs to this alias exactly; a user subquery named `book_b0` must not be mistaken for one
-    if (meta.inheritanceType === "cti") {
-      meta.baseTypes.forEach((_, i) => ctx.ctiAliases.set(`${alias}_b${i}`, alias));
-      if (isPrimary) meta.subTypes.forEach((_, i) => ctx.ctiAliases.set(`${alias}_s${i}`, alias));
-    }
     return () => {
-      const cti: ParsedFindQuery = { selects: [], tables: [], orderBys: [] };
-      addTablePerClassJoinsAndClassTag(cti, meta, alias, isPrimary);
-      const extraJoins = cti.tables.map((t) => {
-        if (t.join !== "outer") return fail(`Unexpected ${t.join} join for CTI`);
-        return `LEFT OUTER JOIN ${kq(t.table)} AS ${kq(t.alias)} ON ${t.col1} = ${t.col2}`;
-      });
-      // Entity mode starts with the primary table's own columns (excluding lazy ones, like em.find)
-      // and *appends* the CTI base/sub-table columns and the __class tag; the CTI selects alone would
-      // drop the selected table's own fields, i.e. a Publisher would hydrate with an undefined name
-      const primarySelects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
-      const entitySelects = [...primarySelects, ...(cti.selects as string[])];
+      // Ordinary entity mode selects the table's columns, excluding lazy ones like em.find.
+      const entitySelects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
       return {
         handle,
         alias,
         sql: `${kq(meta.tableName)} AS ${kq(alias)}`,
         bindings: [],
         refs: [],
-        extraJoins,
         entitySelects,
         meta,
       };
@@ -1477,10 +1462,9 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner, isPr
 }
 
 /**
- * em.find's per-source injections: `alias.deleted_at IS NULL` for a soft-deletable entity (CTI
- * subtypes are skipped, like em.find; see `filterSoftDeletes`), and the `type_id = X` discriminator
- * for an STI subtype, so `from: table(TaskNew)` only sees (and a joined subtype only matches)
- * TaskNew rows.
+ * Per-source soft-delete injections: `alias.deleted_at IS NULL` for a soft-deletable entity.
+ * CTI subtypes are skipped because their deleted-at column belongs to the base table (see
+ * `filterSoftDeletes`). STI sources read all physical rows without discriminator predicates.
  *
  * The conditions go into the from's WHERE or the join's ON, and never keep an otherwise unreferenced
  * join alive, which is what `pruneable: true` means on em.find's side.
@@ -1504,8 +1488,6 @@ export function injectedConditions(
       pruneable: true,
     });
   }
-  const sti = stiSubtypeFilter(meta, source.alias);
-  if (sti) conditions.push(sti);
   return conditions;
 }
 
@@ -1519,7 +1501,6 @@ function registerJoinTable(handle: JoinTableHandle, ctx: Ctx, assigner: AliasAss
     sql: `${kq(handle.joinTableName)} AS ${kq(alias)}`,
     bindings: [],
     refs: [],
-    extraJoins: [],
     entitySelects: [],
     meta: undefined,
   });
@@ -1533,7 +1514,7 @@ function selectsToSql(
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
   if (isTable(select)) {
-    // Entity mode: `a.*` (plus CTI columns), hydrated through the identity map. Only the from is
+    // Ordinary entity mode: `a.*`, hydrated through the identity map. Only the from is
     // hydratable: a joined alias would need null-row skipping and left-join nullability (see TODO.md)
     if (from.handle !== getTableMgmt(select)) {
       fail("Selecting a joined table is not supported yet; select the from table, or select its columns individually");
@@ -1667,7 +1648,7 @@ export function conditionToSql(
   if (!parsed) return undefined;
   const where = buildWhereClause(parsed, topLevel);
   if (!where) return undefined;
-  return { sql: where[0], bindings: where[1], refs: refsOf(parsed, ctx) };
+  return { sql: where[0], bindings: where[1], refs: refsOf(parsed) };
 }
 
 /**
@@ -1774,11 +1755,11 @@ function isFilter(cond: ExpressionCondition): cond is ExpressionFilter {
   return ("and" in cond && cond.and !== undefined) || ("or" in cond && cond.or !== undefined);
 }
 
-/** The aliases a parsed condition tree references, with physical CTI aliases credited to their source. */
-function refsOf(parsed: ParsedExpressionFilter, ctx: Ctx): string[] {
-  return deepFindConditions(parsed, false)
-    .flatMap((c) => (c.kind === "column" ? [c.alias] : c.kind === "raw" ? c.aliases : c.outerAliases))
-    .map((a) => ctx.ctiAliases.get(a) ?? a);
+/** The physical source aliases a parsed condition tree references. */
+function refsOf(parsed: ParsedExpressionFilter): string[] {
+  return deepFindConditions(parsed, false).flatMap((c) =>
+    c.kind === "column" ? [c.alias] : c.kind === "raw" ? c.aliases : c.outerAliases,
+  );
 }
 
 /**

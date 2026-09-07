@@ -39,7 +39,6 @@ import {
   type Entity,
   newSmallPublisherGroup,
   PublisherGroup,
-  type PublisherGroupColumns,
   type PublisherGroupFields,
   type PublisherGroupFilter,
   type PublisherGroupGraphQLFilter,
@@ -60,7 +59,7 @@ export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "i
   publishers: { kind: "o2m"; type: SmallPublisher };
 }
 
-export interface SmallPublisherGroupColumns extends Omit<PublisherGroupColumns, "id" | "small_name"> {
+export interface SmallPublisherGroupColumns {
   "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
   "small_name": {
     kind: "primitive";
@@ -120,6 +119,7 @@ declare module "joist-core" {
       optsType: SmallPublisherGroupOpts;
       fieldsType: SmallPublisherGroupFields;
       columnsType: SmallPublisherGroupColumns;
+      inheritanceType: "cti";
       supportsEmExecute: false;
       optIdsType: SmallPublisherGroupIdsOpts;
       factoryExtrasType: SmallPublisherGroupFactoryExtras;

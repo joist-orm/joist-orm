@@ -150,6 +150,7 @@ declare module "joist-core" {
       optsType: AuthorScheduleOpts;
       fieldsType: AuthorScheduleFields;
       columnsType: AuthorScheduleColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: AuthorScheduleIdsOpts;
       factoryExtrasType: AuthorScheduleFactoryExtras;

@@ -33,6 +33,25 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const { entity, createdAt, updatedAt, deletedAt } = meta;
 
   const fields = generateFields(config, meta);
+  const physical = meta.physicalMetadata ?? meta;
+  const sharedTable = meta.inheritanceType === "sti" && meta.baseClassName;
+  const storageFields = generateFields(config, physical, true);
+  // Reuse unchanged descriptors; only moved or specialized fields need separate storage metadata.
+  const physicalFields = Object.fromEntries(
+    Object.entries(storageFields).map(([name, field]) => [
+      name,
+      fields[name]?.toString() === field.toString() ? code`${entity.metaName}.fields[${q(name)}]` : field,
+    ]),
+  );
+  const columns = Object.fromEntries<string>([
+    ["id", "id"],
+    ...[...physical.primitives, ...physical.enums, ...physical.pgEnums, ...physical.manyToOnes].map(
+      (field) => [field.columnName, field.fieldName] as const,
+    ),
+    ...physical.polymorphics.flatMap((field) =>
+      field.components.map((component) => [component.columnName, field.fieldName] as const),
+    ),
+  ]);
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -68,16 +87,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tableName: "${meta.tableName}",
       supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true},
       fields: ${fields},
-      columns: ${Object.fromEntries([
-        ["id", { fieldName: "id" }],
-        ...[...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes].map((field) => [
-          field.columnName,
-          { fieldName: field.fieldName },
-        ]),
-        ...meta.polymorphics.flatMap((field) =>
-          field.components.map((component) => [component.columnName, { fieldName: field.fieldName }]),
-        ),
-      ])},
+      columns: {},
       allFields: {},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
@@ -86,6 +96,21 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       baseTypes: [],
       subTypes: [], ${maybeInsertionOrder} ${maybeUniqueBy}
     };
+
+    ${
+      sharedTable
+        ? ""
+        : code`
+      ${Object.entries(columns).map(([columnName, fieldName]) => {
+        const firstColumn = Object.keys(columns).find((name) => columns[name] === fieldName)!;
+        const field =
+          firstColumn === columnName
+            ? physicalFields[fieldName]
+            : code`${entity.metaName}.columns[${q(firstColumn)}].field`;
+        return code`${entity.metaName}.columns[${q(columnName)}] = { fieldName: ${q(fieldName)}, field: ${field} };`;
+      })}
+    `
+    }
 
     (${entity.typeForMetadataFile} as any).metadata = ${entity.metaName};
   `;
@@ -103,7 +128,8 @@ function getUniqueBy(config: Config, meta: EntityDbMetadata): string[][] {
   });
 }
 
-function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {
+/** Emits field descriptors; physical polymorphic serdes resolve the original storage components. */
+function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical = false): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
   fields["id"] = code`
@@ -341,7 +367,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
             columnName: "${columnName}",
           },`,
         )}],
-        serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"),
+        serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"${physical ? code`, ${q(components[0].columnName)}` : ""}),
         immutable: false,
       }
     `;

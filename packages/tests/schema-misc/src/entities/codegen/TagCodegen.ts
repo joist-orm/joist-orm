@@ -137,6 +137,7 @@ declare module "joist-core" {
       optsType: TagOpts;
       fieldsType: TagFields;
       columnsType: TagColumns;
+      inheritanceType: never;
       supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;

@@ -95,6 +95,37 @@ describe("EntityManager.execute", () => {
     ]);
   });
 
+  it("preserves NULL elements in numeric AuthorStat arrays returned by UPDATE", async () => {
+    // Given a persisted AuthorStat whose numeric arrays are empty
+    const em = newEntityManager();
+    const s = table(AuthorStat);
+    await em.execute({
+      insert: s,
+      values: {
+        smallint: 1,
+        integer: 1,
+        bigint: 1n,
+        decimal: 1.5,
+        real: 1.5,
+        double_precision: 1.5,
+        decimal_samples: [],
+        bigint_samples: [],
+      },
+    });
+    // When storing NULL elements alongside zero, a fraction, and a bigint beyond Number's exact range
+    const result = await em.execute({
+      update: s,
+      set: {
+        decimal_samples: sql<number[]>`ARRAY[NULL, 0, 1.25]::numeric[]`,
+        bigint_samples: sql<bigint[]>`ARRAY[NULL, 0, 9007199254740993]::bigint[]`,
+      },
+      allowAll: true,
+      returning: { decimal: s.decimal_samples, bigint: s.bigint_samples },
+    });
+    // Then RETURNING preserves NULL elements without coercion or numeric precision loss
+    expect(result.rows).toEqual([{ decimal: [null, 0, 1.25], bigint: [null, 0n, 9007199254740993n] }]);
+  });
+
   it("returns generated PasswordValue array elements from real User password history", async () => {
     // Given a User whose password history is written by the generated custom array serde during flush
     const em = newEntityManager();
@@ -789,6 +820,75 @@ describe("EntityManager.execute", () => {
   });
 
   describe("native codecs and RETURNING", () => {
+    it("persists falsy Author assignments rather than omitting them", async () => {
+      // Given an Author with nonempty text, a positive age, and isFunny enabled
+      const em = newEntityManager();
+      const a = table(Author);
+      await em.execute({
+        insert: a,
+        values: { first_name: "Falsy", number_of_books: 0, last_name: "Original", age: 42, is_funny: true },
+      });
+      // When replacing those values with empty text, zero, and false
+      const result = await em.execute({
+        update: a,
+        set: { last_name: "", age: 0, is_funny: false },
+        where: a.id.eq("a:1"),
+        returning: { lastName: a.last_name, age: a.age, isFunny: a.is_funny },
+      });
+      // Then RETURNING and physical storage retain all three explicit assignments
+      expect(result.rows).toEqual([{ lastName: "", age: 0, isFunny: false }]);
+      expect(await select("authors")).toMatchObject([{ last_name: "", age: 0, is_funny: false }]);
+    });
+
+    it("preserves milliseconds in an Author deletion timestamp", async () => {
+      // Given an Author import with a deletion timestamp between whole seconds
+      const em = newEntityManager();
+      const a = table(Author);
+      const deletedAt = new Date("2026-09-06T12:34:56.789Z");
+      // When inserting the Date as a domain value
+      const result = await em.execute({
+        insert: a,
+        values: { first_name: "Deleted", number_of_books: 0, deleted_at: deletedAt },
+        returning: a.deleted_at,
+      });
+      // Then the returned Date and stored timestamp retain millisecond precision
+      expect(result.rows).toEqual([deletedAt]);
+      expect(await select("authors")).toMatchObject([{ deleted_at: deletedAt }]);
+    });
+
+    it("stores extra business address keys before Zod strips them from RETURNING", async () => {
+      // Given an Author business address with an extra import marker outside AddressSchema
+      const em = newEntityManager();
+      const a = table(Author);
+      const businessAddress = { street: "Main", imported: true };
+      // When writing the domain object and returning its schema-backed column
+      const result = await em.execute({
+        insert: a,
+        values: { first_name: "Importer", number_of_books: 0, business_address: businessAddress },
+        returning: a.business_address,
+      });
+      // Then read-time parsing strips the marker without changing the persisted JSON
+      expect(result.rows).toEqual([{ street: "Main" }]);
+      expect(await select("authors")).toMatchObject([{ business_address: businessAddress }]);
+    });
+
+    it("stores an invalid Author address without RETURNING but rejects it on read", async () => {
+      // Given an Author import whose numeric street violates the real Superstruct address schema
+      const em = newEntityManager();
+      const a = table(Author);
+      // @ts-expect-error A numeric street deliberately violates the generated address type
+      const address: Author["address"] = { street: 123 };
+      // When writing invalid domain JSON without requesting read-time decoding
+      const result = await em.execute({
+        insert: a,
+        values: { first_name: "Importer", number_of_books: 0, address },
+      });
+      // Then the write persists the JSON, while a public read applies Superstruct validation
+      expect(result).toEqual({ rowCount: 1, rows: [] });
+      expect(await select("authors")).toMatchObject([{ address: { street: 123 } }]);
+      await expect(em.query({ from: a, select: a.address })).rejects.toThrow("Expected a string");
+    });
+
     it("encodes and returns enums, enum arrays, JSON, native arrays, bigint, and dates", async () => {
       // Given a fresh Author import with real domain values rather than raw database enum ids
       const em = newEntityManager();

@@ -41,7 +41,7 @@ export interface ExecuteResult<R> {
   rows: R[];
 }
 
-/** RETURNING never hydrates entities or exposes a table-shaped read value. */
+/** A mutation's RETURNING projection: one SQL expression or a named object of expressions. */
 export type MutationReturning = (ExprLike<unknown> | Readonly<Record<string, ExprLike<unknown>>>) & {
   readonly [tableMgmt]?: never;
   readonly [subqueryBrand]?: never;
@@ -353,15 +353,19 @@ type NoMutationReadClauses = Partial<
     never
   >
 >;
+/** Column keys allowed in INSERT, i.e. Book's optional `id` and required `author_id`. */
 type InsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" | "optional" } ? K : never;
 }[keyof ColumnsOf<T>];
+/** Column keys that each INSERT row must supply, i.e. Book's `author_id` despite its ORM default. */
 type RequiredInsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" } ? K : never;
 }[keyof ColumnsOf<T>];
+/** Column keys allowed in UPDATE SET, i.e. Book's `title` and `author_id`, but not `id`. */
 type UpdateKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { update: true } ? K : never;
 }[keyof ColumnsOf<T>];
+/** A column's domain value before SQL nullability is added, i.e. Book's `id` is BookId and `author_id` is AuthorId. */
 type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
   ? IdOf<T>
   : ColumnsOf<T>[K] extends { kind: "m2o"; type: infer U }

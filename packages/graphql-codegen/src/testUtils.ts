@@ -52,7 +52,6 @@ export function newDbMeta(opt: EntityDbMetadata[] | Partial<DbMetadata>): DbMeta
 export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveField> = {}): PrimitiveField {
   return {
     kind: "primitive",
-    columnNotNull: opts.notNull ?? true,
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
@@ -64,6 +63,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     protected: false,
     unique: false,
     columnDefault: null,
+    columnNotNull: opts.notNull ?? true,
     superstruct: undefined,
     zodSchema: undefined,
     customSerde: undefined,
@@ -117,12 +117,12 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
   const enumDetailsType = imp(`${enumName}Details@./entities`);
   return {
     kind: "enum",
-    columnNotNull: opts.notNull ?? true,
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
     columnType: "int",
     columnDefault: null,
+    columnNotNull: opts.notNull ?? true,
     derived: false,
     enumName,
     enumType,
@@ -143,10 +143,10 @@ export function newManyToOneField(
 ): ManyToOneField {
   return {
     kind: "m2o",
-    columnNotNull: opts.notNull ?? true,
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
+    columnNotNull: opts.notNull ?? true,
     derived: false,
     notNull: true,
     hasConfigDefault: false,

@@ -54,10 +54,23 @@ describe("EntityManager.rawQueries", () => {
       await insertAuthor({ first_name: "a2" });
       const em = newEntityManager();
       const a = alias(Author);
-      // When finding Authors with an alias condition on firstName
-      const authors = await em.find(Author, { as: a }, { conditions: { and: [a.firstName.eq("a1")] } });
+      // And frozen ID, raw, and cross-column conditions can be reused by find
+      const conditions = {
+        and: [
+          Object.freeze(a.id.eq("a:1")!),
+          Object.freeze(a.firstName.eq("a1")!),
+          Object.freeze(a.firstName.raw("LIKE ?", ["a1"])),
+          Object.freeze(a.id.eq(a.id)!),
+        ],
+      };
+      Object.freeze(conditions.and);
+      Object.freeze(conditions);
+      // When finding Authors twice with the same immutable conditions
+      const authors = await em.find(Author, { as: a }, { conditions });
+      const again = await newEntityManager().find(Author, { as: a }, { conditions });
       // Then only the matching Author is returned
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      expect(again).toMatchEntity([{ firstName: "a1" }]);
     });
 
     it("returns entities for a bare alias", async () => {
@@ -717,6 +730,33 @@ describe("EntityManager.rawQueries", () => {
       });
     });
 
+    it("returns zero counts and null aggregates when no Authors match", async () => {
+      // Given a persisted Author outside the requested name filter
+      await insertAuthor({ first_name: "Other" });
+      const em = newEntityManager();
+      const a = table(Author);
+      // When aggregating an empty result over a physically required derived count
+      const rows = await em.query({
+        from: a,
+        where: a.first_name.eq("Missing"),
+        select: {
+          count: a.number_of_books.count(),
+          distinct: a.number_of_books.countDistinct(),
+          sum: a.number_of_books.sum(),
+          avg: a.number_of_books.avg(),
+          min: a.number_of_books.min(),
+          max: a.number_of_books.max(),
+          array: a.number_of_books.arrayAgg(),
+          names: a.first_name.stringAgg(","),
+        },
+      });
+      // Then PostgreSQL's empty-input results survive decoding without hydration
+      expect(rows).toEqual([
+        { count: 0, distinct: 0, sum: null, avg: null, min: null, max: null, array: null, names: null },
+      ]);
+      expect(em.entities).toEqual([]);
+    });
+
     it("can filter groups with having", async () => {
       // Given Authors a1 and a2 as separate aggregate groups
       await insertAuthor({ first_name: "a1" });
@@ -831,6 +871,41 @@ describe("EntityManager.rawQueries", () => {
          "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.age >= $1 AND a.deleted_at IS NULL GROUP BY a.first_name HAVING count(b.id)::int > $2",
        ]
       `);
+    });
+
+    it("reuses frozen read predicates without resolving the caller's conditions in place", async () => {
+      // Given an Author selected by the reusable report
+      await insertAuthor({ first_name: "Alice" });
+      // And another Author that must remain outside its predicates
+      await insertAuthor({ first_name: "Bob" });
+      const em = newEntityManager();
+      const a = table(Author);
+      // And immutable ID, cross-column, raw, template, and optional predicates
+      const where = {
+        and: [
+          Object.freeze(a.id.eq("a:1")!),
+          Object.freeze(a.id.eq(a.id)!),
+          Object.freeze(a.first_name.raw("LIKE ?", ["A%"])),
+          Object.freeze(sql.condition`${a.first_name} = ${"Alice"}`!),
+          a.id.eq(undefined),
+        ],
+      };
+      Object.freeze(where.and);
+      Object.freeze(where);
+      // And a frozen aggregate predicate and report root
+      const report = Object.freeze({
+        from: a,
+        where,
+        having: Object.freeze(a.id.count().eq(1)!),
+        select: Object.freeze({ count: a.id.count() }),
+      });
+      // When executing the same report twice
+      const first = await em.query(report);
+      const second = await em.query(report);
+      // Then all predicates remain usable and the result stays a decoded POJO
+      expect(first).toEqual([{ count: 1 }]);
+      expect(second).toEqual(first);
+      expect(em.entities).toEqual([]);
     });
 
     it("prunes a bare where condition given undefined", async () => {
@@ -1217,6 +1292,48 @@ describe("EntityManager.rawQueries", () => {
       `);
     });
 
+    it.each(["limit", "offset"] as const)("rejects invalid read %s before SQL", async (key) => {
+      // Given a real Author read at an unchecked application boundary
+      const em = newEntityManager();
+      const read = em.query.bind(em) as (input: unknown) => Promise<unknown[]>;
+      const a = table(Author);
+      const source = { from: a, select: { name: a.first_name } };
+      // And pagination values that are not nonnegative finite integers
+      const invalid = [-1, 0.5, NaN, Infinity, null, "1"];
+      // When paginating ordinary reads and nested compound operands
+      for (const value of invalid) {
+        await expect(read({ ...source, [key]: value })).rejects.toThrow(
+          `Read query ${key} must be a nonnegative finite integer`,
+        );
+        await expect(read({ unionAll: [source, { ...source, [key]: value }] })).rejects.toThrow(
+          `Read query ${key} must be a nonnegative finite integer`,
+        );
+      }
+      // Then no malformed pagination reaches PostgreSQL
+      expect(queries).toEqual([]);
+    });
+
+    it("accepts zero pagination and explicit false read flags", async () => {
+      // Given an Author that an unpaginated read would return
+      await insertAuthor({ first_name: "Alice" });
+      const em = newEntityManager();
+      const a = table(Author);
+      // And explicit false flags and a zero offset on the read
+      const source = {
+        from: a,
+        select: { name: a.first_name },
+        offset: 0,
+        distinct: false,
+        pruneJoins: false,
+        softDeletes: "include",
+      } as const;
+      // When zero LIMIT is used on an ordinary or compound read
+      expect(await em.query({ ...source, limit: 0 })).toEqual([]);
+      expect(await em.query({ unionAll: [source, source], limit: 0, offset: 0 })).toEqual([]);
+      // Then zero OFFSET and false flags alone do not suppress the Author
+      expect(await em.query(source)).toEqual([{ name: "Alice" }]);
+    });
+
     it("can order with nulls last, limit, and offset", async () => {
       // Given Author a1 with a known age
       await insertAuthor({ first_name: "a1", age: 10 });
@@ -1375,8 +1492,8 @@ describe("EntityManager.rawQueries", () => {
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
-      // And a reusable Book count subquery correlated to the outer Author alias
-      const cnt = query({ from: b, where: b.author_id.eq(a.id), select: b.id.count() });
+      // And a frozen reusable Book count subquery correlated to the outer Author alias
+      const cnt = query(Object.freeze({ from: b, where: Object.freeze(b.author_id.eq(a.id)!), select: b.id.count() }));
       // And a separate Book alias for an outer join in the second query
       const b2 = table(Book, "b2");
       resetQueryCount();
@@ -1530,6 +1647,18 @@ describe("EntityManager.rawQueries", () => {
         select: { text: c.text },
       });
       expect(rows).toEqual([{ text: "on a1" }]);
+    });
+
+    it("rejects a direct id column as a polymorphic IN subquery", () => {
+      // Given a Comment table with a polymorphic parent
+      const c = table(Comment);
+      // And an Author id column without a scalar subquery
+      const a = table(Author);
+      // When using the column directly as the polymorphic IN operand
+      // Then the predicate requires a subquery selecting the parent ids
+      expect(() => c.parent.in(a.id)).toThrow(
+        "parent is polymorphic, so `in` needs a subquery selecting an id or FK column",
+      );
     });
 
     it("rejects an in subquery that does not select an id or FK column", () => {

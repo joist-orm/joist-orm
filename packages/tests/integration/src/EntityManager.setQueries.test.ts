@@ -14,6 +14,7 @@ import {
 } from "joist-orm";
 import {
   Author,
+  AuthorStat,
   Book,
   BookRange,
   Comment,
@@ -1440,6 +1441,46 @@ describe("EntityManager.setQueries", () => {
       });
       // Then the agreed aggregate decoder returns numbers for every branch
       expect(rows).toEqual([{ age: 20 }, { age: 40 }]);
+    });
+
+    it("combines generated decimals with AVG and physical numeric arrays", async () => {
+      // Given an EntityManager and an alias using AuthorStat's generated numeric codecs
+      const em = newEntityManager();
+      const s = table(AuthorStat);
+      // And an AuthorStat whose decimal and physical samples contain the same fractional value
+      await em.execute({
+        insert: s,
+        values: {
+          smallint: 1,
+          integer: 1,
+          bigint: 1n,
+          decimal: 1.25,
+          real: 1.25,
+          double_precision: 1.25,
+          decimal_samples: [1.25],
+        },
+      });
+      // When combining a decimal column with PostgreSQL's numeric AVG output
+      const values = query({
+        union: [
+          { from: s, select: { value: s.decimal } },
+          { from: s, select: { value: s.decimal.avg() } },
+        ],
+      });
+      const scalars = await em.query(values);
+      // Then the shared numeric domain returns a number rather than a driver string
+      expect(scalars).toEqual([{ value: 1.25 }]);
+      expectTypeOf(scalars).toEqualTypeOf<{ value: number | null }[]>();
+      // When aggregating the agreed numeric output and combining it with the stored samples
+      const arrays = await em.query({
+        union: [
+          { from: values, select: { samples: values.value.arrayAgg() } },
+          { from: s, select: { samples: s.decimal_samples } },
+        ],
+      });
+      // Then both array representations deduplicate and decode their fractional elements as numbers
+      expect(arrays).toEqual([{ samples: [1.25] }]);
+      expectTypeOf(arrays[0].samples![0]).toEqualTypeOf<number | null>();
     });
 
     it("combines MIN and MAX of varchar columns using their matching text outputs", async () => {

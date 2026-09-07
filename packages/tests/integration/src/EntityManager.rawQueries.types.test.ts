@@ -203,6 +203,26 @@ async function typeAssertions() {
   expectTypeOf(withSequel).resolves.toEqualTypeOf<{ title: string; sequel: string | null }[]>();
 
   // === Mistakes that must not compile
+  // Given a nonliteral Author read carrying an unsupported CTE clause
+  const withCte = { from: a, select: { name: a.first_name }, with: [] };
+  // And an otherwise valid compound with that invalid later operand
+  const nestedCte = { unionAll: [q, withCte] } as const;
+  // And a compound mixed with a mutation operation
+  const compoundMutation = { union: [q, q], insert: a } as const;
+  // When checking public overloads rather than internal clause-check types
+  // Then nonliteral inputs cannot hide unsupported clauses
+  // @ts-expect-error: ordinary read values do not support CTE clauses
+  query(withCte);
+  // @ts-expect-error: nested operands must reject unsupported clauses
+  query(nestedCte);
+  // @ts-expect-error: execution checks nested nonliteral clauses too
+  em.query(nestedCte);
+  // @ts-expect-error: a nonliteral compound cannot also be an INSERT
+  query(compoundMutation);
+  // And query-clause words remain legal as projected data keys
+  const keywords = query({ from: a, select: { with: a.first_name, select: a.first_name, delete: a.first_name } });
+  expectTypeOf(em.query(keywords)).resolves.toEqualTypeOf<{ with: string; select: string; delete: string }[]>();
+
   // @ts-expect-error: an AuthorId column cannot be compared to a BookId column
   bookStats.authorId.eq(b.id);
   // @ts-expect-error: the subquery selects BookId, but a.id is an AuthorId column

@@ -52,6 +52,7 @@ export function newDbMeta(opt: EntityDbMetadata[] | Partial<DbMetadata>): DbMeta
 export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveField> = {}): PrimitiveField {
   return {
     kind: "primitive",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
@@ -117,6 +118,7 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
   const enumDetailsType = imp(`${enumName}Details@./entities`);
   return {
     kind: "enum",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
@@ -143,6 +145,7 @@ export function newManyToOneField(
 ): ManyToOneField {
   return {
     kind: "m2o",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
     columnGenerated: false,
@@ -174,6 +177,7 @@ export function newPolymorphicField(
     hasConfigDefault: false,
     components: components.map((component) => ({
       columnName: `${snakeCase(fieldName)}_${snakeCase(component)}_id`,
+      columnOwner: makeEntity("Author"),
       otherFieldName: fieldName,
       otherEntity: makeEntity(component),
       isDeferredAndDeferrable: true,

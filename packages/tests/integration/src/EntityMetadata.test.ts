@@ -236,13 +236,22 @@ describe("EntityMetadata", () => {
     // When inspecting Publisher CTI and Task STI column metadata
     // Then CTI columns stay on their owning table while STI subtypes share Task's columns
     expect(getMetadata(SmallPublisher).columns.name).toBeUndefined();
+    expect(getMetadata(SmallPublisher).fields.id.serde!.columns[0].column).toBe(getMetadata(SmallPublisher).columns.id);
+    expect(getMetadata(SmallPublisher).columns.id).not.toBe(getMetadata(Publisher).columns.id);
     expect(getMetadata(SmallPublisher).fields.city.serde!.columns[0].column).toBe(
       getMetadata(SmallPublisher).columns.city,
     );
     expect(getMetadata(SmallPublisher).columns.group_id).toBeUndefined();
     expect(getMetadata(Publisher).fields.group.serde!.columns[0].column).toBe(getMetadata(Publisher).columns.group_id);
+    expect(getMetadata(SmallPublisher).allFields.group.serde!.columns[0].column).toBe(
+      getMetadata(Publisher).columns.group_id,
+    );
     expect(getMetadata(TaskOld).columns).toBe(getMetadata(Task).columns);
     expect(getMetadata(TaskNew).columns).toBe(getMetadata(Task).columns);
+    expect(getMetadata(TaskOld).fields.id.serde!.columns[0].column).toBe(getMetadata(Task).columns.id);
+    expect(getMetadata(TaskOld).fields.specialOldField.serde!.columns[0].column).toBe(
+      getMetadata(Task).columns.special_old_field,
+    );
     expect(getMetadata(TaskOld).columns.copied_from_id.idMetadata!()).toBe(getMetadata(Task));
     expect(getMetadata(TaskOld).allFields.copiedFrom.serde!.columns[0].column).toBe(
       getMetadata(Task).columns.copied_from_id,

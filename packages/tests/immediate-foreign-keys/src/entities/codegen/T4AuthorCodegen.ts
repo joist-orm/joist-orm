@@ -59,6 +59,20 @@ export interface T4AuthorFields {
   t4Books: { kind: "o2m"; type: T4Book };
 }
 
+export interface T4AuthorColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "first_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "favorite_book_id": { kind: "m2o"; type: T4Book; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface T4AuthorOpts {
   firstName: string;
   favoriteBook: T4Book | T4BookId;
@@ -115,6 +129,8 @@ declare module "joist-core" {
       orderType: T4AuthorOrder;
       optsType: T4AuthorOpts;
       fieldsType: T4AuthorFields;
+      columnsType: T4AuthorColumns;
+      supportsEmExecute: true;
       optIdsType: T4AuthorIdsOpts;
       factoryExtrasType: T4AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT4Author>[1];

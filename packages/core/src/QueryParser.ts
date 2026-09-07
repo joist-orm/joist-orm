@@ -2,10 +2,10 @@ import { groupBy, isPlainObject } from "joist-utils";
 
 import { type AliasMgmt, getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
 import { getMetadataForTable } from "./configure.ts";
+import { deferredAliasSym, isDeferredAliasCondition } from "./DeferredAlias.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionFilter, type OrderBy, type ValueFilter } from "./EntityFilter.ts";
 import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata.ts";
-import { deferredAliasSym, isDeferredAliasCondition } from "./Expr.ts";
 import {
   type Column,
   ConditionBuilder,
@@ -67,8 +67,8 @@ export interface ExistsCondition {
   outerAliases: string[];
 }
 
-// `skipCondition` lives in `Expr.ts` (a runtime leaf) so alias/expression methods can return it
-// without a load-order cycle; `index.ts` re-exports it from there.
+// `skipCondition` lives in `DeferredAlias.ts`, shared by domain aliases and SQL expressions
+// without a load-order cycle; `index.ts` re-exports it through Expr.ts.
 
 export interface PrimaryTable {
   join: "primary";
@@ -1225,8 +1225,8 @@ function resolveAliasConditions(
   function resolve(handle: AliasMgmt): { meta: EntityMetadata; alias: string } {
     return bindings.get(handle) ?? fail(`Alias for ${handle.tableName} is not bound to this query's join literal`);
   }
-  function maybeResolve(c: ColumnCondition | RawCondition): void {
-    if (isDeferredAliasCondition(c)) c[deferredAliasSym](resolve);
+  function maybeResolve<C extends ColumnCondition | RawCondition>(c: C): C | undefined {
+    return isDeferredAliasCondition(c) ? c[deferredAliasSym](resolve) : undefined;
   }
   visitConditions(query, { visitCond: maybeResolve, visitRaw: maybeResolve });
 }

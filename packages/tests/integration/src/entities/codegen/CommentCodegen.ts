@@ -88,6 +88,61 @@ export interface CommentFields {
   books: { kind: "o2m"; type: Book };
 }
 
+export interface CommentColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "parent_tagged_id": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "parent_tags": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "text": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "user_id": { kind: "m2o"; type: User; derived: false; nullable: true; insert: "optional"; update: true };
+  "parent_author_id": { kind: "m2o"; type: Author; nullable: true; insert: "never"; update: false };
+  "parent_book_id": { kind: "m2o"; type: Book; nullable: true; insert: "never"; update: false };
+  "parent_book_review_id": { kind: "m2o"; type: BookReview; nullable: true; insert: "never"; update: false };
+  "parent_publisher_id": { kind: "m2o"; type: Publisher; nullable: true; insert: "never"; update: false };
+  "parent_task_id": { kind: "m2o"; type: TaskOld; nullable: true; insert: "never"; update: false };
+}
+
 export interface CommentOpts {
   text?: string | null;
   user?: User | UserId | null;
@@ -181,6 +236,8 @@ declare module "joist-core" {
       orderType: CommentOrder;
       optsType: CommentOpts;
       fieldsType: CommentFields;
+      columnsType: CommentColumns;
+      supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];

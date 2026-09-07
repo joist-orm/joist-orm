@@ -59,6 +59,20 @@ export interface T2BookFields {
   t2Authors: { kind: "o2m"; type: T2Author };
 }
 
+export interface T2BookColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "author_id": { kind: "m2o"; type: T2Author; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface T2BookOpts {
   title: string;
   author: T2Author | T2AuthorId;
@@ -115,6 +129,8 @@ declare module "joist-core" {
       orderType: T2BookOrder;
       optsType: T2BookOpts;
       fieldsType: T2BookFields;
+      columnsType: T2BookColumns;
+      supportsEmExecute: true;
       optIdsType: T2BookIdsOpts;
       factoryExtrasType: T2BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT2Book>[1];

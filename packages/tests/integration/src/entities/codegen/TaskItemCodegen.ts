@@ -65,6 +65,31 @@ export interface TaskItemFields {
   task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
 }
 
+export interface TaskItemColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "new_task_id": { kind: "m2o"; type: TaskNew; derived: false; nullable: true; insert: "optional"; update: true };
+  "old_task_id": { kind: "m2o"; type: TaskOld; derived: false; nullable: true; insert: "optional"; update: true };
+  "task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface TaskItemOpts {
   newTask?: TaskNew | TaskNewId | null;
   oldTask?: TaskOld | TaskOldId | null;
@@ -137,6 +162,8 @@ declare module "joist-core" {
       orderType: TaskItemOrder;
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
+      columnsType: TaskItemColumns;
+      supportsEmExecute: true;
       optIdsType: TaskItemIdsOpts;
       factoryExtrasType: TaskItemFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskItem>[1];

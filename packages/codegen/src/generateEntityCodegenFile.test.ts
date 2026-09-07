@@ -1,5 +1,5 @@
 import { config } from "./config.ts";
-import { makeEntity } from "./EntityDbMetadata.ts";
+import { type PrimitiveField, makeEntity } from "./EntityDbMetadata.ts";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile.ts";
 
 describe("generateEntityCodegenFile", () => {
@@ -37,22 +37,38 @@ function getterRegion(output: string, fieldName: string): string {
     .trim();
 }
 
-function primitive(fieldName: string): any {
+/** Builds a string field for the getter JSDoc test. */
+function primitive(fieldName: string): PrimitiveField {
   return {
+    kind: "primitive",
     fieldName,
+    columnName: fieldName,
+    columnType: "text",
     fieldType: "string",
+    rawFieldType: "string",
     notNull: fieldName === "firstName",
+    columnNotNull: fieldName === "firstName",
     derived: false,
+    protected: false,
     unique: false,
     columnDefault: null,
+    hasConfigDefault: false,
+    isArray: false,
+    superstruct: undefined,
+    zodSchema: undefined,
+    customSerde: undefined,
+    columnGenerated: false,
   };
 }
 
-function fakeMeta(name: string, primitives: any[]): any {
+function fakeMeta(name: string, primitives: PrimitiveField[]): any {
   return {
     name,
     entity: makeEntity(name),
     tagName: name.toLowerCase().slice(0, 1),
+    tableName: "authors",
+    primaryKey: { columnType: "int", notNull: true, columnNotNull: true, columnDefault: null, columnGenerated: false },
+    subTypes: [],
     primitives,
     enums: [],
     pgEnums: [],

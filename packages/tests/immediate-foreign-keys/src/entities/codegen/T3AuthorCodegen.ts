@@ -59,6 +59,20 @@ export interface T3AuthorFields {
   t3Books: { kind: "o2m"; type: T3Book };
 }
 
+export interface T3AuthorColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "first_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "favorite_book_id": { kind: "m2o"; type: T3Book; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface T3AuthorOpts {
   firstName: string;
   favoriteBook: T3Book | T3BookId;
@@ -115,6 +129,8 @@ declare module "joist-core" {
       orderType: T3AuthorOrder;
       optsType: T3AuthorOpts;
       fieldsType: T3AuthorFields;
+      columnsType: T3AuthorColumns;
+      supportsEmExecute: true;
       optIdsType: T3AuthorIdsOpts;
       factoryExtrasType: T3AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT3Author>[1];

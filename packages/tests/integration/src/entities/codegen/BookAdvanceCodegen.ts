@@ -69,6 +69,31 @@ export interface BookAdvanceFields {
   publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
 }
 
+export interface BookAdvanceColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "status_id": { kind: "enum"; type: AdvanceStatus; nullable: false; insert: "required"; update: true };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
+  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface BookAdvanceOpts {
   status: AdvanceStatus;
   book: Book | BookId;
@@ -150,6 +175,8 @@ declare module "joist-core" {
       orderType: BookAdvanceOrder;
       optsType: BookAdvanceOpts;
       fieldsType: BookAdvanceFields;
+      columnsType: BookAdvanceColumns;
+      supportsEmExecute: true;
       optIdsType: BookAdvanceIdsOpts;
       factoryExtrasType: BookAdvanceFactoryExtras;
       factoryOptsType: Parameters<typeof newBookAdvance>[1];

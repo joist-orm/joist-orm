@@ -150,6 +150,9 @@ export type PrimitiveField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  /** Database nullability, unchanged by domain inheritance specialization. */
+  columnNotNull: boolean;
   // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
   fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
@@ -170,6 +173,8 @@ export type EnumField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   derived: "sync" | "async" | false;
   enumName: string;
   enumType: Import;
@@ -185,6 +190,8 @@ export type PgEnumField = Field & {
   kind: "pg-enum";
   columnName: string;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   /** I.e. `favorite_shape`. */
   dbType: string;
   /** I.e. `FavoriteShape`. */
@@ -199,6 +206,9 @@ export type PgEnumField = Field & {
 export type ManyToOneField = Field & {
   kind: "m2o";
   columnName: string;
+  columnDefault?: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   dbType: string;
   otherFieldName: string;
   otherEntity: Entity;
@@ -319,6 +329,8 @@ export class EntityDbMetadata {
   abstract: boolean;
   nonDeferredFkOrder: number = -1;
   uniqueConstraints?: string[][];
+  /** Gates mutation targets, not reads; false when required columns or array storage have no supported mutation mapping. */
+  supportsEmExecute?: boolean;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -421,6 +433,30 @@ export class EntityDbMetadata {
     this.updatedAt = this.primitives.find((f) => updatedAtConf.names.includes(f.columnName));
     this.deletedAt = this.primitives.find((f) => deletedAtConf.names.includes(f.columnName));
     this.uniqueConstraints = inferUniqueConstraints(this, table);
+    const fields = [this.primaryKey, ...this.primitives, ...this.enums, ...this.pgEnums, ...this.manyToOnes];
+    const mapped = new Set(fields.map((field) => field.columnName));
+    // Composite keys and unmapped NOT NULL columns cannot be supplied through mutation field names.
+    this.supportsEmExecute =
+      table.primaryKey?.columns.length === 1 &&
+      this.primaryKey.columnName === "id" &&
+      // Native enum and multidimensional arrays still have scalar field mappings.
+      table.columns.every((column) => column.arrayDimension <= 1 && !(isArray(column) && isPgEnum(column))) &&
+      // JSON/schema serdes encode one JSON value, not a SQL array. Date-mode serdes also encode one scalar.
+      // Custom element mappers and Temporal array serdes have separate elementwise write paths.
+      !this.primitives.some(
+        (field) =>
+          field.isArray &&
+          !field.customSerde &&
+          (field.columnType === "jsonb" ||
+            (!config.temporal &&
+              (field.columnType === "date" ||
+                field.columnType === "timestamp with time zone" ||
+                field.columnType === "timestamp without time zone"))),
+      ) &&
+      table.columns.every(
+        (column) =>
+          mapped.has(column.name) || !column.notNull || column.defaultWithTypeCast !== null || column.isGenerated,
+      );
   }
 
   get name(): string {
@@ -541,13 +577,15 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "primitive",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
-    fieldType: array ? code`${fieldType}[]` : maybeUserType,
+    fieldType: array ? code`${maybeUserType}[]` : maybeUserType,
     rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
     unique,
@@ -595,10 +633,12 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
@@ -627,10 +667,12 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
@@ -652,6 +694,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "pg-enum",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     dbType: column.type.name,
@@ -660,6 +703,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     enumValues: (column.type as EnumType).values,
     notNull: column.notNull,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     hasConfigDefault, // can be set to true by scanEntityFiles
   };
@@ -682,8 +726,11 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "m2o",
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
+    columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     otherEntity,
     otherFieldName,
     notNull,

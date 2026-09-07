@@ -167,10 +167,30 @@ export function generateEntityCodegenFile(
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
+  // CTI subtype ids have their own SQL defaults, unlike the base table's sequence-backed ids.
+  // Locally redeclared fields also replace base policies when STI strengthens notNull.
   const maybeBaseFields = baseEntity
-    ? code`extends ${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}`
+    ? code`extends Omit<${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}, "id"${[
+        ...meta.primitives,
+        ...meta.enums,
+        ...meta.pgEnums,
+        ...meta.manyToOnes,
+      ]
+        .filter((field) =>
+          [...baseEntity.primitives, ...baseEntity.enums, ...baseEntity.pgEnums, ...baseEntity.manyToOnes].some(
+            (baseField) => baseField.fieldName === field.fieldName,
+          ),
+        )
+        .map((field) => code` | "${field.fieldName}"`)}>`
     : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
+  const columns = generateColumnsType(meta, idType);
+  const maybeBaseColumns = baseEntity
+    ? code`extends Omit<${imp(`t:${baseEntity.name}Columns@./entities.ts`)}, ${joinCode(
+        Object.keys(columns).map((name) => code`${JSON.stringify(name)}`),
+        { on: " | " },
+      )}>`
+    : "";
   const maybeBaseIdOpts = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
     : "";
@@ -230,6 +250,10 @@ export function generateEntityCodegenFile(
       ${generateFieldsType(meta, idType)}
     }
 
+    export interface ${entityName}Columns ${maybeBaseColumns} {
+      ${Object.entries(columns).map(([name, descriptor]) => code`${JSON.stringify(name)}: ${descriptor};`)}
+    }
+
     export interface ${entity.optsName} ${maybeBaseOpts} {
       ${generateOptsFields(meta)}
     }
@@ -276,6 +300,8 @@ export function generateEntityCodegenFile(
           orderType: ${entity.orderName};
           optsType: ${entity.optsName};
           fieldsType: ${entity.fieldsName};
+          columnsType: ${entityName}Columns;
+          supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true};
           optIdsType: ${entity.idsOptsName};
           factoryExtrasType: ${entity.factoryExtrasName};
           factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
@@ -543,30 +569,32 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never };`;
+  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never; };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
     return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
       notNull,
-    )}, derived: ${derived !== false} };`;
+    )}, derived: ${derived !== false}; };`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; };`;
     } else {
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)} };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; };`;
     }
   });
-  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
+  const pgEnums = meta.pgEnums.map((field) => {
+    const { fieldName, enumType, notNull } = field;
     const nullable = undefinedOrNever(notNull);
-    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
+    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true; };`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull, derived }) => {
+  const m2o = meta.manyToOnes.map((field) => {
+    const { fieldName, otherEntity, notNull, derived } = field;
     return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(
       notNull,
-    )}, derived: ${derived !== false} };`;
+    )}, derived: ${derived !== false}; };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
@@ -587,6 +615,57 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
   return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...o2o, ...lo2m];
+}
+
+/**
+ * Emits physical columns with domain value types and database nullability.
+ * I.e. Comment.parent_book_id is an optional Book reference, not the CommentParent union.
+ * Polymorphic component writes remain unsupported, so their policies are conservative.
+ */
+function generateColumnsType(meta: EntityDbMetadata, idType: "string" | "number"): Record<string, Code> {
+  const columns: Record<string, Code> = {
+    id: code`{ kind: "primitive"; type: ${idType}; unique: true; ${columnPolicyType(meta, meta.primaryKey)} }`,
+  };
+  for (const field of [...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes]) {
+    const policy = columnPolicyType(meta, field);
+    if (field.kind === "primitive") {
+      columns[field.columnName] =
+        code`{ kind: "primitive"; type: ${field.fieldType}; unique: ${field.unique}; derived: ${field.derived !== false}; ${policy} }`;
+    } else if (field.kind === "m2o") {
+      columns[field.columnName] =
+        code`{ kind: "m2o"; type: ${field.otherEntity.type}; derived: ${field.derived !== false}; ${policy} }`;
+    } else {
+      const array = field.kind === "enum" && field.isArray ? "[]" : "";
+      const native = field.kind === "pg-enum" ? "native: true;" : "";
+      columns[field.columnName] = code`{ kind: "enum"; type: ${field.enumType}${array}; ${native} ${policy} }`;
+    }
+  }
+  for (const field of meta.polymorphics) {
+    for (const component of field.components) {
+      columns[component.columnName] =
+        code`{ kind: "m2o"; type: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
+    }
+  }
+  return columns;
+}
+
+/** Emits SQL write policy without using ORM defaults or derived-field restrictions. */
+function columnPolicyType(
+  meta: EntityDbMetadata,
+  column: Pick<PrimitiveField, "columnNotNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
+): Code {
+  const primaryKey = column === meta.primaryKey ? meta.primaryKey.columnType : undefined;
+  const insert = column.columnGenerated
+    ? "never"
+    : !column.columnNotNull ||
+        column.columnDefault != null ||
+        column === meta.createdAt ||
+        column === meta.updatedAt ||
+        primaryKey === "int" ||
+        primaryKey === "bigint"
+      ? "optional"
+      : "required";
+  return code`nullable: ${!column.columnNotNull}; insert: "${insert}"; update: ${!primaryKey && !column.columnGenerated};`;
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.

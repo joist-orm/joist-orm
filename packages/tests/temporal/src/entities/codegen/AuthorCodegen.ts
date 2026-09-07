@@ -67,6 +67,136 @@ export interface AuthorFields {
   books: { kind: "o2m"; type: Book };
 }
 
+export interface AuthorColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "firstName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "lastName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "birthday": {
+    kind: "primitive";
+    type: Temporal.PlainDate;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "children_birthdays": {
+    kind: "primitive";
+    type: Temporal.PlainDate[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_birthdays": {
+    kind: "primitive";
+    type: Temporal.PlainDate[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "timestamp": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "timestamps": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_timestamps": {
+    kind: "primitive";
+    type: Temporal.PlainDateTime[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time": {
+    kind: "primitive";
+    type: Temporal.PlainTime;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "times": {
+    kind: "primitive";
+    type: Temporal.PlainTime[];
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_times": {
+    kind: "primitive";
+    type: Temporal.PlainTime[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time_to_micros": {
+    kind: "primitive";
+    type: Temporal.PlainTime;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+}
+
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
@@ -173,6 +303,8 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];

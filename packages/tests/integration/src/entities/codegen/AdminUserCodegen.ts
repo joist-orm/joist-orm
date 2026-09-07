@@ -40,6 +40,7 @@ import {
   type Entity,
   newAdminUser,
   User,
+  type UserColumns,
   type UserFields,
   type UserFilter,
   type UserGraphQLFilter,
@@ -50,9 +51,22 @@ import {
 
 export type AdminUserId = Flavor<string, "User">;
 
-export interface AdminUserFields extends UserFields {
+export interface AdminUserFields extends Omit<UserFields, "id"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+}
+
+export interface AdminUserColumns extends Omit<UserColumns, "id" | "role"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "role": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface AdminUserOpts extends UserOpts {
@@ -97,6 +111,8 @@ declare module "joist-core" {
       orderType: AdminUserOrder;
       optsType: AdminUserOpts;
       fieldsType: AdminUserFields;
+      columnsType: AdminUserColumns;
+      supportsEmExecute: false;
       optIdsType: AdminUserIdsOpts;
       factoryExtrasType: AdminUserFactoryExtras;
       factoryOptsType: Parameters<typeof newAdminUser>[1];

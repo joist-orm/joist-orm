@@ -49,6 +49,7 @@ import {
   newTaskNew,
   type Tag,
   Task,
+  type TaskColumns,
   type TaskFields,
   type TaskFilter,
   type TaskGraphQLFilter,
@@ -63,7 +64,7 @@ import {
 
 export type TaskNewId = Flavor<string, "Task">;
 
-export interface TaskNewFields extends TaskFields {
+export interface TaskNewFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
@@ -72,6 +73,38 @@ export interface TaskNewFields extends TaskFields {
   newTaskTaskItems: { kind: "o2m"; type: TaskItem };
   selfReferentialTasks: { kind: "o2m"; type: TaskNew };
   copiedTo: { kind: "o2m"; type: TaskNew };
+}
+
+export interface TaskNewColumns
+  extends
+    Omit<TaskColumns, "id" | "special_new_field" | "self_referential_id" | "special_new_author_id" | "copied_from_id"> {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "special_new_field": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "self_referential_id": {
+    kind: "m2o";
+    type: TaskNew;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "special_new_author_id": {
+    kind: "m2o";
+    type: Author;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "copied_from_id": { kind: "m2o"; type: TaskNew; derived: false; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskNewOpts extends TaskOpts {
@@ -147,6 +180,8 @@ declare module "joist-core" {
       orderType: TaskNewOrder;
       optsType: TaskNewOpts;
       fieldsType: TaskNewFields;
+      columnsType: TaskNewColumns;
+      supportsEmExecute: false;
       optIdsType: TaskNewIdsOpts;
       factoryExtrasType: TaskNewFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskNew>[1];

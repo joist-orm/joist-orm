@@ -58,6 +58,38 @@ export interface CriticColumnFields {
   critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
 }
 
+export interface CriticColumnColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "critic_id": { kind: "m2o"; type: Critic; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface CriticColumnOpts {
   name: string;
   critic: Critic | CriticId;
@@ -118,6 +150,8 @@ declare module "joist-core" {
       orderType: CriticColumnOrder;
       optsType: CriticColumnOpts;
       fieldsType: CriticColumnFields;
+      columnsType: CriticColumnColumns;
+      supportsEmExecute: true;
       optIdsType: CriticColumnIdsOpts;
       factoryExtrasType: CriticColumnFactoryExtras;
       factoryOptsType: Parameters<typeof newCriticColumn>[1];

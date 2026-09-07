@@ -60,6 +60,38 @@ export interface EmployeeFields {
   reports: { kind: "o2m"; type: Employee };
 }
 
+export interface EmployeeColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "manager_id": { kind: "m2o"; type: Employee; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface EmployeeOpts {
   name: string;
   manager?: Employee | EmployeeId | null;
@@ -127,6 +159,8 @@ declare module "joist-core" {
       orderType: EmployeeOrder;
       optsType: EmployeeOpts;
       fieldsType: EmployeeFields;
+      columnsType: EmployeeColumns;
+      supportsEmExecute: true;
       optIdsType: EmployeeIdsOpts;
       factoryExtrasType: EmployeeFactoryExtras;
       factoryOptsType: Parameters<typeof newEmployee>[1];

@@ -11,7 +11,7 @@ import { type EntityManager } from "./EntityManager.ts";
  * ```ts
  * declare module "joist-core" {
  *   interface TypeMap {
- *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; filterType: AuthorFilter };
+ *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; columnsType: AuthorColumns; filterType: AuthorFilter };
  *   }
  * }
  * ```
@@ -60,6 +60,9 @@ export type OptsOf<T> = TypeMapEntry<T, "optsType">;
 
 /** Return the `FooFields` type for the given `Foo` entity. */
 export type FieldsOf<T> = TypeMapEntry<T, "fieldsType">;
+
+/** Return the physical `FooColumns` type for the given `Foo` entity. */
+export type ColumnsOf<T> = TypeMapEntry<T, "columnsType">;
 
 export type OptIdsOf<T> = TypeMapEntry<T, "optIdsType">;
 

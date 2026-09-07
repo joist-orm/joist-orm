@@ -74,6 +74,41 @@ export interface ImageFields {
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
 }
 
+export interface ImageColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "file_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "type_id": { kind: "enum"; type: ImageType; nullable: false; insert: "required"; update: true };
+  "author_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: true; insert: "optional"; update: true };
+  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface ImageOpts {
   fileName: string;
   type: ImageType;
@@ -164,6 +199,8 @@ declare module "joist-core" {
       orderType: ImageOrder;
       optsType: ImageOpts;
       fieldsType: ImageFields;
+      columnsType: ImageColumns;
+      supportsEmExecute: true;
       optIdsType: ImageIdsOpts;
       factoryExtrasType: ImageFactoryExtras;
       factoryOptsType: Parameters<typeof newImage>[1];

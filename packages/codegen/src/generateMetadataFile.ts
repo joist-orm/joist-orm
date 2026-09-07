@@ -6,6 +6,7 @@ import {
   type DbMetadata,
   type EntityDbMetadata,
   type OneToManyField,
+  type PrimitiveField,
 } from "./EntityDbMetadata.ts";
 import {
   BigIntSerde,
@@ -65,7 +66,18 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       idDbType: "${meta.primaryKey.columnType}",
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
+      supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true},
       fields: ${fields},
+      columns: ${Object.fromEntries([
+        ["id", { fieldName: "id" }],
+        ...[...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes].map((field) => [
+          field.columnName,
+          { fieldName: field.fieldName },
+        ]),
+        ...meta.polymorphics.flatMap((field) =>
+          field.components.map((component) => [component.columnName, { fieldName: field.fieldName }]),
+        ),
+      ])},
       allFields: {},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
@@ -100,26 +112,33 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.primaryKey.columnType}"),
+      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.primaryKey.columnType}", ${columnOptions(dbMetadata.primaryKey)}),
       immutable: true,
     }
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, fieldType, superstruct, zodSchema, customSerde, isArray } = p;
+    const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde, isArray } = p;
+    const column = columnOptions(p);
     let serde: Code;
     if (customSerde) {
-      serde = code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`;
+      serde = isArray
+        ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}[]", ${customSerde}, true, ${!p.notNull}, ${column})`
+        : code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde}, false, false, ${column})`;
     } else if (superstruct) {
-      serde = code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`;
+      serde = code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct}, ${column})`;
     } else if (zodSchema) {
-      serde = code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`;
-    } else if (columnType === "numeric") {
-      serde = code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`;
+      serde = code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema}, ${column})`;
+    } else if (columnType === "numeric" || columnType === "decimal") {
+      serde = isArray
+        ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}", true, ${!p.notNull}, ${column})`
+        : code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}", false, false, ${column})`;
     } else if (columnType === "jsonb") {
-      serde = code`new ${JsonSerde}("${fieldName}", "${columnName}")`;
-    } else if (fieldType === "bigint") {
-      serde = code`new ${BigIntSerde}("${fieldName}", "${columnName}")`;
+      serde = code`new ${JsonSerde}("${fieldName}", "${columnName}", ${column})`;
+    } else if (p.rawFieldType === "bigint") {
+      serde = isArray
+        ? code`new ${BigIntSerde}("${fieldName}", "${columnName}", true, ${!p.notNull}, ${column})`
+        : code`new ${BigIntSerde}("${fieldName}", "${columnName}", false, false, ${column})`;
     } else {
       let serdeType: Import;
       if (columnType === "date") {
@@ -134,8 +153,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serdeType = PrimitiveSerde;
       }
       serde = isArray
-        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true, ${!p.notNull})`
-        : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
+        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true, ${!p.notNull}, ${column})`
+        : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}", false, false, ${column})`;
     }
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
@@ -168,7 +187,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         protected: false,
         type: "string",
-        serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${dbType}"),
+        serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${dbType}", false, false, ${columnOptions(p)}),
         immutable: false,
         ${maybeDefault(p)}
       }`;
@@ -187,7 +206,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         derived: ${!derived ? false : `"${derived}"`},
         enumDetailType: ${enumDetailType},
-        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}"${maybeIsNullable}, ${enumDetailType}),
+        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}"${maybeIsNullable}, ${enumDetailType}, ${columnOptions(field)}),
         immutable: false,
         ${maybeDefault(field)}
       }
@@ -206,7 +225,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
-        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
+        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}", ${columnOptions(m2o)}),
         immutable: false,
         ${maybeDefault(m2o)}
       }
@@ -331,8 +350,15 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   return fields;
 }
 
-function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Code | "" {
-  return f.hasConfigDefault ? code`default: "config",` : f.columnDefault ? code`default: "schema",` : "";
+/** Emits constructor options using codegen's existing column facts. */
+function columnOptions(
+  column: Pick<PrimitiveField, "columnNotNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
+): Code {
+  return code`{ sqlNullable: ${!column.columnNotNull}, hasDefault: ${column.columnDefault != null && !column.columnGenerated}, isGenerated: ${column.columnGenerated} }`;
+}
+
+function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: number | boolean | string | null }): Code | "" {
+  return f.hasConfigDefault ? code`default: "config",` : f.columnDefault != null ? code`default: "schema",` : "";
 }
 
 function maybeOrderBy(f: OneToManyField): Code | "" {

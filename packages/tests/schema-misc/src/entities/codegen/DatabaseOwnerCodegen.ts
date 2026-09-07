@@ -55,6 +55,19 @@ export interface DatabaseOwnerFields {
   tags: { kind: "m2m"; type: Tag };
 }
 
+export interface DatabaseOwnerColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+}
+
 export interface DatabaseOwnerOpts {
   name: string;
   tags?: Tag[];
@@ -104,6 +117,8 @@ declare module "joist-core" {
       orderType: DatabaseOwnerOrder;
       optsType: DatabaseOwnerOpts;
       fieldsType: DatabaseOwnerFields;
+      columnsType: DatabaseOwnerColumns;
+      supportsEmExecute: true;
       optIdsType: DatabaseOwnerIdsOpts;
       factoryExtrasType: DatabaseOwnerFactoryExtras;
       factoryOptsType: Parameters<typeof newDatabaseOwner>[1];

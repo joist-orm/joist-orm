@@ -61,6 +61,20 @@ export interface T5BookFields {
   reviews: { kind: "o2m"; type: T5BookReview };
 }
 
+export interface T5BookColumns {
+  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "author_id": { kind: "m2o"; type: T5Author; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface T5BookOpts {
   title: string;
   author: T5Author | T5AuthorId;
@@ -117,6 +131,8 @@ declare module "joist-core" {
       orderType: T5BookOrder;
       optsType: T5BookOpts;
       fieldsType: T5BookFields;
+      columnsType: T5BookColumns;
+      supportsEmExecute: true;
       optIdsType: T5BookIdsOpts;
       factoryExtrasType: T5BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT5Book>[1];

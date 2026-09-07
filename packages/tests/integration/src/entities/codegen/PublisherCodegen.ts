@@ -115,6 +115,157 @@ export interface PublisherFields {
   images: { kind: "o2m"; type: Image };
 }
 
+export interface PublisherColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "latitude": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "longitude": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "huge_number": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_book_reviews": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "deleted_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "titles_of_favorite_books": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "book_advance_titles_snapshot": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_book_advances_snapshot": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "base_sync_default": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "base_async_default": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "favorite_author_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "rating": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "size_id": { kind: "enum"; type: PublisherSize; nullable: true; insert: "optional"; update: true };
+  "type_id": { kind: "enum"; type: PublisherType; nullable: false; insert: "optional"; update: true };
+  "favorite_author_id": { kind: "m2o"; type: Author; derived: true; nullable: true; insert: "optional"; update: true };
+  "group_id": { kind: "m2o"; type: PublisherGroup; derived: false; nullable: true; insert: "optional"; update: true };
+  "spotlight_author_id": {
+    kind: "m2o";
+    type: Author;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+}
+
 export interface PublisherOpts {
   name: string;
   latitude?: number | null;
@@ -285,6 +436,8 @@ declare module "joist-core" {
       orderType: PublisherOrder;
       optsType: PublisherOpts;
       fieldsType: PublisherFields;
+      columnsType: PublisherColumns;
+      supportsEmExecute: false;
       optIdsType: PublisherIdsOpts;
       factoryExtrasType: PublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisher>[1];

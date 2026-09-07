@@ -69,6 +69,37 @@ export interface TagFields {
   tasks: { kind: "m2m"; type: Task };
 }
 
+export interface TagColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+}
+
 export interface TagOpts {
   name: string;
   authors?: Author[];
@@ -142,6 +173,8 @@ declare module "joist-core" {
       orderType: TagOrder;
       optsType: TagOpts;
       fieldsType: TagFields;
+      columnsType: TagColumns;
+      supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;
       factoryOptsType: Parameters<typeof newTag>[1];

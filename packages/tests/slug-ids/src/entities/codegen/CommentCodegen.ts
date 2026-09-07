@@ -58,6 +58,39 @@ export interface CommentFields {
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
+export interface CommentColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "text": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "parent_author_id": { kind: "m2o"; type: Author; nullable: true; insert: "never"; update: false };
+  "parent_book_id": { kind: "m2o"; type: Book; nullable: true; insert: "never"; update: false };
+}
+
 export interface CommentOpts {
   text: string;
   parent: CommentParent;
@@ -121,6 +154,8 @@ declare module "joist-core" {
       orderType: CommentOrder;
       optsType: CommentOpts;
       fieldsType: CommentFields;
+      columnsType: CommentColumns;
+      supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];

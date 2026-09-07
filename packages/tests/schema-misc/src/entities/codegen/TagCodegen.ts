@@ -61,6 +61,19 @@ export interface TagFields {
   databaseOwners: { kind: "m2m"; type: DatabaseOwner };
 }
 
+export interface TagColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "title": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+}
+
 export interface TagOpts {
   title: string;
   authors?: Author[];
@@ -123,6 +136,8 @@ declare module "joist-core" {
       orderType: TagOrder;
       optsType: TagOpts;
       fieldsType: TagFields;
+      columnsType: TagColumns;
+      supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;
       factoryOptsType: Parameters<typeof newTag>[1];

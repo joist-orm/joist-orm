@@ -87,6 +87,93 @@ export interface TaskFields {
   taskTaskItems: { kind: "o2m"; type: TaskItem };
 }
 
+export interface TaskColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "duration_in_days": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "deleted_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "sync_default": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "async_default_1": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "async_default_2": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "sync_derived": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "async_derived": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "type_id": { kind: "enum"; type: TaskType; nullable: true; insert: "optional"; update: true };
+  "copied_from_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface TaskOpts {
   durationInDays?: number;
   deletedAt?: Date | null;
@@ -193,6 +280,8 @@ declare module "joist-core" {
       orderType: TaskOrder;
       optsType: TaskOpts;
       fieldsType: TaskFields;
+      columnsType: TaskColumns;
+      supportsEmExecute: false;
       optIdsType: TaskIdsOpts;
       factoryExtrasType: TaskFactoryExtras;
       factoryOptsType: Parameters<typeof newTask>[1];

@@ -58,6 +58,46 @@ export interface ArtistFields {
   paintings: { kind: "o2m"; type: Painting };
 }
 
+export interface ArtistColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
+  "firstName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "lastName": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "createdAt": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updatedAt": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+}
+
 export interface ArtistOpts {
   firstName: string;
   lastName: string;
@@ -120,6 +160,8 @@ declare module "joist-core" {
       orderType: ArtistOrder;
       optsType: ArtistOpts;
       fieldsType: ArtistFields;
+      columnsType: ArtistColumns;
+      supportsEmExecute: true;
       optIdsType: ArtistIdsOpts;
       factoryExtrasType: ArtistFactoryExtras;
       factoryOptsType: Parameters<typeof newArtist>[1];

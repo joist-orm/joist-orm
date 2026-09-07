@@ -83,6 +83,66 @@ export interface BookReviewFields {
   comment: { kind: "o2o"; type: Comment };
 }
 
+export interface BookReviewColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "rating": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_public": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_test": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "is_test_chain": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "book_id": { kind: "m2o"; type: Book; derived: false; nullable: false; insert: "required"; update: true };
+  "critic_id": { kind: "m2o"; type: Critic; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface BookReviewOpts {
   rating: number;
   book: Book | BookId;
@@ -174,6 +234,8 @@ declare module "joist-core" {
       orderType: BookReviewOrder;
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
+      columnsType: BookReviewColumns;
+      supportsEmExecute: true;
       optIdsType: BookReviewIdsOpts;
       factoryExtrasType: BookReviewFactoryExtras;
       factoryOptsType: Parameters<typeof newBookReview>[1];

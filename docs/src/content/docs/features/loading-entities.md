@@ -68,8 +68,9 @@ For queries that grow outside what `em.find` can provide, i.e. **the last ~5% of
 * Group bys/aggregates
 * Subqueries and arbitrary joins
 * Select custom fragments of data (not just an entity)
+* Combine compatible projections with `UNION`, `INTERSECT`, or `EXCEPT`
 
-For anything `em.query` cannot express (i.e. `UNION`s or writes), a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely) still works fine alongside Joist.
+For anything `em.query` cannot express (i.e. writes or user-authored CTEs), a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely) still works fine alongside Joist.
 
 #### `buildQuery`
 
@@ -92,5 +93,4 @@ These three options all focus on loading *entities*, which your code will then i
 If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), use [Raw Queries](./queries-raw), as per the "option 3" in the above list.
 
 :::
-
 

@@ -48,6 +48,8 @@ export interface EntityMetadata<T extends Entity = any> {
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;
+  /** Whether codegen verified this table is a supported SQL mutation target; does not gate reads. */
+  supportsEmExecute?: boolean;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;
   inheritanceType?: "sti" | "cti" | undefined;
@@ -59,6 +61,8 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
+  /** Physical column names mapped to their owning domain fields, including inherited fields. */
+  columns: Record<string, { fieldName: string }>;
   allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;

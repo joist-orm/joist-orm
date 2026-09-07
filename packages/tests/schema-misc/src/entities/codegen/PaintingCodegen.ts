@@ -58,6 +58,38 @@ export interface PaintingFields {
   artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
 }
 
+export interface PaintingColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
+  "title": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "createdAt": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updatedAt": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "artistId": { kind: "m2o"; type: Artist; derived: false; nullable: false; insert: "required"; update: true };
+}
+
 export interface PaintingOpts {
   title: string;
   artist: Artist | ArtistId;
@@ -118,6 +150,8 @@ declare module "joist-core" {
       orderType: PaintingOrder;
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
+      columnsType: PaintingColumns;
+      supportsEmExecute: true;
       optIdsType: PaintingIdsOpts;
       factoryExtrasType: PaintingFactoryExtras;
       factoryOptsType: Parameters<typeof newPainting>[1];

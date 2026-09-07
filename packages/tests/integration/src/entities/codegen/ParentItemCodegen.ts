@@ -63,6 +63,45 @@ export interface ParentItemFields {
   childItems: { kind: "o2m"; type: ChildItem };
 }
 
+export interface ParentItemColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "parent_group_id": {
+    kind: "m2o";
+    type: ParentGroup;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+}
+
 export interface ParentItemOpts {
   name?: string | null;
   parentGroup: ParentGroup | ParentGroupId;
@@ -126,6 +165,8 @@ declare module "joist-core" {
       orderType: ParentItemOrder;
       optsType: ParentItemOpts;
       fieldsType: ParentItemFields;
+      columnsType: ParentItemColumns;
+      supportsEmExecute: true;
       optIdsType: ParentItemIdsOpts;
       factoryExtrasType: ParentItemFactoryExtras;
       factoryOptsType: Parameters<typeof newParentItem>[1];

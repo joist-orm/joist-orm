@@ -154,6 +154,284 @@ export interface AuthorFields {
   userOneToOne: { kind: "o2o"; type: User };
 }
 
+export interface AuthorColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "first_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "last_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "ssn": {
+    kind: "primitive";
+    type: string;
+    unique: true;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "initials": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_books": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "book_comments": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "is_popular": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "age": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "graduated": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "nick_names": {
+    kind: "primitive";
+    type: string[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "nick_names_upper": {
+    kind: "primitive";
+    type: string[];
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "was_ever_popular": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "is_funny": {
+    kind: "primitive";
+    type: boolean;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "mentor_names": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "mentee_names": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "address": {
+    kind: "primitive";
+    type: Address;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "business_address": {
+    kind: "primitive";
+    type: z.input<typeof AddressSchema>;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "quotes": {
+    kind: "primitive";
+    type: Quotes;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_atoms": {
+    kind: "primitive";
+    type: bigint;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "deleted_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_public_reviews": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "numberOfPublicReviews2": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "tags_of_all_books": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "search": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "image_file_name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "certificate": {
+    kind: "primitive";
+    type: Uint8Array;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "range_of_books": { kind: "enum"; type: BookRange; nullable: true; insert: "optional"; update: true };
+  "favorite_colors": { kind: "enum"; type: Color[]; nullable: true; insert: "optional"; update: true };
+  "favorite_shape": {
+    kind: "enum";
+    type: FavoriteShape;
+    native: true;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "mentor_id": { kind: "m2o"; type: Author; derived: false; nullable: true; insert: "optional"; update: true };
+  "root_mentor_id": { kind: "m2o"; type: Author; derived: true; nullable: true; insert: "optional"; update: true };
+  "current_draft_book_id": {
+    kind: "m2o";
+    type: Book;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "favorite_book_id": { kind: "m2o"; type: Book; derived: true; nullable: true; insert: "optional"; update: true };
+  "publisher_id": { kind: "m2o"; type: Publisher; derived: false; nullable: true; insert: "optional"; update: true };
+}
+
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
@@ -445,6 +723,8 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];

@@ -26,6 +26,15 @@ import { setAsyncDefaults, setSyncDefaults } from "./defaults.ts";
 import { type Driver } from "./drivers/index.ts";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { type Entity, type Entity as EntityW, type IdType, isEntity } from "./Entity.ts";
+import {
+  type CheckMutation,
+  type ExecuteResult,
+  type MutationInput,
+  type MutationRow,
+  decodeStatementResult,
+  isMutation,
+  parseStatement,
+} from "./execute.ts";
 import { getField, setField } from "./fields.ts";
 import { FlushLock } from "./FlushLock.ts";
 import {
@@ -101,12 +110,16 @@ import { type PendingChange } from "./PendingChanges.ts";
 import { PluginManager } from "./PluginManager.ts";
 import { type PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 import {
+  type CheckSetQuery,
   type EntityQuery,
   type QueryArg,
   type QueryJoins,
   type QueryRow,
   type QuerySelect,
   type QuerySource,
+  type SetOperand,
+  type SetQuery,
+  type SetQueryRow,
   type Subquery,
   parseUserQuery,
 } from "./query.ts";
@@ -527,19 +540,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Runs a SQL-shaped query written as an object literal, and returns typed rows.
    *
    * ```ts
-   * const [a, b] = aliases(Author, Book);
+   * const [a, b] = tables(Author, Book);
    * const rows = await em.query({
    *   from: a,
-   *   join: [{ left: b, on: b.author.eq(a.id) }],
+   *   join: [{ left: b, on: b.author_id.eq(a.id) }],
    *   where: { and: [a.age.gte(minAge)] },
-   *   groupBy: [a.firstName],
-   *   select: { name: a.firstName, bookCount: b.id.count() },
+   *   groupBy: [a.first_name],
+   *   select: { name: a.first_name, bookCount: b.id.count() },
    *   orderBy: { bookCount: "DESC" },
    * });
    * // → { name: string; bookCount: number }[]
    * ```
    *
-   * `select` decides the row type: a bare alias (`select: a`) returns entities through the identity
+   * `select` decides the row type: a bare table (`select: a`) returns entities through the identity
    * map, a `{ key: expr }` object returns typed POJOs, and a `query(...)` value returns its rows. Joins
    * are pruned like `em.find`: an `undefined` condition drops out, and a join nothing references
    * anymore drops with it. See `query.ts` for the full DSL, and `query()` for composing subqueries.
@@ -548,6 +561,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public query<R>(q: Subquery<R, any>): Promise<R[]>;
   public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
+  public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
   public query<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
     q: QueryArg<F, S, J, never>,
   ): Promise<QueryRow<S, J>[]>;
@@ -556,9 +570,42 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const em = this;
     return (async function query() {
       const plan = parseUserQuery(q);
-      const rows = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
       return plan.decodeRows(em, rows);
     })().catch(function query(err) {
+      throw appendStack(err, new Error());
+    });
+  }
+
+  /**
+   * Executes immediate SQL with a native command count. Mutations bypass the entity unit of work;
+   * reads retain query's decoding and permissions. Neither path flushes or repairs cached entities.
+   */
+  public execute<const M extends MutationInput>(
+    statement: M & CheckMutation<M>,
+  ): Promise<ExecuteResult<MutationRow<M>>>;
+  public execute<R>(statement: Subquery<R, any>): Promise<ExecuteResult<R>>;
+  public execute<T extends Entity>(statement: EntityQuery<T>): Promise<ExecuteResult<T>>;
+  public execute<const Q extends SetQuery<readonly SetOperand[]>>(
+    statement: Q & CheckSetQuery<Q>,
+  ): Promise<ExecuteResult<SetQueryRow<Q>>>;
+  public execute<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
+    statement: QueryArg<F, S, J, never>,
+  ): Promise<ExecuteResult<QueryRow<S, J>>>;
+  public execute(statement: unknown): Promise<ExecuteResult<unknown>> {
+    const em = this;
+    return (async function execute() {
+      if (isMutation(statement)) {
+        em.__api.checkWritesAllowed();
+        if (em.mode === "in-memory-writes") fail("SQL mutations do not support in-memory-writes mode");
+      } else {
+        em.#assertFindAllowed("execute");
+      }
+      const plan = parseStatement(statement);
+      if (!plan) return { rowCount: 0, rows: [] };
+      const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      return decodeStatementResult(em, plan, result);
+    })().catch(function execute(err) {
       throw appendStack(err, new Error());
     });
   }

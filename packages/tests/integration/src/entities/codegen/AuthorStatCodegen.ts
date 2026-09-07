@@ -51,6 +51,156 @@ export interface AuthorStatFields {
   json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  decimalSamples: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  bigintSamples: { kind: "primitive"; type: bigint[]; unique: false; nullable: undefined; derived: false };
+}
+
+export interface AuthorStatColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "smallint": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "integer": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "nullable_integer": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "bigint": {
+    kind: "primitive";
+    type: bigint;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "decimal": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "real": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "smallserial": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "serial": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "bigserial": {
+    kind: "primitive";
+    type: bigint;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "double_precision": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: false;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "nullable_text": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "json": {
+    kind: "primitive";
+    type: Object;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "decimal_samples": {
+    kind: "primitive";
+    type: number[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "bigint_samples": {
+    kind: "primitive";
+    type: bigint[];
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface AuthorStatOpts {
@@ -66,6 +216,8 @@ export interface AuthorStatOpts {
   doublePrecision: number;
   nullableText?: string | null;
   json?: Object | null;
+  decimalSamples?: number[] | null;
+  bigintSamples?: bigint[] | null;
 }
 
 export interface AuthorStatIdsOpts {
@@ -87,6 +239,8 @@ export interface AuthorStatFilter {
   json?: ValueFilter<Object, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  decimalSamples?: ValueFilter<number[], null>;
+  bigintSamples?: ValueFilter<bigint[], null>;
 }
 
 export interface AuthorStatGraphQLFilter {
@@ -105,6 +259,8 @@ export interface AuthorStatGraphQLFilter {
   json?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  decimalSamples?: ValueGraphQLFilter<number[]>;
+  bigintSamples?: ValueGraphQLFilter<bigint[]>;
 }
 
 export interface AuthorStatOrder {
@@ -123,6 +279,8 @@ export interface AuthorStatOrder {
   json?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  decimalSamples?: OrderBy;
+  bigintSamples?: OrderBy;
 }
 
 export interface AuthorStatFactoryExtras {
@@ -158,6 +316,8 @@ declare module "joist-core" {
       orderType: AuthorStatOrder;
       optsType: AuthorStatOpts;
       fieldsType: AuthorStatFields;
+      columnsType: AuthorStatColumns;
+      supportsEmExecute: true;
       optIdsType: AuthorStatIdsOpts;
       factoryExtrasType: AuthorStatFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthorStat>[1];
@@ -289,6 +449,22 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get decimalSamples(): number[] | undefined {
+    return getField(this, "decimalSamples");
+  }
+
+  set decimalSamples(decimalSamples: number[] | undefined) {
+    setField(this, "decimalSamples", decimalSamples);
+  }
+
+  get bigintSamples(): bigint[] | undefined {
+    return getField(this, "bigintSamples");
+  }
+
+  set bigintSamples(bigintSamples: bigint[] | undefined) {
+    setField(this, "bigintSamples", bigintSamples);
   }
 
   /**

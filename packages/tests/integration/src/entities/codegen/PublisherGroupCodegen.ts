@@ -71,6 +71,55 @@ export interface PublisherGroupFields {
   critics: { kind: "o2m"; type: Critic };
 }
 
+export interface PublisherGroupColumns {
+  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
+  "name": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: false;
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "number_of_book_reviews": {
+    kind: "primitive";
+    type: number;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "number_of_book_reviews_formatted": {
+    kind: "primitive";
+    type: string;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    kind: "primitive";
+    type: Date;
+    unique: false;
+    derived: true;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+}
+
 export interface PublisherGroupOpts {
   name?: string | null;
   publishers?: Publisher[];
@@ -151,6 +200,8 @@ declare module "joist-core" {
       orderType: PublisherGroupOrder;
       optsType: PublisherGroupOpts;
       fieldsType: PublisherGroupFields;
+      columnsType: PublisherGroupColumns;
+      supportsEmExecute: false;
       optIdsType: PublisherGroupIdsOpts;
       factoryExtrasType: PublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisherGroup>[1];

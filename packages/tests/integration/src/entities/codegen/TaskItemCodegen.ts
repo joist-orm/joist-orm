@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -66,28 +67,12 @@ export interface TaskItemFields {
 }
 
 export interface TaskItemColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "new_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
-  "old_task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
-  "task_id": { kind: "m2o"; type: Task; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<TaskItem>; entity: TaskItem; nullable: false; insert: "optional"; update: false };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "new_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "old_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskItemOpts {

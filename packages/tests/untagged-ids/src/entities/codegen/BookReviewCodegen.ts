@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -57,17 +58,9 @@ export interface BookReviewFields {
 }
 
 export interface BookReviewColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
-  "rating": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "book_id": { kind: "m2o"; type: Author; derived: false; nullable: false; insert: "required"; update: true };
+  "id": { type: IdOf<BookReview>; entity: BookReview; nullable: false; insert: "required"; update: false };
+  "rating": { type: number; nullable: false; insert: "required"; update: true };
+  "book_id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookReviewOpts {

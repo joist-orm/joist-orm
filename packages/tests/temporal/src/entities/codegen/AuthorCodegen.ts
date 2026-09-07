@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -68,133 +69,21 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "firstName": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "lastName": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "birthday": {
-    kind: "primitive";
-    type: Temporal.PlainDate;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "children_birthdays": {
-    kind: "primitive";
-    type: Temporal.PlainDate[];
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "maybe_birthdays": {
-    kind: "primitive";
-    type: Temporal.PlainDate[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "timestamp": {
-    kind: "primitive";
-    type: Temporal.PlainDateTime;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "timestamps": {
-    kind: "primitive";
-    type: Temporal.PlainDateTime[];
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "maybe_timestamps": {
-    kind: "primitive";
-    type: Temporal.PlainDateTime[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "time": {
-    kind: "primitive";
-    type: Temporal.PlainTime;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "times": {
-    kind: "primitive";
-    type: Temporal.PlainTime[];
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "maybe_times": {
-    kind: "primitive";
-    type: Temporal.PlainTime[];
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "time_to_micros": {
-    kind: "primitive";
-    type: Temporal.PlainTime;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Temporal.ZonedDateTime;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Temporal.ZonedDateTime;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "firstName": { type: string; nullable: false; insert: "required"; update: true };
+  "lastName": { type: string; nullable: true; insert: "optional"; update: true };
+  "birthday": { type: Temporal.PlainDate; nullable: false; insert: "required"; update: true };
+  "children_birthdays": { type: Temporal.PlainDate[]; nullable: false; insert: "optional"; update: true };
+  "maybe_birthdays": { type: Temporal.PlainDate[]; nullable: true; insert: "optional"; update: true };
+  "timestamp": { type: Temporal.PlainDateTime; nullable: false; insert: "optional"; update: true };
+  "timestamps": { type: Temporal.PlainDateTime[]; nullable: false; insert: "optional"; update: true };
+  "maybe_timestamps": { type: Temporal.PlainDateTime[]; nullable: true; insert: "optional"; update: true };
+  "time": { type: Temporal.PlainTime; nullable: true; insert: "optional"; update: true };
+  "times": { type: Temporal.PlainTime[]; nullable: false; insert: "optional"; update: true };
+  "maybe_times": { type: Temporal.PlainTime[]; nullable: true; insert: "optional"; update: true };
+  "time_to_micros": { type: Temporal.PlainTime; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

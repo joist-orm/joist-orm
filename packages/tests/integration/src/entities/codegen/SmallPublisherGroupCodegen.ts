@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -60,16 +61,14 @@ export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "i
 }
 
 export interface SmallPublisherGroupColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "small_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
+  "id": {
+    type: IdOf<SmallPublisherGroup>;
+    entity: SmallPublisherGroup;
+    nullable: false;
     insert: "optional";
-    update: true;
+    update: false;
   };
+  "small_name": { type: string; nullable: true; insert: "optional"; update: true };
 }
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {

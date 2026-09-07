@@ -11,6 +11,7 @@ import {
   getBaseSelfAndSubMetas,
   getMetadata,
 } from "./EntityMetadata.ts";
+import { SimpleFieldSerde } from "./fieldSerde.ts";
 import { getProperties } from "./getProperties.ts";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys.ts";
 import { reverseReactiveHint } from "./reactiveHints.ts";
@@ -19,7 +20,6 @@ import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference
 import { type ReactiveFieldImpl } from "./relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "./rules.ts";
 import { maybeGetRuntimeConfig } from "./runtimeConfig.ts";
-import { KeySerde } from "./serde.ts";
 import { defineLazyGetter, fail } from "./utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -437,13 +437,9 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             required: false,
             immutable: false,
             derived: false,
-            serde: new KeySerde(
-              comp.otherMetadata().tagName,
-              fieldName,
-              comp.columnName,
-              field.serde.columns[0].dbType as any,
-            ),
-            ...comp,
+            serde: new SimpleFieldSerde(fieldName, comp.column),
+            otherMetadata: comp.otherMetadata,
+            otherFieldName: comp.otherFieldName,
             aliasSuffix: field.aliasSuffix,
           } satisfies ManyToOneField & { aliasSuffix: string };
         }

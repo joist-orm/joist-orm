@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasLazyField,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type LazyField,
@@ -66,52 +67,12 @@ export interface ParentGroupFields {
 }
 
 export interface ParentGroupColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "bulk_data": {
-    kind: "primitive";
-    type: Object;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "required_data": {
-    kind: "primitive";
-    type: Object;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<ParentGroup>; entity: ParentGroup; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: true; insert: "optional"; update: true };
+  "bulk_data": { type: Object; nullable: true; insert: "optional"; update: true };
+  "required_data": { type: Object; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
 }
 
 export interface ParentGroupOpts {

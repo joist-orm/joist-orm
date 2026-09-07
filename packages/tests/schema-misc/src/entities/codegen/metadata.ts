@@ -1,4 +1,4 @@
-import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
+import { Column, type ColumnDescriptors, configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig, SimpleFieldSerde } from "joist-orm";
 import type { Context } from "src/context";
 import { Artist } from "../Artist";
 import { Author } from "../Author";
@@ -17,6 +17,32 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
+const artistMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => artistMeta, new KeySerde("artist", "uuid")),
+  "firstName": new Column("firstName", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "lastName": new Column("lastName", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "createdAt": new Column("createdAt", false, true, false, true, true, undefined, new DateSerde("timestamp without time zone")),
+  "updatedAt": new Column("updatedAt", false, false, false, true, true, undefined, new DateSerde("timestamp without time zone")),
+} satisfies ColumnDescriptors;
+const authorMetaColumns = {
+  "id": new Column("id", false, true, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+  "firstName": new Column("firstName", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "lastName": new Column("lastName", true, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "delete": new Column("delete", true, false, false, false, true, undefined, new PrimitiveSerde("boolean")),
+  "createdAt": new Column("createdAt", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "updatedAt": new Column("updatedAt", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+} satisfies ColumnDescriptors;
+const bookMetaColumns = { "id": new Column("id", false, true, false, false, true, () => bookMeta, new KeySerde("b", "int")), "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")), "authorId": new Column("authorId", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")) } satisfies ColumnDescriptors;
+const databaseOwnerMetaColumns = { "id": new Column("id", false, true, false, false, true, () => databaseOwnerMeta, new KeySerde("do", "int")), "name": new Column("name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")) } satisfies ColumnDescriptors;
+const paintingMetaColumns = {
+  "id": new Column("id", false, false, false, false, true, () => paintingMeta, new KeySerde("p", "uuid")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "createdAt": new Column("createdAt", false, true, false, true, true, undefined, new DateSerde("timestamp without time zone")),
+  "updatedAt": new Column("updatedAt", false, false, false, true, true, undefined, new DateSerde("timestamp without time zone")),
+  "artistId": new Column("artistId", false, false, false, false, true, () => artistMeta, new KeySerde("artist", "uuid")),
+} satisfies ColumnDescriptors;
+const tagMetaColumns = { "id": new Column("id", false, true, false, false, true, () => tagMeta, new KeySerde("t", "int")), "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")) } satisfies ColumnDescriptors;
+
 export const artistMeta: EntityMetadata<Artist> = {
   cstr: Artist,
   type: "Artist",
@@ -27,14 +53,14 @@ export const artistMeta: EntityMetadata<Artist> = {
   tableName: "artists",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("artist", "id", "id", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "firstName", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "lastName", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", artistMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", artistMetaColumns["firstName"]), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", artistMetaColumns["lastName"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", artistMetaColumns["createdAt"]), immutable: false, default: "schema" },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", artistMetaColumns["updatedAt"]), immutable: false },
     "paintings": { kind: "o2m", fieldName: "paintings", fieldIdName: "paintingIds", required: false, otherMetadata: () => paintingMeta, otherFieldName: "artist", otherColumnName: "artistId", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: artistMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -43,12 +69,6 @@ export const artistMeta: EntityMetadata<Artist> = {
   baseTypes: [],
   subTypes: [],
 };
-
-artistMeta.columns["id"] = { fieldName: "id", field: artistMeta.fields["id"] };
-artistMeta.columns["firstName"] = { fieldName: "firstName", field: artistMeta.fields["firstName"] };
-artistMeta.columns["lastName"] = { fieldName: "lastName", field: artistMeta.fields["lastName"] };
-artistMeta.columns["createdAt"] = { fieldName: "createdAt", field: artistMeta.fields["createdAt"] };
-artistMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: artistMeta.fields["updatedAt"] };
 
 (Artist as any).metadata = artistMeta;
 
@@ -62,16 +82,16 @@ export const authorMeta: EntityMetadata<Author> = {
   tableName: "authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "firstName", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "lastName", "character varying", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
-    "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("delete", "delete", "boolean", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", authorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", authorMetaColumns["firstName"]), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", authorMetaColumns["lastName"]), immutable: false },
+    "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new SimpleFieldSerde("delete", authorMetaColumns["delete"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["createdAt"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updatedAt"]), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["authorId", "tagId"], hasJoinTableId: true },
   },
-  columns: {},
+  columns: authorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -80,13 +100,6 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
-
-authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
-authorMeta.columns["firstName"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
-authorMeta.columns["lastName"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
-authorMeta.columns["delete"] = { fieldName: "delete", field: authorMeta.fields["delete"] };
-authorMeta.columns["createdAt"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
-authorMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -100,12 +113,12 @@ export const bookMeta: EntityMetadata<Book> = {
   tableName: "book",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", bookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["authorId"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["authorId"]), immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined, immutable: false, joinTableName: "book_to_tags", columnNames: ["bookId", "tagId"], hasJoinTableId: false },
   },
-  columns: {},
+  columns: bookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -114,10 +127,6 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
-
-bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
-bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
-bookMeta.columns["authorId"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 
@@ -131,11 +140,11 @@ export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
   tableName: "database_owners",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("do", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", databaseOwnerMetaColumns["id"]), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("name", databaseOwnerMetaColumns["name"]), immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "databaseOwners", serde: undefined, immutable: false, joinTableName: "database_owner_to_tags", columnNames: ["databaseOwnerId", "tagId"], hasJoinTableId: false },
   },
-  columns: {},
+  columns: databaseOwnerMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -144,9 +153,6 @@ export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
   baseTypes: [],
   subTypes: [],
 };
-
-databaseOwnerMeta.columns["id"] = { fieldName: "id", field: databaseOwnerMeta.fields["id"] };
-databaseOwnerMeta.columns["name"] = { fieldName: "name", field: databaseOwnerMeta.fields["name"] };
 
 (DatabaseOwner as any).metadata = databaseOwnerMeta;
 
@@ -160,13 +166,13 @@ export const paintingMeta: EntityMetadata<Painting> = {
   tableName: "paintings",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "artist": { kind: "m2o", fieldName: "artist", fieldIdName: "artistId", derived: false, required: true, otherMetadata: () => artistMeta, otherFieldName: "paintings", serde: new KeySerde("artist", "artist", "artistId", "uuid", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", paintingMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", paintingMetaColumns["title"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", paintingMetaColumns["createdAt"]), immutable: false, default: "schema" },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", paintingMetaColumns["updatedAt"]), immutable: false },
+    "artist": { kind: "m2o", fieldName: "artist", fieldIdName: "artistId", derived: false, required: true, otherMetadata: paintingMetaColumns["artistId"].idMetadata!, otherFieldName: "paintings", serde: new SimpleFieldSerde("artist", paintingMetaColumns["artistId"]), immutable: false },
   },
-  columns: {},
+  columns: paintingMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -175,12 +181,6 @@ export const paintingMeta: EntityMetadata<Painting> = {
   baseTypes: [],
   subTypes: [],
 };
-
-paintingMeta.columns["id"] = { fieldName: "id", field: paintingMeta.fields["id"] };
-paintingMeta.columns["title"] = { fieldName: "title", field: paintingMeta.fields["title"] };
-paintingMeta.columns["createdAt"] = { fieldName: "createdAt", field: paintingMeta.fields["createdAt"] };
-paintingMeta.columns["updatedAt"] = { fieldName: "updatedAt", field: paintingMeta.fields["updatedAt"] };
-paintingMeta.columns["artistId"] = { fieldName: "artist", field: paintingMeta.fields["artist"] };
 
 (Painting as any).metadata = paintingMeta;
 
@@ -194,13 +194,13 @@ export const tagMeta: EntityMetadata<Tag> = {
   tableName: "tags",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", tagMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", tagMetaColumns["title"]), immutable: false },
     "authors": { kind: "m2m", fieldName: "authors", fieldIdName: "authorIds", required: false, derived: false, otherMetadata: () => authorMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["tagId", "authorId"], hasJoinTableId: true },
     "books": { kind: "m2m", fieldName: "books", fieldIdName: "bookIds", required: false, derived: false, otherMetadata: () => bookMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "book_to_tags", columnNames: ["tagId", "bookId"], hasJoinTableId: false },
     "databaseOwners": { kind: "m2m", fieldName: "databaseOwners", fieldIdName: "databaseOwnerIds", required: false, derived: false, otherMetadata: () => databaseOwnerMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "database_owner_to_tags", columnNames: ["tagId", "databaseOwnerId"], hasJoinTableId: false },
   },
-  columns: {},
+  columns: tagMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
@@ -209,9 +209,6 @@ export const tagMeta: EntityMetadata<Tag> = {
   baseTypes: [],
   subTypes: [],
 };
-
-tagMeta.columns["id"] = { fieldName: "id", field: tagMeta.fields["id"] };
-tagMeta.columns["title"] = { fieldName: "title", field: tagMeta.fields["title"] };
 
 (Tag as any).metadata = tagMeta;
 

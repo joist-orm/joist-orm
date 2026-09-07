@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -59,35 +60,11 @@ export interface PaintingFields {
 }
 
 export interface PaintingColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "required"; update: false };
-  "title": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "createdAt": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updatedAt": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "artistId": { kind: "m2o"; type: Artist; derived: false; nullable: false; insert: "required"; update: true };
+  "id": { type: IdOf<Painting>; entity: Painting; nullable: false; insert: "required"; update: false };
+  "title": { type: string; nullable: false; insert: "required"; update: true };
+  "createdAt": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updatedAt": { type: Date; nullable: false; insert: "optional"; update: true };
+  "artistId": { type: IdOf<Artist>; entity: Artist; nullable: false; insert: "required"; update: true };
 }
 
 export interface PaintingOpts {

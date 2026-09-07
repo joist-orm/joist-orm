@@ -1,4 +1,4 @@
-import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PlainTimeSerde, PrimitiveSerde, setRuntimeConfig, Temporal, ZonedDateTimeSerde } from "joist-orm";
+import { Column, type ColumnDescriptors, configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PlainTimeSerde, PrimitiveSerde, setRuntimeConfig, SimpleFieldSerde, Temporal, ZonedDateTimeSerde } from "joist-orm";
 import type { Context } from "src/context";
 import { Author } from "../Author";
 import { Book } from "../Book";
@@ -13,6 +13,35 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
+const authorMetaColumns = {
+  "id": new Column("id", false, true, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+  "firstName": new Column("firstName", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "lastName": new Column("lastName", true, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "birthday": new Column("birthday", false, false, false, false, true, undefined, new PlainDateSerde("date")),
+  "children_birthdays": new Column("children_birthdays", false, true, false, false, true, undefined, new PlainDateSerde("date[]", true)),
+  "maybe_birthdays": new Column("maybe_birthdays", true, true, false, false, true, undefined, new PlainDateSerde("date[]", true)),
+  "timestamp": new Column("timestamp", false, true, false, false, true, undefined, new PlainDateTimeSerde("timestamp without time zone")),
+  "timestamps": new Column("timestamps", false, true, false, false, true, undefined, new PlainDateTimeSerde("timestamp without time zone[]", true)),
+  "maybe_timestamps": new Column("maybe_timestamps", true, true, false, false, true, undefined, new PlainDateTimeSerde("timestamp without time zone[]", true)),
+  "time": new Column("time", true, true, false, false, true, undefined, new PlainTimeSerde("time without time zone")),
+  "times": new Column("times", false, true, false, false, true, undefined, new PlainTimeSerde("time without time zone[]", true)),
+  "maybe_times": new Column("maybe_times", true, true, false, false, true, undefined, new PlainTimeSerde("time without time zone[]", true)),
+  "time_to_micros": new Column("time_to_micros", true, true, false, false, true, undefined, new PlainTimeSerde("time without time zone")),
+  "created_at": new Column("created_at", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+  "updated_at": new Column("updated_at", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+} satisfies ColumnDescriptors;
+const bookMetaColumns = {
+  "id": new Column("id", false, true, false, false, true, () => bookMeta, new KeySerde("b", "int")),
+  "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "published_at": new Column("published_at", false, false, false, false, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+  "timestamp_tzs": new Column("timestamp_tzs", false, true, false, false, true, undefined, new ZonedDateTimeSerde("timestamp with time zone[]", true)),
+  "maybe_timestamp_tzs": new Column("maybe_timestamp_tzs", true, true, false, false, true, undefined, new ZonedDateTimeSerde("timestamp with time zone[]", true)),
+  "created_at": new Column("created_at", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+  "updated_at": new Column("updated_at", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+  "deleted_at": new Column("deleted_at", true, false, false, false, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
+  "author_id": new Column("author_id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+} satisfies ColumnDescriptors;
+
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
@@ -23,24 +52,24 @@ export const authorMeta: EntityMetadata<Author> = {
   tableName: "authors",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "firstName", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "lastName", "character varying", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
-    "birthday": { kind: "primitive", fieldName: "birthday", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDate, serde: new PlainDateSerde("birthday", "birthday", "date", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "childrenBirthdays": { kind: "primitive", fieldName: "childrenBirthdays", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDate, serde: new PlainDateSerde("childrenBirthdays", "children_birthdays", "date[]", true, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "maybeBirthdays": { kind: "primitive", fieldName: "maybeBirthdays", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainDate, serde: new PlainDateSerde("maybeBirthdays", "maybe_birthdays", "date[]", true, true, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "timestamp": { kind: "primitive", fieldName: "timestamp", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new PlainDateTimeSerde("timestamp", "timestamp", "timestamp without time zone", false, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "timestamps": { kind: "primitive", fieldName: "timestamps", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new PlainDateTimeSerde("timestamps", "timestamps", "timestamp without time zone[]", true, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "maybeTimestamps": { kind: "primitive", fieldName: "maybeTimestamps", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainDateTime, serde: new PlainDateTimeSerde("maybeTimestamps", "maybe_timestamps", "timestamp without time zone[]", true, true, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "time": { kind: "primitive", fieldName: "time", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("time", "time", "time without time zone", false, false, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "times": { kind: "primitive", fieldName: "times", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("times", "times", "time without time zone[]", true, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "maybeTimes": { kind: "primitive", fieldName: "maybeTimes", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("maybeTimes", "maybe_times", "time without time zone[]", true, true, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "timeToMicros": { kind: "primitive", fieldName: "timeToMicros", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("timeToMicros", "time_to_micros", "time without time zone", false, false, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("createdAt", "created_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", authorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", authorMetaColumns["firstName"]), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", authorMetaColumns["lastName"]), immutable: false },
+    "birthday": { kind: "primitive", fieldName: "birthday", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDate, serde: new SimpleFieldSerde("birthday", authorMetaColumns["birthday"]), immutable: false },
+    "childrenBirthdays": { kind: "primitive", fieldName: "childrenBirthdays", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDate, serde: new SimpleFieldSerde("childrenBirthdays", authorMetaColumns["children_birthdays"]), immutable: false, default: "schema" },
+    "maybeBirthdays": { kind: "primitive", fieldName: "maybeBirthdays", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainDate, serde: new SimpleFieldSerde("maybeBirthdays", authorMetaColumns["maybe_birthdays"]), immutable: false, default: "schema" },
+    "timestamp": { kind: "primitive", fieldName: "timestamp", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new SimpleFieldSerde("timestamp", authorMetaColumns["timestamp"]), immutable: false, default: "schema" },
+    "timestamps": { kind: "primitive", fieldName: "timestamps", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new SimpleFieldSerde("timestamps", authorMetaColumns["timestamps"]), immutable: false, default: "schema" },
+    "maybeTimestamps": { kind: "primitive", fieldName: "maybeTimestamps", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainDateTime, serde: new SimpleFieldSerde("maybeTimestamps", authorMetaColumns["maybe_timestamps"]), immutable: false, default: "schema" },
+    "time": { kind: "primitive", fieldName: "time", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new SimpleFieldSerde("time", authorMetaColumns["time"]), immutable: false, default: "schema" },
+    "times": { kind: "primitive", fieldName: "times", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainTime, serde: new SimpleFieldSerde("times", authorMetaColumns["times"]), immutable: false, default: "schema" },
+    "maybeTimes": { kind: "primitive", fieldName: "maybeTimes", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new SimpleFieldSerde("maybeTimes", authorMetaColumns["maybe_times"]), immutable: false, default: "schema" },
+    "timeToMicros": { kind: "primitive", fieldName: "timeToMicros", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new SimpleFieldSerde("timeToMicros", authorMetaColumns["time_to_micros"]), immutable: false, default: "schema" },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["created_at"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updated_at"]), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
-  columns: {},
+  columns: authorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -49,22 +78,6 @@ export const authorMeta: EntityMetadata<Author> = {
   baseTypes: [],
   subTypes: [],
 };
-
-authorMeta.columns["id"] = { fieldName: "id", field: authorMeta.fields["id"] };
-authorMeta.columns["firstName"] = { fieldName: "firstName", field: authorMeta.fields["firstName"] };
-authorMeta.columns["lastName"] = { fieldName: "lastName", field: authorMeta.fields["lastName"] };
-authorMeta.columns["birthday"] = { fieldName: "birthday", field: authorMeta.fields["birthday"] };
-authorMeta.columns["children_birthdays"] = { fieldName: "childrenBirthdays", field: authorMeta.fields["childrenBirthdays"] };
-authorMeta.columns["maybe_birthdays"] = { fieldName: "maybeBirthdays", field: authorMeta.fields["maybeBirthdays"] };
-authorMeta.columns["timestamp"] = { fieldName: "timestamp", field: authorMeta.fields["timestamp"] };
-authorMeta.columns["timestamps"] = { fieldName: "timestamps", field: authorMeta.fields["timestamps"] };
-authorMeta.columns["maybe_timestamps"] = { fieldName: "maybeTimestamps", field: authorMeta.fields["maybeTimestamps"] };
-authorMeta.columns["time"] = { fieldName: "time", field: authorMeta.fields["time"] };
-authorMeta.columns["times"] = { fieldName: "times", field: authorMeta.fields["times"] };
-authorMeta.columns["maybe_times"] = { fieldName: "maybeTimes", field: authorMeta.fields["maybeTimes"] };
-authorMeta.columns["time_to_micros"] = { fieldName: "timeToMicros", field: authorMeta.fields["timeToMicros"] };
-authorMeta.columns["created_at"] = { fieldName: "createdAt", field: authorMeta.fields["createdAt"] };
-authorMeta.columns["updated_at"] = { fieldName: "updatedAt", field: authorMeta.fields["updatedAt"] };
 
 (Author as any).metadata = authorMeta;
 
@@ -78,17 +91,17 @@ export const bookMeta: EntityMetadata<Book> = {
   tableName: "book",
   supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int", { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "publishedAt": { kind: "primitive", fieldName: "publishedAt", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("publishedAt", "published_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "timestampTzs": { kind: "primitive", fieldName: "timestampTzs", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("timestampTzs", "timestamp_tzs", "timestamp with time zone[]", true, false, { sqlNullable: false, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "maybeTimestampTzs": { kind: "primitive", fieldName: "maybeTimestampTzs", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("maybeTimestampTzs", "maybe_timestamp_tzs", "timestamp with time zone[]", true, true, { sqlNullable: true, hasDefault: true, isGenerated: false }), immutable: false, default: "schema" },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("createdAt", "created_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updated_at", "timestamp with time zone", false, false, { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
-    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("deletedAt", "deleted_at", "timestamp with time zone", false, false, { sqlNullable: true, hasDefault: false, isGenerated: false }), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int", { sqlNullable: false, hasDefault: false, isGenerated: false }), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", bookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
+    "publishedAt": { kind: "primitive", fieldName: "publishedAt", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("publishedAt", bookMetaColumns["published_at"]), immutable: false },
+    "timestampTzs": { kind: "primitive", fieldName: "timestampTzs", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("timestampTzs", bookMetaColumns["timestamp_tzs"]), immutable: false, default: "schema" },
+    "maybeTimestampTzs": { kind: "primitive", fieldName: "maybeTimestampTzs", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("maybeTimestampTzs", bookMetaColumns["maybe_timestamp_tzs"]), immutable: false, default: "schema" },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("createdAt", bookMetaColumns["created_at"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("updatedAt", bookMetaColumns["updated_at"]), immutable: false },
+    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("deletedAt", bookMetaColumns["deleted_at"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["author_id"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["author_id"]), immutable: false },
   },
-  columns: {},
+  columns: bookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
@@ -97,16 +110,6 @@ export const bookMeta: EntityMetadata<Book> = {
   baseTypes: [],
   subTypes: [],
 };
-
-bookMeta.columns["id"] = { fieldName: "id", field: bookMeta.fields["id"] };
-bookMeta.columns["title"] = { fieldName: "title", field: bookMeta.fields["title"] };
-bookMeta.columns["published_at"] = { fieldName: "publishedAt", field: bookMeta.fields["publishedAt"] };
-bookMeta.columns["timestamp_tzs"] = { fieldName: "timestampTzs", field: bookMeta.fields["timestampTzs"] };
-bookMeta.columns["maybe_timestamp_tzs"] = { fieldName: "maybeTimestampTzs", field: bookMeta.fields["maybeTimestampTzs"] };
-bookMeta.columns["created_at"] = { fieldName: "createdAt", field: bookMeta.fields["createdAt"] };
-bookMeta.columns["updated_at"] = { fieldName: "updatedAt", field: bookMeta.fields["updatedAt"] };
-bookMeta.columns["deleted_at"] = { fieldName: "deletedAt", field: bookMeta.fields["deletedAt"] };
-bookMeta.columns["author_id"] = { fieldName: "author", field: bookMeta.fields["author"] };
 
 (Book as any).metadata = bookMeta;
 

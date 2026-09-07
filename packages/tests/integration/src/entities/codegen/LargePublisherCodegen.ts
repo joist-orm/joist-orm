@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -82,25 +83,9 @@ export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rati
 }
 
 export interface LargePublisherColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "shared_column": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "country": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<LargePublisher>; entity: LargePublisher; nullable: false; insert: "optional"; update: false };
+  "shared_column": { type: string; nullable: true; insert: "optional"; update: true };
+  "country": { type: string; nullable: true; insert: "optional"; update: true };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {

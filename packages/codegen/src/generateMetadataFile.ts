@@ -10,6 +10,8 @@ import {
 } from "./EntityDbMetadata.ts";
 import {
   BigIntSerde,
+  Column,
+  ColumnDescriptors,
   CustomSerdeAdapter,
   DateSerde,
   DecimalToNumberSerde,
@@ -21,37 +23,20 @@ import {
   PlainDateSerde,
   PlainDateTimeSerde,
   PlainTimeSerde,
-  PolymorphicKeySerde,
+  PolyComponent,
   PrimitiveSerde,
+  SimpleFieldSerde,
   SuperstructSerde,
   ZodSerde,
   ZonedDateTimeSerde,
+  polymorphicField,
 } from "./symbols.ts";
 import { mapSimpleDbTypeToTypescriptType, q } from "./utils.ts";
 
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, createdAt, updatedAt, deletedAt } = meta;
 
-  const fields = generateFields(config, meta);
-  const physical = meta.physicalMetadata ?? meta;
-  const sharedTable = meta.inheritanceType === "sti" && meta.baseClassName;
-  const storageFields = generateFields(config, physical, true);
-  // Reuse unchanged descriptors; only moved or specialized fields need separate storage metadata.
-  const physicalFields = Object.fromEntries(
-    Object.entries(storageFields).map(([name, field]) => [
-      name,
-      fields[name]?.toString() === field.toString() ? code`${entity.metaName}.fields[${q(name)}]` : field,
-    ]),
-  );
-  const columns = Object.fromEntries<string>([
-    ["id", "id"],
-    ...[...physical.primitives, ...physical.enums, ...physical.pgEnums, ...physical.manyToOnes].map(
-      (field) => [field.columnName, field.fieldName] as const,
-    ),
-    ...physical.polymorphics.flatMap((field) =>
-      field.components.map((component) => [component.columnName, field.fieldName] as const),
-    ),
-  ]);
+  const fields = generateFields(config, dbMeta, meta, (name) => columnReference(dbMeta, meta, name));
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -87,7 +72,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tableName: "${meta.tableName}",
       supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true},
       fields: ${fields},
-      columns: {},
+      columns: ${columnOwner(dbMeta, meta, "id").entity.metaName}Columns,
       allFields: {},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
@@ -96,21 +81,6 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       baseTypes: [],
       subTypes: [], ${maybeInsertionOrder} ${maybeUniqueBy}
     };
-
-    ${
-      sharedTable
-        ? ""
-        : code`
-      ${Object.entries(columns).map(([columnName, fieldName]) => {
-        const firstColumn = Object.keys(columns).find((name) => columns[name] === fieldName)!;
-        const field =
-          firstColumn === columnName
-            ? physicalFields[fieldName]
-            : code`${entity.metaName}.columns[${q(firstColumn)}].field`;
-        return code`${entity.metaName}.columns[${q(columnName)}] = { fieldName: ${q(fieldName)}, field: ${field} };`;
-      })}
-    `
-    }
 
     (${entity.typeForMetadataFile} as any).metadata = ${entity.metaName};
   `;
@@ -128,8 +98,13 @@ function getUniqueBy(config: Config, meta: EntityDbMetadata): string[][] {
   });
 }
 
-/** Emits field descriptors; physical polymorphic serdes resolve the original storage components. */
-function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical = false): Record<string, Code> {
+/** Emits fields that bind the already-declared physical columns. */
+function generateFields(
+  config: Config,
+  dbMeta: DbMetadata,
+  dbMetadata: EntityDbMetadata,
+  columnRef: (name: string, codec?: Code, args?: Code) => Code,
+): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
   fields["id"] = code`
@@ -138,33 +113,29 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.primaryKey.columnType}", ${columnOptions(dbMetadata.primaryKey)}),
+      serde: new ${SimpleFieldSerde}("id", ${columnRef("id", code`new ${KeySerde}("${dbMetadata.tagName}", "${dbMetadata.primaryKey.columnType}")`, columnArgs(dbMetadata.primaryKey, dbMetadata, code`() => ${dbMetadata.entity.metaName}`))}),
       immutable: true,
     }
   `;
 
   dbMetadata.primitives.forEach((p) => {
     const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde, isArray } = p;
-    const column = columnOptions(p);
+    const column = columnArgs(p, dbMetadata);
     let serde: Code;
     if (customSerde) {
       serde = isArray
-        ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}[]", ${customSerde}, true, ${!p.notNull}, ${column})`
-        : code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde}, false, false, ${column})`;
+        ? code`new ${CustomSerdeAdapter}( "${columnType}[]", ${customSerde}, true)`
+        : code`new ${CustomSerdeAdapter}( "${columnType}", ${customSerde})`;
     } else if (superstruct) {
-      serde = code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct}, ${column})`;
+      serde = code`new ${SuperstructSerde}( ${superstruct})`;
     } else if (zodSchema) {
-      serde = code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema}, ${column})`;
+      serde = code`new ${ZodSerde}( ${zodSchema})`;
     } else if (columnType === "numeric" || columnType === "decimal") {
-      serde = isArray
-        ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}", true, ${!p.notNull}, ${column})`
-        : code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}", false, false, ${column})`;
+      serde = isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
     } else if (columnType === "jsonb") {
-      serde = code`new ${JsonSerde}("${fieldName}", "${columnName}", ${column})`;
+      serde = code`new ${JsonSerde}()`;
     } else if (p.rawFieldType === "bigint") {
-      serde = isArray
-        ? code`new ${BigIntSerde}("${fieldName}", "${columnName}", true, ${!p.notNull}, ${column})`
-        : code`new ${BigIntSerde}("${fieldName}", "${columnName}", false, false, ${column})`;
+      serde = isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
     } else {
       let serdeType: Import;
       if (columnType === "date") {
@@ -178,9 +149,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
       } else {
         serdeType = PrimitiveSerde;
       }
-      serde = isArray
-        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true, ${!p.notNull}, ${column})`
-        : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}", false, false, ${column})`;
+      serde = isArray ? code`new ${serdeType}( "${columnType}[]", true)` : code`new ${serdeType}( "${columnType}")`;
     }
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
@@ -192,7 +161,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
         required: ${!derived && p.notNull},
         protected: ${p.protected},
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
-        serde: ${serde},
+        serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(columnName, serde, column)}),
         immutable: false,
         ${p.lazy ? code`lazy: true,` : ""}
         ${extras}
@@ -213,7 +182,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
         required: ${notNull},
         protected: false,
         type: "string",
-        serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${dbType}", false, false, ${columnOptions(p)}),
+        serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(columnName, code`new ${PrimitiveSerde}("${dbType}")`, columnArgs(p, dbMetadata))}),
         immutable: false,
         ${maybeDefault(p)}
       }`;
@@ -223,7 +192,6 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
     const { fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
-    const maybeIsNullable = isArray ? `, ${!notNull}` : "";
     fields[fieldName] = code`
       {
         kind: "enum",
@@ -232,7 +200,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
         required: ${notNull},
         derived: ${!derived ? false : `"${derived}"`},
         enumDetailType: ${enumDetailType},
-        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}"${maybeIsNullable}, ${enumDetailType}, ${columnOptions(field)}),
+        serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(columnName, code`new ${serdeType}("${columnTypeWithArray}", ${enumDetailType})`, columnArgs(field, dbMetadata))}),
         immutable: false,
         ${maybeDefault(field)}
       }
@@ -242,6 +210,13 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
   dbMetadata.manyToOnes.forEach((m2o) => {
     const { fieldName, columnName, notNull, otherEntity, otherFieldName, derived, dbType } = m2o;
     const otherTagName = config.entities[otherEntity.name].tag;
+    const physical = (dbMetadata.physicalMetadata ?? dbMetadata).manyToOnes.find(
+      (field) => field.columnName === columnName,
+    );
+    const otherMetadata =
+      physical?.otherEntity.name === otherEntity.name
+        ? code`${columnRef(columnName)}.idMetadata!`
+        : code`() => ${otherEntity.metaName}`;
     fields[fieldName] = code`
       {
         kind: "m2o",
@@ -249,9 +224,9 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
         fieldIdName: "${fieldName}Id",
         derived: ${!derived ? false : `"${derived}"`},
         required: ${notNull},
-        otherMetadata: () => ${otherEntity.metaName},
+        otherMetadata: ${otherMetadata},
         otherFieldName: "${otherFieldName}",
-        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}", ${columnOptions(m2o)}),
+        serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(columnName, code`new ${KeySerde}("${otherTagName}", "${dbType}")`, columnArgs(m2o, dbMetadata, code`() => ${otherEntity.metaName}`))}),
         immutable: false,
         ${maybeDefault(m2o)}
       }
@@ -353,34 +328,76 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata, physical =
 
   dbMetadata.polymorphics.forEach((p) => {
     const { fieldName, notNull, components } = p;
+    components.forEach((component) =>
+      columnRef(
+        component.columnName,
+        code`new ${KeySerde}("${config.entities[component.otherEntity.name].tag}", "${dbMeta.entitiesByName[component.otherEntity.name].primaryKey.columnType}")`,
+        code`true, false, false, false, false, () => ${component.otherEntity.metaName}`,
+      ),
+    );
     fields[fieldName] = code`
-      {
-        kind: "poly",
-        fieldName: "${fieldName}",
-        fieldIdName: "${fieldName}Id",
-        required: ${notNull},
-        components: [${components.map(
-          ({ otherFieldName, otherEntity, columnName }) => code`
-          {
-            otherMetadata: () => ${otherEntity.metaName},
-            otherFieldName: "${otherFieldName}",
-            columnName: "${columnName}",
-          },`,
-        )}],
-        serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"${physical ? code`, ${q(components[0].columnName)}` : ""}),
-        immutable: false,
-      }
+      ${polymorphicField}("${fieldName}", ${notNull}, [${components.map((component) => {
+        const owner = columnOwner(dbMeta, dbMetadata, component.columnName);
+        const physical = (owner.physicalMetadata ?? owner).polymorphics
+          .flatMap((field) => field.components)
+          .find((c) => c.columnName === component.columnName)!;
+        const target =
+          physical.otherEntity.name === component.otherEntity.name
+            ? ""
+            : code`, () => ${component.otherEntity.metaName}`;
+        return code`new ${PolyComponent}(${columnRef(component.columnName)}, ${q(component.otherFieldName)}${target}),`;
+      })}])
     `;
   });
 
   return fields;
 }
 
-/** Emits constructor options using codegen's existing column facts. */
-function columnOptions(
+/** Emits constructor arguments using codegen's existing column facts. */
+function columnArgs(
   column: Pick<PrimitiveField, "columnNotNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
+  meta: EntityDbMetadata,
+  idMetadata?: Code,
 ): Code {
-  return code`{ sqlNullable: ${!column.columnNotNull}, hasDefault: ${column.columnDefault != null && !column.columnGenerated}, isGenerated: ${column.columnGenerated} }`;
+  const insertOptional = column === meta.createdAt || column === meta.updatedAt;
+  return code`${!column.columnNotNull}, ${column.columnDefault != null && !column.columnGenerated}, ${column.columnGenerated}, ${insertOptional}, true, ${idMetadata ?? "undefined"}`;
+}
+
+/** Declares all physical codecs before any domain metadata; ID targets remain lazy. */
+export function generateColumnDeclarations(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
+  if (meta.inheritanceType === "sti" && meta.baseClassName) return code``;
+  const columns: Record<string, Code> = {};
+  generateFields(config, dbMeta, meta.physicalMetadata ?? meta, (name, codec, args) => {
+    if (codec) columns[name] = code`new ${Column}(${q(name)}, ${args}, ${codec})`.asOneline();
+    return code`${meta.entity.metaName}Columns[${q(name)}]`;
+  });
+  return code`const ${meta.entity.metaName}Columns = ${columns} satisfies ${ColumnDescriptors};`;
+}
+
+/** Locates a column's physical table without copying inherited columns into subtype tables. */
+function columnOwner(dbMeta: DbMetadata, meta: EntityDbMetadata, name: string): EntityDbMetadata {
+  if (meta.inheritanceType === "sti" && meta.baseClassName) {
+    return columnOwner(dbMeta, dbMeta.entitiesByName[meta.baseClassName], name);
+  }
+  const physical = meta.physicalMetadata ?? meta;
+  if (
+    name === "id" ||
+    [
+      ...physical.primitives,
+      ...physical.enums,
+      ...physical.pgEnums,
+      ...physical.manyToOnes,
+      ...physical.polymorphics.flatMap((field) => field.components),
+    ].some((field) => field.columnName === name)
+  )
+    return meta;
+  if (meta.baseClassName) return columnOwner(dbMeta, dbMeta.entitiesByName[meta.baseClassName], name);
+  throw new Error(`No physical column ${meta.name}.${name}`);
+}
+
+/** Emits a direct reference to the single physical descriptor. */
+function columnReference(dbMeta: DbMetadata, meta: EntityDbMetadata, name: string): Code {
+  return code`${columnOwner(dbMeta, meta, name).entity.metaName}Columns[${q(name)}]`;
 }
 
 function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: number | boolean | string | null }): Code | "" {

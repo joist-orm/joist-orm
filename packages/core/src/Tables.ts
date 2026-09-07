@@ -1,5 +1,6 @@
 import { groupBy } from "joist-utils";
 
+import { type Column } from "./columns.ts";
 // Load-order only: without this, the built cjs/esm module graph evaluates relations/* before their
 // base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
 import "./configure.ts";
@@ -25,12 +26,10 @@ import {
   type Expr,
   type ExprContext,
   type ExprLike,
-  type ExprOutputType,
   type InnerJoin,
   type LeftJoin,
   type SqlFragment,
   asNode,
-  canonicalDbType,
   deferredCondition,
   isExpr,
 } from "./Expr.ts";
@@ -38,8 +37,8 @@ import { type ExpressionCondition, getConstructorFromTaggedId, maybeResolveRefer
 import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
 import { type ParsedValueFilter, makeLike, mapToDb } from "./QueryParser.ts";
-import { type Column, KeySerde, PolymorphicKeySerde } from "./serde.ts";
 import { skipCondition } from "./skipCondition.ts";
+import { type TypeInfo } from "./TypeInfo.ts";
 import { type ColumnsOf, type FieldsOf, type TypeMap, type TypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
@@ -108,10 +107,10 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = {
 } & {
   [P in keyof ColumnsOf<T>]: P extends "id"
     ? EntityColumn<T, never, Name>
-    : ColumnsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
-      ? PrimitiveColumn<V, N extends true ? null : never, Name>
-      : ColumnsOf<T>[P] extends { kind: "m2o"; type: infer U extends Entity; nullable: infer N }
-        ? ReferenceColumn<U, N extends true ? null : never, Name>
+    : ColumnsOf<T>[P] extends { entity: infer U extends Entity; nullable: infer N }
+      ? ReferenceColumn<U, N extends true ? null : never, Name>
+      : ColumnsOf<T>[P] extends { type: infer V; nullable: infer N }
+        ? PrimitiveColumn<V, N extends true ? null : never, Name>
         : never;
 } & {
   [
@@ -297,12 +296,9 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       if (typeof key !== "string") return undefined;
       const descriptor = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
       if (descriptor) {
-        const { field } = descriptor;
-        const column =
-          field.serde?.columns.find((c) => c.columnName === key) ?? fail(`No column ${key} on ${cstr.name}`);
-        return field.kind === "m2o" || field.kind === "poly"
-          ? new EntityColumnImpl(meta, field, column, mgmt)
-          : new PrimitiveColumnImpl(meta, field, column, mgmt);
+        return descriptor.idMetadata && key !== "id"
+          ? new EntityColumnImpl(meta, descriptor, mgmt)
+          : new PrimitiveColumnImpl(meta, descriptor, mgmt);
       }
       const subtype = subtypes.get(key);
       if (subtype) {
@@ -317,7 +313,7 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         physicalRelation(meta, key) ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
       switch (field.kind) {
         case "m2o":
-          return new ReferenceJoinImpl(new EntityColumnImpl(meta, field, field.serde!.columns[0], mgmt));
+          return new ReferenceJoinImpl(new EntityColumnImpl(meta, field.serde.columns[0].column, mgmt));
         case "poly":
           return new PolyReferenceImpl(meta, mgmt, field);
         case "o2m":
@@ -349,12 +345,11 @@ export function isTable(obj: unknown): obj is Table<any, any> {
 
 /**
  * A physical table column implements `Expr`: it renders as `alias."column"`, decodes result
- * values through the field's serde, and inherits aggregate methods from `BaseExpr`.
+ * values through the column's shared scalar codec, and inherits aggregate methods from `BaseExpr`.
  */
 class TableColumn extends BaseExpr {
   public constructor(
     readonly meta: EntityMetadata,
-    readonly field: Field,
     readonly column: Column,
     readonly mgmt: TableMgmt,
   ) {
@@ -362,26 +357,12 @@ class TableColumn extends BaseExpr {
   }
 
   /** Author.id, Book.author_id, and Comment.parent_author_id use the same Author ID domain. */
-  get outputType(): ExprOutputType | undefined {
-    const idMeta = this.idMetadata;
-    // Built-in poly components are plain columns, not KeySerde instances, but share its ID codec.
-    if (idMeta && this.field.serde?.constructor === PolymorphicKeySerde) {
-      return {
-        dbType: canonicalDbType(this.column.dbType),
-        domain: `key:${idMeta.tagName}`,
-        idMeta,
-        arrayElementSafe: true,
-      };
-    }
-    const outputType = this.column.outputType;
-    if (!outputType || !(this.column instanceof KeySerde)) return outputType;
-    return idMeta ? { ...outputType, idMeta } : undefined;
+  get outputType(): TypeInfo | undefined {
+    return this.column.outputType;
   }
 
   get sqlNullable(): boolean | undefined {
-    // Entity requiredness differs from physical NOT NULL for derived and STI fields.
-    // A required poly still has nullable component FKs: only one target is set on each row.
-    return this.field.kind === "poly" ? true : this.column.sqlNullable;
+    return this.column.sqlNullable;
   }
 
   get sqlSource(): object {
@@ -396,10 +377,8 @@ class TableColumn extends BaseExpr {
   /** Decodes result-set values with public PK/FK ids, while hydration keeps internal tagged ids. */
   decode(value: unknown): unknown {
     if (value === null || value === undefined) return value;
-    if (this.column instanceof KeySerde || this.field.serde instanceof PolymorphicKeySerde) {
-      const idMeta = this.idMetadata;
-      if (idMeta) return toIdOf(idMeta, this.column.mapFromDb(value) as TaggedId | undefined);
-    }
+    const idMeta = this.idMetadata;
+    if (idMeta) return toIdOf(idMeta, this.column.mapFromDb(value) as TaggedId | undefined);
     return this.column.mapFromDb(value);
   }
 
@@ -409,13 +388,7 @@ class TableColumn extends BaseExpr {
 
   /** Identifies the ID domain of a primary key, FK, or physical polymorphic component. */
   get idMetadata(): EntityMetadata | undefined {
-    return this.field.kind === "primaryKey"
-      ? this.meta
-      : this.field.kind === "m2o"
-        ? this.field.otherMetadata()
-        : this.field.kind === "poly"
-          ? this.field.components.find((c) => c.columnName === this.column.columnName)?.otherMetadata()
-          : undefined;
+    return this.column.idMetadata?.();
   }
 
   /** Encodes literals when the condition is created and renders with each query's aliases. */
@@ -691,7 +664,7 @@ class PolyReferenceImpl<T extends Entity> {
       if (!otherMeta) {
         return fail(
           selected instanceof TableColumn
-            ? `${this.field.fieldName} \`in\` needs an id or FK column, got ${selected.field.fieldName}`
+            ? `${this.field.fieldName} \`in\` needs an id or FK column, got ${selected.column.columnName}`
             : `${this.field.fieldName} is polymorphic, so \`in\` needs a subquery selecting an id or FK column`,
         );
       }
@@ -739,9 +712,7 @@ class PolyReferenceImpl<T extends Entity> {
   private componentColumn(comp: PolymorphicFieldComponent): EntityColumnImpl<T> {
     const descriptor =
       this.meta.columns[comp.columnName] ?? fail(`No physical column ${comp.columnName} on ${this.meta.type}`);
-    const column =
-      descriptor.field.serde?.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
-    return new EntityColumnImpl<T>(this.meta, descriptor.field, column, this.mgmt);
+    return new EntityColumnImpl<T>(this.meta, descriptor, this.mgmt);
   }
 }
 
@@ -840,9 +811,7 @@ class OneToManyJoinImpl extends CollectionJoinImpl {
           `${field.otherColumnName} is not physically present on ${otherMeta.tableName}; join the base table explicitly`,
       );
     }
-    const physicalColumn =
-      descriptor.field.serde?.columns.find((c) => c.columnName === field.otherColumnName) ?? fail("Missing column");
-    const column = new EntityColumnImpl(otherMeta, descriptor.field, physicalColumn, other[tableMgmt]);
+    const column = new EntityColumnImpl(otherMeta, descriptor, other[tableMgmt]);
     const on = column.eq(this.proxy.id);
     // Collections (o2m/lo2m) filter soft-deletes like em.find; o2o references resolve them
     const filtered = field.kind === "o2m" ? field.softDeletes !== "include" : field.kind === "lo2m";
@@ -908,7 +877,7 @@ class ReferenceJoinImpl {
   constructor(private column: EntityColumnImpl<unknown>) {}
 
   as(other: object): object {
-    return this.column.field.required ? this.column.inner(other) : this.column.left(other);
+    return this.column.sqlNullable === false ? this.column.inner(other) : this.column.left(other);
   }
 
   inner(other: object): object {
@@ -933,15 +902,18 @@ function physicalRelation(meta: EntityMetadata, key: string): Field | undefined 
   if (!isRelation(field)) return undefined;
   // I.e. TaskNew.copiedFrom uses Task's original FK domain, not its specialized TaskNew target.
   if (field?.kind === "m2o" || field?.kind === "poly") {
-    const columnName = field.serde.columns[0].columnName;
-    const storage = meta.columns[columnName]?.field;
-    if (
-      !storage ||
-      storage.kind !== field.kind ||
-      !storage.serde!.columns.every((column) => Object.hasOwn(meta.columns, column.columnName))
-    )
-      return undefined;
-    return storage;
+    if (!field.serde.columns.every((binding) => meta.columns[binding.columnName] === binding.column)) return undefined;
+    return field.kind === "poly"
+      ? {
+          ...field,
+          components: field.components.map((component) => ({
+            column: component.column,
+            columnName: component.columnName,
+            otherFieldName: component.otherFieldName,
+            otherMetadata: component.column.idMetadata!,
+          })),
+        }
+      : field;
   }
   return field;
 }

@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -63,50 +64,12 @@ export interface ChildItemFields {
 }
 
 export interface ChildItemColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "child_group_id": {
-    kind: "m2o";
-    type: ChildGroup;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "parent_item_id": {
-    kind: "m2o";
-    type: ParentItem;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
+  "id": { type: IdOf<ChildItem>; entity: ChildItem; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "child_group_id": { type: IdOf<ChildGroup>; entity: ChildGroup; nullable: false; insert: "required"; update: true };
+  "parent_item_id": { type: IdOf<ParentItem>; entity: ParentItem; nullable: false; insert: "required"; update: true };
 }
 
 export interface ChildItemOpts {

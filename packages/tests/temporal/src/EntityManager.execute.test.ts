@@ -1,5 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import {
+  Column,
   CustomSerdeAdapter,
   type ExecuteResult,
   PlainTimeSerde,
@@ -895,28 +896,30 @@ describe("EntityManager.execute", () => {
       select: { firstName: source.firstName, birthday: source.birthday, maybe_times: source.maybe_times },
     };
     // And a target that differs either in mapper identity for time[] or in SQL storage for the same PlainTime mapper
-    const columns = getMetadata(Author).fields.maybeTimes.serde!.columns;
-    const original = columns[0];
-    columns[0] =
+    const columns = getMetadata(Author).columns;
+    const original = columns.maybe_times;
+    const codec =
       mismatch === "domain"
         ? new CustomSerdeAdapter(
-            "maybeTimes",
-            "maybe_times",
             "time[]",
             {
               fromDb: (value: string) => Temporal.PlainTime.from(value),
               toDb: (value: Temporal.PlainTime) => value.toString(),
             },
             true,
-            true,
           )
-        : new PlainTimeSerde("maybeTimes", "maybe_times", "timetz[]", true, true);
+        : new PlainTimeSerde("timetz[]", true);
     // And the changed codec still describes the same nullable column and SQL default
-    Object.assign(columns[0], {
-      sqlNullable: original.sqlNullable,
-      hasDefault: original.hasDefault,
-      isGenerated: original.isGenerated,
-    });
+    columns.maybe_times = new Column(
+      original.columnName,
+      original.sqlNullable,
+      original.hasDefault,
+      original.isGenerated,
+      original.insertOptional,
+      original.writable,
+      original.idMetadata,
+      codec,
+    );
     resetQueryCount();
     try {
       // When copying the source array despite deliberately incompatible target metadata
@@ -926,7 +929,7 @@ describe("EntityManager.execute", () => {
       );
       expect(queries).toEqual([]);
     } finally {
-      columns[0] = original;
+      columns.maybe_times = original;
     }
   });
 

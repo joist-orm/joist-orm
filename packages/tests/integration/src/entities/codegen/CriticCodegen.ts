@@ -15,6 +15,7 @@ import {
   hasMany,
   hasOne,
   hasOneToOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -75,43 +76,18 @@ export interface CriticFields {
 }
 
 export interface CriticColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
   "favorite_large_publisher_id": {
-    kind: "m2o";
-    type: LargePublisher;
-    derived: false;
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "group_id": { kind: "m2o"; type: PublisherGroup; derived: false; nullable: true; insert: "optional"; update: true };
+  "group_id": { type: IdOf<PublisherGroup>; entity: PublisherGroup; nullable: true; insert: "optional"; update: true };
 }
 
 export interface CriticOpts {

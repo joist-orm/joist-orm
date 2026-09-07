@@ -2141,27 +2141,32 @@ describe("EntityManager.execute", () => {
       async (fact) => {
         // Given a persisted Tag with ordinary read and filter codecs
         await insertTag({ name: "Readable" });
+        // And a SQL table reference for Tag mutations and reads
         const em = newEntityManager();
         const t = table(Tag);
         // And its column models legacy metadata missing one physical fact
-        const column = getMetadata(Tag).fields.name.serde!.columns[0];
-        const original = column[fact];
-        delete column[fact];
+        const column = getMetadata(Tag).columns.name;
+        const original = Object.getOwnPropertyDescriptor(column, fact)!;
+        Reflect.deleteProperty(column, fact);
         resetQueryCount();
         try {
+          // When inserting a Tag without the required physical column metadata
           // Then INSERT and UPDATE fail clearly before issuing SQL
           await expect(em.execute({ insert: t, values: { name: "Forbidden" } })).rejects.toThrow(
             "Missing physical metadata for Tag.name; run codegen",
           );
+          // When updating Tag with the same incomplete metadata
+          // Then UPDATE also rejects the mutation before issuing SQL
           await expect(em.execute({ update: t, set: { name: "Forbidden" }, allowAll: true })).rejects.toThrow(
             "Missing physical metadata for Tag.name; run codegen",
           );
           expect(queries).toEqual([]);
-          // And both read APIs still use the existing codecs
+          // When reading Tag through both SQL read APIs
+          // Then both read APIs still use the existing codecs
           expect(await em.query({ from: t, where: t.name.eq("Readable"), select: t.name })).toEqual(["Readable"]);
           expect(await em.execute({ from: t, select: t.name })).toEqual({ rowCount: 1, rows: ["Readable"] });
         } finally {
-          column[fact] = original;
+          Object.defineProperty(column, fact, original);
         }
       },
     );
@@ -2169,19 +2174,22 @@ describe("EntityManager.execute", () => {
     it("rejects unsupported column value writes while preserving legacy column reads", async () => {
       // Given a persisted Tag whose ordinary read and filter codecs remain supported
       await insertTag({ name: "Readable" });
+      // And a SQL table reference for Tag mutations and reads
       const em = newEntityManager();
       const t = table(Tag);
       // And the real column temporarily models an older custom Column without the optional write capability
-      const column = getMetadata(Tag).fields.name.serde!.columns[0];
+      const column = getMetadata(Tag).columns.name.codec;
       const original = Object.getOwnPropertyDescriptor(column, "mapToDbValue");
       Object.defineProperty(column, "mapToDbValue", { value: undefined, configurable: true, writable: true });
       resetQueryCount();
       try {
         // When INSERT would need the unavailable domain-value write encoder
+        // Then the Tag insertion is rejected instead of using the filter encoder
         await expect(em.execute({ insert: t, values: { name: "Forbidden" } })).rejects.toThrow(
           "The codec for Tag.name does not support SQL value writes",
         );
-        // And UPDATE must not fall back to the legacy filter encoder for domain assignments
+        // When UPDATE needs the unavailable domain-value write encoder
+        // Then UPDATE must not fall back to the legacy filter encoder for domain assignments
         await expect(em.execute({ update: t, set: { name: "Forbidden" }, allowAll: true })).rejects.toThrow(
           "The codec for Tag.name does not support SQL value writes",
         );

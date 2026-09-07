@@ -1,3 +1,4 @@
+import { type Column } from "./columns.ts";
 import { type ExpressionFilter } from "./EntityFilter.ts";
 import { isDefined } from "./EntityManager.ts";
 import {
@@ -8,7 +9,6 @@ import {
   type RawCondition,
   mapToDb,
 } from "./QueryParser.ts";
-import { type Column } from "./serde.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { fail, partition } from "./utils.ts";
 

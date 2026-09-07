@@ -107,8 +107,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     ensureNotDeleted(this.entity, "pending");
     const current = this.current();
     // Resolve the id to an entity
-    if (!isEntity(current) && current !== undefined && (!this._isLoaded || opts.forceReload)) {
-      this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
+    if (!this._isLoaded || opts.forceReload) {
+      this.loaded =
+        isEntity(current) || current === undefined
+          ? (current as U | undefined)
+          : ((await this.entity.em.load(getConstructorFromTaggedId(current), current)) as U);
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);

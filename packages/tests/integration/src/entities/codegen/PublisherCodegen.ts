@@ -18,6 +18,7 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -116,154 +117,27 @@ export interface PublisherFields {
 }
 
 export interface PublisherColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "latitude": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "longitude": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "huge_number": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "number_of_book_reviews": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "deleted_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "titles_of_favorite_books": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "book_advance_titles_snapshot": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "number_of_book_advances_snapshot": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "base_sync_default": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "base_async_default": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "favorite_author_name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: true;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "rating": {
-    kind: "primitive";
-    type: number;
-    unique: false;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "size_id": { kind: "enum"; type: PublisherSize; nullable: true; insert: "optional"; update: true };
-  "type_id": { kind: "enum"; type: PublisherType; nullable: false; insert: "optional"; update: true };
-  "favorite_author_id": { kind: "m2o"; type: Author; derived: true; nullable: true; insert: "optional"; update: true };
-  "group_id": { kind: "m2o"; type: PublisherGroup; derived: false; nullable: true; insert: "optional"; update: true };
-  "spotlight_author_id": {
-    kind: "m2o";
-    type: Author;
-    derived: false;
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  "id": { type: IdOf<Publisher>; entity: Publisher; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: false; insert: "required"; update: true };
+  "latitude": { type: number; nullable: true; insert: "optional"; update: true };
+  "longitude": { type: number; nullable: true; insert: "optional"; update: true };
+  "huge_number": { type: number; nullable: true; insert: "optional"; update: true };
+  "number_of_book_reviews": { type: number; nullable: false; insert: "optional"; update: true };
+  "deleted_at": { type: Date; nullable: true; insert: "optional"; update: true };
+  "titles_of_favorite_books": { type: string; nullable: true; insert: "optional"; update: true };
+  "book_advance_titles_snapshot": { type: string; nullable: true; insert: "optional"; update: true };
+  "number_of_book_advances_snapshot": { type: string; nullable: true; insert: "optional"; update: true };
+  "base_sync_default": { type: string; nullable: false; insert: "required"; update: true };
+  "base_async_default": { type: string; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "favorite_author_name": { type: string; nullable: true; insert: "optional"; update: true };
+  "rating": { type: number; nullable: true; insert: "optional"; update: true };
+  "size_id": { type: PublisherSize; nullable: true; insert: "optional"; update: true };
+  "type_id": { type: PublisherType; nullable: false; insert: "optional"; update: true };
+  "favorite_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "group_id": { type: IdOf<PublisherGroup>; entity: PublisherGroup; nullable: true; insert: "optional"; update: true };
+  "spotlight_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
 }
 
 export interface PublisherOpts {

@@ -1,9 +1,10 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
+import { type Column } from "./columns.ts";
 import { type DriverQueryResult } from "./drivers/Driver.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionCondition } from "./EntityFilter.ts";
 import { type IdOf } from "./EntityManager.ts";
-import { type EntityMetadata, type Field } from "./EntityMetadata.ts";
+import { type EntityMetadata } from "./EntityMetadata.ts";
 import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "./Expr.ts";
 import { keyToTaggedId, toTaggedId } from "./keys.ts";
 import { kq, safeKq } from "./keywords.ts";
@@ -190,7 +191,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   }
   if (meta.supportsEmExecute !== true)
     fail(`SQL mutations require supported physical metadata for ${meta.type}; run codegen`);
-  const fields: StoredField[] = Object.values(meta.allFields).filter((field) => isStoredField(field));
+  const fields = Object.values(meta.columns);
   for (const field of fields) {
     requireColumnMetadata(meta, field);
   }
@@ -203,7 +204,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   const bindings: unknown[] = [];
   if (operation === "insert") {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");
-    const required = fields.filter((field) => isRequired(meta, field));
+    const required = fields.filter((column) => column.insert === "required");
     if ("values" in statement) {
       const rows = Array.isArray(statement.values) ? statement.values : [statement.values];
       // No target is registered here: value subqueries own their sources, but no existing INSERT row exists.
@@ -211,19 +212,17 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const entries = rows.map((row) => assignments(meta, row, "insert"));
       for (const row of entries) {
         for (const field of required) {
-          if (!row.some((entry) => entry[0] === field.serde.columns[0].columnName))
-            fail(`INSERT requires ${meta.type}.${field.serde.columns[0].columnName}`);
+          if (!row.some((entry) => entry[0] === field.columnName))
+            fail(`INSERT requires ${meta.type}.${field.columnName}`);
         }
       }
       if (rows.length === 0) return undefined;
-      const keys = fields.filter((field) =>
-        entries.some((row) => row.some((entry) => entry[0] === field.serde.columns[0].columnName)),
-      );
-      sql += ` (${keys.map((field) => kq(field.serde.columns[0].columnName)).join(", ")}) VALUES `;
+      const keys = fields.filter((field) => entries.some((row) => row.some((entry) => entry[0] === field.columnName)));
+      sql += ` (${keys.map((field) => kq(field.columnName)).join(", ")}) VALUES `;
       sql += entries
         .map((row) => {
           const cells = keys.map((field) => {
-            const entry = row.find((entry) => entry[0] === field.serde.columns[0].columnName);
+            const entry = row.find((entry) => entry[0] === field.columnName);
             if (!entry) return "DEFAULT";
             const cell = assignmentToSql(meta, field, entry[1], valuesCtx);
             bindings.push(...cell.bindings);
@@ -237,13 +236,12 @@ export function parseStatement(arg: unknown): Plan | undefined {
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
       const columns = source.output.columns;
       for (const field of required) {
-        if (!columns.some((column) => column[0] === field.serde.columns[0].columnName))
-          fail(`INSERT requires ${meta.type}.${field.serde.columns[0].columnName}`);
+        if (!columns.some((column) => column[0] === field.columnName))
+          fail(`INSERT requires ${meta.type}.${field.columnName}`);
       }
       for (const [key, expr] of columns) {
         const field = writableField(meta, key, "insert");
-        const targetExpr = asNode((target as unknown as Record<string, ExprLike<unknown>>)[key]);
-        const left = targetExpr.outputType;
+        const left = field.outputType;
         const right = expr.outputType;
         if (
           !left ||
@@ -254,12 +252,12 @@ export function parseStatement(arg: unknown): Plan | undefined {
         ) {
           fail(`INSERT SELECT ${meta.type}.${key} has incompatible or unknown storage codecs`);
         }
-        if (!field.serde.columns[0].sqlNullable && expr.sqlNullable === true)
+        if (!field.sqlNullable && expr.sqlNullable === true)
           fail(`INSERT SELECT ${meta.type}.${key} cannot accept a nullable output`);
       }
-      const keys = fields.filter((field) => columns.some((column) => column[0] === field.serde.columns[0].columnName));
+      const keys = fields.filter((field) => columns.some((column) => column[0] === field.columnName));
       const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
-      sql += ` (${keys.map((field) => kq(field.serde.columns[0].columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.serde.columns[0].columnName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
+      sql += ` (${keys.map((field) => kq(field.columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.columnName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
       bindings.push(...source.bindings);
     }
   } else {
@@ -282,7 +280,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
             const field = writableField(meta, key, "update");
             const cell = assignmentToSql(meta, field, value, ctx);
             bindings.push(...cell.bindings);
-            return `${kq(field.serde.columns[0].columnName)} = ${cell.sql}`;
+            return `${kq(field.columnName)} = ${cell.sql}`;
           })
           .join(", ");
     }
@@ -368,7 +366,7 @@ type UpdateKey<T> = {
 /** A column's domain value before SQL nullability is added, i.e. Book's `id` is BookId and `author_id` is AuthorId. */
 type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
   ? IdOf<T>
-  : ColumnsOf<T>[K] extends { kind: "m2o"; type: infer U }
+  : ColumnsOf<T>[K] extends { entity: infer U }
     ? IdOf<U>
     : ColumnsOf<T>[K] extends { type: infer V }
       ? V
@@ -379,7 +377,7 @@ type SqlValue<T, K extends keyof ColumnsOf<T>> =
 type Assignment<T, K extends keyof ColumnsOf<T>> =
   | SqlValue<T, K>
   | ExprLike<SqlValue<T, K>>
-  | (ColumnsOf<T>[K] extends { kind: "m2o"; type: infer U } ? U : never);
+  | (K extends "id" ? never : ColumnsOf<T>[K] extends { entity: infer U } ? U : never);
 type InsertSourceRow<T> = { [K in RequiredInsertKey<T>]: SqlValue<T, K> } & {
   [K in Exclude<InsertKey<T>, RequiredInsertKey<T>>]?: SqlValue<T, K>;
 };
@@ -446,29 +444,8 @@ type MutationClause<M> =
   | (M extends { readonly insert: unknown }
       ? "insert" | (M extends { readonly values: unknown } ? "values" : "from")
       : "where" | "allowAll" | "softDeletes" | (M extends { readonly update: unknown } ? "update" | "set" : "delete"));
-type StoredField = Extract<Field, { kind: "primaryKey" | "primitive" | "enum" | "m2o" }>;
-
-/** Only ordinary single-column persisted fields can be assigned without ORM relationship processing. */
-function isStoredField(field: Field): field is StoredField {
-  return ["primaryKey", "primitive", "enum", "m2o"].includes(field.kind) && field.serde?.columns.length === 1;
-}
-
-/** SQL defaults, generated expressions, and Joist's numeric ID/timestamp conventions permit omission. */
-function isRequired(meta: EntityMetadata, field: StoredField): boolean {
-  if (field.kind === "primaryKey" && (meta.idDbType === "int" || meta.idDbType === "bigint")) return false;
-  const column = field.serde.columns[0];
-  return (
-    !column.sqlNullable &&
-    !column.hasDefault &&
-    !column.isGenerated &&
-    field.fieldName !== meta.timestampFields?.createdAt &&
-    field.fieldName !== meta.timestampFields?.updatedAt
-  );
-}
-
-/** Legacy columns remain readable, but mutations require complete physical facts. */
-function requireColumnMetadata(meta: EntityMetadata, field: StoredField): void {
-  const column = field.serde.columns[0];
+/** SQL mutations require complete physical metadata. */
+function requireColumnMetadata(meta: EntityMetadata, column: Column): void {
   if (
     typeof column.sqlNullable !== "boolean" ||
     typeof column.hasDefault !== "boolean" ||
@@ -490,31 +467,31 @@ function assignments(meta: EntityMetadata, value: unknown, operation: "insert" |
 }
 
 /** Applies physical write restrictions, not ORM-derived, protected, or business-immutable flags. */
-function writableField(meta: EntityMetadata, key: string, operation: "insert" | "update"): StoredField {
+function writableField(meta: EntityMetadata, key: string, operation: "insert" | "update"): Column {
   const column = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
-  const field = column ? meta.allFields[column.fieldName] : undefined;
-  if (!field || !isStoredField(field)) fail(`Unsupported SQL mutation field ${meta.type}.${key}`);
-  requireColumnMetadata(meta, field);
-  if (operation === "update" && field.kind === "primaryKey") fail("UPDATE primary-key assignments are not supported");
-  if (field.serde.columns[0].isGenerated) fail(`Generated field ${meta.type}.${key} is omit-only`);
-  return field;
+  if (!column) fail(`Unsupported SQL mutation field ${meta.type}.${key}`);
+  requireColumnMetadata(meta, column);
+  if (operation === "update" && key === "id") fail("UPDATE primary-key assignments are not supported");
+  if (column.isGenerated) fail(`Generated field ${meta.type}.${key} is omit-only`);
+  if (operation === "update" ? !column.update : column.insert === "never")
+    fail(`Unsupported SQL mutation field ${meta.type}.${key}`);
+  return column;
 }
 
 /**
  * Classifies SQL expressions and SQL NULL before invoking the column's entity-independent write codec.
  * Normalizes public PK/FK ids to internal tagged ids using the target entity's idType.
  */
-function assignmentToSql(meta: EntityMetadata, field: StoredField, value: unknown, ctx: Ctx): SqlFragment {
+function assignmentToSql(meta: EntityMetadata, column: Column, value: unknown, ctx: Ctx): SqlFragment {
   if (isExpr(value)) return asNode(value).toSql(ctx);
   if (value === null) {
-    if (!field.serde.columns[0].sqlNullable)
-      fail(`${meta.type}.${field.serde.columns[0].columnName} is physically NOT NULL`);
+    if (!column.sqlNullable) fail(`${meta.type}.${column.columnName} is physically NOT NULL`);
     return { sql: "NULL", bindings: [], refs: [] };
   }
-  if (field.kind === "m2o" || field.kind === "primaryKey") {
-    const other = field.kind === "m2o" ? field.otherMetadata() : meta;
+  if (column.idMetadata) {
+    const other = column.idMetadata();
     if (isEntity(value)) {
-      if (field.kind !== "m2o" || !(value instanceof other.cstr)) fail(`Expected a ${other.type} reference`);
+      if (column.columnName === "id" || !(value instanceof other.cstr)) fail(`Expected a ${other.type} reference`);
       if (value.isNewEntity || value.idTaggedMaybe === undefined)
         fail(`Cannot reference an unflushed ${other.type}, even with an assigned ID`);
       value = value.idTaggedMaybe;
@@ -528,8 +505,8 @@ function assignmentToSql(meta: EntityMetadata, field: StoredField, value: unknow
           : toTaggedId(other, value as string | number);
     }
   }
-  const column = field.serde.columns[0];
-  if (!column.mapToDbValue) fail(`The codec for ${meta.type}.${column.columnName} does not support SQL value writes`);
+  if (!column.codec.mapToDbValue)
+    fail(`The codec for ${meta.type}.${column.columnName} does not support SQL value writes`);
   return { sql: "?", bindings: [column.mapToDbValue(value)], refs: [] };
 }
 

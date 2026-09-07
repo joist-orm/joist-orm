@@ -17,6 +17,7 @@ import {
   hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -61,35 +62,11 @@ export interface EmployeeFields {
 }
 
 export interface EmployeeColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "name": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "updated_at": {
-    kind: "primitive";
-    type: Date;
-    unique: false;
-    derived: true;
-    nullable: false;
-    insert: "optional";
-    update: true;
-  };
-  "manager_id": { kind: "m2o"; type: Employee; derived: false; nullable: true; insert: "optional"; update: true };
+  "id": { type: IdOf<Employee>; entity: Employee; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "manager_id": { type: IdOf<Employee>; entity: Employee; nullable: true; insert: "optional"; update: true };
 }
 
 export interface EmployeeOpts {

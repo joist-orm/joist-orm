@@ -11,7 +11,6 @@ import {
   type ExprBrand,
   type ExprContext,
   type ExprLike,
-  type ExprOutputType,
   type InnerJoin,
   type LeftJoin,
   RefExpr,
@@ -46,6 +45,7 @@ import {
   m2mJoinTable,
   tableMgmt,
 } from "./Tables.ts";
+import { type TypeInfo } from "./TypeInfo.ts";
 import { type TypeMapEntry } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
@@ -851,7 +851,7 @@ class SubqueryColumnExpr extends BaseExpr {
     return this.inner.encode(value);
   }
 
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.inner.outputType;
   }
 
@@ -881,7 +881,7 @@ class SubqueryExpr extends BaseExpr {
     return expr instanceof OutputExpr ? expr.inner : expr;
   }
 
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.subquerySelect.outputType;
   }
 
@@ -1170,7 +1170,7 @@ class OutputExpr extends BaseExpr {
     super();
   }
 
-  get outputType(): ExprOutputType | undefined {
+  get outputType(): TypeInfo | undefined {
     return this.inner.outputType;
   }
 

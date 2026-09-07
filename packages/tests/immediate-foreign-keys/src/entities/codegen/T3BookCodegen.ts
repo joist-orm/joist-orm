@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -60,17 +61,9 @@ export interface T3BookFields {
 }
 
 export interface T3BookColumns {
-  "id": { kind: "primitive"; type: number; unique: true; nullable: false; insert: "optional"; update: false };
-  "title": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "author_id": { kind: "m2o"; type: T3Author; derived: false; nullable: false; insert: "required"; update: true };
+  "id": { type: IdOf<T3Book>; entity: T3Book; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; nullable: false; insert: "required"; update: true };
+  "author_id": { type: IdOf<T3Author>; entity: T3Author; nullable: false; insert: "required"; update: true };
 }
 
 export interface T3BookOpts {

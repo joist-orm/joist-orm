@@ -7,6 +7,7 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,16 +57,8 @@ export interface AdminUserFields extends Omit<UserFields, "id"> {
 }
 
 export interface AdminUserColumns {
-  "id": { kind: "primitive"; type: string; unique: true; nullable: false; insert: "optional"; update: false };
-  "role": {
-    kind: "primitive";
-    type: string;
-    unique: false;
-    derived: false;
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
+  "id": { type: IdOf<AdminUser>; entity: AdminUser; nullable: false; insert: "optional"; update: false };
+  "role": { type: string; nullable: false; insert: "required"; update: true };
 }
 
 export interface AdminUserOpts extends UserOpts {

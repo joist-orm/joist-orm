@@ -2394,9 +2394,9 @@ describe("EntityManager.setQueries", () => {
       { canonical: "varchar[]", spelling: "character varying[]" },
     ])("canonicalizes known primitive $spelling outputs", (testCase) => {
       // Given a primitive column using PostgreSQL's canonical type spelling
-      const left = new PrimitiveSerde("left", "left", testCase.canonical, testCase.canonical.endsWith("[]"));
+      const left = new PrimitiveSerde(testCase.canonical, testCase.canonical.endsWith("[]"));
       // And an independent column using an equivalent physical type spelling
-      const right = new PrimitiveSerde("right", "right", testCase.spelling, testCase.spelling.endsWith("[]"));
+      const right = new PrimitiveSerde(testCase.spelling, testCase.spelling.endsWith("[]"));
       // When inspecting the native compatibility metadata
       // Then canonical physical types and logical domains agree without serde identity
       expect(left.outputType).toBeDefined();
@@ -2411,11 +2411,11 @@ describe("EntityManager.setQueries", () => {
       { name: "ZonedDateTime", serde: ZonedDateTimeSerde, dbType: "timestamptz" },
     ])("recognizes matching scalar Temporal $name domains", (testCase) => {
       // Given a Temporal scalar column codec without changing the integration schema's Date configuration
-      const left = new testCase.serde("left", "left", testCase.dbType);
+      const left = new testCase.serde(testCase.dbType);
       // And an independent scalar column using the same Temporal mapper and physical type
-      const right = new testCase.serde("right", "right", testCase.dbType);
+      const right = new testCase.serde(testCase.dbType);
       // And a Date codec with the same physical representation but a different logical domain
-      const date = new DateSerde("date", "date", testCase.dbType);
+      const date = new DateSerde(testCase.dbType);
       // When inspecting the native codec metadata used by set validation
       // Then matching Temporal columns agree but are not interchangeable with Date columns
       expect(left.outputType).toBeDefined();

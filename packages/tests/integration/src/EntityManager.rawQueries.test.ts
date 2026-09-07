@@ -1,3 +1,4 @@
+import { expectTypeOf } from "expect-type";
 import { Query, alias, getMetadata, query, sql, table, tables } from "joist-orm";
 import {
   Author,
@@ -45,6 +46,57 @@ import { ZodError } from "zod";
  * queries, and raw SQL expressions, including how optional filters affect joins and returned rows.
  */
 describe("EntityManager.rawQueries", () => {
+  it("selects typed SQL shortcuts for an Author", async () => {
+    // Given an Author with a known name and age
+    await insertAuthor({ first_name: "Alice", age: 30 });
+    // And an Author table for the computed projections
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When computing numeric, string, and boolean values with typed SQL shortcuts
+    const rows = await em.query({
+      from: a,
+      select: {
+        age: sql.number`${a.age} + ${2}`,
+        name: sql.string`upper(${a.first_name})`,
+        adult: sql.boolean`${a.age.gte(18)}`,
+      },
+      where: sql.number`${a.age} + ${2}`.eq(32),
+    });
+
+    // Then the Author's computed values have the declared runtime and inferred types
+    expect(rows).toEqual([{ age: 32, name: "ALICE", adult: true }]);
+    expectTypeOf(rows).toEqualTypeOf<{ age: number; name: string; adult: boolean }[]>();
+  });
+
+  it("selects nullable SQL shortcuts for Authors with known and unknown ages", async () => {
+    // Given an Author with a known age
+    await insertAuthor({ first_name: "Alice", age: 30 });
+    // And an Author whose age is unknown
+    await insertAuthor({ first_name: "Bob" });
+    // And an Author table for the nullable projections
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When computing nullable numeric, string, and boolean values from each Author's age
+    const rows = await em.query({
+      from: a,
+      select: {
+        age: sql.numberOrNull`${a.age} + ${2}`,
+        label: sql.stringOrNull`${a.age}::text`,
+        adult: sql.booleanOrNull`${a.age.gte(18)}`,
+      },
+      orderBy: [{ asc: a.first_name }],
+    });
+
+    // Then known ages produce typed values and unknown ages remain null
+    expect(rows).toEqual([
+      { age: 32, label: "30", adult: true },
+      { age: null, label: null, adult: null },
+    ]);
+    expectTypeOf(rows).toEqualTypeOf<{ age: number | null; label: string | null; adult: boolean | null }[]>();
+  });
+
   describe("select shapes", () => {
     it("filters Authors by a domain field through an alias", async () => {
       // Given an Author matching the firstName condition

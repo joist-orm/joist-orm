@@ -683,7 +683,7 @@ export function query(q: AnyReadQuery): unknown {
  * sql`${"Alice"}`      // Value: ?, bindings ["Alice"]
  *
  * // Selecting this expression keeps the join to Book b.
- * sql<number>`${b.order} * ${2}`
+ * sql.number`${b.order} * ${2}`
  *
  * // Reference an unmodeled column; it is untracked at the type level.
  * sql.ref<string>(a, "ts_search")
@@ -693,6 +693,24 @@ export function query(q: AnyReadQuery): unknown {
 export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
   return new TemplateExpr(strings, values) as any;
 }
+
+/** Shorthand for `sql<number>`; does not cast or convert the SQL result. */
+sql.number = sql<number>;
+
+/** Shorthand for `sql<number | null>`; does not cast or convert the SQL result. */
+sql.numberOrNull = sql<number | null>;
+
+/** Shorthand for `sql<string>`; does not cast or convert the SQL result. */
+sql.string = sql<string>;
+
+/** Shorthand for `sql<string | null>`; does not cast or convert the SQL result. */
+sql.stringOrNull = sql<string | null>;
+
+/** Shorthand for `sql<boolean>`; does not cast or convert the SQL result. */
+sql.boolean = sql<boolean>;
+
+/** Shorthand for `sql<boolean | null>`; does not cast or convert the SQL result. */
+sql.booleanOrNull = sql<boolean | null>;
 
 /** A raw condition for `where`, `having`, or `on`. */
 sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {

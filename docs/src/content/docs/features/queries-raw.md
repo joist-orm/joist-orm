@@ -42,7 +42,7 @@ This is solely a preference for potentially easier reasoning of the query--the o
 
 Prefer [find queries](./queries-find) for the ~80-90% of queries that are plain entity `SELECT`s — they have join literals, batching, and preloading. `em.query` is the next level down, for the queries `em.find` can't express.
 
-**Unlike `em.find`, `em.query` is not batched: each call executes one SQL statement.**
+**Unlike `em.find`, `em.query` is not batched: each call executes its own SQL statement.** Population can execute additional relation queries.
 
 :::
 
@@ -91,6 +91,22 @@ The `select` key determines the `rows` return type:
   const authorIds = await em.query({ from: a, select: a.id });
   // AuthorId[]
   ```
+
+### Populating Entities
+
+Entity selections accept a `populate` option as the second argument, using the same load hints as `em.find`:
+
+```ts
+const authors = await em.query(
+  { from: a, select: a, where: a.age.gte(18) },
+  { populate: { books: "reviews" } },
+);
+// Loaded<Author, { books: "reviews" }>[]
+const reviews = authors[0].books.get[0].reviews.get;
+```
+
+This also works with reusable entity queries: `em.query(query({ from: a, select: a }), { populate: "books" })`.
+Population runs after the SQL query through `em.populate`, preserving the identity map and using the existing relation loaders. It is only supported for entity selections, not POJO or scalar results.
 
 ### Left joins and `null`
 

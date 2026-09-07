@@ -2,6 +2,7 @@ import { expectTypeOf } from "expect-type";
 import {
   type Expr,
   type ExprBrand,
+  type Loaded,
   type Query,
   type Subquery,
   alias,
@@ -28,11 +29,45 @@ import {
 import { newEntityManager } from "src/testEm";
 
 describe("EntityManager.rawQueries.types", () => {
+  it("type-checks entity population", () => {
+    // Given compile-time assertions for Author population
+    // When the type checker checks the query results and rejected hints
+    // Then the assertions remain available without executing queries
+    expect(typeof populateTypeAssertions).toBe("function");
+  });
   it("type-checks", () => {
     // The assertions in `typeAssertions` are checked by `tsc`; referencing the function keeps it from being flagged as unused
     expect(typeof typeAssertions).toBe("function");
   });
 });
+
+/** Checks loaded query results and rejects hints that do not belong to the selected entity. */
+async function populateTypeAssertions() {
+  // Given Author and Book tables
+  const em = newEntityManager();
+  const [a, b] = tables(Author, Book);
+
+  // When selecting Authors with a join and a nested population hint
+  const authors = await em.query(
+    { from: a, join: [{ inner: b, on: b.author_id.eq(a.id) }], select: a },
+    { populate: { books: "author" } },
+  );
+
+  // Then the selected Authors have exactly the requested loaded relations
+  expectTypeOf(authors).toEqualTypeOf<Loaded<Author, { readonly books: "author" }>[]>();
+  // @ts-expect-error Publisher was not populated
+  authors[0].publisher.get;
+  // @ts-expect-error Author has no missing relation
+  em.query({ from: a, select: a }, { populate: { missing: {} } });
+  // @ts-expect-error Book has no missing relation
+  em.query({ from: a, select: a }, { populate: { books: { missing: {} } } });
+  // @ts-expect-error Reusable entity queries also validate their hints
+  em.query(query({ from: a, select: a }), { populate: { missing: {} } });
+  // @ts-expect-error Scalar results cannot be populated
+  em.query({ from: a, select: a.id }, { populate: "books" });
+  // @ts-expect-error Reusable POJO queries cannot be populated
+  em.query(query({ from: a, select: { name: a.first_name } }), { populate: "books" });
+}
 
 /**
  * Compile-time assertions for `em.query`: row types, left-join nullability, source keys, and the mistakes

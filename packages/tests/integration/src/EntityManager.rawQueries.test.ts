@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Query, alias, getMetadata, query, sql, table, tables } from "joist-orm";
+import { type Loaded, Query, alias, getMetadata, query, sql, table, tables } from "joist-orm";
 import {
   Author,
   Book,
@@ -98,6 +98,75 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("select shapes", () => {
+    it("populates selected Authors and their nested Book relations", async () => {
+      // Given an Author with a Book
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      // And another Author without Books
+      await insertAuthor({ first_name: "a2" });
+      // And the first Author already in the identity map with unloaded Books
+      const em = newEntityManager();
+      const existing = await em.load(Author, "a:1");
+      const a = table(Author);
+      expect(existing.books.isLoaded).toBe(false);
+
+      // When selecting Authors with their Books and each Book's Author populated
+      const authors = await em.query({ from: a, select: a, orderBy: { id: "ASC" } }, { populate: { books: "author" } });
+
+      // Then the identity map is preserved and nested relations are available synchronously
+      expectTypeOf(authors).toEqualTypeOf<Loaded<Author, { readonly books: "author" }>[]>();
+      expect(authors[0]).toBe(existing);
+      expect(authors[0].books.get.map((book) => book.title)).toEqual(["b1"]);
+      expect(authors[0].books.get[0].author.get).toBe(existing);
+      expect(authors[1].books.get).toEqual([]);
+    });
+
+    it("populates reusable Author queries", async () => {
+      // Given an Author with a Book
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      // And a reusable query selecting Authors
+      const em = newEntityManager();
+      const a = table(Author);
+      const allAuthors = query({ from: a, select: a });
+
+      // When selecting Authors from the reusable query with Books populated
+      const authors = await em.query(allAuthors, { populate: "books" });
+
+      // Then Books are available synchronously with loaded types
+      expectTypeOf(authors).toEqualTypeOf<Loaded<Author, "books">[]>();
+      expect(authors[0].books.get.map((book) => book.title)).toEqual(["b1"]);
+    });
+
+    it("preserves empty Author results when population is requested", async () => {
+      // Given an Author whose name does not match the requested name
+      await insertAuthor({ first_name: "a1" });
+      // And an Author table for selecting matching entities
+      const em = newEntityManager();
+      const a = table(Author);
+
+      // When selecting Authors whose name does not exist
+      const missing = await em.query({ from: a, select: a, where: a.first_name.eq("missing") }, { populate: "books" });
+
+      // Then population preserves the empty result
+      expect(missing).toEqual([]);
+    });
+
+    it("rejects population of non-entity selections before executing SQL", async () => {
+      // Given an Author table with no loaded entities
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+
+      // When requesting Books on a projection instead of Author entities
+      // Then the query fails before reaching PostgreSQL, even with no matching Authors
+      await expect(
+        // @ts-expect-error Population requires an entity selection
+        em.query({ from: a, select: { name: a.first_name } }, { populate: "books" }),
+      ).rejects.toThrow("em.query populate requires an entity selection");
+      expect(queries).toEqual([]);
+    });
+
     it("filters Authors by a domain field through an alias", async () => {
       // Given an Author matching the firstName condition
       await insertAuthor({ first_name: "a1" });

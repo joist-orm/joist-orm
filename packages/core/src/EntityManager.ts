@@ -557,21 +557,43 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * are pruned like `em.find`: an `undefined` condition drops out, and a join nothing references
    * anymore drops with it. See `query.ts` for the full DSL, and `query()` for composing subqueries.
    *
+   * Entity selections accept a second argument, `{ populate: hint }`, and return `Loaded` entities.
+   * Population runs after the query, using the same relation loaders as `em.populate`.
    * This method is not batched: these are custom queries, too unique to batch.
    */
   public query<R>(q: Subquery<R, any>): Promise<R[]>;
   public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
+  public query<T extends Entity, const H extends LoadHint<T>>(
+    q: EntityQuery<T>,
+    options: { populate: H },
+  ): Promise<Loaded<T, H>[]>;
   public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
   public query<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
     q: QueryArg<F, S, J, never>,
   ): Promise<QueryRow<S, J>[]>;
-  public query(q: unknown): Promise<any[]> {
+  public query<
+    F extends QuerySource,
+    S extends QuerySelect,
+    const H extends LoadHint<Extract<QueryRow<S, J>, EntityW>>,
+    J extends QueryJoins = [],
+  >(
+    q: QueryArg<F, S, J, never>,
+    options: QueryRow<S, J> extends EntityW ? { populate: H } : never,
+  ): Promise<Loaded<Extract<QueryRow<S, J>, EntityW>, H>[]>;
+  public query(q: unknown, options?: { populate: LoadHint<EntityW> }): Promise<any[]> {
     this.#assertFindAllowed("query");
     const em = this;
     return (async function query() {
       const plan = parseUserQuery(q);
+      if (options?.populate && plan.output.kind !== "entity") {
+        fail("em.query populate requires an entity selection");
+      }
       const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
-      return plan.decodeRows(em, rows);
+      const result = plan.decodeRows(em, rows);
+      if (options?.populate) {
+        await em.populate(result, options.populate);
+      }
+      return result;
     })().catch(function query(err) {
       throw appendStack(err, new Error());
     });

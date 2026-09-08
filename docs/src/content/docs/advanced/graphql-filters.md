@@ -53,3 +53,32 @@ const authors = await em.findGql(Author, gqlFilter);
 Also note that while the `age: { eq: 2 }` is a really clean way to write filters by hand, it can be annoying to dynamically create, i.e. in a UI that needs to conditionally change the operator from "equals" to "not equals", because there is not a single key to bind against in the input type.
 
 To make building these UIs easier, `findGql` also accepts a "more-boring" `{ op: "gt", value: 1 }` syntax. The value of the `op` key can be any of the supported operators, i.e. `gt`, `lt`, `gte`, `ne`, etc.
+
+### Paginating Entity Queries
+
+`joist-graphql-resolver-utils` also accepts entity-selecting `Query` objects instead of an entity constructor and GraphQL filter. Define the base query in your resolver and pass it to either pagination helper:
+
+```typescript
+import { paginateCursor, paginateLimit } from "joist-graphql-resolver-utils";
+import { type Query, tables } from "joist-orm";
+
+const [a] = tables(Author);
+const query = {
+  from: a,
+  where: a.age.gte(18),
+  select: a,
+  orderBy: [{ first_name: "ASC" }, { id: "ASC" }],
+} satisfies Query;
+
+// Returns { entities: Author[], pageInfo }.
+const page = await paginateLimit(ctx, query, { limit: 20, offset: 40 });
+
+// Returns { nodes: Author[], edges, pageInfo }.
+const connection = await paginateCursor(ctx, query, { first: 20, after: args.after });
+```
+
+The helpers call `em.query` for the requested page. Page-info counts are lazy and memoized, so selecting only the entities or nodes does not execute count queries. `totalCount` counts the base query without pagination or cursor bounds, including its `where`, joins, `distinct`, `groupBy`, and `having` clauses.
+
+Limit pagination preserves the base query's ordering. Cursor pagination replaces it with ID ordering, returns nodes in ascending ID order, and supports `first`/`after` and `last`/`before`. Both cursor bounds are combined with the existing query conditions. Its `hasNextPage` and `hasPreviousPage` check for matching entities past the returned endpoints; an empty connection reports both as false, like the filter-based helper.
+
+Pagination arguments replace any `limit` or `offset` on the base query without mutating it. The default page size is 100. These overloads require `select: a`; projected rows and custom cursor ordering are not supported. For joins that multiply entities, use `distinct: true` when each entity should appear only once.

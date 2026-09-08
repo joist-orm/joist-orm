@@ -1,5 +1,16 @@
 import { expectTypeOf } from "expect-type";
-import { type Loaded, Query, alias, getMetadata, query, sql, table, tables } from "joist-orm";
+import {
+  type Loaded,
+  Query,
+  type RawCondition,
+  alias,
+  getAliasMgmt,
+  getMetadata,
+  query,
+  sql,
+  table,
+  tables,
+} from "joist-orm";
 import {
   Author,
   Book,
@@ -191,6 +202,67 @@ describe("EntityManager.rawQueries", () => {
       // Then only the matching Author is returned
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
       expect(again).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("reuses custom alias conditions for Authors and their mentors", async () => {
+      // Given an Author who mentors another Author
+      await insertAuthor({ first_name: "mentor" });
+      // And a mentee whose name does not match the mentor condition
+      await insertAuthor({ first_name: "mentee", mentor_id: 1 });
+      // And a frozen custom condition that resolves the Author name in each query
+      const a = alias(Author);
+      const sqlAliases: string[] = [];
+      const conditions = Object.freeze(
+        getAliasMgmt(a).condition((meta, sqlAlias) => {
+          expect(meta).toBe(getMetadata(Author));
+          sqlAliases.push(sqlAlias);
+          return {
+            kind: "raw",
+            aliases: [sqlAlias],
+            condition: `${sqlAlias}.first_name = ?`,
+            bindings: ["mentor"],
+            pruneable: false,
+          };
+        }),
+      );
+
+      // When constructing the condition without finding Authors
+      // Then no query binding has been requested
+      expectTypeOf(conditions).toEqualTypeOf<Readonly<RawCondition>>();
+      expect(sqlAliases).toEqual([]);
+
+      // When using the same condition for the root Author and a joined mentor
+      const [authors, mentees] = await Promise.all([
+        newEntityManager().find(Author, { as: a }, { conditions: { and: [conditions] } }),
+        newEntityManager().find(Author, { mentor: { as: a } }, { conditions: { and: [conditions] } }),
+      ]);
+
+      // Then each query uses its own SQL alias and retains the mentor join
+      expect(authors).toMatchEntity([{ firstName: "mentor" }]);
+      expect(mentees).toMatchEntity([{ firstName: "mentee" }]);
+      expect(sqlAliases.sort()).toEqual(["a", "a1"]);
+      expect(conditions.condition).toBe("unset");
+      expect(conditions.aliases).toEqual([]);
+    });
+
+    it("rejects custom alias conditions without a bound Author", async () => {
+      // Given an Author alias that is absent from the find filter
+      const a = alias(Author);
+      // And a custom condition that requires that Author's SQL alias
+      const conditions = getAliasMgmt(a).condition((_meta, sqlAlias) => ({
+        kind: "raw",
+        aliases: [sqlAlias],
+        condition: `${sqlAlias}.first_name = ?`,
+        bindings: ["mentor"],
+        pruneable: false,
+      }));
+
+      // When finding Authors without binding the condition's alias
+      // Then the missing binding is rejected before SQL execution
+      await expect(newEntityManager().find(Author, {}, { conditions: { and: [conditions] } })).rejects.toThrow(
+        "Alias for authors is not bound to this query's join literal",
+      );
+      expect(queries).toEqual([]);
     });
 
     it("returns entities for a bare alias", async () => {

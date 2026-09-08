@@ -40,6 +40,11 @@ const aliasColumn = Symbol("aliasColumn");
 export interface AliasMgmt {
   tableName: string;
   meta: EntityMetadata;
+  /**
+   * Builds a raw condition using each query's bound metadata and SQL alias, before join pruning.
+   * Return a fresh condition instead of mutating shared state; the callback runs only when used.
+   */
+  condition(build: (meta: EntityMetadata, alias: string) => RawCondition): RawCondition;
 }
 
 /** Keeps domain aliases covariant in their entity type. */
@@ -141,7 +146,17 @@ export function getAliasMetadata<T extends Entity>(alias: Alias<T>): EntityMetad
 /** Creates domain predicates lazily from entity field metadata. */
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
-  const mgmt: AliasMgmt = { tableName: meta.tableName, meta };
+  const mgmt: AliasMgmt = {
+    tableName: meta.tableName,
+    meta,
+    condition(build) {
+      const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", bindings: [], pruneable: false };
+      return withDeferredAlias(cond, (resolve, copy) => {
+        const bound = resolve(mgmt);
+        Object.assign(copy, build(bound.meta, bound.alias));
+      });
+    },
+  };
   return new Proxy(cstr, {
     get(_, key) {
       if (key === aliasMgmt) return mgmt;

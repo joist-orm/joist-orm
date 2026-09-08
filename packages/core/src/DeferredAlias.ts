@@ -1,11 +1,12 @@
 // Erased imports keep domain predicates independent of the query parser at module load time.
+import { type AliasMgmt } from "./Aliases.ts";
 import { type EntityMetadata } from "./EntityMetadata.ts";
 import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
 
 export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
 
 /** Resolves a domain alias to this em.find parse's binding. */
-export type AliasResolver = (handle: { meta: EntityMetadata; tableName: string }) => {
+export type AliasResolver = (handle: AliasMgmt) => {
   meta: EntityMetadata;
   alias: string;
 };

@@ -67,12 +67,26 @@ export interface TaskItemFields {
 }
 
 export interface TaskItemColumns {
-  "id": { type: IdOf<TaskItem>; entity: TaskItem; nullable: false; insert: "optional"; update: false };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "new_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
-  "old_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
-  "task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<TaskItem>; entity: TaskItem; nullable: false; insert: "optional"; update: false };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "new_task_id": {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "newTask";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "old_task_id": {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "oldTask";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "task_id": { type: IdOf<Task>; entity: Task; fieldName: "task"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskItemOpts {

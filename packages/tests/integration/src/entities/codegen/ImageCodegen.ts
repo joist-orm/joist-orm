@@ -76,14 +76,28 @@ export interface ImageFields {
 }
 
 export interface ImageColumns {
-  "id": { type: IdOf<Image>; entity: Image; nullable: false; insert: "optional"; update: false };
-  "file_name": { type: string; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "type_id": { type: ImageType; nullable: false; insert: "required"; update: true };
-  "author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
-  "book_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "optional"; update: true };
-  "publisher_id": { type: IdOf<Publisher>; entity: Publisher; nullable: true; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Image>; entity: Image; nullable: false; insert: "optional"; update: false };
+  "file_name": { type: string; fieldName: "fileName"; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "type_id": { type: ImageType; fieldName: "type"; nullable: false; insert: "required"; update: true };
+  "author_id": {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "author";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "book_id": { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
+  "publisher_id": {
+    type: IdOf<Publisher>;
+    entity: Publisher;
+    fieldName: "publisher";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface ImageOpts {

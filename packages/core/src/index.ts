@@ -54,6 +54,7 @@ export {
   isTable,
   newTableProxy,
   type Table,
+  type TableFilter,
   type TableBrand,
   type TableFor,
   type TableMgmt,

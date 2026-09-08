@@ -57,8 +57,15 @@ export interface DatabaseOwnerFields {
 }
 
 export interface DatabaseOwnerColumns {
-  "id": { type: IdOf<DatabaseOwner>; entity: DatabaseOwner; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: false; insert: "required"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<DatabaseOwner>;
+    entity: DatabaseOwner;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
 }
 
 export interface DatabaseOwnerOpts {

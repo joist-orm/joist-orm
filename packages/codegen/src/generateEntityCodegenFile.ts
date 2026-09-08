@@ -619,14 +619,15 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
 /**
  * Emits physical columns with domain value types and database nullability.
  * I.e. Comment.parent_book_id is an optional Book reference, not the CommentParent union.
+ * fieldName identifies direct local domain filters; polymorphic components have no eligible name.
  * Polymorphic component writes remain unsupported, so their policies are conservative.
  */
 function generateColumnsType(meta: EntityDbMetadata): Record<string, Code> {
   const columns: Record<string, Code> = {
-    id: code`{ type: ${IdOf}<${meta.entity.type}>; entity: ${meta.entity.type}; ${columnPolicyType(meta, meta.primaryKey)} }`,
+    id: code`{ fieldName: "id"; type: ${IdOf}<${meta.entity.type}>; entity: ${meta.entity.type}; ${columnPolicyType(meta, meta.primaryKey)} }`,
   };
   for (const field of [...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes]) {
-    const policy = columnPolicyType(meta, field);
+    const policy = code`fieldName: "${field.fieldName}"; ${columnPolicyType(meta, field)}`;
     if (field.kind === "primitive") {
       columns[field.columnName] = code`{ type: ${field.fieldType}; ${policy} }`;
     } else if (field.kind === "m2o") {
@@ -640,7 +641,7 @@ function generateColumnsType(meta: EntityDbMetadata): Record<string, Code> {
   for (const field of meta.polymorphics) {
     for (const component of field.components) {
       columns[component.columnName] =
-        code`{ type: ${IdOf}<${component.otherEntity.type}>; entity: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
+        code`{ fieldName: never; type: ${IdOf}<${component.otherEntity.type}>; entity: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
     }
   }
   return columns;

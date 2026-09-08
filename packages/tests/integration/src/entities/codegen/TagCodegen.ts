@@ -71,10 +71,10 @@ export interface TagFields {
 }
 
 export interface TagColumns {
-  "id": { type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface TagOpts {

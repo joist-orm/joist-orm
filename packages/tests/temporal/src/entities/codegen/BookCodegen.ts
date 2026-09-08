@@ -72,15 +72,58 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; nullable: false; insert: "required"; update: true };
-  "published_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "required"; update: true };
-  "timestamp_tzs": { type: Temporal.ZonedDateTime[]; nullable: false; insert: "optional"; update: true };
-  "maybe_timestamp_tzs": { type: Temporal.ZonedDateTime[]; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
-  "deleted_at": { type: Temporal.ZonedDateTime; nullable: true; insert: "optional"; update: true };
-  "author_id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  "published_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "publishedAt";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "timestamp_tzs": {
+    type: Temporal.ZonedDateTime[];
+    fieldName: "timestampTzs";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_timestamp_tzs": {
+    type: Temporal.ZonedDateTime[];
+    fieldName: "maybeTimestampTzs";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "createdAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "updatedAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "deleted_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "deletedAt";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "author_id": {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "author";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface BookOpts {

@@ -67,12 +67,19 @@ export interface ParentGroupFields {
 }
 
 export interface ParentGroupColumns {
-  "id": { type: IdOf<ParentGroup>; entity: ParentGroup; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: true; insert: "optional"; update: true };
-  "bulk_data": { type: Object; nullable: true; insert: "optional"; update: true };
-  "required_data": { type: Object; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<ParentGroup>;
+    entity: ParentGroup;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  "bulk_data": { type: Object; fieldName: "bulkData"; nullable: true; insert: "optional"; update: true };
+  "required_data": { type: Object; fieldName: "requiredData"; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface ParentGroupOpts {

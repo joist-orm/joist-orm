@@ -64,12 +64,33 @@ export interface ChildItemFields {
 }
 
 export interface ChildItemColumns {
-  "id": { type: IdOf<ChildItem>; entity: ChildItem; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "child_group_id": { type: IdOf<ChildGroup>; entity: ChildGroup; nullable: false; insert: "required"; update: true };
-  "parent_item_id": { type: IdOf<ParentItem>; entity: ParentItem; nullable: false; insert: "required"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<ChildItem>;
+    entity: ChildItem;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "child_group_id": {
+    type: IdOf<ChildGroup>;
+    entity: ChildGroup;
+    fieldName: "childGroup";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "parent_item_id": {
+    type: IdOf<ParentItem>;
+    entity: ParentItem;
+    fieldName: "parentItem";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface ChildItemOpts {

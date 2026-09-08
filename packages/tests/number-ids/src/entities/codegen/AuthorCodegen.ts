@@ -52,11 +52,11 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; nullable: false; insert: "required"; update: true };
-  "last_name": { type: string; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "last_name": { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

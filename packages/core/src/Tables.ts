@@ -5,7 +5,7 @@ import { type Column } from "./columns.ts";
 // base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
 import "./configure.ts";
 import { buildValueCondition } from "./drivers/buildUtils.ts";
-import { type Entity } from "./Entity.ts";
+import { type Entity, isEntity } from "./Entity.ts";
 import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
 import {
   type EntityMetadata,
@@ -36,10 +36,10 @@ import {
 import { type ExpressionCondition, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index.ts";
 import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
-import { type ParsedValueFilter, makeLike, mapToDb } from "./QueryParser.ts";
+import { type ParsedValueFilter, makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { type TypeInfo } from "./TypeInfo.ts";
-import { type ColumnsOf, type FieldsOf, type TypeMap, type TypeNameOf } from "./typeMap.ts";
+import { type ColumnsOf, type FieldsOf, type FilterOf, type TypeMap, type TypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
@@ -102,7 +102,41 @@ export interface TableBrand<T, Name extends string> extends TableMgmt {
  * LEFT-joined SmallPublisher does not make Publisher columns nullable. `table(Author, "m")`
  * gives a self-join table its own key.
  */
-export type Table<T extends Entity, Name extends string = TableNameOf<T>> = {
+export type Table<T extends Entity, Name extends string = TableNameOf<T>> = TableShape<T, Name> &
+  ("where" extends keyof TableShape<T, Name>
+    ? {}
+    : {
+        /** Builds an AND condition from local domain fields, without implicit joins. */
+        where(filter: TableFilter<T>): ExpressionCondition;
+      });
+
+/** Domain filters for fields stored on this physical table, without relationship traversal. */
+export type TableFilter<T extends Entity> = {
+  [K in LocalFieldNames<T> & keyof FieldsOf<T>]?: FieldsOf<T>[K] extends {
+    kind: "m2o";
+    type: infer U extends Entity;
+    nullable: infer N;
+  }
+    ? TableReferenceFilter<U, N extends undefined ? null : never>
+    : FilterOf<T>[K];
+};
+
+/** Generated column ownership excludes CTI base fields and polymorphic components. */
+type LocalFieldNames<T> = ColumnsOf<T>[keyof ColumnsOf<T>] extends { fieldName: infer F }
+  ? Extract<F, keyof FilterOf<T>>
+  : never;
+
+/** The owning-reference subset of find filters that only compares a foreign key. */
+type TableReferenceFilter<T extends Entity, N> =
+  | T
+  | IdOf<T>
+  | readonly (T | IdOf<T>)[]
+  | boolean
+  | N
+  | undefined
+  | { ne: T | IdOf<T> | N | undefined };
+
+type TableShape<T extends Entity, Name extends string> = {
   readonly [tableMgmt]: TableBrand<T, Name>;
 } & {
   [P in keyof ColumnsOf<T>]: P extends "id"
@@ -309,8 +343,11 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
           left: join.left.bind(join),
         });
       }
-      const field =
-        physicalRelation(meta, key) ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
+      const relation = physicalRelation(meta, key);
+      if (key === "where" && !isRelation(meta.allFields[key])) {
+        return (filter: TableFilter<T>) => tableWhere(mgmt, filter);
+      }
+      const field = relation ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
       switch (field.kind) {
         case "m2o":
           return new ReferenceJoinImpl(new EntityColumnImpl(meta, field.serde.columns[0].column, mgmt));
@@ -331,7 +368,7 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       return (
         key === tableMgmt ||
         (typeof key === "string" &&
-          (Object.hasOwn(meta.columns, key) || !!physicalRelation(meta, key) || subtypes.has(key)))
+          (key === "where" || Object.hasOwn(meta.columns, key) || !!physicalRelation(meta, key) || subtypes.has(key)))
       );
     },
   });
@@ -916,4 +953,76 @@ function physicalRelation(meta: EntityMetadata, key: string): Field | undefined 
       : field;
   }
   return field;
+}
+
+/**
+ * Maps local domain fields to table-bound conditions, encoding each leaf once.
+ * I.e. Author.firstName uses the first_name column but resolves its alias in each query scope.
+ * Collections, polymorphic references, and inherited nonlocal fields require explicit expressions.
+ */
+function tableWhere(mgmt: TableMgmt, filter: object): ExpressionCondition {
+  const { meta } = mgmt;
+  const conditions: ExpressionCondition[] = [];
+  if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
+    throw new Error(`Expected a domain field filter for ${meta.type}`);
+  }
+  for (const [key, value] of Object.entries(filter)) {
+    // CTI allFields.id points at the base key; the subtype has its own physical key.
+    const field = key === "id" ? meta.fields.id : Object.hasOwn(meta.allFields, key) ? meta.allFields[key] : undefined;
+    if (
+      !field ||
+      !["primaryKey", "primitive", "enum", "m2o"].includes(field.kind) ||
+      !field.serde ||
+      field.serde.columns.length !== 1 ||
+      !field.serde.columns.every((binding) => meta.columns[binding.columnName] === binding.column)
+    ) {
+      throw new Error(`Unsupported table filter field ${meta.type}.${key}; use an explicit join`);
+    }
+    const column = new TableColumn(meta, field.serde.columns[0].column, mgmt);
+    let leaves: ParsedValueFilter<unknown>[];
+    if (field.kind === "m2o") {
+      if (!isTableReferenceFilter(value)) {
+        throw new Error(`Unsupported table reference filter ${meta.type}.${key}; use an entity or ID`);
+      }
+      const parsed = parseEntityFilter(field.otherMetadata(), value);
+      if (parsed?.kind === "join") {
+        throw new Error(`Unsupported table reference filter ${meta.type}.${key}; use an entity or ID`);
+      }
+      leaves = parsed ? [parsed] : [];
+    } else {
+      leaves = parseValueFilter(value);
+    }
+    for (const leaf of leaves) {
+      if (leaf.kind === "between" && leaf.value.some((v) => v === undefined)) {
+        if (leaf.value[0] !== undefined) conditions.push(column.addCondition({ kind: "gte", value: leaf.value[0] }));
+        if (leaf.value[1] !== undefined) conditions.push(column.addCondition({ kind: "lte", value: leaf.value[1] }));
+      } else if (leaf.kind === "in" && !column.column.isArray && leaf.value.includes(null)) {
+        conditions.push({
+          or: [
+            column.addCondition({ kind: "is-null" }),
+            column.addCondition({ kind: "in", value: leaf.value.filter((v) => v !== null) }),
+          ],
+        });
+      } else {
+        conditions.push(column.addCondition(leaf));
+      }
+    }
+  }
+  return conditions.length === 0 ? skipCondition : { and: conditions };
+}
+
+/** Rejects nested relations, scopes, and aliases before parsing owning-reference values. */
+function isTableReferenceFilter(value: unknown): boolean {
+  if (value == null || typeof value === "boolean" || isTableReferenceValue(value)) return true;
+  if (Array.isArray(value)) return value.every(isTableReferenceValue);
+  if (typeof value === "object" && Object.keys(value).length === 1 && Object.hasOwn(value, "ne")) {
+    const excluded = (value as { ne: unknown }).ne;
+    return excluded == null || isTableReferenceValue(excluded);
+  }
+  return false;
+}
+
+/** Recognizes an entity or public ID without accepting another filter object. */
+function isTableReferenceValue(value: unknown): boolean {
+  return typeof value === "string" || typeof value === "number" || isEntity(value);
 }

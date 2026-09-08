@@ -61,9 +61,16 @@ export interface T3AuthorFields {
 }
 
 export interface T3AuthorColumns {
-  "id": { type: IdOf<T3Author>; entity: T3Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; nullable: false; insert: "required"; update: true };
-  "favorite_book_id": { type: IdOf<T3Book>; entity: T3Book; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T3Author>; entity: T3Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "favorite_book_id": {
+    type: IdOf<T3Book>;
+    entity: T3Book;
+    fieldName: "favoriteBook";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface T3AuthorOpts {

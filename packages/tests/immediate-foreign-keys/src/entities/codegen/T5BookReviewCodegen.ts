@@ -58,9 +58,23 @@ export interface T5BookReviewFields {
 }
 
 export interface T5BookReviewColumns {
-  "id": { type: IdOf<T5BookReview>; entity: T5BookReview; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; nullable: false; insert: "required"; update: true };
-  "book_id": { type: IdOf<T5Book>; entity: T5Book; nullable: true; insert: "optional"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<T5BookReview>;
+    entity: T5BookReview;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  "book_id": {
+    type: IdOf<T5Book>;
+    entity: T5Book;
+    fieldName: "book";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface T5BookReviewOpts {

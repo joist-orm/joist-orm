@@ -202,6 +202,7 @@ describe("EntityMetadata", () => {
   });
 
   it("binds each polymorphic component to an independent scalar ID column", () => {
+    // Given Comment's polymorphic parent with independent Author and Book columns
     // When inspecting Comment's polymorphic parent metadata
     const meta = getMetadata(Comment);
     // Then each component binds to a nullable physical column with its target's ID domain
@@ -225,6 +226,7 @@ describe("EntityMetadata", () => {
     expectTypeOf<ColumnsOf<Comment>["parent_book_id"]["type"]>().toEqualTypeOf<IdOf<Book>>();
     expectTypeOf<ColumnsOf<Comment>["parent_book_id"]>().toEqualTypeOf<{
       type: IdOf<Book>;
+      fieldName: never;
       entity: Book;
       nullable: true;
       insert: "never";

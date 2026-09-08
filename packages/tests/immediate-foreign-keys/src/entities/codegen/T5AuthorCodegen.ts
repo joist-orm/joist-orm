@@ -57,8 +57,8 @@ export interface T5AuthorFields {
 }
 
 export interface T5AuthorColumns {
-  "id": { type: IdOf<T5Author>; entity: T5Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T5Author>; entity: T5Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
 }
 
 export interface T5AuthorOpts {

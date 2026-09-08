@@ -83,9 +83,16 @@ export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rati
 }
 
 export interface LargePublisherColumns {
-  "id": { type: IdOf<LargePublisher>; entity: LargePublisher; nullable: false; insert: "optional"; update: false };
-  "shared_column": { type: string; nullable: true; insert: "optional"; update: true };
-  "country": { type: string; nullable: true; insert: "optional"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "shared_column": { type: string; fieldName: "sharedColumn"; nullable: true; insert: "optional"; update: true };
+  "country": { type: string; fieldName: "country"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {

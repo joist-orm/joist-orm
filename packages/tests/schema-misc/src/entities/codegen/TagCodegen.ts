@@ -63,8 +63,8 @@ export interface TagFields {
 }
 
 export interface TagColumns {
-  "id": { type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
 }
 
 export interface TagOpts {

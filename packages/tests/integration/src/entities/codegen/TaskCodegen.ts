@@ -90,23 +90,51 @@ export interface TaskFields {
 }
 
 export interface TaskColumns {
-  "id": { type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
-  "duration_in_days": { type: number; nullable: false; insert: "required"; update: true };
-  "special_new_field": { type: number; nullable: true; insert: "optional"; update: true };
-  "special_old_field": { type: number; nullable: true; insert: "optional"; update: true };
-  "deleted_at": { type: Date; nullable: true; insert: "optional"; update: true };
-  "sync_default": { type: string; nullable: true; insert: "optional"; update: true };
-  "async_default_1": { type: string; nullable: true; insert: "optional"; update: true };
-  "async_default_2": { type: string; nullable: true; insert: "optional"; update: true };
-  "sync_derived": { type: string; nullable: true; insert: "optional"; update: true };
-  "async_derived": { type: string; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "type_id": { type: TaskType; nullable: true; insert: "optional"; update: true };
-  "copied_from_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
-  "parent_old_task_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
-  "self_referential_id": { type: IdOf<Task>; entity: Task; nullable: true; insert: "optional"; update: true };
-  "special_new_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
+  "duration_in_days": { type: number; fieldName: "durationInDays"; nullable: false; insert: "required"; update: true };
+  "special_new_field": { type: number; fieldName: "specialNewField"; nullable: true; insert: "optional"; update: true };
+  "special_old_field": { type: number; fieldName: "specialOldField"; nullable: true; insert: "optional"; update: true };
+  "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  "sync_default": { type: string; fieldName: "syncDefault"; nullable: true; insert: "optional"; update: true };
+  "async_default_1": { type: string; fieldName: "asyncDefault_1"; nullable: true; insert: "optional"; update: true };
+  "async_default_2": { type: string; fieldName: "asyncDefault_2"; nullable: true; insert: "optional"; update: true };
+  "sync_derived": { type: string; fieldName: "syncDerived"; nullable: true; insert: "optional"; update: true };
+  "async_derived": { type: string; fieldName: "asyncDerived"; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "type_id": { type: TaskType; fieldName: "type"; nullable: true; insert: "optional"; update: true };
+  "copied_from_id": {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "copiedFrom";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "parent_old_task_id": {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "parentOldTask";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "self_referential_id": {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "selfReferential";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "special_new_author_id": {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "specialNewAuthor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface TaskOpts {

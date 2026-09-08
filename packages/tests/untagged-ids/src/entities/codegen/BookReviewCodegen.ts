@@ -58,9 +58,23 @@ export interface BookReviewFields {
 }
 
 export interface BookReviewColumns {
-  "id": { type: IdOf<BookReview>; entity: BookReview; nullable: false; insert: "required"; update: false };
-  "rating": { type: number; nullable: false; insert: "required"; update: true };
-  "book_id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<BookReview>;
+    entity: BookReview;
+    nullable: false;
+    insert: "required";
+    update: false;
+  };
+  "rating": { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
+  "book_id": {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "book";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface BookReviewOpts {

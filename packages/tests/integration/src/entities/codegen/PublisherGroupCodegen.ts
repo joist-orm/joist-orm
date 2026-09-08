@@ -73,12 +73,31 @@ export interface PublisherGroupFields {
 }
 
 export interface PublisherGroupColumns {
-  "id": { type: IdOf<PublisherGroup>; entity: PublisherGroup; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: true; insert: "optional"; update: true };
-  "number_of_book_reviews": { type: number; nullable: false; insert: "required"; update: true };
-  "number_of_book_reviews_formatted": { type: string; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<PublisherGroup>;
+    entity: PublisherGroup;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  "number_of_book_reviews": {
+    type: number;
+    fieldName: "numberOfBookReviews";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "number_of_book_reviews_formatted": {
+    type: string;
+    fieldName: "numberOfBookReviewsFormatted";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface PublisherGroupOpts {

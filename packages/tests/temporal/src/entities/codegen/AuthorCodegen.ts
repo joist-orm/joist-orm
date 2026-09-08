@@ -69,21 +69,75 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
-  "firstName": { type: string; nullable: false; insert: "required"; update: true };
-  "lastName": { type: string; nullable: true; insert: "optional"; update: true };
-  "birthday": { type: Temporal.PlainDate; nullable: false; insert: "required"; update: true };
-  "children_birthdays": { type: Temporal.PlainDate[]; nullable: false; insert: "optional"; update: true };
-  "maybe_birthdays": { type: Temporal.PlainDate[]; nullable: true; insert: "optional"; update: true };
-  "timestamp": { type: Temporal.PlainDateTime; nullable: false; insert: "optional"; update: true };
-  "timestamps": { type: Temporal.PlainDateTime[]; nullable: false; insert: "optional"; update: true };
-  "maybe_timestamps": { type: Temporal.PlainDateTime[]; nullable: true; insert: "optional"; update: true };
-  "time": { type: Temporal.PlainTime; nullable: true; insert: "optional"; update: true };
-  "times": { type: Temporal.PlainTime[]; nullable: false; insert: "optional"; update: true };
-  "maybe_times": { type: Temporal.PlainTime[]; nullable: true; insert: "optional"; update: true };
-  "time_to_micros": { type: Temporal.PlainTime; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "firstName": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "lastName": { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  "birthday": { type: Temporal.PlainDate; fieldName: "birthday"; nullable: false; insert: "required"; update: true };
+  "children_birthdays": {
+    type: Temporal.PlainDate[];
+    fieldName: "childrenBirthdays";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_birthdays": {
+    type: Temporal.PlainDate[];
+    fieldName: "maybeBirthdays";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "timestamp": {
+    type: Temporal.PlainDateTime;
+    fieldName: "timestamp";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "timestamps": {
+    type: Temporal.PlainDateTime[];
+    fieldName: "timestamps";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "maybe_timestamps": {
+    type: Temporal.PlainDateTime[];
+    fieldName: "maybeTimestamps";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time": { type: Temporal.PlainTime; fieldName: "time"; nullable: true; insert: "optional"; update: true };
+  "times": { type: Temporal.PlainTime[]; fieldName: "times"; nullable: false; insert: "optional"; update: true };
+  "maybe_times": {
+    type: Temporal.PlainTime[];
+    fieldName: "maybeTimes";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "time_to_micros": {
+    type: Temporal.PlainTime;
+    fieldName: "timeToMicros";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "created_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "createdAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updated_at": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "updatedAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface AuthorOpts {

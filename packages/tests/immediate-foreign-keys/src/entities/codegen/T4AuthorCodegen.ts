@@ -61,9 +61,16 @@ export interface T4AuthorFields {
 }
 
 export interface T4AuthorColumns {
-  "id": { type: IdOf<T4Author>; entity: T4Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; nullable: false; insert: "required"; update: true };
-  "favorite_book_id": { type: IdOf<T4Book>; entity: T4Book; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T4Author>; entity: T4Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "favorite_book_id": {
+    type: IdOf<T4Book>;
+    entity: T4Book;
+    fieldName: "favoriteBook";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface T4AuthorOpts {

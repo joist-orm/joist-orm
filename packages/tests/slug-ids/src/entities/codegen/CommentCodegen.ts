@@ -59,12 +59,26 @@ export interface CommentFields {
 }
 
 export interface CommentColumns {
-  "id": { type: IdOf<Comment>; entity: Comment; nullable: false; insert: "optional"; update: false };
-  "text": { type: string; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "parent_author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "never"; update: false };
-  "parent_book_id": { type: IdOf<Book>; entity: Book; nullable: true; insert: "never"; update: false };
+  "id": { fieldName: "id"; type: IdOf<Comment>; entity: Comment; nullable: false; insert: "optional"; update: false };
+  "text": { type: string; fieldName: "text"; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "parent_author_id": {
+    fieldName: never;
+    type: IdOf<Author>;
+    entity: Author;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  "parent_book_id": {
+    fieldName: never;
+    type: IdOf<Book>;
+    entity: Book;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
 }
 
 export interface CommentOpts {

@@ -61,9 +61,16 @@ export interface T2BookFields {
 }
 
 export interface T2BookColumns {
-  "id": { type: IdOf<T2Book>; entity: T2Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; nullable: false; insert: "required"; update: true };
-  "author_id": { type: IdOf<T2Author>; entity: T2Author; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T2Book>; entity: T2Book; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  "author_id": {
+    type: IdOf<T2Author>;
+    entity: T2Author;
+    fieldName: "author";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface T2BookOpts {

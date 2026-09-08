@@ -57,8 +57,15 @@ export interface AdminUserFields extends Omit<UserFields, "id"> {
 }
 
 export interface AdminUserColumns {
-  "id": { type: IdOf<AdminUser>; entity: AdminUser; nullable: false; insert: "optional"; update: false };
-  "role": { type: string; nullable: false; insert: "required"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<AdminUser>;
+    entity: AdminUser;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "role": { type: string; fieldName: "role"; nullable: false; insert: "required"; update: true };
 }
 
 export interface AdminUserOpts extends UserOpts {

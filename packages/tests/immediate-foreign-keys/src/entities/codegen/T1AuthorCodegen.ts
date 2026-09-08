@@ -57,8 +57,8 @@ export interface T1AuthorFields {
 }
 
 export interface T1AuthorColumns {
-  "id": { type: IdOf<T1Author>; entity: T1Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T1Author>; entity: T1Author; nullable: false; insert: "optional"; update: false };
+  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
 }
 
 export interface T1AuthorOpts {

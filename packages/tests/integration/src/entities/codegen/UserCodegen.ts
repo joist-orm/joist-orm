@@ -100,20 +100,41 @@ export interface UserFields {
 }
 
 export interface UserColumns {
-  "id": { type: IdOf<User>; entity: User; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: false; insert: "required"; update: true };
-  "email": { type: string; nullable: false; insert: "required"; update: true };
-  "ip_address": { type: IpAddress; nullable: true; insert: "optional"; update: true };
-  "password": { type: PasswordValue; nullable: true; insert: "optional"; update: true };
-  "bio": { type: string; nullable: false; insert: "optional"; update: true };
-  "original_email": { type: string; nullable: false; insert: "required"; update: true };
-  "trial_period": { type: string; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "password_history": { type: PasswordValue[]; nullable: true; insert: "optional"; update: true };
-  "manager_id": { type: IdOf<User>; entity: User; nullable: true; insert: "optional"; update: true };
-  "author_id": { type: IdOf<Author>; entity: Author; nullable: true; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<User>; entity: User; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  "email": { type: string; fieldName: "email"; nullable: false; insert: "required"; update: true };
+  "ip_address": { type: IpAddress; fieldName: "ipAddress"; nullable: true; insert: "optional"; update: true };
+  "password": { type: PasswordValue; fieldName: "password"; nullable: true; insert: "optional"; update: true };
+  "bio": { type: string; fieldName: "bio"; nullable: false; insert: "optional"; update: true };
+  "original_email": { type: string; fieldName: "originalEmail"; nullable: false; insert: "required"; update: true };
+  "trial_period": { type: string; fieldName: "trialPeriod"; nullable: true; insert: "optional"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  "password_history": {
+    type: PasswordValue[];
+    fieldName: "passwordHistory";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "manager_id": {
+    type: IdOf<User>;
+    entity: User;
+    fieldName: "manager";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  "author_id": {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "authorManyToOne";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
   "favorite_publisher_large_id": {
+    fieldName: never;
     type: IdOf<LargePublisher>;
     entity: LargePublisher;
     nullable: true;
@@ -121,6 +142,7 @@ export interface UserColumns {
     update: false;
   };
   "favorite_publisher_small_id": {
+    fieldName: never;
     type: IdOf<SmallPublisher>;
     entity: SmallPublisher;
     nullable: true;

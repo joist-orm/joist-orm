@@ -84,13 +84,21 @@ export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "grou
 }
 
 export interface SmallPublisherColumns {
-  "id": { type: IdOf<SmallPublisher>; entity: SmallPublisher; nullable: false; insert: "optional"; update: false };
-  "city": { type: string; nullable: false; insert: "required"; update: true };
-  "shared_column": { type: string; nullable: true; insert: "optional"; update: true };
-  "all_author_names": { type: string; nullable: true; insert: "optional"; update: true };
+  "id": {
+    fieldName: "id";
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  "city": { type: string; fieldName: "city"; nullable: false; insert: "required"; update: true };
+  "shared_column": { type: string; fieldName: "sharedColumn"; nullable: true; insert: "optional"; update: true };
+  "all_author_names": { type: string; fieldName: "allAuthorNames"; nullable: true; insert: "optional"; update: true };
   "self_referential_id": {
     type: IdOf<SmallPublisher>;
     entity: SmallPublisher;
+    fieldName: "selfReferential";
     nullable: true;
     insert: "optional";
     update: true;

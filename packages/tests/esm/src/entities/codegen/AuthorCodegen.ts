@@ -68,13 +68,25 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
-  "firstName": { type: string; nullable: false; insert: "required"; update: true };
-  "lastName": { type: string; nullable: true; insert: "optional"; update: true };
-  "delete": { type: boolean; nullable: true; insert: "optional"; update: true };
-  "createdAt": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
-  "updatedAt": { type: Temporal.ZonedDateTime; nullable: false; insert: "optional"; update: true };
-  "favorite_colors": { type: Color[]; nullable: true; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  "firstName": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "lastName": { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  "delete": { type: boolean; fieldName: "delete"; nullable: true; insert: "optional"; update: true };
+  "createdAt": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "createdAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "updatedAt": {
+    type: Temporal.ZonedDateTime;
+    fieldName: "updatedAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "favorite_colors": { type: Color[]; fieldName: "favoriteColors"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {

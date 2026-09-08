@@ -8,9 +8,12 @@ let output: string[] = [];
 describe("ReactionLogging", () => {
   describe("validation", () => {
     it("sees primitive sets", async () => {
+      // Given a new Author whose primitive values queue reactive work
       const em = newEntityManager();
       newAuthor(em);
+      // When the Author is flushed
       await em.flush();
+      // Then reaction logging records the queued work and validation rules
       expect(output).toMatchInlineSnapshot(`
        [
          "a#1.firstName changed, queuing a#1.direct↩",
@@ -196,7 +199,7 @@ describe("ReactionLogging", () => {
          "    Author.rf -> [ a#1 ]↩",
          "    took 0 millis (em.entities=1)↩",
          "Validating from 1 changed entities... (em.entities=1)↩",
-         "  Walked 1 Author.(self) paths, found 1 Author.addRule(AuthorCodegen.ts:474) to validate↩",
+         "  Walked 1 Author.(self) paths, found 1 Author.addRule(AuthorCodegen.ts:533) to validate↩",
          "    [ a#1 ] -> [ a#1 ]↩",
          "  Walked 1 Author.(self) paths, found 1 Author.addRule(Author.ts:478) to validate↩",
          "    [ a#1 ] -> [ a#1 ]↩",

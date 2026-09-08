@@ -63,9 +63,16 @@ export interface T5BookFields {
 }
 
 export interface T5BookColumns {
-  "id": { type: IdOf<T5Book>; entity: T5Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; nullable: false; insert: "required"; update: true };
-  "author_id": { type: IdOf<T5Author>; entity: T5Author; nullable: false; insert: "required"; update: true };
+  "id": { fieldName: "id"; type: IdOf<T5Book>; entity: T5Book; nullable: false; insert: "optional"; update: false };
+  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  "author_id": {
+    type: IdOf<T5Author>;
+    entity: T5Author;
+    fieldName: "author";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface T5BookOpts {

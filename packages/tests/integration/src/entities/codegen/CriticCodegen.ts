@@ -76,18 +76,26 @@ export interface CriticFields {
 }
 
 export interface CriticColumns {
-  "id": { type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
+  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
   "favorite_large_publisher_id": {
     type: IdOf<LargePublisher>;
     entity: LargePublisher;
+    fieldName: "favoriteLargePublisher";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "group_id": { type: IdOf<PublisherGroup>; entity: PublisherGroup; nullable: true; insert: "optional"; update: true };
+  "group_id": {
+    type: IdOf<PublisherGroup>;
+    entity: PublisherGroup;
+    fieldName: "group";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface CriticOpts {

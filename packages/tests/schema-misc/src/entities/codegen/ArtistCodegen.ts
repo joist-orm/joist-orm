@@ -60,11 +60,11 @@ export interface ArtistFields {
 }
 
 export interface ArtistColumns {
-  "id": { type: IdOf<Artist>; entity: Artist; nullable: false; insert: "required"; update: false };
-  "firstName": { type: string; nullable: false; insert: "required"; update: true };
-  "lastName": { type: string; nullable: false; insert: "required"; update: true };
-  "createdAt": { type: Date; nullable: false; insert: "optional"; update: true };
-  "updatedAt": { type: Date; nullable: false; insert: "optional"; update: true };
+  "id": { fieldName: "id"; type: IdOf<Artist>; entity: Artist; nullable: false; insert: "required"; update: false };
+  "firstName": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  "lastName": { type: string; fieldName: "lastName"; nullable: false; insert: "required"; update: true };
+  "createdAt": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  "updatedAt": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface ArtistOpts {

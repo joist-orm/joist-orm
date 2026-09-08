@@ -97,10 +97,7 @@ The `select` key determines the `rows` return type:
 Entity selections accept a `populate` option as the second argument, using the same load hints as `em.find`:
 
 ```ts
-const authors = await em.query(
-  { from: a, select: a, where: a.age.gte(18) },
-  { populate: { books: "reviews" } },
-);
+const authors = await em.query({ from: a, select: a, where: a.age.gte(18) }, { populate: { books: "reviews" } });
 // Loaded<Author, { books: "reviews" }>[]
 const reviews = authors[0].books.get[0].reviews.get;
 ```
@@ -149,6 +146,43 @@ const rows = await em.query({
 ```
 
 A POJO `select` is also type-checked against the query's scope: selecting a column from a source that is neither `from` nor in `join` is a compile error that names the missing source. (Conditions in `where`/`having`/`orderBy` are not scope-checked at compile time; an out-of-scope source there fails at runtime.)
+
+### Ergonomics filters with `Table.where`
+
+One of the DX wins of `em.find`s filters was, for endpoint filter shapes that match your domain, being able to just drop those key/values into `em.find` without maual translation:
+
+```ts
+type GetAuthorFilters = {
+  firstName?: string;
+  lastName?: string;
+};
+
+function getAuthors(filters: GetAuthorFilters) {
+  return em.find(Author, { ...filters });
+}
+```
+
+Because `em.query` is for low-level SQL queries, most of its DSL uses column names, which might be snake-cased like `first_name` or `last_name`, and it also doesn't support `em.find`s "nested-relation filter", b/c it wants joins explicitly called out.
+
+To provide this same "easy filter handling DX", table variables have a `where(filter)` method that accepts the same basic shape as `em.filter`, and return an `em.query`-compatiable `ExpressionCondition`.
+
+```ts
+import { type TableFilter, tables } from "joist-orm";
+
+const [a, b] = tables(Author, Book);
+// I.e. passed as a paramter
+const filter = {
+  firstName: { ilike: "ali%" },
+  age: { gte: 18 },
+} satisfies TableFilter<Author>;
+
+const rows = await em.query({
+  from: a,
+  join: [a.books.inner(b)],
+  where: a.where(filter),
+  select: a.first_name,
+});
+```
 
 ## Joins
 

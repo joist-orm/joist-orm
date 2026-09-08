@@ -1,6 +1,13 @@
 import { type Entity, type MaybeAbstractEntityConstructor } from "joist-core";
 
-import { type ContextWithEm, type PaginationFilter, defaultLimit } from "./paginationUtils.ts";
+import {
+  type ContextWithEm,
+  type PaginationFilter,
+  type PaginationQuery,
+  countQuery,
+  defaultLimit,
+  queryEntities,
+} from "./paginationUtils.ts";
 
 type LimitArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   filter?: F | null;
@@ -9,16 +16,29 @@ type LimitArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
 };
 type Page = { offset: number; limit: number };
 
-/** Returns a limit/offset page shape for a generated query resolver. */
-export async function paginateLimit<T extends Entity, F extends object = PaginationFilter<T>>(
+/** Returns a limit/offset page shape for a resolver, preserving the entity query's ordering. */
+export function paginateLimit<T extends Entity>(
+  ctx: ContextWithEm,
+  query: PaginationQuery<T>,
+  args: Omit<LimitArgs<T>, "filter">,
+): Promise<{ entities: T[]; pageInfo: LimitPageInfo<T> }>;
+export function paginateLimit<T extends Entity, F extends object = PaginationFilter<T>>(
   ctx: ContextWithEm,
   type: MaybeAbstractEntityConstructor<T>,
+  args: LimitArgs<T, F>,
+): Promise<{ entities: T[]; pageInfo: LimitPageInfo<T> }>;
+export async function paginateLimit<T extends Entity, F extends object = PaginationFilter<T>>(
+  ctx: ContextWithEm,
+  type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>,
   args: LimitArgs<T, F>,
 ): Promise<{ entities: T[]; pageInfo: LimitPageInfo<T> }> {
   const limit = args.limit ?? defaultLimit;
   const offset = args.offset ?? 0;
   const filter = (args.filter ?? {}) as PaginationFilter<T>;
-  const entities = await ctx.em.findGql(type, filter, { limit, offset });
+  const entities =
+    typeof type === "function"
+      ? await ctx.em.findGql(type, filter, { limit, offset })
+      : await queryEntities<T>(ctx, { ...type, limit, offset });
   return { entities, pageInfo: new LimitPageInfo(ctx, type, filter, { limit, offset }) };
 }
 
@@ -28,9 +48,14 @@ export class LimitPageInfo<T extends Entity = Entity> {
   #filter: PaginationFilter<T>;
   #page: Page;
   #totalCountPromise: Promise<number> | undefined;
-  #type: MaybeAbstractEntityConstructor<T>;
+  #type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>;
 
-  constructor(ctx: ContextWithEm, type: MaybeAbstractEntityConstructor<T>, filter: PaginationFilter<T>, page: Page) {
+  constructor(
+    ctx: ContextWithEm,
+    type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>,
+    filter: PaginationFilter<T>,
+    page: Page,
+  ) {
     this.#ctx = ctx;
     this.#type = type;
     this.#filter = filter;
@@ -46,7 +71,10 @@ export class LimitPageInfo<T extends Entity = Entity> {
   }
 
   get totalCount(): Promise<number> {
-    return (this.#totalCountPromise ??= this.#ctx.em.findCount(this.#type, this.#filter));
+    return (this.#totalCountPromise ??=
+      typeof this.#type === "function"
+        ? this.#ctx.em.findCount(this.#type, this.#filter)
+        : countQuery(this.#ctx, this.#type));
   }
 
   get nextPage(): Promise<number | undefined> {

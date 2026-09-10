@@ -95,6 +95,7 @@ These hints in `joist-config.json` generally look like:
    - For example, if you want `canMeow` to be required for all `Cat`s, you can add `notNull: true` to the `canMeow` field
    - Without an explicit `notNull` set, we assume subtype fields are nullable, which is how they're represented in the database
    - See the "Pros/Cons" section later for why this can't be encoded in the database
+   - The column itself must be **nullable in the database**: Joist inserts all the subtypes in a flush with a single column list, so a subtype that doesn't know a column inserts `NULL` for it. A column that is `notNull` in the database therefore has to stay on the base type, where every subtype can set it -- codegen fails if you try to push one down to a subtype. If only some subtypes should set it, keep the field on the base and use a validation rule.
 4. On any FKs that point _to_ your base type, add `stiType: "SubType"` to indicate that the FK is only valid for the given subtype.
    - See the `DogPack` example in the above example config
 

@@ -163,6 +163,28 @@ function expandSingleTableInheritance(
         }
       });
 
+      // A column that is `notNull` in the database has to be settable by *every* subtype, because STI
+      // inserts use a single column list spanning whichever subtypes are in the flush (`newStiInsertOp`).
+      // A subtype that doesn't know the field contributes NULL, and the insert fails -- but only when two
+      // subtypes happen to be created in the same `em.flush`, which makes this a landmine rather than an
+      // obvious bug. Leave such a field on the base and use a validation rule if only some subtypes should
+      // set it; `stiType` + a nullable column is the way to model "required for just this subtype".
+      const notNullFieldNames = new Set(
+        [...entity.primitives, ...entity.enums, ...entity.pgEnums, ...entity.manyToOnes]
+          .filter((f) => f.notNull)
+          .map((f) => f.fieldName),
+      );
+      for (const [name, f] of allFields) {
+        if (f.stiType && notNullFieldNames.has(name)) {
+          fail(
+            `${entity.name}.${name} is notNull in the database, so it cannot be pushed down to a single subtype` +
+              ` with stiType '${f.stiType}' -- the other subtypes would insert NULL. Either make the column` +
+              ` nullable (and keep stiType, which will still make it required on ${f.stiType}), or leave the` +
+              ` field on ${entity.name}.`,
+          );
+        }
+      }
+
       // Now split each subType out into its out entity
       for (const [enumCode, subTypeName] of subTypes) {
         // Find all the base entity's fields that belong to us

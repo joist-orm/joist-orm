@@ -957,6 +957,325 @@ describe("EntityManager.rawQueries", () => {
     });
   });
 
+  describe("exists conditions", () => {
+    it("correlates scalar and entity queries inside nested and/or conditions", async () => {
+      // Given an Author with two Books, who must appear only once
+      await insertAuthor({ first_name: "published", age: 30 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      // And an adult Author without Books
+      await insertAuthor({ first_name: "unpublished", age: 40 });
+      // And an underage Author excluded by the outer condition
+      await insertAuthor({ first_name: "young", age: 10 });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And reusable scalar and entity queries correlated to each Author
+      const bookIds = query({ from: b, where: b.author_id.eq(a.id), select: b.id });
+      const books = query({ from: b, where: b.author_id.eq(a.id), select: b });
+      resetQueryCount();
+
+      // When selecting Authors with Books through a scalar query
+      const published = await em.query({ from: a, select: a.first_name, where: { exists: bookIds } });
+      // Then multiple matching Books do not duplicate their Author
+      expect(published).toEqual(["published"]);
+      expectTypeOf(published).toEqualTypeOf<string[]>();
+
+      // When combining missing Books and an explicit Author alternative inside an adult filter
+      const adults = await em.query({
+        from: a,
+        select: a.first_name,
+        where: {
+          and: [
+            a.age.gte(18),
+            { or: [{ notExists: books }, { and: [a.first_name.eq("published"), { exists: books }] }] },
+          ],
+        },
+        orderBy: [{ asc: a.id }],
+      });
+      // Then both adult alternatives survive, but the underage Author does not
+      expect(adults).toEqual(["published", "unpublished"]);
+      expect(em.entities).toEqual([]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE (a.age >= $1 AND (NOT EXISTS (SELECT b.* FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) OR (a.first_name = $2 AND EXISTS (SELECT b1.* FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL)))) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
+    it("accepts POJO and set queries without changing their projections", async () => {
+      // Given an Author whose two Books have different titles
+      await insertAuthor({ first_name: "published" });
+      await insertBook({ title: "first", author_id: 1 });
+      await insertBook({ title: "second", author_id: 1 });
+      // And an Author without Books
+      await insertAuthor({ first_name: "unpublished" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And two correlated POJO projections whose rows do not intersect
+      const first = query({
+        from: b,
+        where: { and: [b.author_id.eq(a.id), b.title.eq("first")] },
+        select: { id: b.id, title: b.title },
+      });
+      const second = query({
+        from: b,
+        where: { and: [b.author_id.eq(a.id), b.title.eq("second")] },
+        select: { id: b.id, title: b.title },
+      });
+      const common = query({ intersect: [first, second] });
+      resetQueryCount();
+
+      // When testing the POJO query and the intersection of different Book rows
+      const authors = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { and: [{ exists: first }, { notExists: common }] },
+      });
+      // Then only the published Author has the first Book and no common row
+      expect(authors).toEqual(["published"]);
+
+      // When testing the union of those Book projections
+      const unionAuthors = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { exists: query({ union: [first, second] }) },
+      });
+      // Then either Book supplies a row without hydrating entities
+      expect(unionAuthors).toEqual(["published"]);
+      expect(em.entities).toEqual([]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE (EXISTS (SELECT b.id AS id, b.title AS title FROM books AS b WHERE (b.author_id = a.id AND b.title = $1) AND b.deleted_at IS NULL) AND NOT EXISTS ((SELECT b1.id AS id, b1.title AS title FROM books AS b1 WHERE (b1.author_id = a.id AND b1.title = $2) AND b1.deleted_at IS NULL) INTERSECT (SELECT b2.id AS id, b2.title AS title FROM books AS b2 WHERE (b2.author_id = a.id AND b2.title = $3) AND b2.deleted_at IS NULL))) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS ((SELECT b.id AS id, b.title AS title FROM books AS b WHERE (b.author_id = a.id AND b.title = $1) AND b.deleted_at IS NULL) UNION (SELECT b1.id AS id, b1.title AS title FROM books AS b1 WHERE (b1.author_id = a.id AND b1.title = $2) AND b1.deleted_at IS NULL)) AND a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("preserves aggregate empty-input rows, pagination, and grouped having", async () => {
+      // Given an Author without Books
+      await insertAuthor({ first_name: "empty" });
+      // And an Author with one Book
+      await insertAuthor({ first_name: "one" });
+      await insertBook({ title: "b1", author_id: 2 });
+      // And an Author with two Books
+      await insertAuthor({ first_name: "two" });
+      await insertBook({ title: "b2", author_id: 3 });
+      await insertBook({ title: "b3", author_id: 3 });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a correlated count that returns one row even for an Author without Books
+      const counts = query({ from: b, where: b.author_id.eq(a.id), select: b.id.count() });
+      resetQueryCount();
+
+      // When testing whether the count query returns a row
+      const counted = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { exists: counts },
+        orderBy: [{ asc: a.id }],
+      });
+      const uncounted = await em.query({ from: a, select: a.first_name, where: { notExists: counts } });
+      // Then a zero count is still a row, so every Author satisfies EXISTS
+      expect(counted).toEqual(["empty", "one", "two"]);
+      expect(uncounted).toEqual([]);
+
+      // When skipping the single aggregate row or limiting Book rows to zero
+      const skipped = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { exists: query({ from: b, where: b.author_id.eq(a.id), select: { count: b.id.count() }, offset: 1 }) },
+      });
+      const limited = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id, limit: 0 }) },
+      });
+      // Then neither query has a row for any Author
+      expect(skipped).toEqual([]);
+      expect(limited).toEqual([]);
+
+      // When requiring a second Book after a one-row offset
+      const secondBook = await em.query({
+        from: a,
+        select: a.first_name,
+        where: {
+          exists: query({
+            from: b,
+            where: b.author_id.eq(a.id),
+            select: b.id,
+            orderBy: [{ asc: b.id }],
+            offset: 1,
+            limit: 1,
+          }),
+        },
+      });
+      // Then only the Author with two Books has a remaining row
+      expect(secondBook).toEqual(["two"]);
+
+      // When requiring a Book group whose count exceeds one
+      const grouped = await em.query({
+        from: a,
+        select: a.first_name,
+        where: {
+          exists: query({
+            from: b,
+            where: b.author_id.eq(a.id),
+            groupBy: [b.author_id],
+            having: b.id.count().gt(1),
+            select: { count: b.id.count() },
+          }),
+        },
+      });
+      // Then empty input has no group and the one-Book group fails HAVING
+      expect(grouped).toEqual(["two"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+         "SELECT a.first_name AS value FROM authors AS a WHERE NOT EXISTS (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT count(b.id)::int AS "count" FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL OFFSET $1) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL LIMIT $1) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL ORDER BY b.id ASC LIMIT $1 OFFSET $2) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT count(b.id)::int AS "count" FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL GROUP BY b.author_id HAVING count(b.id)::int > $1) AND a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("uses correlated exists in join on and notExists in having", async () => {
+      // Given an Author with a reviewed Book and an unreviewed Book
+      await insertAuthor({ first_name: "reviewed" });
+      await insertBook({ title: "reviewed", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertBook({ title: "unreviewed", author_id: 1 });
+      // And an Author with only an unreviewed Book
+      await insertAuthor({ first_name: "unreviewed" });
+      await insertBook({ title: "other", author_id: 2 });
+      const em = newEntityManager();
+      const [a, b, br] = tables(Author, Book, BookReview);
+
+      // When joining only Books that have a review
+      const reviewed = await em.query({
+        from: a,
+        join: [
+          {
+            left: b,
+            on: {
+              and: [b.author_id.eq(a.id), { exists: query({ from: br, where: br.book_id.eq(b.id), select: br }) }],
+            },
+          },
+        ],
+        select: { name: a.first_name, title: b.title },
+        orderBy: [{ asc: a.id }],
+      });
+      // Then the unreviewed Books do not join, but their Author remains
+      expect(reviewed).toEqual([
+        { name: "reviewed", title: "reviewed" },
+        { name: "unreviewed", title: null },
+      ]);
+
+      // When excluding Author groups with any reviewed Book
+      const unreviewed = await em.query({
+        from: a,
+        join: [a.books.inner(b)],
+        groupBy: [a.id],
+        having: {
+          and: [
+            b.id.count().gt(0),
+            {
+              notExists: query({
+                from: br,
+                join: [{ inner: b, on: br.book_id.eq(b.id) }],
+                where: b.author_id.eq(a.id),
+                select: br.id,
+              }),
+            },
+          ],
+        },
+        select: { name: a.first_name, count: b.id.count() },
+      });
+      // Then only the Author whose Book has no reviews remains
+      expect(unreviewed).toEqual([{ name: "unreviewed", count: 1 }]);
+    });
+
+    it("retains an outer join referenced only by a correlated exists condition", async () => {
+      // Given a mentor Author with a Book
+      await insertAuthor({ first_name: "mentor" });
+      await insertBook({ title: "mentor's book", author_id: 1 });
+      // And a mentee whose mentor supplies the correlated Book match
+      await insertAuthor({ first_name: "mentee", mentor_id: 1 });
+      // And an Author without a mentor or Books
+      await insertAuthor({ first_name: "alone" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      const m = table(Author, "mentor");
+      // And a Book query whose only outer reference is the joined mentor
+      const mentorBooks = query({ from: b, where: b.author_id.eq(m.id), select: b.id });
+      resetQueryCount();
+
+      // When selecting Authors whose mentor has Books without projecting the mentor
+      const mentees = await em.query({
+        from: a,
+        join: [a.mentor.as(m)],
+        select: a.first_name,
+        where: { exists: mentorBooks },
+      });
+      // Then the mentor join remains available to the correlated query
+      expect(mentees).toEqual(["mentee"]);
+
+      // When selecting Authors whose mentor has no Books
+      const others = await em.query({
+        from: a,
+        join: [a.mentor.as(m)],
+        select: a.first_name,
+        where: { notExists: mentorBooks },
+        orderBy: [{ asc: a.id }],
+      });
+      // Then Authors without mentors survive the left join and satisfy NOT EXISTS
+      expect(others).toEqual(["mentor", "alone"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a1.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id WHERE NOT EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a1.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
+    it("rejects columns, plain query literals, and booleans before SQL", async () => {
+      // Given an Author table whose columns are not query handles
+      const a = table(Author);
+      const em = newEntityManager();
+      resetQueryCount();
+
+      // When passing non-query operands to EXISTS and NOT EXISTS
+      // Then both the public types and runtime reject them before reaching PostgreSQL
+      await expect(
+        // @ts-expect-error EXISTS requires a query(...) handle, not a column
+        em.query({ from: a, select: a.id, where: { exists: a.id } }),
+      ).rejects.toThrow("Query exists requires a query(...) value");
+      await expect(
+        // @ts-expect-error NOT EXISTS requires a query(...) handle, not a column
+        em.query({ from: a, select: a.id, where: { notExists: a.id } }),
+      ).rejects.toThrow("Query notExists requires a query(...) value");
+      await expect(
+        // @ts-expect-error EXISTS requires query(...), not a plain query literal
+        em.query({ from: a, select: a.id, where: { exists: { from: a, select: a.id } } }),
+      ).rejects.toThrow("Query exists requires a query(...) value");
+      await expect(
+        // @ts-expect-error NOT EXISTS requires query(...), not a plain query literal
+        em.query({ from: a, select: a.id, where: { notExists: { from: a, select: a.id } } }),
+      ).rejects.toThrow("Query notExists requires a query(...) value");
+      await expect(
+        // @ts-expect-error EXISTS does not accept a boolean
+        em.query({ from: a, select: a.id, where: { exists: true } }),
+      ).rejects.toThrow("Query exists requires a query(...) value");
+      await expect(
+        // @ts-expect-error NOT EXISTS does not accept a boolean
+        em.query({ from: a, select: a.id, where: { notExists: false } }),
+      ).rejects.toThrow("Query notExists requires a query(...) value");
+      expect(queries).toEqual([]);
+    });
+  });
+
   describe("aggregates", () => {
     it("can group by with count", async () => {
       // Given Author a1 with two Books in the same aggregate group
@@ -2726,7 +3045,7 @@ describe("EntityManager.rawQueries", () => {
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
-      // `EXISTS` is not modeled; `a.id.in(query(...))` is the idiomatic spelling, but the raw form works too
+      // When using the raw SQL escape hatch instead of the modeled { exists: query(...) } condition
       const rows = await em.query({
         from: a,
         where: {
@@ -2734,6 +3053,7 @@ describe("EntityManager.rawQueries", () => {
         },
         select: { name: a.first_name },
       });
+      // Then the interpolated query still correlates Books to their Author
       expect(rows).toEqual([{ name: "a1" }]);
     });
 

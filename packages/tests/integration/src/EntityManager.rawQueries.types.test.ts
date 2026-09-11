@@ -4,6 +4,7 @@ import {
   type ExprBrand,
   type Loaded,
   type Query,
+  type ScalarQuery,
   type Subquery,
   alias,
   type exprBrand,
@@ -157,8 +158,11 @@ async function typeAssertions() {
 
   // === Subqueries as expressions
   // A single-expression select is a scalar subquery: `| null` because it can return no row
+  // Given Book and Author aliases linked by Book.author_id
+  // When selecting the Book count for an Author as a scalar subquery
   const scalar = query({ from: b, where: { and: [b.author_id.eq(a.id)] }, select: b.id.count() });
-  expectTypeOf(scalar).toEqualTypeOf<Expr<number | null, never>>();
+  // Then the count query retains its scalar brand and nullable expression result
+  expectTypeOf(scalar).toEqualTypeOf<ScalarQuery<number>>();
   // A single-column subquery is an IN-list target, checked against the column's id type
   a.id.in(query({ from: b, select: b.author_id }));
 

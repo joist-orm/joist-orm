@@ -145,6 +145,24 @@ const rows = await em.query({
 });
 ```
 
+Use `{ exists: query(...) }` to select Authors with at least one matching Book, without joining Books into the outer result or duplicating Authors:
+
+```ts
+const [a, b] = tables(Author, Book);
+const authors = await em.query({
+  from: a,
+  where: {
+    and: [
+      a.age.gte(18),
+      { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) },
+    ],
+  },
+  select: a,
+});
+```
+
+Use `notExists` instead to select Authors without matching Books. See [EXISTS and NOT EXISTS](#exists-and-not-exists) for supported query shapes and subquery semantics.
+
 A POJO `select` is also type-checked against the query's scope: selecting a column from a source that is neither `from` nor in `join` is a compile error that names the missing source. (Conditions in `where`/`having`/`orderBy` are not scope-checked at compile time; an out-of-scope source there fails at runtime.)
 
 ### Ergonomics filters with `Table.where`
@@ -345,7 +363,7 @@ Subqueries chain — `query({ from: bookStats, ... })` — and `select: bookStat
 
 ### Scalar and list subqueries
 
-A single-expression `select` in an ordinary `query({ from, select: expr })` returns an `Expr<R | null, never>`, where `R` is the selected row type. In scalar-expression context, zero rows produces SQL `NULL` and more than one row is a database error. `.coalesce()` handles the zero-row case, not multiple rows. Scalar subqueries close over outer sources, so correlation just works:
+A single-expression `select` in an ordinary `query({ from, select: expr })` returns a `ScalarQuery<R>`, a branded `Expr<R | null, never>`, where `R` is the selected row type. In scalar-expression context, zero rows produces SQL `NULL` and more than one row is a database error. `.coalesce()` handles the zero-row case, not multiple rows. Scalar subqueries close over outer sources, so correlation just works:
 
 ```ts
 const rows = await em.query({
@@ -364,6 +382,33 @@ where: {
   and: [a.id.in(query({ from: b, select: b.author_id }))];
 }
 ```
+
+### EXISTS and NOT EXISTS
+
+Use `{ exists: queryValue }` or `{ notExists: queryValue }` wherever a query condition is accepted,
+including `where`, `having`, join `on`, and nested `and`/`or` groups:
+
+```ts
+const booksForAuthor = query({ from: b, where: b.author_id.eq(a.id), select: b.id });
+
+const authors = await em.query({
+  from: a,
+  where: { and: [a.age.gte(18), { exists: booksForAuthor }] },
+  select: a,
+});
+
+const authorsWithoutBooks = await em.query({
+  from: a,
+  where: { notExists: booksForAuthor },
+  select: a,
+});
+```
+
+The operand must be a `query(...)` value, not a query literal or an ordinary expression.
+Scalar, entity, POJO, and compound queries are supported. Correlated references retain the outer
+joins they use. The subquery keeps its projection, grouping, `having`, and pagination: for example,
+an ungrouped `count()` returns a row even when its input is empty, so `EXISTS` is true in that case.
+Existence queries do not hydrate their selected entities.
 
 ### Reusing a base query
 

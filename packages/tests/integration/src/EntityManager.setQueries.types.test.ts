@@ -1,5 +1,15 @@
 import { expectTypeOf } from "expect-type";
-import { type EntityQuery, type Expr, type Query, type SetQuery, type Subquery, query, sql, tables } from "joist-orm";
+import {
+  type EntityQuery,
+  type Expr,
+  type Query,
+  type ScalarQuery,
+  type SetQuery,
+  type Subquery,
+  query,
+  sql,
+  tables,
+} from "joist-orm";
 import { Author, type AuthorId, Book, type BookId, Comment } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
@@ -152,9 +162,9 @@ function typeAssertions() {
   } satisfies Query;
   // When constructing ordinary scalar subqueries and executing scalar SELECT inputs
   // Then expression use adds SQL NULL, while execution retains each selected row's nullability
-  expectTypeOf(orders).toEqualTypeOf<Expr<number | null, never>>();
-  expectTypeOf(ages).toEqualTypeOf<Expr<number | null, never>>();
-  expectTypeOf(query(leftOrders)).toEqualTypeOf<Expr<number | null, never>>();
+  expectTypeOf(orders).toEqualTypeOf<ScalarQuery<number>>();
+  expectTypeOf(ages).toEqualTypeOf<ScalarQuery<number | null>>();
+  expectTypeOf(query(leftOrders)).toEqualTypeOf<ScalarQuery<number | null>>();
   expectTypeOf(orders.coalesce(0)).toEqualTypeOf<Expr<number, never>>();
   expectTypeOf(em.query({ from: a, select: { order: orders, fallback: orders.coalesce(0) } })).resolves.toEqualTypeOf<
     { order: number | null; fallback: number }[]
@@ -263,7 +273,7 @@ function typeAssertions() {
   // Then results and subsequent expression inputs retain the Author-id domain
   expectTypeOf(ids).toEqualTypeOf<Subquery<{ id: AuthorId }, "author_ids">>();
   expectTypeOf(em.query({ unionAll: [bookAuthorIds, authorIds] })).resolves.toEqualTypeOf<{ id: AuthorId }[]>();
-  expectTypeOf(scalarIds).toEqualTypeOf<Expr<AuthorId | null, never>>();
+  expectTypeOf(scalarIds).toEqualTypeOf<ScalarQuery<AuthorId>>();
   expectTypeOf(em.query({ from: ids, select: ids.id })).resolves.toEqualTypeOf<AuthorId[]>();
   ids.id.eq("a:1");
   ids.id.eq(b.author_id);
@@ -555,7 +565,7 @@ function typeAssertions() {
   const annotatedOrders: Query<typeof b.order, typeof leftOrders.join> = leftOrders;
   // When constructing and executing that ordinary scalar query
   // Then its declared LEFT join remains nullable without making it a set operand
-  expectTypeOf(query(annotatedOrders)).toEqualTypeOf<Expr<number | null, never>>();
+  expectTypeOf(query(annotatedOrders)).toEqualTypeOf<ScalarQuery<number | null>>();
   expectTypeOf(em.query(annotatedOrders)).resolves.toEqualTypeOf<(number | null)[]>();
   // @ts-expect-error: an explicit Query annotation does not make scalar projections eligible for sets
   query({ union: [annotatedOrders, annotatedOrders] });

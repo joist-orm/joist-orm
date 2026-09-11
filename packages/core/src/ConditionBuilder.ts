@@ -1,5 +1,5 @@
 import { type Column } from "./columns.ts";
-import { type ExpressionFilter } from "./EntityFilter.ts";
+import { type ConditionGroup, type ConditionInput } from "./conditions.ts";
 import { isDefined } from "./EntityManager.ts";
 import {
   type ColumnCondition,
@@ -22,7 +22,7 @@ export class ConditionBuilder {
   private expressions: ParsedExpressionFilter[] = [];
 
   /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
-  maybeAddExpression(expression: ExpressionFilter): void {
+  maybeAddExpression(expression: ConditionGroup<ConditionInput>): void {
     const parsed = parseExpression(expression);
     if (parsed) this.expressions.push(parsed);
   }
@@ -106,7 +106,7 @@ export class ConditionBuilder {
 }
 
 /** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedExpressionFilter`. */
-function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
+function parseExpression(expression: ConditionGroup<ConditionInput>): ParsedExpressionFilter | undefined {
   // Look for `{ and: [...] }` or `{ or: [...] }`
   const [op, expressions] =
     "and" in expression && expression.and

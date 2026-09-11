@@ -1,4 +1,4 @@
-import type { ExpressionCondition } from "./EntityFilter.ts";
+import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "./conditions.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
 import type { RawCondition } from "./QueryParser.ts";
@@ -64,18 +64,18 @@ export type ExprLike<R> = { readonly [exprBrand]: ExprBrand<R, any> };
  */
 export interface Expr<R, Src extends string = string> {
   readonly [exprBrand]: ExprBrand<R, Src>;
-  eq(value: R | ExprLike<R> | undefined): ExpressionCondition;
-  ne(value: R | ExprLike<R> | undefined): ExpressionCondition;
-  gt(value: R | ExprLike<R> | undefined): ExpressionCondition;
-  gte(value: R | ExprLike<R> | undefined): ExpressionCondition;
-  lt(value: R | ExprLike<R> | undefined): ExpressionCondition;
-  lte(value: R | ExprLike<R> | undefined): ExpressionCondition;
+  eq(value: R | ExprLike<R> | undefined): SqlCondition;
+  ne(value: R | ExprLike<R> | undefined): SqlCondition;
+  gt(value: R | ExprLike<R> | undefined): SqlCondition;
+  gte(value: R | ExprLike<R> | undefined): SqlCondition;
+  lt(value: R | ExprLike<R> | undefined): SqlCondition;
+  lte(value: R | ExprLike<R> | undefined): SqlCondition;
   // A list subquery may select a nullable column; NULLs in the set never match, so that is fine.
-  in(values: readonly R[] | ExprLike<R | null> | undefined): ExpressionCondition;
-  nin(values: readonly R[] | ExprLike<R | null> | undefined): ExpressionCondition;
+  in(values: readonly R[] | ExprLike<R | null> | undefined): SqlCondition;
+  nin(values: readonly R[] | ExprLike<R | null> | undefined): SqlCondition;
 
   /** Prefixes this expression and a space to a raw predicate; write .is`IS NULL`, not .is`NULL`. */
-  is(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition;
+  is(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition;
 
   /** `count(x)::int`; `count(a.id)` is `count(*)` for the FROM table, and the matched-row count for a left-joined one. */
   count(): Expr<number, never>;
@@ -92,7 +92,7 @@ export interface Expr<R, Src extends string = string> {
 
 /**
  * A join entry: the join kind is the key, the joined source is the value, plus `on`. `inner?: never` /
- * `left?: never` keep an entry to one kind (the `ExpressionFilter` `and`/`or` trick).
+ * `left?: never` keep an entry to one kind (the `SqlCondition` `and`/`or` trick).
  *
  * `on` is required. A join is pruned when nothing references it anymore, not by an `undefined` ON;
  * `keep: true` pins a join that would otherwise prune, i.e. an inner join used as an existence filter,
@@ -101,14 +101,14 @@ export interface Expr<R, Src extends string = string> {
  * Declared here (not `query.ts`) so the relation join factories in `Tables.ts` (i.e. `a.books.as(b)`) can
  * return them without importing `query.ts`; `query.ts` re-constrains `A` to its `QuerySource`.
  */
-export interface InnerJoin<A, C = ExpressionCondition> {
+export interface InnerJoin<A, C = SqlCondition> {
   readonly inner: A;
   readonly left?: never;
   readonly on: C;
   readonly keep?: boolean;
 }
 
-export interface LeftJoin<A, C = ExpressionCondition> {
+export interface LeftJoin<A, C = SqlCondition> {
   readonly left: A;
   readonly inner?: never;
   readonly on: C;
@@ -130,7 +130,7 @@ export interface ExprContext {
   /** Returns the SQL alias for a table's `TableMgmt` or a subquery handle, searching enclosing queries. */
   aliasFor(handle: object): string;
   /** Turns a user-facing condition into SQL; `undefined` if it pruned away entirely. */
-  conditionToSql(cond: ExpressionCondition): SqlFragment | undefined;
+  conditionToSql(cond: SqlCondition): SqlFragment | undefined;
 }
 
 export function isExpr(value: unknown): value is ExprLike<any> {
@@ -148,11 +148,11 @@ export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
  * A condition whose SQL depends on aliases that are only known once the query is parsed, i.e.
  * `bookStats.bookCount.gt(1)` or `bs.authorId.eq(a.id)`.
  *
- * It is shaped like a `RawCondition` so it can sit in any `ExpressionFilter`; `resolveDeferredConditions`
+ * It is shaped like a `RawCondition` with a SQL brand so it can sit in any `SqlCondition`; `resolveDeferredConditions`
  * snapshots `condition`, `bindings`, and `aliases` before the filter is parsed. Domain alias conditions
  * use a separate protocol in the `em.find` parser.
  */
-export interface DeferredCondition extends RawCondition {
+export interface DeferredCondition extends RawCondition, PredicateBrand<"sql"> {
   [deferredSym]: (ctx: ExprContext) => RawCondition;
 }
 
@@ -162,17 +162,20 @@ export function isDeferredCondition(cond: unknown): cond is DeferredCondition {
 
 /** Creates a `DeferredCondition` that generates its SQL with `fn` once the query's aliases are known. */
 export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): DeferredCondition {
-  const cond: DeferredCondition = {
-    kind: "raw",
-    aliases: [],
-    condition: "<unresolved>",
-    bindings: [],
-    pruneable: false,
-    [deferredSym]: (ctx) => {
-      const { sql, bindings, refs } = fn(ctx);
-      return { ...cond, condition: sql, bindings, aliases: refs };
+  const cond: DeferredCondition = brandPredicate(
+    {
+      kind: "raw",
+      aliases: [],
+      condition: "<unresolved>",
+      bindings: [],
+      pruneable: false,
+      [deferredSym]: (ctx: ExprContext): RawCondition => {
+        const { sql, bindings, refs } = fn(ctx);
+        return { ...cond, condition: sql, bindings, aliases: refs };
+      },
     },
-  };
+    "sql",
+  );
   return cond;
 }
 
@@ -181,9 +184,9 @@ export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): Deferr
  * may reuse the same condition under another alias; it must not overwrite this occurrence's SQL.
  */
 export function resolveDeferredConditions(
-  cond: ExpressionCondition | undefined,
+  cond: ConditionInput | undefined,
   ctx: ExprContext,
-): ExpressionCondition | undefined {
+): ConditionInput | undefined {
   if (cond === undefined || cond === null) return cond;
   if (isDeferredCondition(cond)) {
     return cond[deferredSym](ctx);
@@ -251,40 +254,40 @@ export abstract class BaseExpr {
     return value;
   }
 
-  eq(value: unknown): ExpressionCondition {
+  eq(value: unknown): SqlCondition {
     return this.compare("=", value);
   }
 
-  ne(value: unknown): ExpressionCondition {
+  ne(value: unknown): SqlCondition {
     return this.compare("!=", value);
   }
 
-  gt(value: unknown): ExpressionCondition {
+  gt(value: unknown): SqlCondition {
     return this.compare(">", value);
   }
 
-  gte(value: unknown): ExpressionCondition {
+  gte(value: unknown): SqlCondition {
     return this.compare(">=", value);
   }
 
-  lt(value: unknown): ExpressionCondition {
+  lt(value: unknown): SqlCondition {
     return this.compare("<", value);
   }
 
-  lte(value: unknown): ExpressionCondition {
+  lte(value: unknown): SqlCondition {
     return this.compare("<=", value);
   }
 
-  in(values: unknown): ExpressionCondition {
+  in(values: unknown): SqlCondition {
     return this.inList("IN", values);
   }
 
-  nin(values: unknown): ExpressionCondition {
+  nin(values: unknown): SqlCondition {
     return this.inList("NOT IN", values);
   }
 
   /** Prefixes this expression to a SQL template, retaining bindings and referenced aliases. */
-  is(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {
+  is(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
     const suffix = new TemplateExpr(strings, values);
     return deferredCondition((ctx) => joinFragments([this.toSql(ctx), suffix.toSql(ctx)], " "));
   }
@@ -363,7 +366,7 @@ export abstract class BaseExpr {
   }
 
   /** `this op value`, where `value` may be `undefined` (pruned), `null`, another expression, or a literal. */
-  protected compare(op: string, value: unknown): ExpressionCondition {
+  protected compare(op: string, value: unknown): SqlCondition {
     if (value === undefined) return skipCondition;
     if (value === null) {
       const not = op === "=" ? "" : op === "!=" ? "NOT " : fail(`Cannot compare ${op} to null`);
@@ -382,7 +385,7 @@ export abstract class BaseExpr {
   }
 
   /** `this IN (subquery)` or `this = ANY(?)` for a list; `NOT IN` / `!= ALL(?)` for `nin`. */
-  protected inList(op: "IN" | "NOT IN", values: unknown): ExpressionCondition {
+  protected inList(op: "IN" | "NOT IN", values: unknown): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) {
       return deferredCondition((ctx) => {
@@ -536,7 +539,7 @@ export function interpolationToSql(value: unknown, ctx: ExprContext): SqlFragmen
   if (isExpr(value)) {
     return asNode(value).toSql(ctx);
   } else if (isConditionLike(value)) {
-    return ctx.conditionToSql(value as ExpressionCondition) ?? { sql: "true", bindings: [], refs: [] };
+    return ctx.conditionToSql(value as SqlCondition) ?? { sql: "true", bindings: [], refs: [] };
   } else {
     return { sql: "?", bindings: [value], refs: [] };
   }

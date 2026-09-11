@@ -28,6 +28,13 @@ export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner.ts";
+export {
+  type ConditionGroup,
+  type DomainPredicate,
+  type PredicateBrand,
+  type SqlCondition,
+  type SqlPredicate,
+} from "./conditions.ts";
 // Domain aliases belong to em.find; physical table expressions belong to em.query/em.execute.
 export {
   alias,

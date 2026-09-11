@@ -1,11 +1,13 @@
 import { groupBy, isPlainObject } from "joist-utils";
 
 import { type AliasMgmt, getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
+import { type ConditionInput, predicateBrand } from "./conditions.ts";
 import { getMetadataForTable } from "./configure.ts";
 import { deferredAliasSym, isDeferredAliasCondition } from "./DeferredAlias.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type ExpressionFilter, type OrderBy, type ValueFilter } from "./EntityFilter.ts";
 import { type EntityMetadata, type Field, getBaseMeta } from "./EntityMetadata.ts";
+import { isDeferredCondition } from "./Expr.ts";
 import {
   type Column,
   ConditionBuilder,
@@ -372,9 +374,11 @@ export function parseFindQuery(
           // Parse the join tree first so its `as:` bindings re-root the aliases that
           // `conditions` reference, then add the conditions against the now-bound aliases.
           addFilterAt(meta, tableAlias, result.where, targetCb, undefined, parentJoin);
+          checkDomainCondition(result.conditions);
           targetCb.maybeAddExpression(result.conditions);
         } else {
           const conditions = Array.isArray(result) ? result : [result];
+          for (const condition of conditions) checkDomainCondition(condition);
           if (conditions.length > 0) targetCb.maybeAddExpression({ and: conditions });
         }
       }
@@ -716,6 +720,7 @@ export function parseFindQuery(
 
   // If they passed extra `conditions: ...`, parse that
   if (optsExpression) {
+    checkDomainCondition(optsExpression);
     cb.maybeAddExpression(optsExpression);
   }
 
@@ -1215,6 +1220,19 @@ export function lazyExcludedSelects(meta: EntityMetadata, alias: string): string
     for (const column of field.serde.columns) selects.push(kqDot(alias, column.columnName));
   }
   return selects;
+}
+
+/** Rejects SQL predicates throughout a domain condition tree before optional-filter pruning. */
+function checkDomainCondition(condition: ConditionInput | undefined): void {
+  if (!condition) return;
+  if (isDeferredCondition(condition) || (predicateBrand in condition && condition[predicateBrand] === "sql")) {
+    fail("SQL predicates are only supported by em.query/em.execute; use alias(...) predicates in em.find and scopes.");
+  }
+  if ("and" in condition && condition.and) {
+    for (const child of condition.and) checkDomainCondition(child);
+  } else if ("or" in condition && condition.or) {
+    for (const child of condition.or) checkDomainCondition(child);
+  }
 }
 
 /** Resolves every `DeferredAliasCondition` in `query` against the parse's alias bindings. */

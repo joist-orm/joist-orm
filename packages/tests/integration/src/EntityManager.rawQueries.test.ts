@@ -1,12 +1,15 @@
 import { expectTypeOf } from "expect-type";
 import {
+  type ColumnCondition,
   type Loaded,
+  type PredicateBrand,
   Query,
   type RawCondition,
   alias,
   getAliasMgmt,
   getMetadata,
   query,
+  skipCondition,
   sql,
   table,
   tables,
@@ -228,7 +231,7 @@ describe("EntityManager.rawQueries", () => {
 
       // When constructing the condition without finding Authors
       // Then no query binding has been requested
-      expectTypeOf(conditions).toEqualTypeOf<Readonly<RawCondition>>();
+      expectTypeOf(conditions).toEqualTypeOf<Readonly<RawCondition & PredicateBrand<"domain">>>();
       expect(sqlAliases).toEqual([]);
 
       // When using the same condition for the root Author and a joined mentor
@@ -1778,17 +1781,20 @@ describe("EntityManager.rawQueries", () => {
       `);
     });
 
-    it.each(["where", "having", "join", "template"] as const)(
+    it.each(["where", "having", "join", "template", "prunable"] as const)(
       "rejects domain alias conditions in SQL %s before execution",
       async (clause) => {
         // Given a persisted Author that a domain alias can find
         await insertAuthor({ first_name: "Selected" });
+        // And SQL tables for the Author report and its Book join
         const em = newEntityManager();
         const a = table(Author);
         const b = table(Book);
         // And the domain condition is already bound by em.find, not merely an unresolved alias
         const domain = alias(Author);
         const condition = domain.firstName.eq("Selected");
+        // When finding the Author through its domain alias
+        // Then the domain predicate works in its intended API
         expect(await em.find(Author, { as: domain }, { conditions: { and: [condition] } })).toMatchEntity([
           { firstName: "Selected" },
         ]);
@@ -1801,14 +1807,113 @@ describe("EntityManager.rawQueries", () => {
               ? { groupBy: [a.id], having: condition }
               : clause === "join"
                 ? { join: [{ inner: b, on: condition, keep: true }] }
-                : { where: sql.condition`${condition}` };
+                : clause === "template"
+                  ? { where: sql.condition`${condition}` }
+                  : { where: { and: [{ or: [undefined, condition], pruneIfUndefined: "any" as const }] } };
         // Then every SQL condition entry point rejects the domain alias before issuing SQL
-        await expect(em.query({ from: a, ...clauses, select: a.id })).rejects.toThrow(
+        await expect(
+          // @ts-expect-error Domain predicates belong to find, including inside nested SQL groups
+          em.query({ from: a, ...clauses, select: a.id }),
+        ).rejects.toThrow(
           "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
         );
         expect(queries).toMatchInlineSnapshot(`[]`);
       },
     );
+
+    it.each(["column", "table filter", "expression", "template", "copied template", "raw"] as const)(
+      "rejects SQL %s predicates in find and scopes before optional pruning",
+      async (kind) => {
+        // Given an adult Author selected by each SQL predicate
+        await insertAuthor({ first_name: "Alice", age: 30 });
+        // And another adult Author who does not match the SQL predicate
+        await insertAuthor({ first_name: "Bob", age: 40 });
+        // And a SQL predicate built from a physical table rather than a domain alias
+        const em = newEntityManager();
+        const a = table(Author);
+        const predicate =
+          kind === "column"
+            ? a.age.eq(30)
+            : kind === "table filter"
+              ? a.where({ age: 30 })
+              : kind === "expression"
+                ? sql.number`${a.age} + ${0}`.eq(30)
+                : kind === "template"
+                  ? sql.condition`${a.age} = ${30}`
+                  : kind === "copied template"
+                    ? { ...sql.condition`${a.age} = ${30}` }
+                    : a.age.raw("= ?", [30]);
+
+        // When selecting Authors through the SQL API
+        const names = await em.query({ from: a, where: predicate, select: a.first_name });
+        // Then the predicate selects only Alice
+        expect(names).toEqual(["Alice"]);
+
+        // When the same predicate is supplied to find and scopes in direct, nested, and prunable groups
+        // Then neither API silently prunes the invalid predicate or sends it to PostgreSQL
+        for (const conditions of [
+          { and: [predicate] },
+          { or: [{ and: [predicate] }] },
+          { and: [{ or: [undefined, predicate], pruneIfUndefined: "any" as const }] },
+        ]) {
+          resetQueryCount();
+          await expect(
+            // @ts-expect-error SQL predicates cannot be used as find conditions
+            em.find(Author, {}, { conditions }),
+          ).rejects.toEqual(
+            new Error(
+              "SQL predicates are only supported by em.query/em.execute; use alias(...) predicates in em.find and scopes.",
+            ),
+          );
+          await expect(
+            // @ts-expect-error SQL predicates cannot be returned by a scope alias callback
+            Author.adult.where(() => conditions).find(em),
+          ).rejects.toEqual(
+            new Error(
+              "SQL predicates are only supported by em.query/em.execute; use alias(...) predicates in em.find and scopes.",
+            ),
+          );
+          expect(queries).toEqual([]);
+        }
+      },
+    );
+
+    it("keeps legacy unbranded conditions and skipped predicates usable in both APIs", async () => {
+      // Given an adult Author matching the legacy age conditions
+      await insertAuthor({ first_name: "Alice", age: 30 });
+      // And another adult Author outside the requested age range
+      await insertAuthor({ first_name: "Bob", age: 40 });
+      // And a hand-written raw age condition with no domain or SQL brand
+      const raw: RawCondition = {
+        kind: "raw",
+        aliases: ["a"],
+        condition: "a.age >= ?",
+        bindings: [30],
+        pruneable: false,
+      };
+      // And an unbranded column condition that excludes Authors aged 40 or older
+      const column: ColumnCondition = {
+        kind: "column",
+        alias: "a",
+        column: "age",
+        dbType: "int",
+        cond: { kind: "lt", value: 40 },
+      };
+      // And the same recursive group includes a skipped optional predicate
+      const conditions = { and: [raw, { or: [column, skipCondition] }] };
+      const em = newEntityManager();
+      const a = table(Author);
+
+      // When filtering Authors through find, a scope callback, and a SQL query
+      const found = await em.find(Author, {}, { conditions });
+      const scoped = await Author.adult.where(() => conditions).find(em);
+      const names = await em.query({ from: a, where: conditions, select: a.first_name });
+
+      // Then the unbranded escape hatch preserves the same age restriction in all three calls
+      expect(found).toMatchEntity([{ firstName: "Alice" }]);
+      expect(scoped).toEqual(found);
+      expect(names).toEqual(["Alice"]);
+    });
 
     it("accepts a single bare condition for where and having", async () => {
       // Given Author a1 below the age threshold and without Books

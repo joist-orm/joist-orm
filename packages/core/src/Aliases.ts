@@ -1,6 +1,7 @@
 import { groupBy } from "joist-utils";
 
 import { type Column } from "./columns.ts";
+import { type PredicateBrand } from "./conditions.ts";
 // Load configure first: relations must not evaluate before their base classes exist.
 import { getConstructorFromTaggedId } from "./configure.ts";
 import { withDeferredAlias } from "./DeferredAlias.ts";
@@ -44,7 +45,7 @@ export interface AliasMgmt {
    * Builds a raw condition using each query's bound metadata and SQL alias, before join pruning.
    * Return a fresh condition instead of mutating shared state; the callback runs only when used.
    */
-  condition(build: (meta: EntityMetadata, alias: string) => RawCondition): RawCondition;
+  condition(build: (meta: EntityMetadata, alias: string) => RawCondition): RawCondition & PredicateBrand<"domain">;
 }
 
 /** Keeps domain aliases covariant in their entity type. */
@@ -277,7 +278,7 @@ class AliasColumnImpl {
   }
 
   /** Maps literal values through the field serde and binds aliases only when parsing. */
-  addCondition(value: ParsedValueFilter<unknown>): ColumnCondition {
+  addCondition(value: ParsedValueFilter<unknown>): ExpressionCondition {
     if ("value" in value && value.value === undefined) return skipCondition;
     const cond: ColumnCondition = {
       kind: "column",
@@ -385,7 +386,12 @@ export function getMaybeCtiAlias(
 }
 
 /** Compares domain columns with per-parse aliases, preserving condition reuse across find calls. */
-function crossColumnCondition(left: AliasColumnImpl, right: AliasColumnImpl, op: string, negate = false): RawCondition {
+function crossColumnCondition(
+  left: AliasColumnImpl,
+  right: AliasColumnImpl,
+  op: string,
+  negate = false,
+): RawCondition & PredicateBrand<"domain"> {
   const cond: RawCondition = { kind: "raw", aliases: [], condition: "unset", bindings: [], pruneable: false };
   return withDeferredAlias(cond, (resolve, copy) => {
     const l = resolve(left.mgmt);

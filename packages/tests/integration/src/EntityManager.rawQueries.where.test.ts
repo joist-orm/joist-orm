@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { type ExpressionCondition, type FilterOf, type TableFilter, alias, query, table, tables } from "joist-orm";
+import { type FilterOf, type SqlCondition, type TableFilter, alias, query, table, tables } from "joist-orm";
 import {
   Author,
   Book,
@@ -316,7 +316,7 @@ function tableFilterTypeAssertions(author: Author, book: Book) {
   b.where({ author: { ne: undefined }, reviewer: { ne: undefined } });
   sp.where({ city: "London" });
   // Then scalar filters retain their exact generated FilterOf leaf types
-  expectTypeOf(condition).toEqualTypeOf<ExpressionCondition>();
+  expectTypeOf(condition).toEqualTypeOf<SqlCondition>();
   expectTypeOf<TableFilter<Author>["firstName"]>().toEqualTypeOf<FilterOf<Author>["firstName"]>();
   expectTypeOf<TableFilter<Author>["businessAddress"]>().toEqualTypeOf<FilterOf<Author>["businessAddress"]>();
   expectTypeOf<TableFilter<Author>["favoriteColors"]>().toEqualTypeOf<FilterOf<Author>["favoriteColors"]>();

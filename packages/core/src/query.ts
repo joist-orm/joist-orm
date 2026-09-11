@@ -89,6 +89,26 @@ import { fail } from "./utils.ts";
 
 export const subqueryBrand: unique symbol = Symbol("joist.subquery");
 export const entityQueryBrand: unique symbol = Symbol("joist.entityQuery");
+export const scalarQueryBrand: unique symbol = Symbol("joist.scalarQuery");
+
+/** A query(...) value with any projection, for EXISTS and NOT EXISTS predicates. */
+export type ExistsQuery = Subquery<unknown, string> | EntityQuery<Entity> | { readonly [scalarQueryBrand]: true };
+
+/**
+ * A condition for a query's where, having, or join on clause. Combine conditions with and/or,
+ * or use exists/notExists to check whether a query(...) value returns any rows.
+ *
+ * I.e. `{ and: [a.age.gte(18), { exists: booksForAuthor }] }` selects adult Authors with Books,
+ * where `booksForAuthor` is `query({ from: b, where: b.author_id.eq(a.id), select: b.id })`.
+ */
+export type QueryCondition =
+  | Exclude<ExpressionCondition, ExpressionFilter>
+  | ((
+      | { and: Array<QueryCondition | undefined>; or?: never; exists?: never; notExists?: never }
+      | { or: Array<QueryCondition | undefined>; and?: never; exists?: never; notExists?: never }
+    ) & { pruneIfUndefined?: "any" | "all" })
+  | { exists: ExistsQuery; notExists?: never; and?: never; or?: never }
+  | { notExists: ExistsQuery; exists?: never; and?: never; or?: never };
 
 /** Phantom type information carried by a table-shaped subquery. */
 export interface SubqueryBrand<R, Name extends string> {
@@ -106,7 +126,7 @@ export type QuerySource =
  * entry a relation join factory returns (`a.books.as(b)`); joins to a subquery are always the expanded
  * form, since a subquery has no FK metadata.
  */
-export type QueryJoin = InnerJoin<QuerySource> | LeftJoin<QuerySource>;
+export type QueryJoin = InnerJoin<QuerySource, QueryCondition> | LeftJoin<QuerySource, QueryCondition>;
 export type QueryJoins = readonly (QueryJoin | undefined)[];
 
 /**
@@ -164,10 +184,10 @@ export type QuerySelect = QuerySource | ExprLike<any> | Record<string, ExprLike<
  */
 export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins> {
   join?: J;
-  /** An `{ and: [...] }` / `{ or: [...] }` filter, or a single bare condition, i.e. `where: a.age.gte(18)`. */
-  where?: ExpressionCondition;
+  /** A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`. */
+  where?: QueryCondition;
   groupBy?: readonly ExprLike<any>[];
-  having?: ExpressionCondition;
+  having?: QueryCondition;
   select: S & CheckEntitySelect<S>;
   orderBy?: readonly (QueryOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
   limit?: number;
@@ -529,6 +549,9 @@ export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { rea
   Record<MutationKey | "with" | "ctes", never>
 >;
 
+/** A scalar/list query that remains distinguishable from ordinary expressions for EXISTS. */
+export type ScalarQuery<R> = Expr<R | null, never> & { readonly [scalarQueryBrand]: true };
+
 /** Physical inheritance tables cannot supply complete entities; select their columns instead. */
 type CheckEntitySelect<S> = [
   Extract<
@@ -573,7 +596,7 @@ export type QueryValue<S, J extends QueryJoins, Name extends string> = S extends
 }
   ? EntityQuery<T>
   : S extends { readonly [exprBrand]: ExprBrand<unknown, any> }
-    ? Expr<QueryRow<S, J> | null, never>
+    ? ScalarQuery<QueryRow<S, J>>
     : Subquery<QueryRow<S, J>, Name>;
 
 /** The names of every alias in scope for a query: the source alias plus every joined alias. */
@@ -889,6 +912,8 @@ class SubqueryColumnExpr extends BaseExpr {
  * subquery's "free" aliases and count toward the outer query's join pruning.
  */
 class SubqueryExpr extends BaseExpr {
+  readonly [scalarQueryBrand] = true;
+
   constructor(readonly handle: SubqueryHandle) {
     super();
   }
@@ -1651,15 +1676,11 @@ function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
  * `pruneIfUndefined` applies unchanged. Deferred SQL expression conditions are resolved
  * against the context first.
  */
-export function conditionToSql(
-  cond: ExpressionCondition | undefined,
-  ctx: Ctx,
-  topLevel: boolean,
-): SqlFragment | undefined {
+export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
   checkCondition(cond);
   if (cond === undefined) return undefined;
-  cond = resolveDeferredConditions(cond, ctx)!;
-  const filter: ExpressionFilter = isFilter(cond) ? cond : { and: [cond] };
+  const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx)!;
+  const filter: ExpressionFilter = isFilter(resolved) ? resolved : { and: [resolved] };
   const cb = new ConditionBuilder();
   cb.maybeAddExpression(filter);
   const parsed = cb.toExpressionFilter();
@@ -1694,6 +1715,12 @@ function checkCondition(value: unknown): void {
     )
       fail("Invalid query pruneIfUndefined policy");
     for (const child of condition[key]) checkCondition(child);
+  } else if ("exists" in condition || "notExists" in condition) {
+    const key = "exists" in condition ? "exists" : "notExists";
+    checkConditionKeys(condition, [key], "Query existence condition");
+    const query = condition[key];
+    if (!(query instanceof SubqueryExpr) && !isReadQueryValue(query)) fail(`Query ${key} requires a query(...) value`);
+    toQuery(query);
   } else if (condition.kind === "raw") {
     checkConditionKeys(
       condition,
@@ -1767,6 +1794,35 @@ function checkConditionKeys(value: object, allowed: readonly PropertyKey[], desc
     if (typeof key === "string" && !Object.prototype.propertyIsEnumerable.call(value, key))
       fail(`${description} requires enumerable fields`);
   }
+}
+
+/**
+ * Converts query-valued predicates to SQL conditions for the shared condition builder.
+ * Keeps each subquery's projection and reports its outer aliases for join pruning.
+ */
+function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): ExpressionCondition | undefined {
+  if (cond === undefined) return undefined;
+  if ("and" in cond && cond.and) {
+    return {
+      and: cond.and.map((child) => resolveQueryCondition(child, ctx)),
+      pruneIfUndefined: cond.pruneIfUndefined,
+    };
+  }
+  if ("or" in cond && cond.or) {
+    return { or: cond.or.map((child) => resolveQueryCondition(child, ctx)), pruneIfUndefined: cond.pruneIfUndefined };
+  }
+  if ("exists" in cond || "notExists" in cond) {
+    const positive = cond.exists !== undefined;
+    const plan = parseQuery(toQuery(positive ? cond.exists : cond.notExists), ctx, ctx.assigner);
+    return {
+      kind: "raw",
+      condition: `${positive ? "EXISTS" : "NOT EXISTS"} (${plan.sql})`,
+      bindings: plan.bindings,
+      aliases: plan.outerRefs,
+      pruneable: false,
+    };
+  }
+  return cond as ExpressionCondition;
 }
 
 function isFilter(cond: ExpressionCondition): cond is ExpressionFilter {

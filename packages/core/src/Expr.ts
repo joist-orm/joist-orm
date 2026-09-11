@@ -101,17 +101,17 @@ export interface Expr<R, Src extends string = string> {
  * Declared here (not `query.ts`) so the relation join factories in `Tables.ts` (i.e. `a.books.as(b)`) can
  * return them without importing `query.ts`; `query.ts` re-constrains `A` to its `QuerySource`.
  */
-export interface InnerJoin<A> {
+export interface InnerJoin<A, C = ExpressionCondition> {
   readonly inner: A;
   readonly left?: never;
-  readonly on: ExpressionCondition;
+  readonly on: C;
   readonly keep?: boolean;
 }
 
-export interface LeftJoin<A> {
+export interface LeftJoin<A, C = ExpressionCondition> {
   readonly left: A;
   readonly inner?: never;
-  readonly on: ExpressionCondition;
+  readonly on: C;
   readonly keep?: boolean;
 }
 

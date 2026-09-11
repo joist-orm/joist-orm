@@ -2,11 +2,11 @@ import { expectTypeOf } from "expect-type";
 import {
   type DeleteStatement,
   type ExecuteResult,
-  type Expr,
   type ExprLike,
   type InsertStatement,
   type InsertValues,
   type Query,
+  type ScalarQuery,
   type SetQuery,
   type UpdateStatement,
   type UpdateValues,
@@ -427,7 +427,9 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       select: { id: a.id, title: b.title, fallback: b.title.coalesce("None") },
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<{ id: AuthorId; title: string | null; fallback: string }>>();
-  expectTypeOf(sourceTitle).toEqualTypeOf<Expr<string | null, never>>();
+  // When selecting a Book title through a reusable scalar query
+  // Then the query retains its scalar brand and allows SQL NULL when no Book is selected
+  expectTypeOf(sourceTitle).toEqualTypeOf<ScalarQuery<string>>();
 
   // When required SQL inputs are missing, undefined, null, or given the wrong native domain
   // Then configuration defaults, factories, and ORM-derived flags do not relax physical constraints

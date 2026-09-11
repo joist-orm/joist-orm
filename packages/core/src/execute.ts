@@ -1,8 +1,8 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
 import { type Column } from "./columns.ts";
+import { type SqlCondition } from "./conditions.ts";
 import { type DriverQueryResult } from "./drivers/Driver.ts";
 import { type Entity, isEntity } from "./Entity.ts";
-import { type ExpressionCondition } from "./EntityFilter.ts";
 import { type IdOf } from "./EntityManager.ts";
 import { type EntityMetadata } from "./EntityMetadata.ts";
 import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "./Expr.ts";
@@ -322,7 +322,7 @@ export function decodeStatementResult(
 type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
 type MutationFilter = {
-  readonly where?: ExpressionCondition | ExprLike<boolean>;
+  readonly where?: SqlCondition | ExprLike<boolean>;
   readonly allowAll?: boolean;
   readonly softDeletes?: "include" | "exclude";
 };
@@ -513,7 +513,7 @@ function assignmentToSql(meta: EntityMetadata, column: Column, value: unknown, c
 /** Checks the user predicate independently so metadata filters cannot turn a pruned guard into consent. */
 function mutationCondition(value: unknown, ctx: Ctx): SqlFragment | undefined {
   if (isExpr(value)) return asNode(value).toSql(ctx);
-  return conditionToSql(value as ExpressionCondition | undefined, ctx, true);
+  return conditionToSql(value as SqlCondition | undefined, ctx, true);
 }
 
 /** Only own enumerable POJO clauses count as input or explicit full-table consent. */

@@ -402,17 +402,22 @@ describe("EntityManager.execute", () => {
       async (operation) => {
         // Given a persisted Tag that must survive the rejected mutation unchanged
         await insertTag({ name: "Retained" });
+        // And a SQL table for the mutation target
         const em = newEntityManager();
         const t = table(Tag);
-        // And a domain alias predicate is nested beside a valid SQL table predicate
+        // And a domain predicate is in an optional group that would otherwise be pruned
         const domain = alias(Tag);
-        const where = { and: [t.id.eq("t:1"), domain.name.eq("Retained")] };
+        const where = {
+          and: [t.id.eq("t:1"), { or: [undefined, domain.name.eq("Retained")], pruneIfUndefined: "any" as const }],
+        };
         resetQueryCount();
         // When a mutation receives a find-only predicate despite allowAll
         const result =
           operation === "update"
-            ? em.execute({ update: t, set: { name: "Changed" }, where, allowAll: true })
-            : em.execute({ delete: t, where, allowAll: true });
+            ? // @ts-expect-error Domain predicates cannot guard SQL updates
+              em.execute({ update: t, set: { name: "Changed" }, where, allowAll: true })
+            : // @ts-expect-error Domain predicates cannot guard SQL deletes
+              em.execute({ delete: t, where, allowAll: true });
         // Then rejection happens before SQL and cannot silently discard part of the guard
         await expect(result).rejects.toThrow(
           "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",

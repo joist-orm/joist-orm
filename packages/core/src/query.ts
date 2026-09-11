@@ -1,9 +1,16 @@
 import { AliasAssigner } from "./AliasAssigner.ts";
 import { ConditionBuilder } from "./ConditionBuilder.ts";
+import {
+  type ConditionGroup,
+  type ConditionInput,
+  type SqlCondition,
+  type SqlPredicate,
+  type UnbrandedPredicate,
+  predicateBrand,
+} from "./conditions.ts";
 import { isDeferredAliasCondition } from "./DeferredAlias.ts";
 import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
-import { type ExpressionCondition, type ExpressionFilter } from "./EntityFilter.ts";
 import { type EntityMetadata, getBaseMeta } from "./EntityMetadata.ts";
 import {
   BaseExpr,
@@ -102,7 +109,8 @@ export type ExistsQuery = Subquery<unknown, string> | EntityQuery<Entity> | { re
  * where `booksForAuthor` is `query({ from: b, where: b.author_id.eq(a.id), select: b.id })`.
  */
 export type QueryCondition =
-  | Exclude<ExpressionCondition, ExpressionFilter>
+  | SqlPredicate
+  | UnbrandedPredicate
   | ((
       | { and: Array<QueryCondition | undefined>; or?: never; exists?: never; notExists?: never }
       | { or: Array<QueryCondition | undefined>; and?: never; exists?: never; notExists?: never }
@@ -132,7 +140,7 @@ export type QueryJoins = readonly (QueryJoin | undefined)[];
 /**
  * An expression order-by entry: the direction is the key and the expression is the value, unlike
  * the keyed form's field name and `"ASC" | "DESC"` value. `never` on the other key keeps an
- * entry to one direction, the same trick `ExpressionFilter` uses for `and`/`or`. `nulls` is
+ * entry to one direction, the same trick `ConditionGroup` uses for `and`/`or`. `nulls` is
  * `NULLS FIRST/LAST`.
  *
  * When select keys are known, exclude them so a keyed sort cannot be silently ignored inside an
@@ -736,7 +744,7 @@ sql.boolean = sql<boolean>;
 sql.booleanOrNull = sql<boolean | null>;
 
 /** A raw condition for `where`, `having`, or `on`. */
-sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): ExpressionCondition {
+sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
   return deferredCondition((ctx) => new TemplateExpr(strings, values).toSql(ctx));
 };
 
@@ -1321,7 +1329,7 @@ export class Ctx implements ExprContext {
     return fail(`${describeHandle(handle)} is not in this query's from/join`);
   }
 
-  conditionToSql(cond: ExpressionCondition): SqlFragment | undefined {
+  conditionToSql(cond: SqlCondition): SqlFragment | undefined {
     // Inside another expression (i.e. a `sql` template), keep `a OR b` grouped
     return conditionToSql(cond, this, false);
   }
@@ -1680,7 +1688,7 @@ export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLe
   checkCondition(cond);
   if (cond === undefined) return undefined;
   const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx)!;
-  const filter: ExpressionFilter = isFilter(resolved) ? resolved : { and: [resolved] };
+  const filter: ConditionGroup<ConditionInput> = isFilter(resolved) ? resolved : { and: [resolved] };
   const cb = new ConditionBuilder();
   cb.maybeAddExpression(filter);
   const parsed = cb.toExpressionFilter();
@@ -1695,7 +1703,10 @@ export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLe
  * I.e. an invalid Author-name condition stays invalid even inside a group that would otherwise prune.
  */
 function checkCondition(value: unknown): void {
-  if (isDeferredAliasCondition(value))
+  if (
+    isDeferredAliasCondition(value) ||
+    (value && typeof value === "object" && predicateBrand in value && value[predicateBrand] === "domain")
+  )
     fail(
       "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
     );
@@ -1724,7 +1735,7 @@ function checkCondition(value: unknown): void {
   } else if (condition.kind === "raw") {
     checkConditionKeys(
       condition,
-      ["kind", "aliases", "condition", "bindings", "pruneable", deferredSym],
+      ["kind", "aliases", "condition", "bindings", "pruneable", deferredSym, predicateBrand],
       "Query raw condition",
     );
     if (
@@ -1736,7 +1747,11 @@ function checkCondition(value: unknown): void {
     )
       fail("Malformed query raw condition");
   } else if (condition.kind === "column") {
-    checkConditionKeys(condition, ["kind", "alias", "column", "dbType", "cond", "pruneable"], "Query column condition");
+    checkConditionKeys(
+      condition,
+      ["kind", "alias", "column", "dbType", "cond", "pruneable", predicateBrand],
+      "Query column condition",
+    );
     if (
       typeof condition.alias !== "string" ||
       typeof condition.column !== "string" ||
@@ -1785,7 +1800,7 @@ function checkCondition(value: unknown): void {
   }
 }
 
-/** Conditions use own enumerable POJO fields, with the SQL expression resolver symbol allowed. */
+/** Conditions use own enumerable POJO fields, with predicate-brand and SQL-resolver symbols allowed. */
 function checkConditionKeys(value: object, allowed: readonly PropertyKey[], description: string): void {
   if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
     fail(`${description} must be a plain POJO`);
@@ -1800,7 +1815,7 @@ function checkConditionKeys(value: object, allowed: readonly PropertyKey[], desc
  * Converts query-valued predicates to SQL conditions for the shared condition builder.
  * Keeps each subquery's projection and reports its outer aliases for join pruning.
  */
-function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): ExpressionCondition | undefined {
+function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): ConditionInput | undefined {
   if (cond === undefined) return undefined;
   if ("and" in cond && cond.and) {
     return {
@@ -1822,10 +1837,10 @@ function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): Expr
       pruneable: false,
     };
   }
-  return cond as ExpressionCondition;
+  return cond as ConditionInput;
 }
 
-function isFilter(cond: ExpressionCondition): cond is ExpressionFilter {
+function isFilter(cond: ConditionInput): cond is ConditionGroup<ConditionInput> {
   return ("and" in cond && cond.and !== undefined) || ("or" in cond && cond.or !== undefined);
 }
 

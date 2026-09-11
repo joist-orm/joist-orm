@@ -1,6 +1,7 @@
 import { groupBy } from "joist-utils";
 
 import { type Column } from "./columns.ts";
+import { type SqlCondition } from "./conditions.ts";
 // Load-order only: without this, the built cjs/esm module graph evaluates relations/* before their
 // base classes exist ("Class extends value undefined"); keep it even though no symbol is imported.
 import "./configure.ts";
@@ -33,7 +34,7 @@ import {
   deferredCondition,
   isExpr,
 } from "./Expr.ts";
-import { type ExpressionCondition, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index.ts";
+import { getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index.ts";
 import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
 import { type ParsedValueFilter, makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "./QueryParser.ts";
@@ -107,7 +108,7 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = Tabl
     ? {}
     : {
         /** Builds an AND condition from local domain fields, without implicit joins. */
-        where(filter: TableFilter<T>): ExpressionCondition;
+        where(filter: TableFilter<T>): SqlCondition;
       });
 
 /** Domain filters for fields stored on this physical table, without relationship traversal. */
@@ -218,31 +219,31 @@ export interface ReferenceColumn<U extends Entity, N extends null | never, Src e
  * through `parent_author_id`, like an explicit join with `on: c.parent.eq(a.id)`.
  */
 export interface PolyReference<U extends Entity, N extends null | never> extends ReferenceJoin<U, N> {
-  eq(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): ExpressionCondition;
-  ne(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): ExpressionCondition;
-  in(values: Array<U | TaggedId> | ExprLike<IdOf<U> | null> | undefined): ExpressionCondition;
+  eq(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
+  ne(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
+  in(values: Array<U | TaggedId> | ExprLike<IdOf<U> | null> | undefined): SqlCondition;
 }
 
 export interface PrimitiveColumn<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
-  eq(value: V | ExprLike<V | N> | N | undefined): ExpressionCondition;
-  ne(value: V | ExprLike<V | N> | N | undefined): ExpressionCondition;
-  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition;
-  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition;
-  gt(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
-  gte(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
-  lt(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
-  lte(value: V | ExprLike<V | N> | undefined): ExpressionCondition;
-  like(value: V | undefined): ExpressionCondition;
-  ilike(value: V | undefined): ExpressionCondition;
-  search(value: V | undefined): ExpressionCondition;
-  between(v1: V | undefined, v2: V | undefined): ExpressionCondition;
+  eq(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
+  ne(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
+  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition;
+  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition;
+  gt(value: V | ExprLike<V | N> | undefined): SqlCondition;
+  gte(value: V | ExprLike<V | N> | undefined): SqlCondition;
+  lt(value: V | ExprLike<V | N> | undefined): SqlCondition;
+  lte(value: V | ExprLike<V | N> | undefined): SqlCondition;
+  like(value: V | undefined): SqlCondition;
+  ilike(value: V | undefined): SqlCondition;
+  search(value: V | undefined): SqlCondition;
+  between(v1: V | undefined, v2: V | undefined): SqlCondition;
   // need to move to ArrayColumn
   // ...added the `string` to support jsonb contains like `WHERE profile @> '{"age": 25}'`
   // Ideally this would go in a JsonbColumn
-  contains(value: string | V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition;
-  ncontains(value: string | V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition;
-  overlaps(value: V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition;
-  noverlaps(value: V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition;
+  contains(value: string | V | PrimitiveColumn<V, any> | N | undefined): SqlCondition;
+  ncontains(value: string | V | PrimitiveColumn<V, any> | N | undefined): SqlCondition;
+  overlaps(value: V | PrimitiveColumn<V, any> | N | undefined): SqlCondition;
+  noverlaps(value: V | PrimitiveColumn<V, any> | N | undefined): SqlCondition;
 
   /**
    * Adds a JSON path existence condition, using the `@?` operator.
@@ -251,7 +252,7 @@ export interface PrimitiveColumn<V, N extends null | never, Src extends string =
    * support parameterized JSON path expressions. The entire `jsonPath` is treated as a parameter,
    * so this is safe from SQL injection.
    */
-  pathExists(jsonPath: string | undefined): ExpressionCondition;
+  pathExists(jsonPath: string | undefined): SqlCondition;
 
   /**
    * Adds a JSON path predicate condition, using the `@@` operator.
@@ -260,7 +261,7 @@ export interface PrimitiveColumn<V, N extends null | never, Src extends string =
    * support parameterized JSON path expressions. The entire `jsonPath` is treated as a parameter,
    * so this is safe from SQL injection.
    */
-  pathIsTrue(jsonPath: string | undefined): ExpressionCondition;
+  pathIsTrue(jsonPath: string | undefined): SqlCondition;
 
   /**
    * Add `exp` to the query, which should include the operator & expression and any
@@ -272,23 +273,23 @@ export interface PrimitiveColumn<V, N extends null | never, Src extends string =
    * a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])`
    * ```
    */
-  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
+  raw(exp: string, bindings: readonly any[] | undefined): SqlCondition;
 }
 
 export interface EntityColumn<T, N extends null | never = never, Src extends string = string> extends Expr<
   IdOf<T> | N,
   Src
 > {
-  eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
+  eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   // Adding `| null` for GraphQL support
-  in(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  nin(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition;
-  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
+  in(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  nin(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  raw(exp: string, bindings: readonly any[] | undefined): SqlCondition;
 }
 
 export const tableMgmt = Symbol("tableMgmt");
@@ -429,7 +430,7 @@ class TableColumn extends BaseExpr {
   }
 
   /** Encodes literals when the condition is created and renders with each query's aliases. */
-  addCondition(value: ParsedValueFilter<unknown>): ExpressionCondition {
+  addCondition(value: ParsedValueFilter<unknown>): SqlCondition {
     const encoded = mapToDb(this.column, value);
     return deferredCondition((ctx) => {
       const left = this.toSql(ctx);
@@ -439,7 +440,7 @@ class TableColumn extends BaseExpr {
   }
 
   /** Renders raw operators against the same quoted column SQL as other expressions. */
-  protected addRawCondition(exp: string, bindings: readonly any[]): ExpressionCondition {
+  protected addRawCondition(exp: string, bindings: readonly any[]): SqlCondition {
     return deferredCondition((ctx) => {
       const left = this.toSql(ctx);
       return { sql: `${left.sql} ${exp}`, bindings: [...left.bindings, ...bindings], refs: left.refs };
@@ -447,7 +448,7 @@ class TableColumn extends BaseExpr {
   }
 
   /** Uses column filter conversions for literals and shared comparisons for expressions and null equality. */
-  protected compare(op: string, value: unknown): ExpressionCondition {
+  protected compare(op: string, value: unknown): SqlCondition {
     if (value === undefined || isExpr(value) || (value === null && (op === "=" || op === "!="))) {
       return super.compare(op, value);
     }
@@ -464,7 +465,7 @@ class TableColumn extends BaseExpr {
    * to render their complete SQL.
    * Negated array operators wrap the complete comparison in NOT.
    */
-  protected compareToExpr(op: string, value: ExprLike<any>, negate = false): ExpressionCondition {
+  protected compareToExpr(op: string, value: ExprLike<any>, negate = false): SqlCondition {
     if (negate) {
       return deferredCondition((ctx) => {
         const comparison = ctx.conditionToSql(this.compareToExpr(op, value))!;
@@ -476,28 +477,28 @@ class TableColumn extends BaseExpr {
 }
 
 class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn implements PrimitiveColumn<V, N> {
-  between(v1: V | undefined, v2: V | undefined): ExpressionCondition {
+  between(v1: V | undefined, v2: V | undefined): SqlCondition {
     if (v1 === undefined || v2 === undefined) return skipCondition;
     return this.addCondition({ kind: "between", value: [v1, v2] });
   }
 
-  like(value: V | undefined): ExpressionCondition {
+  like(value: V | undefined): SqlCondition {
     if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "like", value });
   }
 
-  ilike(value: V | undefined): ExpressionCondition {
+  ilike(value: V | undefined): SqlCondition {
     if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "ilike", value });
   }
 
-  search(value: V | undefined): ExpressionCondition {
+  search(value: V | undefined): SqlCondition {
     // Check !value so that empty strings are pruned
     if (!value) return skipCondition;
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 
-  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition {
+  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inList("IN", values);
     if (values.includes(null)) {
@@ -509,57 +510,57 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn impleme
     }
   }
 
-  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition {
+  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inList("NOT IN", values);
     return this.addCondition({ kind: "nin", value: values.filter((v) => v !== null) as V[] });
   }
 
   // V will already be an array
-  contains(v1: string | V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition {
+  contains(v1: string | V | PrimitiveColumn<V, any> | N | undefined): SqlCondition {
     if (v1 === undefined) return skipCondition;
     if (isExpr(v1)) return this.compareToExpr("@>", v1);
     return this.addCondition({ kind: "contains", value: v1 as any });
   }
 
   // V will already be an array
-  ncontains(v1: string | V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition {
+  ncontains(v1: string | V | PrimitiveColumn<V, any> | N | undefined): SqlCondition {
     if (v1 === undefined) return skipCondition;
     if (isExpr(v1)) return this.compareToExpr("@>", v1, true);
     return this.addCondition({ kind: "ncontains", value: v1 as any });
   }
 
   // V will already be an array
-  overlaps(v1: V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition {
+  overlaps(v1: V | PrimitiveColumn<V, any> | N | undefined): SqlCondition {
     if (v1 === undefined) return skipCondition;
     if (isExpr(v1)) return this.compareToExpr("&&", v1);
     return this.addCondition({ kind: "overlaps", value: v1 as any });
   }
 
-  noverlaps(v1: V | PrimitiveColumn<V, any> | N | undefined): ExpressionCondition {
+  noverlaps(v1: V | PrimitiveColumn<V, any> | N | undefined): SqlCondition {
     if (v1 === undefined) return skipCondition;
     if (isExpr(v1)) return this.compareToExpr("&&", v1, true);
     return this.addCondition({ kind: "noverlaps", value: v1 as any });
   }
 
-  pathExists(jsonPath: string | undefined): ExpressionCondition {
+  pathExists(jsonPath: string | undefined): SqlCondition {
     if (jsonPath === undefined) return skipCondition;
     return this.addCondition({ kind: "jsonPathExists", value: jsonPath });
   }
 
-  pathIsTrue(jsonPath: string | undefined): ExpressionCondition {
+  pathIsTrue(jsonPath: string | undefined): SqlCondition {
     if (jsonPath === undefined) return skipCondition;
     return this.addCondition({ kind: "jsonPathPredicate", value: jsonPath });
   }
 
-  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition {
+  raw(exp: string, bindings: readonly any[] | undefined): SqlCondition {
     if (bindings === undefined) return skipCondition;
     return this.addRawCondition(exp, bindings);
   }
 }
 
 class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
-  in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
@@ -576,7 +577,7 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     }
   }
 
-  nin(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  nin(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
@@ -588,23 +589,23 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     }
   }
 
-  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.compareId(">", "gt", value);
   }
 
-  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.compareId(">=", "gte", value);
   }
 
-  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  lt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.compareId("<", "lt", value);
   }
 
-  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  lte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.compareId("<=", "lte", value);
   }
 
-  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition {
+  raw(exp: string, bindings: readonly any[] | undefined): SqlCondition {
     if (bindings === undefined) return skipCondition;
     return this.addRawCondition(exp, bindings);
   }
@@ -626,7 +627,7 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     return { [kind]: requireTable(other), on: this.eq(idColumnOf(other)) };
   }
 
-  private compareId(op: string, kind: "gt" | "gte" | "lt" | "lte", value: unknown): ExpressionCondition {
+  private compareId(op: string, kind: "gt" | "gte" | "lt" | "lte", value: unknown): SqlCondition {
     if (value === undefined) return skipCondition;
     if (value === null) throw new Error("Unsupported");
     if (isExpr(value)) return this.compareToExpr(op, value);
@@ -642,16 +643,16 @@ class PolyReferenceImpl<T extends Entity> {
   ) {}
 
   /** Compares to a tagged id, an entity, or another table's id column, which picks the component (`c.parent.eq(a.id)`). */
-  eq(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  eq(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.addEqOrNe("eq", value);
   }
 
-  ne(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): ExpressionCondition {
+  ne(value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     return this.addEqOrNe("ne", value);
   }
 
   // We required tagged ids for polys
-  in(values: Array<T | TaggedId> | ExprLike<IdOf<T> | null> | undefined): ExpressionCondition {
+  in(values: Array<T | TaggedId> | ExprLike<IdOf<T> | null> | undefined): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inSubquery(values);
     // Split up the ids by constructor
@@ -688,7 +689,7 @@ class PolyReferenceImpl<T extends Entity> {
    * i.e. `c.parent.in(query({ from: a, ..., select: a.id }))`: like `eq` against a table column, the
    * subquery's agreed ID domain picks the component, i.e. authors pick `parent_author_id`.
    */
-  private inSubquery(values: ExprLike<any>): ExpressionCondition {
+  private inSubquery(values: ExprLike<any>): SqlCondition {
     // Only actual subqueries expose this getter; importing query.ts would create a load-order cycle.
     const selected = asNode(values).subquerySelect;
     const outputType = selected?.outputType;
@@ -715,7 +716,7 @@ class PolyReferenceImpl<T extends Entity> {
   private addEqOrNe(
     kind: "eq" | "ne",
     value: T | TaggedId | ExprLike<IdOf<T> | null> | null | undefined,
-  ): ExpressionCondition {
+  ): SqlCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value instanceof TableColumn) {
@@ -765,7 +766,7 @@ export const m2mJoinTable: unique symbol = Symbol("joist.m2mJoinTable");
 
 export interface M2mJoinTable {
   handle: JoinTableHandle;
-  on: ExpressionCondition;
+  on: SqlCondition;
 }
 
 /** The runtime identity of an m2m join table in a query, i.e. `authors_to_tags`; it has no entity. */
@@ -960,9 +961,9 @@ function physicalRelation(meta: EntityMetadata, key: string): Field | undefined 
  * I.e. Author.firstName uses the first_name column but resolves its alias in each query scope.
  * Collections, polymorphic references, and inherited nonlocal fields require explicit expressions.
  */
-function tableWhere(mgmt: TableMgmt, filter: object): ExpressionCondition {
+function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
   const { meta } = mgmt;
-  const conditions: ExpressionCondition[] = [];
+  const conditions: SqlCondition[] = [];
   if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
     throw new Error(`Expected a domain field filter for ${meta.type}`);
   }

@@ -1,14 +1,25 @@
 import { expectTypeOf } from "expect-type";
 import {
+  type ColumnCondition,
   type Expr,
   type ExprBrand,
+  type ExpressionCondition,
+  type ExpressionFilter,
   type Loaded,
+  type PredicateBrand,
   type Query,
+  type QueryCondition,
+  type RawCondition,
   type ScalarQuery,
+  type SqlCondition,
+  type SqlPredicate,
   type Subquery,
   alias,
   type exprBrand,
+  getAliasMgmt,
   query,
+  skipCondition,
+  sql,
   table,
   tables,
 } from "joist-orm";
@@ -30,6 +41,12 @@ import {
 import { newEntityManager } from "src/testEm";
 
 describe("EntityManager.rawQueries.types", () => {
+  it("type-checks domain and SQL predicate boundaries", () => {
+    // Given predicate assertions using generated Author and Book types
+    // When checking which public API accepts each predicate
+    // Then invalid calls are checked without executing them
+    expect(typeof predicateTypeAssertions).toBe("function");
+  });
   it("type-checks entity population", () => {
     // Given compile-time assertions for Author population
     // When the type checker checks the query results and rejected hints
@@ -41,6 +58,109 @@ describe("EntityManager.rawQueries.types", () => {
     expect(typeof typeAssertions).toBe("function");
   });
 });
+
+/**
+ * Checks recursive predicate boundaries and the deliberate unbranded escape hatch.
+ * This function is checked by tsc but never called, so rejected queries do not execute.
+ */
+function predicateTypeAssertions() {
+  // Given Author and Book SQL tables and an Author domain alias
+  const em = newEntityManager();
+  const [a, b] = tables(Author, Book);
+  const domain = alias(Author);
+  // And a custom raw predicate that must resolve the domain alias in find
+  const custom = getAliasMgmt(domain).condition((_meta, sqlAlias) => ({
+    kind: "raw",
+    aliases: [sqlAlias],
+    condition: `${sqlAlias}.first_name = ?`,
+    bindings: ["Alice"],
+    pruneable: false,
+  }));
+  // And recursive domain conditions with omitted optional filters
+  const domainGroup = { and: [{ or: [domain.firstName.eq("Alice"), custom, skipCondition, undefined] }] };
+  // And recursive SQL conditions with a skipped optional filter
+  const sqlGroup = {
+    or: [{ and: [a.first_name.eq("Alice"), a.where({ age: 30 }), sql.condition`${a.age} > ${18}`, skipCondition] }],
+  };
+  // And a legacy raw condition without either brand
+  const raw: RawCondition = { kind: "raw", aliases: ["a"], condition: "a.age > ?", bindings: [18], pruneable: false };
+  // And a legacy column condition without either brand
+  const column: ColumnCondition = {
+    kind: "column",
+    alias: "a",
+    column: "age",
+    dbType: "int",
+    cond: { kind: "gt", value: 18 },
+  };
+
+  // When assigning conditions to their public types
+  // Then domain and SQL groups retain separate leaves while legacy conditions fit both
+  expectTypeOf(custom).toEqualTypeOf<RawCondition & PredicateBrand<"domain">>();
+  expectTypeOf(domain.firstName.eq("Alice")).toEqualTypeOf<ExpressionCondition>();
+  expectTypeOf(a.first_name.eq("Alice")).toEqualTypeOf<SqlCondition>();
+  expectTypeOf(a.id.count().gt(0)).toEqualTypeOf<SqlCondition>();
+  expectTypeOf(sql.condition`${a.age} > ${18}`).toEqualTypeOf<SqlCondition>();
+  expectTypeOf(domainGroup).toExtend<ExpressionFilter>();
+  expectTypeOf(domainGroup).toExtend<ExpressionCondition>();
+  expectTypeOf(sqlGroup).toExtend<SqlCondition>();
+  expectTypeOf(sqlGroup).toExtend<QueryCondition>();
+  expectTypeOf<SqlPredicate>().toExtend<PredicateBrand<"sql">>();
+  expectTypeOf(raw).toExtend<ExpressionCondition>();
+  expectTypeOf(raw).toExtend<SqlCondition>();
+  expectTypeOf(column).toExtend<ExpressionCondition>();
+  expectTypeOf(column).toExtend<SqlCondition>();
+  // @ts-expect-error Nested SQL leaves cannot become domain conditions
+  const invalidDomain: ExpressionCondition = sqlGroup;
+  // @ts-expect-error Nested domain leaves cannot become SQL conditions
+  const invalidSql: SqlCondition = domainGroup;
+  void invalidDomain;
+  void invalidSql;
+
+  // When using each predicate in its intended API
+  // Then find, scopes, SQL clauses, mutations, and EXISTS accept their own recursive conditions
+  em.find(Author, { as: domain }, { conditions: domainGroup });
+  em.find(Author, {}, { conditions: { and: [raw, column, skipCondition] } });
+  Author.adult.where((a) => ({ or: [a.firstName.eq("Alice"), { and: [skipCondition, a.age.gt(18)] }] })).find(em);
+  Author.adult.where((a) => getAliasMgmt(a).condition(() => raw)).find(em);
+  Author.adult.where(() => skipCondition).find(em);
+  em.query({ from: a, where: sqlGroup, having: sqlGroup, join: [{ inner: b, on: sqlGroup }], select: a.id });
+  em.query({ from: a, where: { and: [raw, column, skipCondition] }, select: a.id });
+  em.execute({ update: a, set: { first_name: "Alice" }, where: sqlGroup });
+  em.execute({ delete: a, where: { and: [raw, column, skipCondition] } });
+  const exists = {
+    or: [sqlGroup, { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
+  } satisfies QueryCondition;
+  em.query({ from: a, where: exists, select: a.id });
+
+  // When predicates cross the domain and SQL boundary, even inside boolean groups
+  // Then all public condition entry points reject the foreign brand
+  // @ts-expect-error Find cannot resolve table predicates
+  em.find(Author, {}, { conditions: sqlGroup });
+  // @ts-expect-error Scopes cannot return nested SQL predicates
+  Author.adult.where(() => sqlGroup);
+  // @ts-expect-error Scopes cannot return SQL expression predicates
+  Author.adult.where(() => a.id.count().gt(0));
+  // @ts-expect-error Find cannot resolve SQL template predicates
+  em.find(Author, {}, { conditions: { and: [sql.condition`${a.age} > ${18}`] } });
+  // @ts-expect-error SQL WHERE cannot resolve domain aliases
+  em.query({ from: a, where: domainGroup, select: a.id });
+  // @ts-expect-error SQL HAVING cannot resolve domain aliases
+  em.query({ from: a, having: domainGroup, select: a.id });
+  // @ts-expect-error SQL ON cannot resolve domain aliases
+  em.query({ from: a, join: [{ inner: b, on: domainGroup }], select: a.id });
+  // @ts-expect-error Custom alias raw conditions retain the domain brand
+  em.query({ from: a, where: custom, select: a.id });
+  // @ts-expect-error SQL UPDATE cannot resolve domain aliases
+  em.execute({ update: a, set: { first_name: "Alice" }, where: domainGroup });
+  // @ts-expect-error SQL DELETE cannot resolve domain aliases
+  em.execute({ delete: a, where: domainGroup });
+  em.query({
+    from: a,
+    // @ts-expect-error EXISTS cannot hide domain predicates inside its SQL query
+    where: { and: [{ exists: query({ from: b, where: domainGroup, select: b.id }) }] },
+    select: a.id,
+  });
+}
 
 /** Checks loaded query results and rejects hints that do not belong to the selected entity. */
 async function populateTypeAssertions() {

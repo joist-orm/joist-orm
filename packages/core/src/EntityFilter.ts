@@ -1,7 +1,7 @@
 import { type Alias } from "./Aliases.ts";
+import { type AndCondition, type DomainPredicate, type OrCondition, type UnbrandedPredicate } from "./conditions.ts";
 import { type Entity } from "./Entity.ts";
 import { type FindFilterOptions, type IdOf } from "./EntityManager.ts";
-import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
 import { type Scope, isScope, resolveScope } from "./scopes.ts";
 import { type FieldsOf, type FilterOf, type OrderOf } from "./typeMap.ts";
 
@@ -120,13 +120,10 @@ export type ValueFilter<V, N> =
  *
  * This is the user-facing DSL that internally will be converted to `ParsedExpressionFilter.
  */
-export type ExpressionFilter = (
-  | { and: Array<ExpressionCondition | undefined>; or?: never }
-  | { or: Array<ExpressionCondition | undefined>; and?: never }
-) & { pruneIfUndefined?: "any" | "all" };
+export type ExpressionFilter = AndCondition<ExpressionCondition> | OrCondition<ExpressionCondition>;
 
-/** A user-facing filter for maybe-nested/maybe-simple conditions. */
-export type ExpressionCondition = ExpressionFilter | ColumnCondition | RawCondition;
+/** A domain-alias predicate or nested group for em.find and scopes, not SQL table expressions. */
+export type ExpressionCondition = ExpressionFilter | DomainPredicate | UnbrandedPredicate;
 
 /** Merges root-scope find settings with caller options, letting caller options win. */
 export function mergeFindOptions<T extends Entity>(

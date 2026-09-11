@@ -1,5 +1,6 @@
 // Erased imports keep domain predicates independent of the query parser at module load time.
 import { type AliasMgmt } from "./Aliases.ts";
+import { type PredicateBrand, brandPredicate } from "./conditions.ts";
 import { type EntityMetadata } from "./EntityMetadata.ts";
 import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
 
@@ -12,7 +13,7 @@ export type AliasResolver = (handle: AliasMgmt) => {
 };
 
 /** A domain condition whose SQL aliases are resolved afresh for each occurrence in em.find. */
-export interface DeferredAliasCondition<C = ColumnCondition | RawCondition> {
+export interface DeferredAliasCondition<C = ColumnCondition | RawCondition> extends PredicateBrand<"domain"> {
   [deferredAliasSym]: (resolve: AliasResolver) => C;
 }
 
@@ -26,7 +27,7 @@ export function withDeferredAlias<C extends object>(
   cond: C,
   resolve: (r: AliasResolver, copy: C) => void,
 ): C & DeferredAliasCondition<C> {
-  return Object.defineProperty(cond, deferredAliasSym, {
+  return Object.defineProperty(brandPredicate(cond, "domain"), deferredAliasSym, {
     value: (r: AliasResolver) => {
       const copy = { ...cond };
       resolve(r, copy);

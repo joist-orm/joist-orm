@@ -687,7 +687,7 @@ describe("EntityManager.execute", () => {
       expect(result).toEqual({ rowCount: 1, rows: ["Beta"] });
       expect(queries).toMatchInlineSnapshot(`
           [
-            "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t.name AS name FROM tags AS t WHERE t.name != $1 ORDER BY t.name ASC LIMIT $2 OFFSET $3) AS sq RETURNING t.name AS value",
+            "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t1.name AS name FROM tags AS t1 WHERE t1.name != $1 ORDER BY t1.name ASC LIMIT $2 OFFSET $3) AS sq RETURNING t.name AS value",
           ]
         `);
     });
@@ -734,7 +734,7 @@ describe("EntityManager.execute", () => {
       });
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM ((SELECT b.notes AS notes, b.author_id AS author_id, b.title AS title FROM books AS b WHERE b.id = $1 AND b.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq.author_id AS author_id, sq.title AS title FROM (SELECT b1.title AS title, b1.notes AS notes, b1.author_id AS author_id FROM books AS b1 WHERE b1.title = $2 AND b1.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
+         "INSERT INTO books AS b (title, notes, author_id) SELECT sq1.title, sq1.notes, sq1.author_id FROM ((SELECT b1.notes AS notes, b1.author_id AS author_id, b1.title AS title FROM books AS b1 WHERE b1.id = $1 AND b1.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq.author_id AS author_id, sq.title AS title FROM (SELECT b2.title AS title, b2.notes AS notes, b2.author_id AS author_id FROM books AS b2 WHERE b2.title = $2 AND b2.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq1 RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
        ]
       `);
       expect(await select("books")).toMatchObject([
@@ -777,7 +777,7 @@ describe("EntityManager.execute", () => {
         expect(encode).not.toHaveBeenCalled();
         expect(queries).toMatchInlineSnapshot(`
          [
-           "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq.first_name, sq.number_of_books, sq.business_address FROM (SELECT a.business_address AS business_address, a.number_of_books AS number_of_books, a.first_name AS first_name FROM authors AS a WHERE a.deleted_at IS NULL) AS sq RETURNING a.id AS value",
+           "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq.first_name, sq.number_of_books, sq.business_address FROM (SELECT a1.business_address AS business_address, a1.number_of_books AS number_of_books, a1.first_name AS first_name FROM authors AS a1 WHERE a1.deleted_at IS NULL) AS sq RETURNING a.id AS value",
          ]
         `);
         expect(await select("authors")).toMatchObject([
@@ -833,7 +833,7 @@ describe("EntityManager.execute", () => {
       expect(result).toEqual({ rowCount: 0, rows: [] });
       expect(queries).toMatchInlineSnapshot(`
         [
-          "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t.name AS name FROM tags AS t) AS sq RETURNING t.id AS value",
+          "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t1.name AS name FROM tags AS t1) AS sq RETURNING t.id AS value",
         ]
       `);
       // When the same empty source is executed without RETURNING
@@ -1482,7 +1482,7 @@ describe("EntityManager.execute", () => {
       expect(queries).toEqual([]);
     });
 
-    it.each(["with", "onConflict", "select", "join", "orderBy", "limit", "unionAll"])(
+    it.each(["ctes", "onConflict", "select", "join", "orderBy", "limit", "unionAll"])(
       "rejects excluded INSERT clause %s before an empty VALUES shortcut",
       async (clause) => {
         // Given an empty Tag import with an unsupported clause explicitly present

@@ -1,11 +1,11 @@
 import { expectTypeOf } from "expect-type";
 import {
   type ColumnCondition,
+  type ExistsQuery,
   type Expr,
   type ExprBrand,
   type ExpressionCondition,
   type ExpressionFilter,
-  type ExistsQuery,
   type Loaded,
   type PredicateBrand,
   type Query,

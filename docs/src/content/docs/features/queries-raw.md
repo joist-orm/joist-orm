@@ -426,6 +426,54 @@ Standalone query objects should use `satisfies Query`, not a `: Query` annotatio
 
 :::
 
+## CTEs: `with`
+
+`with` hoists `query(...)` values into a SQL `WITH` clause. It only _declares_ the CTE; to read one, put the same value in `from` or `join`, where it renders as the bare CTE name instead of an inlined `(SELECT ...)`:
+
+```ts
+const bookStats = query({
+  from: b,
+  groupBy: [b.author_id],
+  select: { authorId: b.author_id, bookCount: b.id.count() },
+  as: "book_stats",
+});
+
+const rows = await em.query({
+  with: bookStats,
+  from: a,
+  join: [{ inner: bookStats, on: bookStats.authorId.eq(a.id) }],
+  select: { name: a.first_name, bookCount: bookStats.bookCount },
+});
+```
+
+```sql
+WITH book_stats AS (
+  SELECT b.author_id AS "authorId", count(b.id)::int AS "bookCount"
+  FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id
+)
+SELECT a.first_name AS name, book_stats."bookCount" AS "bookCount"
+FROM authors AS a JOIN book_stats ON book_stats."authorId" = a.id
+WHERE a.deleted_at IS NULL
+```
+
+Because the value is the same [derived table](#derived-tables) either way, moving a subquery into a CTE is a one-line change, and its columns keep their types.
+
+`as` names the CTE; without it Joist generates one. `with` takes a single value or an array, and CTEs may read _earlier_ entries in that array:
+
+```ts
+const prolific = query({ from: bookStats, where: bookStats.bookCount.gte(2), select: { authorId: bookStats.authorId } });
+const rows = await em.query({
+  with: [bookStats, prolific],
+  from: a,
+  join: [{ inner: prolific, on: prolific.authorId.eq(a.id) }],
+  select: { name: a.first_name, id: prolific.authorId },
+});
+```
+
+An `undefined` entry drops out, and a CTE nothing reads anymore is pruned along with the join that read it, the same [pruning](#condition--join-pruning) joins get; `pruneJoins: false` keeps every CTE. A CTE also needs named columns, so entity-mode and scalar `query(...)` values are rejected, the same rule [set operands](#set-operations) follow.
+
+One `query(...)` value carries one SQL alias, so reading the same CTE twice in one query is an error; give each use its own value.
+
 ## Set Operations
 
 `em.query` supports native PostgreSQL set operations in one SQL statement. A compound query is a separate root shape, not an extra clause on a `{ from, select, ... }` query:
@@ -626,6 +674,7 @@ This is shorthand for `sql.condition` with the receiver as its first interpolati
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
 - `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
-- User-authored CTEs (`WITH ...`) — subqueries render as inline derived tables
+- `WITH RECURSIVE` — [`with`](#ctes-with) declares non-recursive CTEs only
+- A top-level `WITH` before a mutation (`WITH x AS (...) INSERT INTO ...`); an `INSERT ... SELECT` source can declare its own `with`, and `em.execute` runs reads through the same parsing as `em.query`
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) table

@@ -138,6 +138,17 @@ export type QueryJoin = InnerJoin<QuerySource, QueryCondition> | LeftJoin<QueryS
 export type QueryJoins = readonly (QueryJoin | undefined)[];
 
 /**
+ * A CTE declaration: a `query(...)` value with named columns, i.e. a POJO or set-operation select.
+ *
+ * Entity-mode and scalar `query(...)` shapes are excluded: a CTE must be a table shape, so it needs
+ * columns.
+ */
+export type WithSource = Subquery<unknown, string>;
+
+/** One CTE or an array of them; an `undefined` entry prunes, like any other clause. */
+export type WithInput = WithSource | readonly (WithSource | undefined)[];
+
+/**
  * An expression order-by entry: the direction is the key and the expression is the value, unlike
  * the keyed form's field name and `"ASC" | "DESC"` value. `never` on the other key keeps an
  * entry to one direction, the same trick `ConditionGroup` uses for `and`/`or`. `nulls` is
@@ -191,6 +202,15 @@ export type QuerySelect = QuerySource | ExprLike<any> | Record<string, ExprLike<
  * a standalone object use `satisfies Query` (or `satisfies Clauses` for a source-less fragment).
  */
 export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins> {
+  /**
+   * CTEs to include in a `WITH` clause, declared as `query(...)` values; either a single value or an array.
+   *
+   * I.e. `{ with: bookStats, from: a, join: [{ left: bookStats, on: ... }], select: { n: bookStats.n } }`.
+   *
+   * An `undefined` entry is ignored, and a CTE that nothing else in the query references will be pruned,
+   * the same pruning `join` gets (see "Pruning"); `pruneJoins: false` keeps every CTE.
+   */
+  with?: WithInput;
   join?: J;
   /** A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`. */
   where?: QueryCondition;
@@ -214,7 +234,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
 
 /** A whole query: `Clauses` plus its source. `query(q)` turns it into a value; `em.query(q)` runs it. */
 export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins>
-  extends Clauses<S, J>, Partial<Record<SetOperation | MutationKey | "with" | "ctes", never>> {
+  extends Clauses<S, J>, Partial<Record<SetOperation | MutationKey | "ctes", never>> {
   from: QuerySource;
 }
 
@@ -264,6 +284,8 @@ export type SetQuery<Operands extends readonly SetOperand[] = readonly [SetOpera
   [K in SetOperation]: { readonly [P in K]: Operands } & { readonly [P in Exclude<SetOperation, K>]?: never };
 }[SetOperation] & {
   // These clauses belong to the combined rows, not to an implicit first SELECT.
+  /** CTEs for the whole compound, visible to every operand; see `Clauses.with`. */
+  readonly with?: WithInput;
   readonly orderBy?:
     | Readonly<Record<string, OrderByDirection | undefined>>
     | readonly (Readonly<Record<string, OrderByDirection | undefined>> | undefined)[];
@@ -284,7 +306,6 @@ export type SetQuery<Operands extends readonly SetOperand[] = readonly [SetOpera
       | "softDeletes"
       | "pruneJoins"
       | MutationKey
-      | "with"
       | "ctes"
   ]?: never;
 };
@@ -477,7 +498,7 @@ export type CheckReadQuery<Q> = SetOperand extends Q
                 ? Q[K] extends readonly unknown[]
                   ? CheckReadQuery<Q[K]>
                   : unknown
-                : K extends "orderBy" | "limit" | "offset" | "as"
+                : K extends "with" | "orderBy" | "limit" | "offset" | "as"
                   ? unknown
                   : never;
             };
@@ -1035,6 +1056,7 @@ const SET_OPERATIONS: Record<SetOperation, string> = {
 const MUTATION_KEYS: readonly MutationKey[] = ["insert", "update", "delete", "values", "set", "returning", "allowAll"];
 
 const READ_KEYS: readonly (keyof Clauses | "from" | "as")[] = [
+  "with",
   "from",
   "join",
   "where",
@@ -1109,7 +1131,7 @@ function isSetQuery(value: unknown): value is SetQuery<readonly SetOperand[]> {
 function setOperands(q: SetQuery<readonly SetOperand[]>): [SetOperation, readonly SetOperand[]] {
   const keys = (Object.keys(SET_OPERATIONS) as SetOperation[]).filter((key) => key in q);
   if (keys.length !== 1) fail("A set query requires exactly one operation key");
-  validateQueryKeys(q, [keys[0], "orderBy", "limit", "offset", "as"], "Set queries");
+  validateQueryKeys(q, [keys[0], "with", "orderBy", "limit", "offset", "as"], "Set queries");
   const operands = q[keys[0]];
   if (!Array.isArray(operands) || operands.length < 2) fail("Set operations require at least two operands");
   return [keys[0], operands];
@@ -1250,7 +1272,10 @@ class OutputExpr extends BaseExpr {
 function parseSetQuery(q: SetQuery<readonly SetOperand[]>, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
   const [operation, operands] = setOperands(q);
   const output = queryOutput(q);
-  const plans = operands.map((operand) => parseQuery(toQuery(operand), parent, assigner));
+  // A compound's CTEs need a scope of their own, between the enclosing query and the operands.
+  const ctx = new Ctx(assigner, parent);
+  const ctes = registerCtes(q, ctx, assigner);
+  const plans = operands.map((operand) => parseQuery(toQuery(operand), ctx, assigner));
   let sql = "";
   for (const plan of plans) {
     let branch = plan.sql;
@@ -1271,10 +1296,30 @@ function parseSetQuery(q: SetQuery<readonly SetOperand[]>, parent: Ctx | undefin
     sql += " OFFSET ?";
     bindings.push(q.offset);
   }
+  // Prune unused CTEs, the same rule `pruneJoins` applies to an ordinary query.
+  // A CTE can only read earlier siblings, so going last to first means every CTE that could read this
+  // one was already visited, and its own reads are already in `referenced`. That makes one pass enough;
+  // first to last would have to repeat until the set stopped growing. `unshift` restores WITH order.
+  const referenced = new Set(plans.flatMap((plan) => plan.outerRefs));
+  const keptCtes: ParsedCte[] = [];
+  for (let i = ctes.length - 1; i >= 0; i--) {
+    const cte = ctes[i];
+    if (!referenced.has(cte.alias)) continue;
+    for (const ref of cte.plan.outerRefs) referenced.add(ref);
+    keptCtes.unshift(cte);
+  }
+  if (keptCtes.length > 0) {
+    const clause = withFragment(keptCtes);
+    sql = clause.sql + sql;
+    bindings.unshift(...clause.bindings);
+  }
+  // Our own CTE names are not aliases of the enclosing query, so they must not count as correlations.
+  const cteAliases = new Set(ctes.map((cte) => cte.alias));
+  const outerRefs = [...ctx.outerRefs, ...plans.flatMap((plan) => plan.outerRefs)];
   return {
     sql,
     bindings,
-    outerRefs: [...new Set(plans.flatMap((plan) => plan.outerRefs))],
+    outerRefs: [...new Set(outerRefs.filter((ref) => !cteAliases.has(ref)))],
     output,
     decodeRows: plans[0].decodeRows,
   };
@@ -1307,6 +1352,12 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
  */
 export class Ctx implements ExprContext {
   private aliases = new Map<object, string>();
+  /** The subset of `aliases` that are CTE names, so a source reads them bare instead of inlining them. */
+  private ctes = new Map<object, string>();
+  /** Declared `with` entries whose bodies are not parsed yet; reading one is a forward reference. */
+  private pendingCtes = new Map<object, string>();
+  /** CTEs already read by this query's `from`/`join`, so a second read fails instead of colliding. */
+  private usedCtes = new Set<object>();
   readonly outerRefs = new Set<string>();
 
   constructor(
@@ -1314,8 +1365,61 @@ export class Ctx implements ExprContext {
     private parent: Ctx | undefined,
   ) {}
 
+  /**
+   * One handle can hold only one alias per query, so a value used twice must be told apart, not
+   * silently collapsed into the second registration's alias.
+   */
   register(handle: object, alias: string): void {
+    if (this.aliases.has(handle)) {
+      fail(
+        `${describeHandle(handle)} is already in this query's \`with\`/\`from\`/\`join\`; use a separate table(...)/query(...) value for each use`,
+      );
+    }
     this.aliases.set(handle, alias);
+  }
+
+  /** Names every `with` entry up front, so a CTE reading a later sibling is reported, not inlined. */
+  declareCte(handle: object, alias: string): void {
+    this.pendingCtes.set(handle, alias);
+  }
+
+  /** Brings a pending CTE into scope, for the sources and columns that may now read it. */
+  promoteCte(handle: object): void {
+    const alias = this.pendingCtes.get(handle) ?? fail("CTE was not declared");
+    this.pendingCtes.delete(handle);
+    this.ctes.set(handle, alias);
+    this.register(handle, alias);
+  }
+
+  /**
+   * The CTE name for `handle`, looking in the enclosing queries too, because a CTE is in scope for the
+   * whole statement.
+   *
+   * Unlike `aliasFor`, a hit in an enclosing query is not added to `outerRefs`: reading a CTE by name
+   * is not a correlated reference, so it must not keep an enclosing join alive.
+   */
+  cteAliasFor(handle: object): string | undefined {
+    return this.ctes.get(handle) ?? this.parent?.cteAliasFor(handle);
+  }
+
+  /** Whether `handle` is a CTE that is not parsed yet, i.e. itself or a later `with` entry. */
+  isPendingCte(handle: object): boolean {
+    return this.pendingCtes.has(handle) || (this.parent?.isPendingCte(handle) ?? false);
+  }
+
+  /**
+   * One handle holds one alias per query, so a CTE read twice here could not be told apart.
+   *
+   * This checks only this query, not the enclosing ones: a nested subquery that reads the same CTE has
+   * its own FROM, and is fine.
+   */
+  useCte(handle: object): void {
+    if (this.usedCtes.has(handle)) {
+      fail(
+        `${describeHandle(handle)} is already in this query's \`from\`/\`join\`; use a separate query(...) value for each use`,
+      );
+    }
+    this.usedCtes.add(handle);
   }
 
   aliasFor(handle: object): string {
@@ -1355,6 +1459,12 @@ interface ParsedSource {
   meta: EntityMetadata | undefined;
 }
 
+/** A parsed `with` entry: the CTE's name and its body, ready to render into the WITH clause. */
+interface ParsedCte {
+  alias: string;
+  plan: Plan;
+}
+
 interface ParsedJoin {
   kind: "inner" | "left";
   source: ParsedSource;
@@ -1379,6 +1489,9 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
   const ctx = new Ctx(assigner, parent);
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
+
+  // 0. Compile CTEs first: they are in scope for every source below, and cannot read those sources.
+  const ctes = registerCtes(q, ctx, assigner);
 
   // 1. Register every source before generating SQL, so conditions can resolve their aliases.
   const parseFrom = registerSource(q.from, ctx, assigner);
@@ -1418,7 +1531,13 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   const orderBys = orderBysToSql(q, ctx);
 
   // 3. Prune.
-  const kept = pruneJoins(q, from, joins, [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined));
+  const { joins: kept, ctes: keptCtes } = pruneJoins(
+    q,
+    from,
+    joins,
+    ctes,
+    [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined),
+  );
   // Joins emit in declaration order, so an ON may only reference sources declared before it; a forward
   // reference would reach PG as invalid SQL ("missing FROM-clause entry"). Reordering is not offered:
   // it is not semantics-preserving once INNER and LEFT joins mix, and the caller's fix is trivial.
@@ -1440,6 +1559,8 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
 
   // 4. Assemble.
   const out: SqlFragment[] = [];
+  // WITH leads the statement, so its bindings must be pushed before the SELECT's.
+  if (keptCtes.length > 0) out.push(withFragment(keptCtes));
   out.push({ sql: `SELECT ${q.distinct ? "DISTINCT " : ""}`, bindings: [], refs: [] });
   out.push(joinFragmentParts(selects, ", "));
   out.push({ sql: ` FROM ${from.sql}`, bindings: from.bindings, refs: [] });
@@ -1477,6 +1598,25 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
  */
 function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () => ParsedSource {
   const handle = handleOf(source);
+  const cteAlias = ctx.cteAliasFor(handle);
+  if (cteAlias) {
+    ctx.useCte(handle);
+    // A declared CTE is read by its name; the `with` that declared it already parsed its body.
+    return () => ({
+      handle,
+      alias: cteAlias,
+      sql: safeKq(cteAlias),
+      bindings: [],
+      refs: [],
+      entitySelects: [],
+      meta: undefined,
+    });
+  }
+  if (ctx.isPendingCte(handle)) {
+    fail(
+      `${describeHandle(handle)} is declared later in this query's \`with\`; a CTE can only read earlier ones, and cannot read itself`,
+    );
+  }
   if (handle instanceof SubqueryHandle) {
     const alias = handle.name ? assigner.getLiteralAlias(handle.name) : assigner.getLiteralAlias("sq");
     ctx.register(handle, alias);
@@ -1869,14 +2009,28 @@ function refsOf(parsed: ParsedExpressionFilter): string[] {
  * explicit `{ inner: b, on }` here does filter rows, so pruning it when unreferenced drops that filter;
  * that matches `{ books: { title: undefined } }` in em.find and is deliberate. `keep: true` pins it, and
  * a pure existence filter is better written as `a.id.in(query({ ... }))`, which is never `undefined`.
+ *
+ * CTEs prune on the same rule and through the same dependency map: a `with` entry nothing reads
+ * anymore drops with the join that read it, and a CTE read only by another CTE survives with it.
+ * A CTE joined into the query shares its alias with that join, so their dependencies are merged.
  */
-function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: SqlFragment[]): ParsedJoin[] {
-  if (q.pruneJoins === false) return joins;
+function pruneJoins(
+  q: AnyQuery,
+  from: ParsedSource,
+  joins: ParsedJoin[],
+  ctes: ParsedCte[],
+  used: SqlFragment[],
+): { joins: ParsedJoin[]; ctes: ParsedCte[] } {
+  if (q.pruneJoins === false) return { joins, ctes };
   const deps = new Map<string, string[]>();
-  for (const j of joins) {
-    const refs = [...(j.userOn?.refs ?? []), ...j.source.refs].filter((r) => r !== j.source.alias);
-    deps.set(j.source.alias, refs);
+  function addDeps(alias: string, refs: readonly string[]): void {
+    const own = refs.filter((r) => r !== alias);
+    const existing = deps.get(alias);
+    if (existing) existing.push(...own);
+    else deps.set(alias, own);
   }
+  for (const j of joins) addDeps(j.source.alias, [...(j.userOn?.refs ?? []), ...j.source.refs]);
+  for (const c of ctes) addDeps(c.alias, c.plan.outerRefs);
   const required = new Set<string>();
   function markRequired(alias: string): void {
     if (required.has(alias)) return;
@@ -1886,7 +2040,51 @@ function pruneJoins(q: AnyQuery, from: ParsedSource, joins: ParsedJoin[], used: 
   markRequired(from.alias);
   for (const r of used.flatMap((u) => u.refs)) markRequired(r);
   for (const j of joins) if (j.keep) markRequired(j.source.alias);
-  return joins.filter((j) => required.has(j.source.alias));
+  return {
+    joins: joins.filter((j) => required.has(j.source.alias)),
+    ctes: ctes.filter((c) => required.has(c.alias)),
+  };
+}
+
+/**
+ * Names and parses each `with` entry, in declaration order.
+ *
+ * Each entry is in scope before the next is parsed, so a CTE can read an *earlier* sibling by name,
+ * PostgreSQL's rule for a non-recursive WITH. A forward reference, or a CTE reading the query's own
+ * `from`, fails as "not in this query's from/join", the same error any out-of-scope source gets.
+ *
+ * I.e. `with: [totals, ranked]` parses `totals` first, so `ranked` can join it, but not the reverse.
+ */
+function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasAssigner): ParsedCte[] {
+  const entries = q.with === undefined ? [] : Array.isArray(q.with) ? q.with : [q.with as WithSource];
+  const handles = entries.filter(isDefined).map(withEntryHandle);
+  // Name every entry before parsing any body, so reading a later one is an error, not a silent inline.
+  const aliases = handles.map((handle) => assigner.getLiteralAlias(handle.name ?? "cte"));
+  handles.forEach((handle, i) => ctx.declareCte(handle, aliases[i]));
+  return handles.map((handle, i) => {
+    // Parse first, then promote: the body sees earlier siblings, but not itself or later ones.
+    const plan = parseQuery(handle.q, ctx, assigner);
+    ctx.promoteCte(handle);
+    return { alias: aliases[i], plan };
+  });
+}
+
+/** A CTE must be a table shape, so entity-mode and scalar values, which have no columns, are out. */
+function withEntryHandle(entry: unknown): SubqueryHandle {
+  if (!isSubqueryValue(entry)) {
+    fail(
+      entry instanceof SubqueryExpr || isEntityQueryValue(entry)
+        ? "A `with` entry needs named columns; entity and scalar query(...) values have none"
+        : "A `with` entry must be a query(...) value",
+    );
+  }
+  return readValueHandle(entry);
+}
+
+/** Renders `WITH a AS (...), b AS (...) `, whose bindings lead the statement, as their SQL does. */
+function withFragment(ctes: ParsedCte[]): SqlFragment {
+  const sql = ctes.map((c) => `${safeKq(c.alias)} AS (${c.plan.sql})`).join(", ");
+  return { sql: `WITH ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };
 }
 
 function asExpr(value: unknown, where: string): BaseExpr {

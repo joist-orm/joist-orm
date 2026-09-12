@@ -31,6 +31,9 @@
       "graphql-codegen": [
         "build/graphql-codegen-export.d.mts"
       ],
+      "graphql-plugins": [
+        "build/graphql-plugins-export.d.mts"
+      ],
       "tests": [
         "build/tests-export.d.mts"
       ],
@@ -139,6 +142,25 @@
       },
       "default": "./build/graphql-codegen-export.js"
     },
+    "./graphql-plugins": {
+      "bun": {
+        "types": "./build/graphql-plugins-export.d.mts",
+        "default": "./build/graphql-plugins-export.js"
+      },
+      "module-sync": {
+        "types": "./build/graphql-plugins-export.d.mts",
+        "default": "./build/graphql-plugins-export.js"
+      },
+      "import": {
+        "types": "./build/graphql-plugins-export.d.mts",
+        "default": "./build/graphql-plugins-export.js"
+      },
+      "require": {
+        "types": "./build/graphql-plugins-export.d.cts",
+        "default": "./build/graphql-plugins-export.cjs"
+      },
+      "default": "./build/graphql-plugins-export.js"
+    },
     "./tests": {
       "bun": {
         "types": "./build/tests-export.d.mts",
@@ -204,6 +226,7 @@
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
+    "joist-graphql-plugins": "workspace:*",
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-knex": "workspace:*",
     "joist-migration-utils": "workspace:*",
@@ -211,6 +234,8 @@
     "joist-utils": "workspace:*"
   },
   "peerDependencies": {
+    "@envelop/core": "^5.5.1",
+    "graphql": "^17.0.2",
     "knex": "^3.1.0",
     "node-pg-migrate": "^8.0.4",
     "pg": "^8.23.0",
@@ -218,6 +243,12 @@
     "postgres-array": "^3.0.4"
   },
   "peerDependenciesMeta": {
+    "@envelop/core": {
+      "optional": true
+    },
+    "graphql": {
+      "optional": true
+    },
     "knex": {
       "optional": true
     },

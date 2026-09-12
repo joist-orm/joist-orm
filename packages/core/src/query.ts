@@ -115,8 +115,8 @@ export type QueryCondition =
       | { and: Array<QueryCondition | undefined>; or?: never; exists?: never; notExists?: never }
       | { or: Array<QueryCondition | undefined>; and?: never; exists?: never; notExists?: never }
     ) & { pruneIfUndefined?: "any" | "all" })
-  | { exists: ExistsQuery; notExists?: never; and?: never; or?: never }
-  | { notExists: ExistsQuery; exists?: never; and?: never; or?: never };
+  | { exists: ExistsQuery | undefined; notExists?: never; and?: never; or?: never }
+  | { notExists: ExistsQuery | undefined; exists?: never; and?: never; or?: never };
 
 /** Phantom type information carried by a table-shaped subquery. */
 export interface SubqueryBrand<R, Name extends string> {
@@ -1687,7 +1687,8 @@ function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
 export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
   checkCondition(cond);
   if (cond === undefined) return undefined;
-  const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx)!;
+  const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx);
+  if (resolved === undefined) return undefined;
   const filter: ConditionGroup<ConditionInput> = isFilter(resolved) ? resolved : { and: [resolved] };
   const cb = new ConditionBuilder();
   cb.maybeAddExpression(filter);
@@ -1700,7 +1701,8 @@ export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLe
 
 /**
  * Rejects malformed predicates throughout a condition tree before pruning can discard a restriction.
- * I.e. an invalid Author-name condition stays invalid even inside a group that would otherwise prune.
+ * I.e. an invalid Author-name condition stays invalid even inside a group that would otherwise prune,
+ * while an explicitly omitted query-valued condition is allowed to prune.
  */
 function checkCondition(value: unknown): void {
   if (
@@ -1730,6 +1732,7 @@ function checkCondition(value: unknown): void {
     const key = "exists" in condition ? "exists" : "notExists";
     checkConditionKeys(condition, [key], "Query existence condition");
     const query = condition[key];
+    if (query === undefined) return;
     if (!(query instanceof SubqueryExpr) && !isReadQueryValue(query)) fail(`Query ${key} requires a query(...) value`);
     toQuery(query);
   } else if (condition.kind === "raw") {
@@ -1827,8 +1830,10 @@ function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): Cond
     return { or: cond.or.map((child) => resolveQueryCondition(child, ctx)), pruneIfUndefined: cond.pruneIfUndefined };
   }
   if ("exists" in cond || "notExists" in cond) {
-    const positive = cond.exists !== undefined;
-    const plan = parseQuery(toQuery(positive ? cond.exists : cond.notExists), ctx, ctx.assigner);
+    const positive = "exists" in cond;
+    const subquery = positive ? cond.exists : cond.notExists;
+    if (subquery === undefined) return undefined;
+    const plan = parseQuery(toQuery(subquery), ctx, ctx.assigner);
     return {
       kind: "raw",
       condition: `${positive ? "EXISTS" : "NOT EXISTS"} (${plan.sql})`,

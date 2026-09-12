@@ -5,6 +5,7 @@ import {
   type ExprBrand,
   type ExpressionCondition,
   type ExpressionFilter,
+  type ExistsQuery,
   type Loaded,
   type PredicateBrand,
   type Query,
@@ -131,6 +132,13 @@ function predicateTypeAssertions() {
     or: [sqlGroup, { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
   } satisfies QueryCondition;
   em.query({ from: a, where: exists, select: a.id });
+  // And optional existence queries that are omitted by the caller
+  const optionalExists: ExistsQuery | undefined = undefined;
+  const optionalNotExists: ExistsQuery | undefined = undefined;
+  const optionalExistence = {
+    and: [{ exists: optionalExists }, { notExists: optionalNotExists }],
+  } satisfies QueryCondition;
+  em.query({ from: a, where: optionalExistence, select: a.id });
 
   // When predicates cross the domain and SQL boundary, even inside boolean groups
   // Then all public condition entry points reject the foreign brand

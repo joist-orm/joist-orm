@@ -835,6 +835,15 @@ export function parseUserQuery(arg: unknown): Plan {
   return parseQuery(toQuery(arg), undefined, new AliasAssigner());
 }
 
+/**
+ * Parses a read that sits inside another statement, i.e. an INSERT's SELECT source, so it resolves that
+ * statement's CTEs and shares its alias space instead of generating names that could collide with them.
+ */
+export function parseNestedQuery(arg: unknown, parent: Ctx, assigner: AliasAssigner): Plan {
+  if (arg instanceof SubqueryExpr) fail("Scalar query values are expressions, not executable read inputs");
+  return parseQuery(toQuery(arg), parent, assigner);
+}
+
 /** Recognizes read brands, including malformed hybrids that must reach read validation rather than mutation execution. */
 export function isReadQueryValue(arg: unknown): boolean {
   return isSubqueryValue(arg) || isEntityQueryValue(arg);
@@ -1373,18 +1382,7 @@ function parseSetQuery(
     sql += " OFFSET ?";
     bindings.push(q.offset);
   }
-  // Prune unused CTEs, the same rule `pruneJoins` applies to an ordinary query.
-  // A CTE can only read earlier siblings, so going last to first means every CTE that could read this
-  // one was already visited, and its own reads are already in `referenced`. That makes one pass enough;
-  // first to last would have to repeat until the set stopped growing. `unshift` restores WITH order.
-  const referenced = new Set(plans.flatMap((plan) => plan.outerRefs));
-  const keptCtes: ParsedCte[] = [];
-  for (let i = ctes.length - 1; i >= 0; i--) {
-    const cte = ctes[i];
-    if (!referenced.has(cte.alias)) continue;
-    for (const ref of cte.plan.outerRefs) referenced.add(ref);
-    keptCtes.unshift(cte);
-  }
+  const keptCtes = pruneCtes(ctes, new Set(plans.flatMap((plan) => plan.outerRefs)));
   if (keptCtes.length > 0) {
     const clause = withFragment(keptCtes);
     sql = clause.sql + sql;
@@ -1553,7 +1551,7 @@ interface ParsedSource {
 }
 
 /** A parsed `with` entry: the CTE's name and its body, ready to render into the WITH clause. */
-interface ParsedCte {
+export interface ParsedCte {
   alias: string;
   plan: Plan;
   /** A recursive CTE reads itself, and makes the whole clause `WITH RECURSIVE`. */
@@ -2164,7 +2162,7 @@ function pruneJoins(
  *
  * I.e. `with: [totals, ranked]` parses `totals` first, so `ranked` can join it, but not the reverse.
  */
-function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasAssigner): ParsedCte[] {
+export function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasAssigner): ParsedCte[] {
   const entries = q.with === undefined ? [] : Array.isArray(q.with) ? q.with : [q.with as WithSource];
   const handles = entries.filter(isDefined).map(withEntryHandle);
   // Name every entry before parsing any body, so reading a later one is an error, not a silent inline.
@@ -2193,12 +2191,30 @@ function withEntryHandle(entry: unknown): SubqueryHandle {
 }
 
 /**
+ * Drops the CTEs that nothing reads, given the aliases the rest of the statement referenced.
+ *
+ * A CTE can only read earlier siblings, so going last to first means every CTE that could read this one
+ * was already visited, and its own reads are already in `referenced`. That makes one pass enough; first
+ * to last would have to repeat until the set stopped growing. `unshift` restores WITH order.
+ */
+export function pruneCtes(ctes: ParsedCte[], referenced: Set<string>): ParsedCte[] {
+  const kept: ParsedCte[] = [];
+  for (let i = ctes.length - 1; i >= 0; i--) {
+    const cte = ctes[i];
+    if (!referenced.has(cte.alias)) continue;
+    for (const ref of cte.plan.outerRefs) referenced.add(ref);
+    kept.unshift(cte);
+  }
+  return kept;
+}
+
+/**
  * Renders `WITH a AS (...), b AS (...) `, whose bindings lead the statement, as their SQL does.
  *
  * One recursive CTE makes the whole clause `WITH RECURSIVE`, PostgreSQL's rule: the keyword is on the
  * clause, not on the entry that needs it, and it does not force the other entries to be recursive.
  */
-function withFragment(ctes: ParsedCte[]): SqlFragment {
+export function withFragment(ctes: ParsedCte[]): SqlFragment {
   const recursive = ctes.some((c) => c.recursive) ? " RECURSIVE" : "";
   const sql = ctes.map((c) => `${safeKq(c.alias)} AS (${c.plan.sql})`).join(", ");
   return { sql: `WITH${recursive} ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };

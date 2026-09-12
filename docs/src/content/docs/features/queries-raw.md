@@ -713,6 +713,5 @@ This is shorthand for `sql.condition` with the receiver as its first interpolati
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
 - `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
-- A top-level `WITH` before a mutation (`WITH x AS (...) INSERT INTO ...`); an `INSERT ... SELECT` source can declare its own `with`, and `em.execute` runs reads through the same parsing as `em.query`
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) table

@@ -78,6 +78,30 @@ INSERT SELECT output keys must match target physical column names regardless of 
 
 INSERT SELECT sources can copy compatible custom-mapped arrays and Temporal arrays directly in SQL, with the same [codec compatibility requirements as compound reads](/features/queries-raw/#output-compatibility-and-codecs). Physical enum-table arrays and custom numeric arrays are unsupported INSERT SELECT outputs; bound VALUES and UPDATE assignments remain supported. For explicit annotations of joined or compound sources, use `InsertStatement<T, Returning, typeof source>` to retain the source's concrete output and join types.
 
+## CTEs
+
+`with` hoists `query(...)` values into a `WITH` before the statement, the same clause [`em.query`](/features/queries-raw/#ctes-with) takes. The CTE is in scope for the whole statement: an `UPDATE`/`DELETE` `where`, an `INSERT`'s `SELECT` source, a `VALUES` cell, and `returning`.
+
+```ts
+const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+
+await em.execute({
+  update: a,
+  with: bookAuthors,
+  set: { first_name: "writer" },
+  where: a.id.in(query({ from: bookAuthors, select: bookAuthors.authorId })),
+});
+```
+
+```sql
+WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL)
+UPDATE authors AS a SET first_name = $1
+WHERE (a.id IN (SELECT book_authors."authorId" AS value FROM book_authors))
+```
+
+A CTE the statement never reads is pruned, as on a read query. The CTE scope deliberately sits *above* the target, so a `VALUES` cell or an `INSERT ... SELECT` source can read the CTEs without also seeing the row being written.
+
+
 ## Guards and expressions
 
 UPDATE and DELETE require a user `where` that survives [condition pruning](/features/queries-raw/#condition--join-pruning), unless `allowAll: true` is explicit. An absent or fully pruned guard fails before SQL; injected soft-delete filters do not count as consent. This is not general tautology detection. `allowAll` neither removes an existing predicate nor disables soft-delete filtering.

@@ -24,13 +24,18 @@ import {
   type SetOperation,
   type SetQuery,
   type Subquery,
+  type WithInput,
   conditionToSql,
   entityQueryBrand,
   injectedConditions,
   isReadQueryValue,
+  parseNestedQuery,
   parseUserQuery,
   projectionToSql,
+  pruneCtes,
+  registerCtes,
   subqueryBrand,
+  withFragment,
 } from "./query.ts";
 import { type TableFor, getTableMgmt, isTable, tableMgmt } from "./Tables.ts";
 import { type ColumnsOf, type TypeMapEntry } from "./typeMap.ts";
@@ -75,6 +80,8 @@ export type InsertStatement<
   readonly where?: never;
   readonly allowAll?: never;
   readonly softDeletes?: never;
+  /** CTEs to hoist into a `WITH` before the INSERT; see `Clauses.with`. */
+  readonly with?: WithInput;
 } & NoMutationReadClauses &
   (
     | { readonly values: InsertValues<T> | readonly InsertValues<T>[]; readonly from?: never }
@@ -93,6 +100,8 @@ export type UpdateStatement<
   readonly delete?: never;
   readonly values?: never;
   readonly from?: never;
+  /** CTEs to hoist into a `WITH` before the UPDATE; see `Clauses.with`. */
+  readonly with?: WithInput;
 } & MutationFilter &
   NoMutationReadClauses;
 
@@ -108,6 +117,8 @@ export type DeleteStatement<
   readonly values?: never;
   readonly from?: never;
   readonly set?: never;
+  /** CTEs to hoist into a `WITH` before the DELETE; see `Clauses.with`. */
+  readonly with?: WithInput;
 } & MutationFilter &
   NoMutationReadClauses;
 
@@ -123,7 +134,7 @@ export type MutationInput = (
   | { readonly insert: TableFor<Entity>; readonly from: SetOperand; readonly values?: never }
   | { readonly update: TableFor<Entity>; readonly set: object }
   | { readonly delete: TableFor<Entity> }
-) & { readonly returning?: MutationReturning } & MutationFilter;
+) & { readonly returning?: MutationReturning; readonly with?: WithInput } & MutationFilter;
 
 /** Without RETURNING the row type is never; scalar expressions produce scalar rows. */
 export type MutationRow<M> = M extends { readonly returning?: infer R }
@@ -179,8 +190,16 @@ export function parseStatement(arg: unknown): Plan | undefined {
   const operation = roots[0];
   const allowed =
     operation === "insert"
-      ? ["insert", "values", "from", "returning"]
-      : [operation, "where", "allowAll", "softDeletes", "returning", ...(operation === "update" ? ["set"] : [])];
+      ? ["insert", "values", "from", "returning", "with"]
+      : [
+          operation,
+          "where",
+          "allowAll",
+          "softDeletes",
+          "returning",
+          "with",
+          ...(operation === "update" ? ["set"] : []),
+        ];
   checkPojo(statement, allowed, `SQL ${operation}`);
   const target = statement[operation];
   if (!isTable(target)) fail("A mutation target must be an entity table");
@@ -196,10 +215,18 @@ export function parseStatement(arg: unknown): Plan | undefined {
     requireColumnMetadata(meta, field);
   }
   const assigner = new AliasAssigner();
-  const ctx = new Ctx(assigner, undefined);
+  // A CTE is in scope for the whole statement, so its scope is the parent of every other one here. It
+  // deliberately holds no target alias, which is what lets INSERT VALUES cells and the INSERT SELECT
+  // source read the CTEs without also seeing the row being written.
+  const withCtx = new Ctx(assigner, undefined);
+  const ctes = registerCtes(statement, withCtx, assigner);
+  // Aliases the rest of the statement reads, so an unread CTE prunes like it does on a read query.
+  const refs: string[] = [];
+  const ctx = new Ctx(assigner, withCtx);
   const alias = assigner.getAlias(meta.tableName);
   ctx.register(mgmt, alias);
   const returning = statement.returning === undefined ? undefined : projectionToSql(statement.returning, ctx);
+  if (returning) for (const select of returning.selects) refs.push(...select.refs);
   let sql = `${operation === "delete" ? "DELETE FROM" : operation.toUpperCase() + (operation === "insert" ? " INTO" : "")} ${kq(meta.tableName)} AS ${kq(alias)}`;
   const bindings: unknown[] = [];
   if (operation === "insert") {
@@ -208,7 +235,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
     if ("values" in statement) {
       const rows = Array.isArray(statement.values) ? statement.values : [statement.values];
       // No target is registered here: value subqueries own their sources, but no existing INSERT row exists.
-      const valuesCtx = new Ctx(assigner, undefined);
+      const valuesCtx = new Ctx(assigner, withCtx);
       const entries = rows.map((row) => assignments(meta, row, "insert"));
       for (const row of entries) {
         for (const field of required) {
@@ -226,13 +253,14 @@ export function parseStatement(arg: unknown): Plan | undefined {
             if (!entry) return "DEFAULT";
             const cell = assignmentToSql(meta, field, entry[1], valuesCtx);
             bindings.push(...cell.bindings);
+            refs.push(...cell.refs);
             return cell.sql;
           });
           return `(${cells.join(", ")})`;
         })
         .join(", ");
     } else {
-      const source = parseUserQuery(statement.from);
+      const source = parseNestedQuery(statement.from, withCtx, assigner);
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
       const columns = source.output.columns;
       for (const field of required) {
@@ -259,6 +287,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
       sql += ` (${keys.map((field) => kq(field.columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.columnName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
       bindings.push(...source.bindings);
+      refs.push(...source.outerRefs);
     }
   } else {
     if (statement.allowAll !== undefined && typeof statement.allowAll !== "boolean") fail("allowAll must be a boolean");
@@ -280,6 +309,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
             const field = writableField(meta, key, "update");
             const cell = assignmentToSql(meta, field, value, ctx);
             bindings.push(...cell.bindings);
+            refs.push(...cell.refs);
             return `${kq(field.columnName)} = ${cell.sql}`;
           })
           .join(", ");
@@ -292,12 +322,21 @@ export function parseStatement(arg: unknown): Plan | undefined {
     const conditions = [user, injected].filter((condition) => condition !== undefined);
     if (conditions.length) {
       sql += ` WHERE ${conditions.map((condition) => `(${condition.sql})`).join(" AND ")}`;
-      for (const condition of conditions) bindings.push(...condition.bindings);
+      for (const condition of conditions) {
+        bindings.push(...condition.bindings);
+        refs.push(...condition.refs);
+      }
     }
   }
   if (returning) {
     sql += ` RETURNING ${returning.selects.map((select) => select.sql).join(", ")}`;
     for (const select of returning.selects) bindings.push(...select.bindings);
+  }
+  const keptCtes = pruneCtes(ctes, new Set(refs));
+  if (keptCtes.length > 0) {
+    const clause = withFragment(keptCtes);
+    sql = clause.sql + sql;
+    bindings.unshift(...clause.bindings);
   }
   return {
     sql,
@@ -344,7 +383,6 @@ type NoMutationReadClauses = Partial<
     | "intersectAll"
     | "except"
     | "exceptAll"
-    | "with"
     | "ctes"
     | "using"
     | "onConflict",
@@ -441,6 +479,7 @@ type TargetTable<M> = M extends
   : never;
 type MutationClause<M> =
   | "returning"
+  | "with"
   | (M extends { readonly insert: unknown }
       ? "insert" | (M extends { readonly values: unknown } ? "values" : "from")
       : "where" | "allowAll" | "softDeletes" | (M extends { readonly update: unknown } ? "update" | "set" : "delete"));

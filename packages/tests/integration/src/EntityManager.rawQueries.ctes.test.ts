@@ -1,7 +1,7 @@
 import { expectTypeOf } from "expect-type";
-import { type Query, type WithInput, query, sql, table, tables } from "joist-orm";
+import { type Query, type WithInput, query, recursiveQuery, sql, table, tables } from "joist-orm";
 import { Author, type AuthorId, Book, Publisher } from "src/entities";
-import { insertAuthor, insertBook, insertPublisher, select } from "src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher, select, update } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 /**
@@ -563,6 +563,149 @@ describe("EntityManager.rawQueries.ctes", () => {
     ).rejects.toThrow("SQL insert does not support 'with'");
   });
 
+  describe("recursive", () => {
+    it("walks a self-referential tree", async () => {
+      // Given root Author a1, who has no mentor
+      await insertAuthor({ id: 1, first_name: "root" });
+      // And a2, mentored by the root
+      await insertAuthor({ id: 2, first_name: "mid", mentor_id: 1 });
+      // And a3, mentored by a2, so it is only reachable through two steps
+      await insertAuthor({ id: 3, first_name: "leaf", mentor_id: 2 });
+      // And an unrelated Author with no mentor chain to the root
+      await insertAuthor({ id: 4, first_name: "other", mentor_id: 3 });
+      await update("authors", { id: 4, mentor_id: null });
+      const em = newEntityManager();
+      const [a] = tables(Author);
+      // And a recursive CTE seeded with the roots, whose step term joins back to the rows found so far
+      const tree = recursiveQuery(
+        "tree",
+        { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+        (self) => ({
+          from: a,
+          join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+          select: { id: a.id, name: a.first_name },
+        }),
+      );
+      resetQueryCount();
+      // When reading the CTE
+      const rows = await em.query({ with: tree, from: tree, select: tree });
+      // Then every Author reachable from a root is returned, each once
+      expect(rows).toEqual([
+        { id: "a:1", name: "root" },
+        { id: "a:4", name: "other" },
+        { id: "a:2", name: "mid" },
+        { id: "a:3", name: "leaf" },
+      ]);
+      // And the step term keeps its join to the CTE, even though its select reads nothing from it
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH RECURSIVE tree AS ((SELECT a.id AS id, a.first_name AS name FROM authors AS a WHERE a.mentor_id IS NULL AND a.deleted_at IS NULL) UNION ALL (SELECT a1.id AS id, a1.first_name AS name FROM authors AS a1 JOIN tree ON a1.mentor_id = tree.id WHERE a1.deleted_at IS NULL)) SELECT tree.id AS id, tree.name AS name FROM tree",
+       ]
+      `);
+    });
+
+    it("stops a cycle with union distinct", async () => {
+      // Given Author a1
+      await insertAuthor({ id: 1, first_name: "a1" });
+      // And a2, mentored by a1
+      await insertAuthor({ id: 2, first_name: "a2", mentor_id: 1 });
+      // And a1 mentored back by a2, so following mentors loops forever
+      await update("authors", { id: 1, mentor_id: 2 });
+      const em = newEntityManager();
+      const [a] = tables(Author);
+      // And a recursive CTE that drops duplicate rows instead of keeping every copy
+      const chain = recursiveQuery(
+        "chain",
+        { from: a, where: a.id.eq("a:1"), select: { id: a.id, mentorId: a.mentor_id } },
+        (self) => ({
+          from: a,
+          join: [{ inner: self, on: self.mentorId.eq(a.id) }],
+          select: { id: a.id, mentorId: a.mentor_id },
+        }),
+        { union: "distinct" },
+      );
+      resetQueryCount();
+      // When walking the cycle
+      const rows = await em.query({ with: chain, from: chain, select: chain });
+      // Then each Author appears once and the walk terminates
+      expect(rows).toEqual([
+        { id: "a:1", mentorId: "a:2" },
+        { id: "a:2", mentorId: "a:1" },
+      ]);
+      // And the terms are combined with UNION, not UNION ALL
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH RECURSIVE chain AS ((SELECT a.id AS id, a.mentor_id AS "mentorId" FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL) UNION (SELECT a1.id AS id, a1.mentor_id AS "mentorId" FROM authors AS a1 JOIN chain ON chain."mentorId" = a1.id WHERE a1.deleted_at IS NULL)) SELECT chain.id AS id, chain."mentorId" AS "mentorId" FROM chain",
+       ]
+      `);
+    });
+
+    it("makes the whole clause RECURSIVE when mixed with a plain CTE", async () => {
+      // Given root Author a1
+      await insertAuthor({ id: 1, first_name: "root" });
+      // And a Book, so the plain CTE has a row
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a plain CTE of the Authors that have Books
+      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      // And a recursive CTE of the mentor tree
+      const tree = recursiveQuery("tree", { from: a, where: a.mentor_id.eq(null), select: { id: a.id } }, (self) => ({
+        from: a,
+        join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+        select: { id: a.id },
+      }));
+      resetQueryCount();
+      // When both are read
+      const rows = await em.query({
+        with: [bookAuthors, tree],
+        from: tree,
+        join: [{ inner: bookAuthors, on: bookAuthors.authorId.eq(tree.id) }],
+        select: { id: tree.id, authorId: bookAuthors.authorId },
+      });
+      // Then the root Author comes back
+      expect(rows).toEqual([{ id: "a:1", authorId: "a:1" }]);
+      // And RECURSIVE is on the clause, not on the one entry that needs it
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH RECURSIVE book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL), tree AS ((SELECT a.id AS id FROM authors AS a WHERE a.mentor_id IS NULL AND a.deleted_at IS NULL) UNION ALL (SELECT a1.id AS id FROM authors AS a1 JOIN tree ON a1.mentor_id = tree.id WHERE a1.deleted_at IS NULL)) SELECT tree.id AS id, book_authors."authorId" AS "authorId" FROM tree JOIN book_authors ON book_authors."authorId" = tree.id",
+       ]
+      `);
+    });
+
+    it("rejects a base term without named columns", async () => {
+      const [a] = tables(Author);
+      // Given a base term that selects entities rather than named columns
+      // When the recursive CTE is built
+      // Then it is rejected, because a CTE must be a table shape
+      expect(() =>
+        recursiveQuery("tree", { from: a, select: a } as any, (self: any) => ({ from: a, select: { id: a.id } })),
+      ).toThrow("A recursive CTE's base term needs a named projection");
+    });
+
+    it("rejects an unnamed recursive CTE", async () => {
+      const [a] = tables(Author);
+      // Given an empty name, which the step term could not reference
+      // When the recursive CTE is built
+      // Then it is rejected
+      expect(() =>
+        recursiveQuery("" as any, { from: a, select: { id: a.id } }, () => ({ from: a, select: { id: a.id } })),
+      ).toThrow("A recursive CTE needs a name");
+    });
+
+    it("rejects an unknown union option", async () => {
+      const [a] = tables(Author);
+      // Given a union option that is neither 'all' nor 'distinct'
+      // When the recursive CTE is built
+      // Then it is rejected before any SQL is generated
+      expect(() =>
+        recursiveQuery("tree", { from: a, select: { id: a.id } }, () => ({ from: a, select: { id: a.id } }), {
+          union: "nope" as any,
+        }),
+      ).toThrow("A recursive CTE's union must be 'all' or 'distinct'");
+    });
+  });
+
   describe("types", () => {
     const [a, b] = tables(Author, Book);
 
@@ -628,6 +771,24 @@ describe("EntityManager.rawQueries.ctes", () => {
       // And neither does the scalar query
       // @ts-expect-error a scalar query has no columns to read by name
       expectTypeOf(count).toMatchTypeOf<WithInput>();
+    });
+
+    it("takes a recursive CTE's row type from its base term", async () => {
+      const em = newEntityManager();
+      // Given a recursive CTE whose base term projects an AuthorId and a name
+      const tree = recursiveQuery(
+        "tree",
+        { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+        (self) => ({
+          from: a,
+          join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+          select: { id: a.id, name: a.first_name },
+        }),
+      );
+      // When it is read
+      const rows = await em.query({ with: tree, from: tree, select: tree });
+      // Then the row is the base term's projection, which is what PostgreSQL gives the CTE
+      expectTypeOf(rows).toEqualTypeOf<{ id: AuthorId; name: string }[]>();
     });
 
     it("still rejects the ctes spelling it does not use", () => {

@@ -474,6 +474,45 @@ An `undefined` entry drops out, and a CTE nothing reads anymore is pruned along 
 
 One `query(...)` value carries one SQL alias, so reading the same CTE twice in one query is an error; give each use its own value.
 
+### Recursive CTEs
+
+`recursiveQuery(name, base, step)` declares a `WITH RECURSIVE` CTE. `base` is the non-recursive term, which seeds the rows and, as in PostgreSQL, supplies the CTE's columns; `step` receives the CTE itself, so it can join back to the rows found so far:
+
+```ts
+const tree = recursiveQuery(
+  "tree",
+  { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+  (self) => ({
+    from: a,
+    join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+    select: { id: a.id, name: a.first_name },
+  }),
+);
+
+const rows = await em.query({ with: tree, from: tree, select: tree });
+```
+
+```sql
+WITH RECURSIVE tree AS (
+  (SELECT a.id AS id, a.first_name AS name FROM authors AS a
+   WHERE a.mentor_id IS NULL AND a.deleted_at IS NULL)
+  UNION ALL
+  (SELECT a1.id AS id, a1.first_name AS name FROM authors AS a1
+   JOIN tree ON tree.id = a1.mentor_id WHERE a1.deleted_at IS NULL)
+)
+SELECT tree.id AS id, tree.name AS name FROM tree
+```
+
+The result is an ordinary CTE value: declare it in `with`, read it through `from`/`join`. Unlike `query()` the name is required, because the step term has to name it. One recursive entry makes the whole clause `WITH RECURSIVE`, PostgreSQL's rule, without making the other entries recursive.
+
+The terms are combined with `UNION ALL`. Pass `{ union: "distinct" }` for `UNION`, which drops duplicate rows and so stops a cyclic graph from looping forever:
+
+```ts
+const chain = recursiveQuery("chain", base, step, { union: "distinct" });
+```
+
+The step term's join back to the CTE is never pruned, even when nothing else reads it — PostgreSQL requires a recursive term to reference its own CTE, so it is not an optional filter the way [an ordinary explicit join](#condition--join-pruning) is.
+
 ## Set Operations
 
 `em.query` supports native PostgreSQL set operations in one SQL statement. A compound query is a separate root shape, not an extra clause on a `{ from, select, ... }` query:
@@ -674,7 +713,6 @@ This is shorthand for `sql.condition` with the receiver as its first interpolati
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
 - `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
-- `WITH RECURSIVE` — [`with`](#ctes-with) declares non-recursive CTEs only
 - A top-level `WITH` before a mutation (`WITH x AS (...) INSERT INTO ...`); an `INSERT ... SELECT` source can declare its own `with`, and `em.execute` runs reads through the same parsing as `em.query`
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) table

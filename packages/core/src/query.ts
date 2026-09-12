@@ -148,6 +148,12 @@ export type WithSource = Subquery<unknown, string>;
 /** One CTE or an array of them; an `undefined` entry prunes, like any other clause. */
 export type WithInput = WithSource | readonly (WithSource | undefined)[];
 
+/** How a recursive CTE combines its two terms: `UNION ALL` keeps every row, `UNION` drops duplicates. */
+export interface RecursiveOptions {
+  /** Defaults to `"all"`. `"distinct"` emits UNION, which stops a cyclic graph from looping forever. */
+  union?: "all" | "distinct";
+}
+
 /**
  * An expression order-by entry: the direction is the key and the expression is the value, unlike
  * the keyed form's field name and `"ASC" | "DESC"` value. `never` on the other key keeps an
@@ -725,6 +731,50 @@ export function query(q: AnyReadQuery): unknown {
 }
 
 /**
+ * Declares a `WITH RECURSIVE` CTE from its two terms, and returns the CTE as a readable value.
+ *
+ * `base` is the non-recursive term, which seeds the rows and, as in PostgreSQL, supplies the CTE's
+ * columns. `step` is the recursive term: it receives the CTE itself, so it can join back to the rows
+ * found so far. The two terms are combined with UNION ALL, or UNION when `union: "distinct"` drops
+ * duplicates, which is how a cyclic graph is kept from looping forever.
+ *
+ * ```ts
+ * const [a] = tables(Author);
+ * const tree = recursiveQuery(
+ *   "tree",
+ *   { from: a, where: a.mentor_id.isNull(), select: { id: a.id, mentorId: a.mentor_id } },
+ *   (self) => ({
+ *     from: a,
+ *     join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+ *     select: { id: a.id, mentorId: a.mentor_id },
+ *   }),
+ * );
+ * const rows = await em.query({ with: tree, from: tree, select: tree });
+ * ```
+ *
+ * The result is an ordinary CTE value: declare it in `with` and read it through `from`/`join`, the same
+ * as one from `query()`. Unlike `query()`, the name is required, because the step term must name it.
+ */
+export function recursiveQuery<Name extends string, F extends QuerySource, S extends QuerySelect, J extends QueryJoins>(
+  name: Name,
+  base: QueryArg<F, S, J, Name>,
+  step: (self: Subquery<QueryRow<S, J>, Name>) => SetOperand,
+  opts: RecursiveOptions = {},
+): Subquery<QueryRow<S, J>, Name> {
+  if (typeof name !== "string" || name === "") fail("A recursive CTE needs a name");
+  if (opts.union !== undefined && opts.union !== "all" && opts.union !== "distinct") {
+    fail("A recursive CTE's union must be 'all' or 'distinct'");
+  }
+  // Start on the base term so `self`'s columns resolve while the step term is still being built.
+  const handle = new SubqueryHandle(toQuery(base), true);
+  if (handle.output().kind !== "pojo") fail("A recursive CTE's base term needs a named projection");
+  const self = newSubqueryProxy(handle) as Subquery<QueryRow<S, J>, Name>;
+  const operands = [base, step(self)] as unknown as readonly SetOperand[];
+  handle.setBody(opts.union === "distinct" ? { union: operands, as: name } : { unionAll: operands, as: name });
+  return self;
+}
+
+/**
  * Builds a SQL expression from a tagged template.
  *
  * For an Author alias `a` assigned the SQL alias `a1`:
@@ -862,7 +912,28 @@ export interface QueryOutput {
 
 /** The runtime identity of a `query(...)` value; `Ctx.aliasFor` keys on it, like a table's `TableMgmt`. */
 export class SubqueryHandle {
-  constructor(readonly q: AnyReadQuery) {}
+  #q: AnyReadQuery;
+
+  /**
+   * `recursiveQuery` starts the handle on its base term, so the step term can read the CTE's columns
+   * while the body that contains that step is still being built, then replaces it with the whole body.
+   * The base term supplies the CTE's columns either way, PostgreSQL's rule for a recursive WITH.
+   */
+  constructor(
+    q: AnyReadQuery,
+    readonly recursive = false,
+  ) {
+    this.#q = q;
+  }
+
+  get q(): AnyReadQuery {
+    return this.#q;
+  }
+
+  setBody(q: AnyReadQuery): void {
+    if (!this.recursive) fail("Only a recursive CTE replaces its body");
+    this.#q = q;
+  }
 
   get name(): string | undefined {
     return this.q.as;
@@ -1269,11 +1340,17 @@ class OutputExpr extends BaseExpr {
  * output positions without moving DISTINCT/order/pagination or repeating volatile selected expressions.
  * Parenthesizing each accumulated left side preserves array association and explicit nested grouping.
  */
-function parseSetQuery(q: SetQuery<readonly SetOperand[]>, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+function parseSetQuery(
+  q: SetQuery<readonly SetOperand[]>,
+  parent: Ctx | undefined,
+  assigner: AliasAssigner,
+  recursiveSelf?: SubqueryHandle,
+): Plan {
   const [operation, operands] = setOperands(q);
   const output = queryOutput(q);
   // A compound's CTEs need a scope of their own, between the enclosing query and the operands.
   const ctx = new Ctx(assigner, parent);
+  if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
   const ctes = registerCtes(q, ctx, assigner);
   const plans = operands.map((operand) => parseQuery(toQuery(operand), ctx, assigner));
   let sql = "";
@@ -1358,6 +1435,8 @@ export class Ctx implements ExprContext {
   private pendingCtes = new Map<object, string>();
   /** CTEs already read by this query's `from`/`join`, so a second read fails instead of colliding. */
   private usedCtes = new Set<object>();
+  /** The recursive CTE whose body this query is part of, if any; see `recursiveSelf`. */
+  private ownRecursiveSelf: SubqueryHandle | undefined;
   readonly outerRefs = new Set<string>();
 
   constructor(
@@ -1400,6 +1479,20 @@ export class Ctx implements ExprContext {
    */
   cteAliasFor(handle: object): string | undefined {
     return this.ctes.get(handle) ?? this.parent?.cteAliasFor(handle);
+  }
+
+  /**
+   * The recursive CTE this query's terms belong to, inherited from the enclosing query.
+   *
+   * PostgreSQL requires a recursive term to reference its own CTE, so that reference is not optional
+   * and must survive pruning, unlike an ordinary explicit join that nothing else reads.
+   */
+  get recursiveSelf(): SubqueryHandle | undefined {
+    return this.ownRecursiveSelf ?? this.parent?.recursiveSelf;
+  }
+
+  setRecursiveSelf(handle: SubqueryHandle): void {
+    this.ownRecursiveSelf = handle;
   }
 
   /** Whether `handle` is a CTE that is not parsed yet, i.e. itself or a later `with` entry. */
@@ -1463,6 +1556,8 @@ interface ParsedSource {
 interface ParsedCte {
   alias: string;
   plan: Plan;
+  /** A recursive CTE reads itself, and makes the whole clause `WITH RECURSIVE`. */
+  recursive: boolean;
 }
 
 interface ParsedJoin {
@@ -1484,10 +1579,16 @@ interface ParsedJoin {
  * 3. Prune: drop joins nothing references (see below), then reject a kept join whose ON collapsed.
  * 4. Assemble the SQL from the kept fragments, so pruned bindings disappear with their SQL.
  */
-function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAssigner): Plan {
+function parseQuery(
+  q: AnyReadQuery,
+  parent: Ctx | undefined,
+  assigner: AliasAssigner,
+  recursiveSelf?: SubqueryHandle,
+): Plan {
   validateReadQuery(q);
-  if (isSetQuery(q)) return parseSetQuery(q, parent, assigner);
+  if (isSetQuery(q)) return parseSetQuery(q, parent, assigner, recursiveSelf);
   const ctx = new Ctx(assigner, parent);
+  if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
   const joinEntries = [...(q.join ?? [])].filter(isDefined);
 
   // 0. Compile CTEs first: they are in scope for every source below, and cannot read those sources.
@@ -1533,6 +1634,7 @@ function parseQuery(q: AnyReadQuery, parent: Ctx | undefined, assigner: AliasAss
   // 3. Prune.
   const { joins: kept, ctes: keptCtes } = pruneJoins(
     q,
+    ctx,
     from,
     joins,
     ctes,
@@ -2013,9 +2115,13 @@ function refsOf(parsed: ParsedExpressionFilter): string[] {
  * CTEs prune on the same rule and through the same dependency map: a `with` entry nothing reads
  * anymore drops with the join that read it, and a CTE read only by another CTE survives with it.
  * A CTE joined into the query shares its alias with that join, so their dependencies are merged.
+ *
+ * The one join that never prunes is a recursive term's reference to its own CTE: PostgreSQL requires
+ * it, so it is not the caller's optional filter (see `Ctx.recursiveSelf`).
  */
 function pruneJoins(
   q: AnyQuery,
+  ctx: Ctx,
   from: ParsedSource,
   joins: ParsedJoin[],
   ctes: ParsedCte[],
@@ -2040,6 +2146,9 @@ function pruneJoins(
   markRequired(from.alias);
   for (const r of used.flatMap((u) => u.refs)) markRequired(r);
   for (const j of joins) if (j.keep) markRequired(j.source.alias);
+  // A recursive term must keep its reference to its own CTE; PostgreSQL rejects a term without one,
+  // and pruning it would quietly turn the recursion into a plain select over the base term's table.
+  for (const j of joins) if (j.source.handle === ctx.recursiveSelf) markRequired(j.source.alias);
   return {
     joins: joins.filter((j) => required.has(j.source.alias)),
     ctes: ctes.filter((c) => required.has(c.alias)),
@@ -2062,10 +2171,12 @@ function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasAssigner
   const aliases = handles.map((handle) => assigner.getLiteralAlias(handle.name ?? "cte"));
   handles.forEach((handle, i) => ctx.declareCte(handle, aliases[i]));
   return handles.map((handle, i) => {
-    // Parse first, then promote: the body sees earlier siblings, but not itself or later ones.
-    const plan = parseQuery(handle.q, ctx, assigner);
-    ctx.promoteCte(handle);
-    return { alias: aliases[i], plan };
+    // A recursive CTE's step term reads the CTE itself, so promote it before parsing, not after.
+    if (handle.recursive) ctx.promoteCte(handle);
+    // Otherwise parse first, then promote: the body sees earlier siblings, but not itself or later ones.
+    const plan = parseQuery(handle.q, ctx, assigner, handle.recursive ? handle : undefined);
+    if (!handle.recursive) ctx.promoteCte(handle);
+    return { alias: aliases[i], plan, recursive: handle.recursive };
   });
 }
 
@@ -2081,10 +2192,16 @@ function withEntryHandle(entry: unknown): SubqueryHandle {
   return readValueHandle(entry);
 }
 
-/** Renders `WITH a AS (...), b AS (...) `, whose bindings lead the statement, as their SQL does. */
+/**
+ * Renders `WITH a AS (...), b AS (...) `, whose bindings lead the statement, as their SQL does.
+ *
+ * One recursive CTE makes the whole clause `WITH RECURSIVE`, PostgreSQL's rule: the keyword is on the
+ * clause, not on the entry that needs it, and it does not force the other entries to be recursive.
+ */
 function withFragment(ctes: ParsedCte[]): SqlFragment {
+  const recursive = ctes.some((c) => c.recursive) ? " RECURSIVE" : "";
   const sql = ctes.map((c) => `${safeKq(c.alias)} AS (${c.plan.sql})`).join(", ");
-  return { sql: `WITH ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };
+  return { sql: `WITH${recursive} ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };
 }
 
 function asExpr(value: unknown, where: string): BaseExpr {

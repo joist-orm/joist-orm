@@ -544,23 +544,152 @@ describe("EntityManager.rawQueries.ctes", () => {
     // And the WITH renders inside the INSERT's source, not before the INSERT
     expect(queries).toMatchInlineSnapshot(`
      [
-       "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM (WITH titles AS (SELECT b.title AS title, b.author_id AS "authorId", b.notes AS notes FROM books AS b WHERE b.deleted_at IS NULL) SELECT titles.title AS title, titles."authorId" AS author_id, titles.notes AS notes FROM titles) AS sq",
+       "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM (WITH titles AS (SELECT b1.title AS title, b1.author_id AS "authorId", b1.notes AS notes FROM books AS b1 WHERE b1.deleted_at IS NULL) SELECT titles.title AS title, titles."authorId" AS author_id, titles.notes AS notes FROM titles) AS sq",
        "select * from "books" order by "id" asc",
      ]
     `);
   });
 
-  it("rejects a top-level with on a mutation", async () => {
-    const em = newEntityManager();
-    const [a, b] = tables(Author, Book);
-    // Given a CTE
-    const names = query({ from: a, select: { name: a.first_name }, as: "names" });
-    // When an INSERT declares it as a top-level clause, which would need `WITH ... INSERT INTO`
-    // Then it is rejected; a mutation's CTEs belong in its SELECT source
-    await expect(
-      // @ts-expect-error: a top-level `with` is not a mutation clause
-      em.execute({ insert: b, with: names, values: { title: "t", author_id: "a:1", notes: "n" } }),
-    ).rejects.toThrow("SQL insert does not support 'with'");
+  describe("mutations", () => {
+    it("hoists a CTE for an UPDATE", async () => {
+      // Given Author a1, who has a Book
+      await insertAuthor({ id: 1, first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      // And Author a2, who has none, so the CTE must not match them
+      await insertAuthor({ id: 2, first_name: "a2" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a CTE of the Authors that have Books
+      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      resetQueryCount();
+      // When the UPDATE declares it and reads it from the where
+      await em.execute({
+        update: a,
+        with: bookAuthors,
+        set: { first_name: "writer" },
+        where: a.id.in(query({ from: bookAuthors, select: bookAuthors.authorId })),
+      });
+      // Then only the Author with a Book is renamed
+      expect(await select("authors")).toMatchObject([{ first_name: "writer" }, { first_name: "a2" }]);
+      // And the WITH leads the statement, ahead of the UPDATE
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) UPDATE authors AS a SET first_name = $1 WHERE (a.id IN (SELECT book_authors."authorId" AS value FROM book_authors)) AND (a.deleted_at IS NULL)",
+         "select * from "authors" order by "id" asc",
+       ]
+      `);
+    });
+
+    it("hoists a CTE for a DELETE", async () => {
+      // Given Author a1, who has a Book
+      await insertAuthor({ id: 1, first_name: "a1" });
+      // And Author a2, who has none
+      await insertAuthor({ id: 2, first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a CTE of the Authors that have no Books, which is the set to delete
+      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      resetQueryCount();
+      // When the DELETE declares it and reads it from the where
+      await em.execute({
+        delete: a,
+        with: bookAuthors,
+        where: { and: [a.id.nin(query({ from: bookAuthors, select: bookAuthors.authorId }))] },
+      });
+      // Then only the bookless Author is gone
+      expect(await select("authors")).toMatchObject([{ first_name: "a1" }]);
+      // And the WITH leads the statement, ahead of the DELETE
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) DELETE FROM authors AS a WHERE (a.id NOT IN (SELECT book_authors."authorId" AS value FROM book_authors)) AND (a.deleted_at IS NULL)",
+         "select * from "authors" order by "id" asc",
+       ]
+      `);
+    });
+
+    it("reads a statement's CTE from an INSERT's SELECT source", async () => {
+      // Given Author a1 with one Book
+      await insertAuthor({ id: 1, first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const [b] = tables(Book);
+      // And a CTE of the existing Book rows, declared on the INSERT itself rather than on its source
+      const titles = query({
+        from: b,
+        select: { title: b.title, authorId: b.author_id, notes: b.notes },
+        as: "titles",
+      });
+      resetQueryCount();
+      // When the INSERT's SELECT source reads that statement-level CTE
+      const result = await em.execute({
+        insert: b,
+        with: titles,
+        from: { from: titles, select: { title: titles.title, author_id: titles.authorId, notes: titles.notes } },
+      });
+      // Then the row is copied
+      expect(result).toMatchObject({ rowCount: 1 });
+      expect(await select("books")).toMatchObject([{ title: "b1" }, { title: "b1" }]);
+      // And the WITH is before the INSERT, with the source reading the CTE by name
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH titles AS (SELECT b.title AS title, b.author_id AS "authorId", b.notes AS notes FROM books AS b WHERE b.deleted_at IS NULL) INSERT INTO books AS b1 (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM (SELECT titles.title AS title, titles."authorId" AS author_id, titles.notes AS notes FROM titles) AS sq",
+         "select * from "books" order by "id" asc",
+       ]
+      `);
+    });
+
+    it("reads a statement's CTE from an INSERT VALUES cell", async () => {
+      // Given Author a1
+      await insertAuthor({ id: 1, first_name: "a1" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a CTE of the Author ids
+      const authorIds = query({ from: a, select: { id: a.id }, as: "author_ids" });
+      resetQueryCount();
+      // When a VALUES cell is a scalar subquery over that CTE
+      await em.execute({
+        insert: b,
+        with: authorIds,
+        values: {
+          title: "t1",
+          notes: "n1",
+          // The cast is a pre-existing gap: `Assignment` does not accept a scalar query(...) in a VALUES
+          // cell, with or without a `with` clause. The runtime accepts it, which is what this pins.
+          author_id: query({ from: authorIds, select: authorIds.id, limit: 1 }) as any,
+        },
+      });
+      // Then the Book is inserted against the CTE's Author
+      expect(await select("books")).toMatchObject([{ title: "t1", author_id: 1 }]);
+      // And the VALUES cell reads the CTE without seeing the row being written
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "WITH author_ids AS (SELECT a.id AS id FROM authors AS a WHERE a.deleted_at IS NULL) INSERT INTO books AS b (title, notes, author_id) VALUES ($1, $2, (SELECT author_ids.id AS value FROM author_ids LIMIT $3))",
+         "select * from "books" order by "id" asc",
+       ]
+      `);
+    });
+
+    it("prunes a CTE that the mutation never reads", async () => {
+      // Given Author a1
+      await insertAuthor({ id: 1, first_name: "a1" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      // And a CTE nothing in the statement goes on to read
+      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      resetQueryCount();
+      // When the UPDATE declares it but filters on its own column instead
+      await em.execute({ update: a, with: bookAuthors, set: { first_name: "x" }, where: a.id.eq("a:1") });
+      // Then the row still updates
+      expect(await select("authors")).toMatchObject([{ first_name: "x" }]);
+      // And no WITH is emitted, the same pruning a read query does
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "UPDATE authors AS a SET first_name = $1 WHERE (a.id = $2) AND (a.deleted_at IS NULL)",
+         "select * from "authors" order by "id" asc",
+       ]
+      `);
+    });
   });
 
   describe("recursive", () => {

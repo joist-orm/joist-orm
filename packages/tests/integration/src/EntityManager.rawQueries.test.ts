@@ -1,6 +1,7 @@
 import { expectTypeOf } from "expect-type";
 import {
   type ColumnCondition,
+  type ExistsQuery,
   type Loaded,
   type PredicateBrand,
   Query,
@@ -961,6 +962,44 @@ describe("EntityManager.rawQueries", () => {
   });
 
   describe("exists conditions", () => {
+    it("prunes undefined exists and notExists queries", async () => {
+      // Given an Author whose name should remain after optional filters are omitted
+      await insertAuthor({ first_name: "optional" });
+      // And omitted existence queries represented by undefined
+      const optionalExists: ExistsQuery | undefined = undefined;
+      const optionalNotExists: ExistsQuery | undefined = undefined;
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+
+      // When selecting with omitted existence conditions inside an AND group
+      const grouped = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { and: [a.first_name.eq("optional"), { exists: optionalExists }, { notExists: optionalNotExists }] },
+      });
+      // Then the remaining Author filter still determines the result
+      expect(grouped).toEqual(["optional"]);
+
+      // When selecting with each omitted existence condition at the top level
+      const existsOmitted = await em.query({ from: a, select: a.first_name, where: { exists: optionalExists } });
+      const notExistsOmitted = await em.query({
+        from: a,
+        select: a.first_name,
+        where: { notExists: optionalNotExists },
+      });
+      // Then both omitted conditions contribute no SQL restriction
+      expect(existsOmitted).toEqual(["optional"]);
+      expect(notExistsOmitted).toEqual(["optional"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
     it("correlates scalar and entity queries inside nested and/or conditions", async () => {
       // Given an Author with two Books, who must appear only once
       await insertAuthor({ first_name: "published", age: 30 });

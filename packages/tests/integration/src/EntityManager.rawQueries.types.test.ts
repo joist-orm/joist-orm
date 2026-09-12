@@ -471,15 +471,15 @@ async function typeAssertions() {
   em.execute({ from: newTask, select: newTask });
 
   // === Mistakes that must not compile
-  // Given a nonliteral Author read carrying an unsupported CTE clause
-  const withCte = { from: a, select: { name: a.first_name }, with: [] };
+  // Given a nonliteral Author read carrying the reserved `ctes` spelling, which `with` does not replace
+  const withCte = { from: a, select: { name: a.first_name }, ctes: [] };
   // And an otherwise valid compound with that invalid later operand
   const nestedCte = { unionAll: [q, withCte] } as const;
   // And a compound mixed with a mutation operation
   const compoundMutation = { union: [q, q], insert: a } as const;
   // When checking public overloads rather than internal clause-check types
   // Then nonliteral inputs cannot hide unsupported clauses
-  // @ts-expect-error: ordinary read values do not support CTE clauses
+  // @ts-expect-error: ordinary read values do not support the `ctes` clause; the spelling is `with`
   query(withCte);
   // @ts-expect-error: nested operands must reject unsupported clauses
   query(nestedCte);

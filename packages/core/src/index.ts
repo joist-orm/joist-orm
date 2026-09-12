@@ -184,6 +184,8 @@ export {
   type QuerySelect,
   type QuerySource,
   type QueryValue,
+  recursiveQuery,
+  type RecursiveOptions,
   type ScalarQuery,
   type SetQuery,
   query,

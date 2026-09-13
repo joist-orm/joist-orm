@@ -1,346 +1,258 @@
 ---
-title: Raw Queries
-description: Documentation for Raw Queries
+title: SQL Queries
+description: Making Lower Level SQL Queries
 sidebar:
   order: 3.2
 ---
 
-Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, set operations, and arbitrary joins, returning entities, plain, strongly-typed POJOs, or scalar values.
+Joist's primary query API is [em.find](./queries-find), which excels at **finding entities** and **preventing N+1s**.
 
-For immediate SQL `INSERT`, `UPDATE`, and `DELETE` statements, use [`em.execute`](/features/sql-mutations/).
+However it's limited in what it supports: no group bys, aggregates, subqueries, or other lower-level SQL features.
 
-Like [find queries](./queries-find), the `em.query` DSL is "just a POJO" of data--no fluent builders to chain 🎉, but thanks to TypeScript's mapped types, still sufficiently type-safe to catch most common errors/typos 💪.
+When you need these capabilities, Joist provides `em.query` for creating arbitrary `SELECT` statements (and if you need low-level `INSERT`, `UPDATE`, and `DELETE` see [`em.execute`](/features/sql-mutations/)).
 
 Here's an example of getting the count of books per author:
 
 ```ts
 const [a, b] = tables(Author, Book);
-
 const rows = await em.query({
+  select: { name: a.firstName, bookCount: b.id.count() },
   from: a,
-  join: [{ left: b, on: b.author_id.eq(a.id) }],
-  where: { and: [a.age.gte(minAge)] },
-  groupBy: [a.first_name],
-  select: { name: a.first_name, bookCount: b.id.count() },
+  join: [a.books.as(b)],
+  where: a.age.gte(minAge),
+  groupBy: [a.firstName],
   orderBy: { bookCount: "DESC" },
   limit: 10,
 });
 // rows is { name: string; bookCount: number }[]
 ```
 
-:::tip[Info]
+We'll discuss more, but the biggest DX differentiator of `em.query` is that it's **not fluent builders**, i.e. the pervasive `.from("authors").join("books")` syntax common in other ORMs, that originated as a [pattern for languages](https://martinfowler.com/bliki/FluentInterface.html) from the 90s, like Java and C++.
 
-Note that we put `select` in "a weird spot": after the `groupBy`, instead of first, where it always appears in SQL.
+Joist realizes that JavaScript and TypeScript excel at **creating data structures**, creating POJOs, and so the `em.query` API leans into the strengths of the languages we actually use today.
 
-This is because we're ordering the object keys in [SQL evaluation order](https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/).
+## When to use Find vs. Query
 
-This is solely a preference for potentially easier reasoning of the query--the order of the `from`, `join`, etc. keys does not actually affect runtime behavior, so you're free to use whatever key order you like.
+You should prefer `em.find` for the ~80-90% of queries in your codebase that are plain `SELECT`s to load entities.
 
-:::
+`em.find`'s killer feature is that, because it specializes in "loading entites", it strictly controls the SQL it generates and **automatically batch every em.find** for bullet-proof N+1 prevention.
 
-:::tip[Info]
+In contrast, `em.query` lets you craft whatever SQL query you want -- but then Joist is not able to rewrite those arbitrary queries into auto-batched / N+1 safe variants, so **every em.query is a real database call**.
 
-Prefer [find queries](./queries-find) for the ~80-90% of queries that are plain entity `SELECT`s — they have join literals, batching, and preloading. `em.query` is the next level down, for the queries `em.find` can't express.
+This sounds alarmist, but "every query is a real database call" is very standard behavior for ORMs; it's only surprising in Joist, given our dedication to N+1 prevention.
 
-**Unlike `em.find`, `em.query` is not batched: each call executes its own SQL statement.** Population can execute additional relation queries.
+## Starting with Tables
 
-:::
+All `em.query`s start with declaring the tables you'll use, using the `table` or `tables` function:
 
-## Tables and generated columns
+```typescript
+import { table, tables } from "joist-orm";
 
-Use `table(Author)` or `tables(Author, Book)` for SQL-shaped `em.query`, `query`, and `em.execute` statements. `alias`/`aliases` and `Alias<T>` belong only to `em.find` and its domain filters; they are not SQL sources or mutation targets.
+// A query with 1 table
+const a = table(Author);
+return em.query({ from: a, ... });
 
-A `Table<T>` exposes physical column names, i.e. `a.first_name` and `b.author_id`, not `a.firstName` or a selectable `b.author`. Column values still use Joist's domain codecs and public ID types. Projection keys are yours to choose: `select: { firstName: a.first_name, authorId: b.author_id }` returns camelCase output keys, and a derived table exposes those chosen keys unchanged.
+// A query with two tables
+const [b, br] = tables(Book, BookReview);
+return em.query({ from: b, join: [{ left: br, ... }]});
+```
 
-Codegen emits `AuthorColumns` and `BookColumns` alongside the existing domain `AuthorFields`/`BookFields` types. The generated `TypeMap` connects each entity to its `columnsType`, exposed through `ColumnsOf<T>`. Columns are keyed by physical storage names and carry value, nullability, and insert/update policy types; domain fields continue to describe entity properties and relationships. Runtime `EntityMetadata.columns` maps each physical name to its owning `fieldName`, so table expressions and mutation assignments reuse the existing serde column and its codecs instead of inventing a second mapping layer.
+The `a`, `b`, and `br` variables are then statically typed to the columns of their respective tables, i.e.
 
-Each column descriptor has direct `nullable: true | false`, `insert: "required" | "optional" | "never"`, and `update: true | false` properties, with literal values for that column. There is no nested `columns` tuple. Domain `Fields` descriptors have no SQL policies and retain `nullable: undefined | never` for entity-property nullability. The runtime `EntityMetadata.columns` map and `serde.columns` storage arrays are unchanged.
+- `a.firstName` is the author's `first_name` column,
+- `b.authorId` is the book's `author_id` foreign key
 
-Relationship names remain join sugar: `b.author.as(a)` and `a.books.as(b)` still work. Polymorphic `c.parent.eq(...)`, `.ne(...)`, and `.in(...)` remain predicate sugar that selects the appropriate physical component. This does not make `parent` a selectable column or a supported mutation assignment.
+We then use these fields (really SQL expressions pointing at the underlying columns) in the `select`, `join`, `where` keys to build out the rest of the SQL query.
 
-### Custom tables
+Each table gets an alias, which defaults to its tag name, i.e. `select * from authors as a`, but you can customize the alias when adding the same table multiple times to a query:
 
-Use `declareTable` for tables intentionally omitted from Joist codegen. Declare the table once, then create reusable handles with `table`, including named handles for self-joins:
+```typescript
+const author = table(Author);
+const mentor = table(Author, "mentor");
+```
 
-```ts
-const auditEntries = declareTable("audit_entries", {
-  id: { type: "int", hasDefault: true },
-  actorName: "text",
-  payload: { type: "jsonb", nullable: true },
-  createdAt: { type: "timestamptz", hasDefault: true },
-});
+A table is also used as every query's `from`, which starts the `FROM authors` that the rest of the query will build on:
 
-const ae = table(auditEntries);
-const previous = table(auditEntries, "previous");
+```typescript
+// A query with 1 table
+const a = table(Author);
+return em.query({ from: a, ... });
+```
 
-const rows = await em.query({
-  from: ae,
-  where: ae.actorName.eq("Alice"),
-  select: { id: ae.id, actorName: ae.actorName, payload: ae.payload },
+## Adding Joins
+
+After the initial `from` table, we add can join in other tables via one of three ways:
+
+- **Explicit joins** are the most direct way, and are an object literal with either the `inner` or `left` key set to the table we're joining in, and an `on` expression:
+
+  ```ts
+  const [a, b, bs] = tables(Author, Book, BookStats);
+  em.query({
+    from: a,
+    join: [
+      // Becomes JOIN books b ON b.author_id = a.id
+      { inner: b, on: b.authorId.eq(a.id) },
+      // Becomes LEFT JOIN book_stats bs ON bs.book_id = b.id
+      { left: bs, on: bs.bookId.eq(b.id) },
+    ];
+  );
+  ```
+
+- **Relationship joins** are syntax sugar for quickly adding joins that "walk the graph" of relations.
+
+  ```ts
+  const [a, b, bs] = tables(Author, Book, BookStats);
+  em.query({
+    from: a,
+    // These are the same joins as before
+    join: [a.books.as(b), b.bookStats.as(bs)];
+  );
+  ```
+
+  These joins leverage that Joist knows the entity relationships, so we don't have to type "the FK id equals the primary key id" over & over. 😅
+
+  Relationship joins will automatically be `INNER` or `LEFT` as appropriate for the query, i.e.:
+
+  - joining `a.books.as(b)` will create a `LEFT JOIN` for `books` so that an author without any books is not dropped from the query (i.e. its a potentially empty collection),
+  - joining `b.author.as(a)` will create an `INNER JOIN` for `author` b/c we know the `author_id` is required (i.e. it's a required reference)
+    - But if `b` itself was already left joined into the query, then `b.author.as(a)` will flip and "percolate the optionality"
+  - joining `a.publisher.as(p)` will create an `LEFT JOIN` for `puslierh` b/c we know the `publisher_id` is nullable (i.e. it's an optional reference)
+
+- **Relationship trees** are an _even sugary_ way of declaring joins, where instead of a flat list of joins, we use an `em.find`-style tree of relationships:
+
+  ```ts
+  const [a, b] = tables(Author, Book);
+  const rows = await em.query({
+    from: a,
+    // When join is an object literal, it's "rooted" to the
+    // same table as `from`, so we "start at author"
+    join: {
+      // We can inline simple conditions, as em.find
+      firstName: "Alice",
+      // And recursive into relations that become joins
+      books: { as: b, title: { ilike: "%database%" } },
+    },
+    select: { author: a.firstName, title: b.title },
+  });
+  ```
+
+In general, Relationship Trees are the easiest way of declaring joins, but you can progressively fallback on Relationship Joins and Explicit Joins as/if you need more control over the query.
+
+:::tip[Tip]
+
+Joining a collection fans rows out — one row per book, not per author. To _filter_ by a collection without causing duplication of the original row, use a subquery instead:
+
+```typescript
+em.query({
+  from: a,
+  where: a.id.in(query({
+    from: b,
+    select: b.author_id
+  }))
 });
 ```
 
-Property names default to snake_case physical columns, so `actorName: "text"` reads `actor_name`. Use `columnName` for a different physical name. The expanded options are `nullable`, `hasDefault`, `generated`, and `array`; SQL arrays are supported for `boolean`, `int`, `float`, `bigint`, `text`, and `uuid`.
+:::
 
-Supported scalar storage types are `boolean`, `int`, `float`, `bigint`, `text`, `uuid`, `date`, `timestamp`, `timestamptz`, `json`, and `jsonb`. They map to their normal JavaScript domains; unvalidated JSON is `unknown`. A custom handle also retains `column<R>(name)` for truly one-off columns that are not worth declaring.
 
-Custom tables have physical columns and codecs, but no entity metadata. They support explicit joins, predicates, projections, subqueries, and SQL mutations, but not entity hydration, relationship join sugar, domain filters, inheritance, tagged IDs, or soft-delete policy. Select their columns individually instead of writing `select: ae`.
+## Selecting Values
 
-## Selecting
+The `select` key determines the data we return over the wire,
+and the resulting `rows` return type, and has three main forms;
 
-The `select` key determines the `rows` return type:
-
-- **A POJO literal** returns typed rows, one key per column. Values decode exactly like entity fields: ids come back as tagged ids (`"a:1"`), enums as enum values, custom serdes as their domain values.
+- **A POJO literal** that defines each row's column name & value:
 
   ```ts
-  const rows = await em.query({ from: a, select: { id: a.id, name: a.first_name, age: a.age } });
-  // { id: AuthorId; name: string; age: number | null }[]
+  const a = table(Author);
+  const rows = await em.query({
+    // Declare fieldName -> value
+    select: { id: a.id, name: a.firstName, age: a.age },
+    from: a,
+  });
+  // { id: AuthorId; name: string; age: number | undefined }[]
   ```
 
-- **A table** returns that table's entities, loaded through the `EntityManager`'s identity map like `em.find`, but the query itself can use group bys and aggregates:
+  This is the most standard "get back rows with column names & values" behavior.
+
+  Return values are decoded just like in entities: ids as tagged ids (`"a:1"`), enums as enums, and columns like `timestamptz` go through their serdes to become `ZonedDateTime` or other respective domain values.
+
+  The return types will be optional (i.e. `age: number | undefined`) based on both the column type itself (i.e. if `age` is nullable in the database) _or_ if the table was left-joined into the query.
+
+- **A table** reference which loads that table's rows as entities:
 
   ```ts
+  const a = table(Author);
   const authors = await em.query({
+    // Returns an Author entity
+    select: a,
     from: a,
     join: [{ inner: b, on: b.author_id.eq(a.id) }],
     groupBy: [a.id],
-    select: a,
     orderBy: [{ sort: b.id.count(), order: "DESC" }],
   });
   ```
 
-  (Currently entities can only be selected using the same table as the `from` key, not from a joined table. `select: a` still hydrates `Author` entities; the table cutover does not turn it into a physical row POJO.)
+  The entities will be loaded through the `EntityManager`'s identity map, just like `em.find`, so you'll get the same requested-cached instance with any WIP edits.
 
-- **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`. Like entity mode, the selected subquery must be the `from`, not a joined source; select a joined subquery's columns individually.
+  This "entity mode" of `em.query` makes it look like `em.find`, but a) gives you low-level control over the whole SQL statement, and b) again meaning it won't be auto-batched.
 
-- **A single expression** in an ordinary `em.query({ from, select: expr })` returns an array of selected values, without the extra `null` from scalar-subquery context:
+   Similar to `em.find`, you can pass `populate` to get back preloaded entities.
 
   ```ts
+  const authors = await em.query(
+    { from: a, select: a, where: a.age.gte(18) },
+    { populate: { books: "reviews" },
+  });
+  // Loaded<Author, { books: "reviews" }>[]
+  const reviews = authors[0].books.get[0].reviews.get;
+  ```
+
+- **A single expression** returns an array of that expression's values:
+
+  ```ts
+  // Returns an AuthorId[] without any wrapping rows
   const authorIds = await em.query({ from: a, select: a.id });
   // AuthorId[]
   ```
 
-### Populating Entities
+  We call this a "scalar result" because it returns the scalar/primitive value directly, instead of being wrapped in a row.
 
-Entity selections accept a `populate` option as the second argument, using the same load hints as `em.find`:
+  Behind the scenes, this becomes `SELECT a.id AS value`, and `em.query` just promotes each `row.value` into the return value as a single array, as an ergonomic affordance.
 
-```ts
-const authors = await em.query({ from: a, select: a, where: a.age.gte(18) }, { populate: { books: "reviews" } });
-// Loaded<Author, { books: "reviews" }>[]
-const reviews = authors[0].books.get[0].reviews.get;
-```
+## Filtering Where
 
-This also works with reusable entity queries: `em.query(query({ from: a, select: a }), { populate: "books" })`.
-Population runs after the SQL query through `em.populate`, preserving the identity map and using the existing relation loaders. It is only supported for entity selections, not POJO or scalar results.
-
-### Left joins and `null`
-
-Row types follow the join list: a column from an inner-joined or `from` source keeps its type, and a column from a left-joined source picks up `| null`, because the join may not match.
-
-The `.coalesce(fallback)` method creates a `COALESCE` with the default value, and so drops the `| null` type:
-
-```ts
-const rows = await em.query({
-  from: a,
-  join: [{ left: b, on: b.author_id.eq(a.id) }],
-  select: { name: a.first_name, title: b.title, safeTitle: b.title.coalesce("No book") },
-});
-// { name: string; title: string | null; safeTitle: string }[]
-```
-
-## Conditions and Expressions
-
-Table columns (i.e. `a.first_name`) are typed expressions that can be used either to `select` the column directly, or use the column in a `where` condition (or other expression location).
-
-For use in `where` clauses, table columns have the condition methods familiar from `em.find`'s [complex conditions](./queries-find#complex-conditions): `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `like`, `ilike`. They can compare across columns, i.e. `b.author_id.eq(a.id)` or `m.age.gt(a.age)`.
-
-They also have common SQL functions as methods, such as aggregates:
-
-- `count()`, `countDistinct()` — `b.id.count()` is the idiomatic `count(*)`
-- `sum()`, `avg()` (numeric columns only), `min()`, `max()`
-- `arrayAgg()`, `stringAgg(delimiter)` — like `min`/`max`, nullable (zero rows aggregate as `NULL`), and `arrayAgg` keeps element `NULL`s, i.e. a left-joined empty group is `[null]`
-- `coalesce(fallback)`
-
-`arrayAgg` also accepts `distinct`, expression `orderBy` entries, and a `filter` condition:
-
-```ts
-const titles = b.title.arrayAgg({
-  distinct: true,
-  orderBy: [{ sort: b.title, order: "DESC", nulls: "first" }],
-  filter: b.title.ne("Untitled"),
-});
-```
-
-The filter selects values for this aggregate without removing rows from other aggregates. It accepts
-the same conditions as `where`, including `sql.condition` and `and`/`or` groups. Undefined conditions
-and order entries are pruned. No matching values produces `null`; use `.coalesce([])` for an empty array.
-With `distinct: true`, PostgreSQL requires ordering expressions to match the aggregate argument.
-
-### Expression Literals
-
-Use expression literals for `arrayAgg`, `case`, `coalesce`, `nullIf`, `greatest`, and `least` as named values in `select`.
-A plain `select` object always names result columns. Operands can be columns, bound values, or nested expressions:
+`where` values are created primarily using the same table variables and turning their columns into boolean conditions, like `eq`: 
 
 ```ts
 const a = table(Author);
-const names = await em.query({
-  from: a,
-  select: { name: { coalesce: [a.last_name, a.first_name] } },
-});
-// names: { name: string }[]
-```
-
-Spread optional candidates into the operand list to build an expression dynamically:
-
-```ts
-const [a, b] = tables(Author, Book);
-const bookTitles = includeBookTitle ? [b.title] : [];
 const rows = await em.query({
+  select: { id: a.id, name: a.firstName, age: a.age },
   from: a,
-  join: [a.books.as(b)],
-  select: { name: { coalesce: [a.last_name, ...bookTitles, a.first_name] } },
-});
-// rows: { name: string }[]
-```
-
-For scalar results, select a column directly or build an expression with `expr(...)`:
-
-```ts
-import { expr } from "joist-orm";
-
-const names = await em.query({
-  from: a,
-  select: expr({ coalesce: [a.last_name, a.first_name] }),
-});
-// names: string[]
-```
-
-Use `expr(...)` to build a reusable expression or call methods such as `.eq(...)`.
-Inline expressions and `expr(...)` use the same validation, codecs, and LEFT-join nullability rules.
-The same distinction applies inside `query(...)`: scalar expression literals use `expr(...)`, while
-derived tables and CTEs name their projected values.
-
-Expression keywords can name result columns: both `select: { coalesce: a.first_name }` and
-`select: { coalesce: { coalesce: [a.last_name, a.first_name] } }` return objects with a `coalesce` column.
-`select: { coalesce: [...] }` is invalid because the named column's value must be an expression, not an operand array.
-
-These expressions match their SQL behavior:
-
-- `coalesce` returns the first non-null value, in list order.
-- CASE returns the first value whose `when` condition is true. Without `else`, no match returns null.
-- A false or SQL NULL condition does not match.
-- A matching CASE arm can return null; an enclosing COALESCE then tries its next candidate.
-- An empty `bookTitles` array leaves just the Author's last and first names as candidates.
-- `arrayAgg` collects its value for every input row. Zero rows return null, and null values remain array elements.
-- `nullIf` returns null when its two operands are equal, otherwise it returns the first operand.
-- `greatest` and `least` return the largest and smallest non-null operands; all-null inputs return null.
-
-#### CASE
-
-For several CASE arms, use an array. The first true condition wins, even if its value is null:
-
-```ts
-const ageGroup = expr({
-  case: [{ when: a.age.gte(18), then: "Adult" }, { when: a.age.gte(0), then: "Child" }, { else: "Unknown" }],
+  where: a.firstName.eq("Bob"),
 });
 ```
 
-`when` accepts the same conditions as `where`, including `and`, `or`, `exists`, and `sql.condition`.
-An undefined or fully pruned condition removes its arm. If all WHEN arms disappear, the result is the
-final `{ else: ... }` entry, or null when it is omitted. The ELSE entry must be last and appear at most
-once. Use an explicit `null` for a null value; `undefined` is not a value. CASE needs at least one WHEN
-arm, and COALESCE needs at least one candidate.
+Columns become conditions by using a comparison method, like `eq` or `ne`, as well as common SQL functions:
 
-The result is a reusable expression for `select`, predicates, ordering, or other expressions. Its type
-accounts for nullable columns and LEFT joins. A non-null fallback, such as the last candidate in
-`expr({ coalesce: [b.title, "No book"] })`, makes the result non-null even when Book is LEFT-joined.
+- Comparisons like `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `like`, `ilike`.
+  - These accept both values like `.eq("Bob")` and other columns like `m.age.gt(a.age)`
+- Count functions `count()`, `countDistinct()`
+  - I.e. `a.id.count()` is the idiomatic `count(*)`
+- Math functions lie `sum()`, `avg()`, `min()`, `max()`
+- Aggregate functions like `arrayAgg()`, `stringAgg(delimiter)`
+  - `arrayAgg` also accepts `distinct`, `orderBy`, and `filter`, i.e. `b.title.arrayAgg({ distinct: true })`
+- `coalesce(fallback)`
+- Other functions like `b.authorId.taggedId()` which return `"a:1"` values for use in SQL expression, like `arrayAgg`
 
-Expression branches must have matching SQL types and codecs. Literal branches use the expression's
-encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknown or different codecs
-cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
-literals need a column or other expression that supplies their codec.
-
-#### ARRAY_AGG
-
-Use the compact form to aggregate an existing expression:
-
-```ts
-const rows = await em.query({
-  from: b,
-  select: { titles: { arrayAgg: b.title } },
-});
-// rows: { titles: string[] | null }[]
-```
-
-The expanded form accepts the same `distinct`, `orderBy`, and `filter` options as `.arrayAgg()`:
-
-```ts
-const rows = await em.query({
-  from: b,
-  select: {
-    authorIds: {
-      arrayAgg: {
-        value: sql.numberOrNull`${b.author_id}`,
-        distinct: true,
-        orderBy: [{ sort: b.author_id, order: "ASC" }],
-        filter: b.title.ne("Untitled"),
-      },
-    },
-  },
-});
-// rows: { authorIds: (number | null)[] | null }[]
-```
-
-`value` can itself be an expression literal, and the complete aggregate can be nested in CASE or
-COALESCE. Array elements use the value expression's codec, so tagged ids and custom values decode in the
-same way as `.arrayAgg()`. The aggregate remains nullable because zero input rows produce SQL `NULL`;
-wrap it in COALESCE when an empty array is preferable. With `distinct: true`, PostgreSQL requires each
-ordering expression to match the aggregate value.
-
-#### NULLIF
-
-`nullIf` returns null when its two operands are equal, otherwise it returns the first operand. Use it
-inside COALESCE to treat empty strings as missing:
-
-```ts
-const displayName = expr({
-  coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name],
-});
-```
-
-A null first operand stays null. A null second operand does not match a non-null first operand:
-`expr({ nullIf: [a.first_name, null] })` returns the first name. The inferred NULLIF result type
-conservatively includes null.
-
-#### GREATEST and LEAST
-
-`greatest` and `least` compare operands using PostgreSQL's ordering:
-
-```ts
-const boundedAge = expr({
-  least: [{ greatest: [a.age, 18] }, 65],
-});
-```
-
-Both ignore null operands and return null only when all operands are null. The example returns 18
-when the Author's age is null. A known non-null operand guarantees a non-null result, including when
-other operands come from LEFT joins.
-
-These expression objects nest inside CASE, COALESCE, or each other. They use the same type and codec checks
-as CASE and COALESCE. NULLIF requires exactly two operands; GREATEST and LEAST require at least one.
-Dynamic arrays are accepted, and their lengths are checked at runtime.
-
-### Query conditions
-
-The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:
+Just like `em.find`, the `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions for creating nested/complex conditions.
 
 ```ts
 const rows = await em.query({
   from: a,
   join: [{ inner: b, on: b.author_id.eq(a.id) }],
-  groupBy: [a.first_name],
+  groupBy: [a.firstName],
   having: { and: [b.id.count().gt(1)] },
-  select: { name: a.first_name, bookCount: b.id.count() },
+  select: { name: a.firstName, bookCount: b.id.count() },
 });
 ```
 
@@ -351,19 +263,23 @@ const [a, b] = tables(Author, Book);
 const authors = await em.query({
   from: a,
   where: {
-    and: [a.age.gte(18), { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
+    and: [
+      a.age.gte(18),
+      { exists: query({ from: b, where: b.authorId.eq(a.id), select: b.id }) },
+    ],
   },
   select: a,
 });
 ```
 
-Use `notExists` instead to select Authors without matching Books. See [EXISTS and NOT EXISTS](#exists-and-not-exists) for supported query shapes and subquery semantics.
+Use `notExists` instead to select Authors without matching Books.
 
 A POJO `select` is also type-checked against the query's scope: selecting a column from a source that is neither `from` nor in `join` is a compile error that names the missing source. (Conditions in `where`/`having`/`orderBy` are not scope-checked at compile time; an out-of-scope source there fails at runtime.)
 
-### Ergonomics filters with `Table.where`
 
-One of the DX wins of `em.find`s filters was, for endpoint filter shapes that match your domain, being able to just drop those key/values into `em.find` without maual translation:
+### Find Style Filters
+
+One of `em.find`'s DX wins for filters is that, if incoming API `filter` shapes matched your domain 1:1, you can drop those key/values into `em.find` without manual translation:
 
 ```ts
 type GetAuthorFilters = {
@@ -376,345 +292,233 @@ function getAuthors(filters: GetAuthorFilters) {
 }
 ```
 
-Because `em.query` is for low-level SQL queries, most of its DSL uses column names, which might be snake-cased like `first_name` or `last_name`, and it also doesn't support `em.find`s "nested-relation filter", b/c it wants joins explicitly called out.
-
-To provide this same "easy filter handling DX", table variables have a `where(filter)` method that accepts the same basic shape as `em.filter`, and return an `em.query`-compatiable `ExpressionCondition`.
+`em.query` supports the same pattern using `Table.where`:
 
 ```ts
-import { type TableFilter, tables } from "joist-orm";
-
 const [a, b] = tables(Author, Book);
-// I.e. passed as a paramter
+// I.e. passed as endpoint query parameters
 const filter = {
   firstName: { ilike: "ali%" },
   age: { gte: 18 },
-} satisfies TableFilter<Author>;
-
+  bookTitle: "Favorite Title",
+};
+// Split out the filters per-table
+const { bookTitle, ...authorOthers } = filter;
 const rows = await em.query({
   from: a,
   join: [a.books.inner(b)],
-  where: a.where(filter),
-  select: a.first_name,
+  where: [a.where(authorOthers), b.where({ bookTitle }),
+  select: a.firstName,
 });
 ```
 
-## Joins
+## Arbitrary Expressions
 
-### Explicit joins
+So far we've used table fields like `a.firstName` and `b.authorId` as the expressions in our `em.query` queries, but complicated SQL queries often need arbitrary SQL expressions.
 
-Joins are expressed as an object literal of:
+For these, Joist has two mechanisms:
 
-- Either `inner` or `left` key set to the table or subquery to join
-- An `on` key describing the expression to join on
+- **Expression literals** are object literals for common SQL functions that can be used anywhere the requires an expression.
 
-Examples are:
+  - `{ coalesce: [a.firstName, a.lastName] }`
+  - `{ greatest: [a1.age, a2.age] }`  and `least`
+    - Or combined `{ least: [{ greatest: [a.age, 18] }, 65] })`
+  - Case statements
+    ```ts
+     { case: [
+        { when: a.age.gte(18), then: "Adult" },
+        { when: { and: [a.age.gte(13), a.age.lte(18)], then: "Teenager" },
+        { else: "Child" }
+      ] },
+    ```
+  - Array aggregation `{ arrayAgg: b.title }`
+  - `{ nullIf: [a.lastName, ""] }`
+
+- **`sql` Tagged Literals** are SQL injection-safe strings of arbitrary SQL.
+
+  Because we need to know their type, they are created via shortcuts like `sql.number`, `sql.stringOrNull`, or `sql.stringArray`.
+
+  ```typescript
+  // A computed expression, usable in select/orderBy
+  em.query({ from: b, select: sql.number`${b.order} * 2` });
+
+  // Using an unmodeled column `ts_search` for full-text search
+  em.query({
+    from: a,
+    where: sql.condition`${a.column("ts_search")} @@ plainto_tsquery(${words})`
+  });
+
+  // Other examples of misc/arbitrary syntax
+  sql.boolean`CASE WHEN ${b.order.in([1, 2])} THEN true ELSE false END`;
+  sql.number`row_number() OVER (PARTITION BY ${b.author_id} ORDER BY ${b.title})::int`;
+  sql.number`count(*) FILTER (WHERE ${br.rating.gte(4)})::int`;
+  ```
+
+  If you already have a column like `a.firstName`, and just want to use it in a custom condition, you can use `.is` _as a tagged literal_ as a shorthand for a `sql.condition`:
+
+  ```ts
+  a.firstName.is`ILIKE ${pattern}`;
+  a.age.is`BETWEEN ${min} AND ${max}`;
+  ts.column("range").is`@> ${asOf}::timestamptz`;
+  // Despite the name, `.is` doesn't inject the `IS` keyword
+  a.age.is`IS NULL`
+  ```
+
+For the expression literals, you can use the `expr` function to declare an expression and then reuse it later:
 
 ```ts
-join: [
-  { inner: b, on: b.author_id.eq(a.id) },
-  { left: bookStats, on: bookStats.authorId.eq(a.id) },
-  { left: c, on: { and: [c.parent.eq(a.id), c.text.ne(null)] } },
-];
-```
+import { expr } from "joist-orm";
 
-### Relationship joins
+// Create up-front to easily reuse
+const someName = expr({
+  coalesce: [a.lastName, a.firstName]
+});
 
-Given that adding joins for relationship traversal (i.e. `JOIN books b ON b.author_id = a.id` for the `books` relation) is very common, Joist provides syntax sugar for easily creating them.
-
-Each relation is available as a key on the entity's table, i.e. an `Author` table `a` has `a.books`, which then has an `as` method to create the `{ left: b, on: b.author_id.eq(a.id) }` join literal. Owning relation names such as `b.author` are join factories, not FK expressions; select or compare `b.author_id` instead.
-
-```ts
-const [a, b, p, t] = tables(Author, Book, Publisher, Tag);
-const writer = table(Author, "writer");
-
-join: [
-  a.books.as(b), // LEFT JOIN books b ON b.author_id = a.id (a collection may be empty)
-  a.publisher.as(p), // LEFT JOIN publishers p ON a.publisher_id = p.id (nullable reference)
-  b.author.as(writer), // LEFT JOIN authors: inherits the optional Book above
-  a.tags.as(t), // m2m: joins authors_to_tags and tags; the pair prunes together
-];
-```
-
-Whether `as` returns an `INNER` join or `LEFT` join follows the relation's nullability:
-
-- a required reference (i.e. `book.author`, a required m2o) is `INNER` unless its source was LEFT joined,
-- a nullable reference, every collection (i.e. `author.books`), and one-to-ones are `LEFT`.
-
-Default reference joins inherit LEFT joins through the complete relationship path. In the example above,
-`b.author.as(writer)` preserves Authors without Books, and selecting `writer.first_name` produces
-`string | null`. This also works when the source was joined with an explicit `{ left: b, on: ... }`.
-Use `.inner(writer)` or an explicit `{ inner: writer, on: ... }` to intentionally filter out missing rows.
-
-The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (which is passing an incorrect `Publisher` table to the `books` relation) is a compile error.
-
-Self-joins (joining back into an existing table) are supported with named tables, i.e. `table(Author, "m")`:
-
-```ts
-const a = table(Author);
-const m = table(Author, "m");
 const rows = await em.query({
   from: a,
-  join: [a.mentor.inner(m)],
-  where: { and: [m.age.gt(a.age)] },
-  select: { mentee: a.first_name, mentor: m.first_name },
+  select: { name: someName },
 });
 ```
-
-Polymorphic references pick their component from the argument, i.e. `c.parent.as(a)` joins through `parent_author_id`, like an explicit join with `on: c.parent.eq(a.id)`.
-
-:::tip[Tip]
-
-Joining a collection fans rows out — one row per book, not per author. To _filter_ by a collection without duplicates, use a subquery instead: `a.id.in(query({ from: b, select: b.author_id }))`.
-
-:::
-
-### Relationship trees
-
-Instead of a flat join list, `join` can be a domain relationship tree rooted at the entity table in `from`:
-
-```ts
-const [a, b] = tables(Author, Book);
-const rows = await em.query({
-  from: a,
-  join: {
-    firstName: "Alice",
-    books: { as: b, title: { ilike: "%database%" } },
-  },
-  select: { author: a.first_name, title: b.title },
-});
-```
-
-Tree keys use domain field names, like `em.find` and `Table.where`. Inline filters become `WHERE`
-conditions, ANDed with any explicit `where`. Nested objects walk relationships; `as` optionally binds
-an existing `table(...)` handle so its columns can be used in `select`, `where`, or other clauses.
-Nodes without `as` get internal handles. Root `as` is optional and, when provided, must be the same
-handle as `from`.
-
-For reusable fragments, `const joins = { books: { as: b } } satisfies JoinTree<Author>` checks the
-domain fields while retaining the exact table bindings for result-type inference.
-
-Join kinds, nullable result types, soft deletes, and pruning follow the relationship joins above.
-Owning-reference ID filters such as `{ author: "a:1" }` compare the FK without joining. Collection
-joins retain SQL row multiplicity; use `distinct`, aggregation, or a subquery when needed.
-
-Trees work with entity, POJO, and scalar selections, including reusable `query(...)` values. They
-require an entity table in `from`, and cannot be mixed with explicit joins in an array. This initial
-form supports simple field filters and ordinary relationships; polymorphic fields, inherited-field
-traversal, find scopes, and tree-level `and`/`or` groups are not supported. Use explicit query conditions
-for boolean composition.
 
 ## Condition & Join Pruning
 
-`em.query` prunes exactly like [find queries](./queries-find#condition--join-pruning): a condition given `undefined` drops out, and a join that nothing references anymore drops with it.
+`em.query` prunes unnecessary clauses exactly like [find queries](./queries-find#condition--join-pruning): a condition that evaluates to `undefined` is dropped, and a join that is never referenced by any remaining clauses is also dropped as well.
+
+This seems weird! Why would we purposefully _drop_ conditions?
+
+The reason is that makes for surprisingly great DX, where you don't need to use imperative `if/else` or ternary conditionals to build your queries, you can just declare the maximal shape, and let Joist figure out "what's actually needed".
 
 ```ts
-const { nameFilter, titleFilter } = req.filter; // either may be undefined
+const { name, title } = req.filter; // either may be undefined
 const rows = await em.query({
+  select: { name: a.firstName },
   from: a,
-  join: [{ inner: b, on: b.author_id.eq(a.id) }],
-  where: { and: [a.first_name.eq(nameFilter), b.title.eq(titleFilter)] },
-  select: { name: a.first_name },
+  join: [a.books.as(b)],
+  // Just use the filters as-is, no conditional spreads
+  where: [a.firstName.eq(name), b.title.eq(title)],
 });
 ```
 
-If `titleFilter` is `undefined`, its condition disappears, nothing references `b` anymore, and the join to `books` disappears too — no `...(titleFilter ? [join] : [])` conditional spreads needed.
+If `title` is `undefined`, then the `b.title.eq` condition is dropped, nothing references `b` anymore, and so the join to `books` disappears too.
 
-Two things to know:
-
-- An **inner join filters rows by itself**, so pruning an unreferenced inner join also drops that filter. If the join _is_ the filter (an existence check), pin it with `keep: true`, or better, write it as `a.id.in(query({ from: b, select: b.author_id }))`, which never prunes.
-- A join that is still referenced but whose `on` condition pruned away entirely is a **runtime error**, not a cross join.
-
-`pruneJoins: false` on the query turns join pruning off, and `undefined` entries in the `join` and `orderBy` arrays are allowed so conditional spreads still work.
-
-### Optional subqueries with `queryMaybe`
-
-Use `queryMaybe` when an optional filter should prune the entire subquery. It returns `undefined` when all of its supplied `where` conditions prune, so an enclosing `in`, `exists`, or `notExists` condition prunes too:
+Just like conditions & joins can be pruned, entire subqueries can be pruned, for example this entire `.in` condition & entire subquery is pruned away if `bookTitle` ends up `undefined``:
 
 ```ts
-import { queryMaybe, tables } from "joist-orm";
-
+const { bookTitle } = req.filter; // string | undefined
 const [a, b] = tables(Author, Book);
-const { titleFilter } = req.filter; // string | undefined
 const authors = await em.query({
-  from: a,
-  where: a.id.in(
-    queryMaybe({
-      from: b,
-      where: b.title.eq(titleFilter),
-      select: b.authorId,
-    }),
-  ),
   select: a,
+  from: a,
+  // We only want to `.in(...books...)` when `bookTitle` is set
+  where: a.id.in({
+    select: b.authorId,
+    from: b,
+    where: b.title.eq(bookTitle),
+  }),
 });
 ```
 
-With a defined `titleFilter`, this returns Authors with a matching Book. With `undefined`, the Book condition, subquery, and outer `in` condition all disappear, so Authors without Books are included too.
+If you need to disable pruning, you can:
 
-`queryMaybe` preserves `query`'s select-shape inference and adds `| undefined` to its return type; `query` itself always returns a query value. The supplied `where` and inline join-tree filters control this decision: if neither has a surviving condition, the value prunes. Alias-only joins, `having`, and implicit soft-delete or STI conditions do not keep the query alive.
-
-Nested `and`/`or` groups follow the existing `pruneIfUndefined` policy: `"all"` (the default) prunes a group when all conditions prune, while `"any"` prunes it when any condition prunes. A fixed condition or correlation otherwise keeps the subquery alive even when an optional filter disappears. Use `pruneIfUndefined: "any"`, or make the whole `where` conditional, when those restrictions should depend on the optional filter.
+* Pass `keep: true` to each individual `{ inner: ... }` join, or
+* Pass `pruneJoins: false` to `em.query`
 
 ## Soft Deletes
 
-`em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a _collection_ sugar join (o2m/m2m, unless the relation is configured `softDeletes: "include"`) gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row.
+`em.query` hides soft-deleted rows the same way `em.find` does:
 
-_Reference_ sugar joins (m2o/o2o/poly) and explicit joins are **not** filtered, matching `em.find`'s relation semantics: `book.author.get` resolves a soft-deleted author, so joining through one should not drop the book. If you do want this behavior, you can add a `deleted_at` condition to the `on` manually.
+- Using `from` with a soft-deletable entity auto-adds `deleted_at IS NULL` to the `WHERE` clause,
+- Using _collection_ joins (o2m, m2m) auto-adds `deleted_at IS NULL` to the `ON` clause, so you don't see deleted children
+- Using _reference_ joins (m2o, o2o, poly) are not filtered and _will_ return soft-deleted rows, since being able to "still FK to a soft-deleted row" is often the rationale for having a soft-deleted row in the first place
 
 You can opt out of soft-delete filtering with `softDeletes: "include"`:
 
 ```ts
-const rows = await em.query({ from: a, select: { name: a.first_name }, softDeletes: "include" });
+const rows = await em.query({
+  select: { name: a.firstName },
+  from: a,
+  softDeletes: "include"
+});
 ```
-
-Like `em.find`, filtering is skipped for CTI subtypes.
 
 ## Ordering and Paging
 
-For ordinary queries, `orderBy` accepts an array of keyed or expression entries, or a single entry:
+`orderBy` supports two forms:
 
-The **keyed form** uses keys from the POJO `select` (or physical column keys in entity mode), each with `"ASC"` or `"DESC"`, optionally suffixed with `NULLS FIRST` / `NULLS LAST`. I.e. `select: a` uses `orderBy: { first_name: "ASC" }`, while `select: { firstName: a.first_name }` uses `orderBy: { firstName: "ASC" }`:
+- The **select form** uses keys from `select`, each set to `"ASC"` or `"DESC"`:
 
-```ts
-const rows = await em.query({
-  from: a,
-  join: [{ inner: b, on: b.author_id.eq(a.id) }],
-  groupBy: [a.first_name],
-  select: { name: a.first_name, bookCount: b.id.count() },
-  orderBy: [{ bookCount: "DESC" }, { name: "ASC NULLS LAST" }],
-});
-// ... ORDER BY "bookCount" DESC, name ASC NULLS LAST
-```
+  ```ts
+  const rows = await em.query({
+    from: a,
+    select: { name: a.firstName, bookCount: b.id.count() },
+    orderBy: [{ name: "ASC" }, { bookCount: "DESC" }],
+  });
+  ```
 
-Entries are applied in array order. A single keyed object is shorthand, i.e. `orderBy: { bookCount: "DESC", name: "ASC NULLS LAST" }` produces the same ordering.
+  You can also use `"ASC NULLS FIRST"` or `"ASC NULL LAST"`.
 
-The **expression form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — including fields you didn't select. Each entry has a `sort` expression, an `order: "ASC" | "DESC" | undefined`, and an optional `nulls: "first" | "last"`:
+  With this form, you can only order by the fields you're selecting.
 
-```ts
-orderBy: [
-  { sort: b.id.count(), order: "DESC" },
-  { sort: a.first_name, order: "ASC", nulls: "last" },
-];
-```
+- The **expression form** takes an array of objects with two keys: `sort` being any arbitrary SQL expression, and `order` being its order:
 
-For one expression, use `orderBy: a.first_name.asc()` or `orderBy: a.first_name.desc()` without an array.
+  ```ts
+  orderBy: [
+    { sort: b.id.count(), order: "DESC" },
+    { sort: a.firstName, order: "ASC", nulls: "last" },
+  ];
+  ```
 
-Keyed and expression entries can also be mixed:
+- This 2nd expression form can also be used by calling `.asc()` or `.desc()` methods on columns or other expressions:
 
-```ts
-orderBy: [{ bookCount: "DESC" }, { sort: a.first_name, order: "ASC", nulls: "last" }];
-```
+  ```ts
+  orderBy: [b.id.desc(), a.firstName.asc()],
+  ```
 
-Both forms allow `undefined` entries. A keyed direction of `undefined` prunes that key; an expression order of `undefined` prunes the complete entry before its expression references are collected, so it does not retain an otherwise-unused join. Prefer the keyed form whenever what you're ordering by is already in `select`. [Set operations](#set-operations) only support the keyed form at their root.
 
-## Composition: `query()`
+## Composing Multiple Queries
 
-`query(pojo)` takes the _same_ object literal as `em.query` and turns it into a value instead of running it. That value is how queries compose:
+Usually queries are object literals passed directly to `em.query`, but you can also assign them to `const`s for reuse/abstractions using the `query` function:
 
-### Derived tables
-
-A POJO select gives a subquery with typed columns, usable in `from`, `join`, and every clause. `as` names it, both in the SQL and in error messages:
-
-```ts
+```typescript
 const bookStats = query({
   from: b,
-  groupBy: [b.author_id],
-  select: { authorId: b.author_id, bookCount: b.id.count() },
+  groupBy: [b.authorId],
+  select: { authorId: b.authorId, bookCount: b.id.count() },
   as: "book_stats",
 });
 
+// Then use it later in another query
 const rows = await em.query({
   from: a,
   join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
-  select: { name: a.first_name, bookCount: bookStats.bookCount.coalesce(0) },
+  select: { name: a.firstName, bookCount: bookStats.bookCount.coalesce(0) },
 });
 ```
-
-Subqueries chain — `query({ from: bookStats, ... })` — and `select: bookStats` on its own is `SELECT *`.
-
-### Scalar and list subqueries
-
-A single-expression `select` in an ordinary `query({ from, select: expr })` returns a `ScalarQuery<R>`, a branded `Expr<R | null, never>`, where `R` is the selected row type. In scalar-expression context, zero rows produces SQL `NULL` and more than one row is a database error. `.coalesce()` handles the zero-row case, not multiple rows. Scalar subqueries close over outer sources, so correlation just works:
-
-```ts
-const rows = await em.query({
-  from: a,
-  select: {
-    name: a.first_name,
-    bookCount: query({ from: b, where: { and: [b.author_id.eq(a.id)] }, select: b.id.count() }).coalesce(0),
-  },
-});
-```
-
-The same single-expression subquery works as an `in` target and can return many rows, without turning an empty result into one `NULL` row. This includes polymorphic references, where the subquery's select column picks the component, i.e. `c.parent.in(query({ from: a, select: a.id }))` filters on `parent_author_id`:
-
-```ts
-where: {
-  and: [a.id.in(query({ from: b, select: b.author_id }))];
-}
-```
-
-### EXISTS and NOT EXISTS
-
-Use `{ exists: queryValue }` or `{ notExists: queryValue }` wherever a query condition is accepted,
-including `where`, `having`, join `on`, and nested `and`/`or` groups:
-
-```ts
-const booksForAuthor = query({ from: b, where: b.author_id.eq(a.id), select: b.id });
-
-const authors = await em.query({
-  from: a,
-  where: { and: [a.age.gte(18), { exists: booksForAuthor }] },
-  select: a,
-});
-
-const authorsWithoutBooks = await em.query({
-  from: a,
-  where: { notExists: booksForAuthor },
-  select: a,
-});
-```
-
-The operand must be a `query(...)` value, not a query literal or an ordinary expression.
-Scalar, entity, POJO, and compound queries are supported. Correlated references retain the outer
-joins they use. The subquery keeps its projection, grouping, `having`, and pagination: for example,
-an ungrouped `count()` returns a row even when its input is empty, so `EXISTS` is true in that case.
-Existence queries do not hydrate their selected entities.
-
-### Reusing a base query
-
-Because queries are data, sharing a base is just a spread — i.e. a page of rows plus a total count from one definition:
-
-```ts
-const base = { from: a, where: { and: [a.first_name.like(filter)] } } satisfies Omit<Query, "select">;
-const page = await em.query({ ...base, select: { name: a.first_name }, orderBy: { name: "ASC" }, limit: 20 });
-const [{ total }] = await em.query({ ...base, select: { total: a.id.count() } });
-```
-
-:::tip[Tip]
-
-Standalone query objects should use `satisfies Query`, not a `: Query` annotation — the annotation widens `select` and loses the per-column types. Joist detects this and reports "select was typed too generically; use `satisfies Query` instead of `: Query`".
 
 :::
 
-## CTEs: `with`
+## Using CTEs
 
-`with` adds `query(...)` values to a SQL `WITH` clause. It only _declares_ the CTE; to read one, put the same value in `from` or `join`, where it renders as the bare CTE name instead of an inlined `(SELECT ...)`:
+You can add CTEs to a query with the `with` keyword, passing the `query(...)`s that will define the CTE.
 
 ```ts
+// Declare a `book_stats` CTE
 const bookStats = query({
   from: b,
-  groupBy: [b.author_id],
-  select: { authorId: b.author_id, bookCount: b.id.count() },
+  groupBy: [b.authorId],
+  select: { authorId: b.authorId, bookCount: b.id.count() },
   as: "book_stats",
 });
-
+// Use it in another query
 const rows = await em.query({
   with: bookStats,
   from: a,
   join: [{ inner: bookStats, on: bookStats.authorId.eq(a.id) }],
-  select: { name: a.first_name, bookCount: bookStats.bookCount },
+  select: { name: a.firstName, bookCount: bookStats.bookCount },
 });
 ```
+
+Creates this SQL:
 
 ```sql
 WITH book_stats AS (
@@ -726,45 +530,26 @@ FROM authors AS a JOIN book_stats ON book_stats."authorId" = a.id
 WHERE a.deleted_at IS NULL
 ```
 
-Because the value is the same [derived table](#derived-tables) either way, moving a subquery into a CTE is a one-line change, and its columns keep their types.
-
-`as` names the CTE; without it Joist generates one. `with` takes a single value or an array, and CTEs may read _earlier_ entries in that array:
-
-```ts
-const prolific = query({
-  from: bookStats,
-  where: bookStats.bookCount.gte(2),
-  select: { authorId: bookStats.authorId },
-});
-const rows = await em.query({
-  with: [bookStats, prolific],
-  from: a,
-  join: [{ inner: prolific, on: prolific.authorId.eq(a.id) }],
-  select: { name: a.first_name, id: prolific.authorId },
-});
-```
-
-An `undefined` entry drops out, and a CTE nothing reads anymore is pruned along with the join that read it, the same [pruning](#condition--join-pruning) joins get; `pruneJoins: false` keeps every CTE. A CTE also needs named columns, so entity-mode and scalar `query(...)` values are rejected, the same rule [set operands](#set-operations) follow.
-
-One `query(...)` value carries one SQL alias, so reading the same CTE twice in one query is an error; give each use its own value.
-
-### Recursive CTEs
-
-`recursiveQuery(name, base, step)` declares a `WITH RECURSIVE` CTE. `base` is the non-recursive term, which seeds the rows and, as in PostgreSQL, supplies the CTE's columns; `step` receives the CTE itself, so it can join back to the rows found so far:
+You can use `recursiveQuery` for `WITH RECURSIVE` CTEs, they are a little different because they involved both a base & recursive case:
 
 ```ts
 const tree = recursiveQuery(
+  // Declare the 2nd
   "tree",
-  { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+  // Declare the base case
+  { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.firstName } },
+  // Declare the recursive case, which joins against
+  // the `self` param which is the base/recursive case.
   (self) => ({
     from: a,
     join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
-    select: { id: a.id, name: a.first_name },
+    select: { id: a.id, name: a.firstName },
   }),
 );
-
 const rows = await em.query({ with: tree, from: tree, select: tree });
 ```
+
+Create this SQL:
 
 ```sql
 WITH RECURSIVE tree AS (
@@ -777,23 +562,14 @@ WITH RECURSIVE tree AS (
 SELECT tree.id AS id, tree.name AS name FROM tree
 ```
 
-Unlike `query()` the name is required, because the step term has to name it. One recursive entry makes the whole clause `WITH RECURSIVE`, PostgreSQL's rule, without making the other entries recursive.
+## Unions and Intersections
 
-The terms are combined with `UNION ALL`. Pass `{ union: "distinct" }` for `UNION`, which drops duplicate rows and so stops a cyclic graph from looping forever:
-
-```ts
-const chain = recursiveQuery("chain", base, step, { union: "distinct" });
-```
-
-## Set Operations
-
-`em.query` supports native PostgreSQL set operations in one SQL statement. A compound query is a separate root shape, not an extra clause on a `{ from, select, ... }` query:
+Set operations like `union`, `interset`, etc. are supported by passing a top-level `union` key and then a list of the query to combine:
 
 ```ts
 const [a, b] = tables(Author, Book);
-const authorNames = { from: a, select: { name: a.first_name } } satisfies Query;
+const authorNames = { from: a, select: { name: a.firstName } } satisfies Query;
 const bookNames = { from: b, select: { name: b.title } } satisfies Query;
-
 const rows = await em.query({
   union: [authorNames, bookNames],
   orderBy: { name: "ASC" },
@@ -802,190 +578,5 @@ const rows = await em.query({
 // { name: string }[]
 ```
 
-Exactly one operation key is allowed per compound:
+We support `union`, `unionAll`, `intersect`, `intersectAll`, `except`, and `exceptAll`.
 
-| Key            | SQL             | Result                                                             |
-| -------------- | --------------- | ------------------------------------------------------------------ |
-| `union`        | `UNION`         | Distinct rows from either side                                     |
-| `unionAll`     | `UNION ALL`     | All rows, adding duplicate counts                                  |
-| `intersect`    | `INTERSECT`     | Distinct rows present on both sides                                |
-| `intersectAll` | `INTERSECT ALL` | Shared rows, taking the minimum duplicate count                    |
-| `except`       | `EXCEPT`        | Distinct left rows not present on the right                        |
-| `exceptAll`    | `EXCEPT ALL`    | Left rows, subtracting right duplicate counts with a floor of zero |
-
-Equality compares complete projected SQL rows, before JavaScript decoding, and treats corresponding SQL `NULL`s as equal. Two different SQL rows can still decode to equal JavaScript values, i.e. if a JSON schema strips fields; that does not make them duplicates in SQL.
-
-Operands can be ordinary read-query POJOs, nested compound POJOs, or compatible `Subquery` values created by `query()`. Every operand and every compound result must have named POJO columns, even for a single column. Scalar-select operands are rejected at compile time and runtime: all-scalar compounds, mixed scalar/POJO operands, reusable scalar `query()` values, and scalar operands inside nested compounds are unsupported. Arbitrary expressions are not set operands either.
-
-Each operation requires **at least two operands**. Known tuples are checked at compile time; every input is checked at runtime, including dynamic arrays. Readonly tuples and arrays are supported. Unlike optional conditions, `undefined`, `null`, and `false` operands are rejected, not omitted: removing the first operand of `EXCEPT` would change its meaning.
-
-For standalone compound objects, use `satisfies SetQuery` instead of a `: SetQuery` annotation to retain literal row types, just as with `satisfies Query` for ordinary queries. Collections widened to the general operand type lose their known output keys and are rejected at compile time:
-
-```ts
-const combined = { union: [authorNames, bookNames] as const } satisfies SetQuery;
-await em.query(combined);
-```
-
-### Named columns and result types
-
-Every POJO operand must have exactly the same keys. The first operand determines output names and column order, and Joist aligns later operands by key, not their object insertion order. For example, these projections are compatible:
-
-```ts
-const authorSelect = { name: a.first_name, id: a.id };
-const bookSelect = { id: b.author_id, name: b.title };
-```
-
-Joist uses projection wrappers to reorder output columns without mutating caller-owned objects or query values. Branch `distinct`, ordering, and pagination stay in place, and selected expressions are not repeated merely to reorder them. Missing or extra keys are rejected, including at runtime for untyped inputs.
-
-`union` and `unionAll` combine each column's compatible value types and nullability from every operand, including left-join nullability. I.e. a required `name: string` combined with a left-joined `name: string | null` returns `{ name: string | null }[]`, regardless of operand order. `intersect`, `except`, and their `All` variants conservatively retain the left row type; they do not infer narrower nullability.
-
-### Grouping, scope, and paging
-
-Each object owns its clauses. A compound root accepts `orderBy`, `limit`, and `offset`, plus `as` when constructing a named `query()` value. It does not accept `from`, `select`, `join`, `where`, `groupBy`, `having`, `distinct`, `softDeletes`, or `pruneJoins`; put these in an operand or an ordinary outer query.
-
-```ts
-const rows = await em.query({
-  unionAll: [
-    { ...authorNames, orderBy: { name: "ASC" }, limit: 10 },
-    { ...bookNames, orderBy: { name: "ASC" }, limit: 10, offset: 10 },
-  ],
-  orderBy: { name: "DESC" },
-  limit: 5,
-  offset: 2,
-});
-```
-
-Here each branch contributes its own page; the root orders and pages the combined rows. Branch ordering alone does not promise final output order.
-
-Operand arrays associate **left-to-right**. Joist emits explicit SQL parentheses for operands and the accumulated left side, preserving nested grouping rather than relying on PostgreSQL's higher precedence for `INTERSECT`. For compatible read operands `q1`, `q2`, and `q3`:
-
-```ts
-query({ except: [q1, q2, q3] });
-// (q1 EXCEPT q2) EXCEPT q3
-
-query({ except: [q1, { except: [q2, q3] }] });
-// q1 EXCEPT (q2 EXCEPT q3), not the same as the previous query
-
-query({ intersect: [{ union: [q1, q2] }, q3] });
-// (q1 UNION q2) INTERSECT q3
-```
-
-Each operand has its own source scope: siblings cannot reference one another's local tables or subqueries. When an ordinary scalar/`IN` subquery reads a compound, its branches can use legitimate enclosing correlations. A correlation in any branch, including a non-first branch, keeps the referenced outer join alive. Reused tables and query values resolve afresh for each execution. Derived-table compounds do not gain implicit `LATERAL` support.
-
-Each branch retains its own soft-delete, STI filtering, and join-pruning behavior; there are no compound-wide policy overrides.
-
-Root `orderBy` accepts **output-key directions only**, as a single object or an array of objects. Directions are `"ASC"` / `"DESC"`, optionally followed by `NULLS FIRST` / `NULLS LAST`; `undefined` entries and directions are pruned. Branch column references and arbitrary expression sorts are rejected at the root.
-
-### Reusable compounds and outer expressions
-
-`query()` turns every compound into a `Subquery` with typed, named columns. Use `as` to name it, execute it directly for POJO rows, or use it as another query's `from` or `join` source and reference its columns in projections or predicates. For expression ordering, use an ordinary outer query:
-
-```ts
-const names = query({
-  union: [authorNames, bookNames],
-  as: "names",
-});
-
-await em.query(names);
-const rows = await em.query({
-  from: names,
-  where: names.name.ne(""),
-  select: names,
-  orderBy: [{ sort: sql<string>`lower(${names.name})`, order: "ASC" }],
-});
-```
-
-### Scalar subqueries and entity membership
-
-To use a compound in `IN` or a scalar expression, first build named POJO rows, then select one column through an ordinary `query({ from, select: expr })`. The compound itself is a derived table, not a scalar expression or an `IN` target.
-
-Entity-mode operands, including `query({ from: a, select: a })` values, are also excluded from compounds. Ordinary entity reads still work: combine compatible IDs and filter an entity query with `id.in(...)`:
-
-```ts
-const ids = query({
-  union: [
-    { from: a, select: { id: a.id } },
-    { from: b, select: { id: b.author_id } },
-  ],
-});
-// Subquery<{ id: AuthorId }, "?">
-
-const authors = await em.query({
-  from: a,
-  where: a.id.in(query({ from: ids, select: ids.id })),
-  select: a,
-});
-// Author[]
-```
-
-The outer single-expression subquery can consume many compound rows in `IN`. Used as a scalar expression, it adds the zero-row `NULL` and errors on multiple rows, just like any ordinary scalar subquery. Apply `.coalesce()` to that outer expression, not to the compound. For example, select at most one ID before providing a fallback:
-
-```ts
-const firstAuthorId = query({
-  from: ids,
-  select: ids.id,
-  orderBy: [{ sort: ids.id, order: "ASC" }],
-  limit: 1,
-}).coalesce("a:1");
-// Expr<AuthorId, never>
-```
-
-The entity membership query does not preserve `ALL` duplicate counts or the compound's ordering. Polymorphic `IN` predicates, i.e. `c.parent.in(query({ from: ids, select: ids.id }))`, use the selected column's agreed ID target, so compatible Author PK/FK operands select the Author component regardless of operand order.
-
-### Output compatibility and codecs
-
-Compatibility is deliberately conservative: every output needs a known codec with the **same SQL representation, logical domain, and exact ID target**. Compatible TypeScript types or PostgreSQL's ability to find a common SQL type are not sufficient. These checks apply to all six operators, including `except` and `intersect` even though their result types retain the left row.
-
-- `a.id` and `b.author_id` are compatible Author IDs, despite distinct expression/serde instances. Results decode as tagged Author IDs, and combined columns retain their encoders for comparisons such as `.eq("a:1")` and `.coalesce()` fallbacks.
-- `a.id` and `b.id` are rejected: identical integer storage does not make Author IDs and Book IDs the same domain.
-- `a.age` and `a.age.sum()` are rejected in either order: the field is `int4`, while its `SUM` is `int8`, even though both expose TypeScript numbers. Matching `SUM` outputs are supported and decode as numbers. Joist does not silently promote or coerce mismatched outputs.
-- Aggregate compatibility also requires a known PostgreSQL overload. I.e. `MIN`/`MAX` of `varchar` or `name` produce `text`, so their outputs do not share the original field's SQL representation. Unmodeled aggregate overloads remain unsupported as set outputs.
-- Known scalar enums (including native enums), custom types, schema-backed JSON, `Date`, and Temporal values are supported when their SQL representations and domains match. Domain compatibility uses the enum, custom mapper, JSON schema, or date/time conversion, not merely the storage type or the field's TypeScript shape. Different schemas, or a custom type and a primitive with identical storage, are not interchangeable.
-- Physical primitive arrays and `arrayAgg()` outputs are supported only when both the driver array representation and element conversion are known. I.e. `a.nick_names` can combine with `a.first_name.arrayAgg()` when both are `varchar[]`, and `a.id.arrayAgg()` can combine with `b.author_id.arrayAgg()`. Element encoders and decoders are retained.
-- Compatible physical custom-type and Temporal arrays support elementwise filters and compound outputs. Their codecs are distinct from scalar `arrayAgg()` codecs because physical arrays pass null elements to the element mapper. Physical enum and `Date` array columns remain unsupported, even when both operands select the same field. Native enum/citext arrays, `Date`/Temporal aggregates, primitive numeric arrays, custom numeric arrays, and custom numeric aggregates also remain unsupported because array driver values may differ from scalar values. Nested SQL arrays, including `arrayAgg()` over an array, are unsupported.
-- Outputs from `sql<R>` and `sql.ref` have unknown codecs and are rejected, even if both operands reuse the same expression or produce only SQL `NULL`. A generic annotation or a cast inside raw SQL does not declare a codec. Known nullable field outputs remain supported even when every returned value happens to be `NULL`.
-
-These codecs are internal compatibility information, not a public coercion/decoder API. Raw `sql` expressions remain available in ordinary queries, including an outer query over a compatible compound; they do not bypass set-output validation.
-
-## Escape Hatches: `sql`
-
-ID and FK columns support `.taggedId()` to produce tagged text inside SQL, i.e. `b.id.taggedId()` produces `"b:1"` and `b.authorId.taggedId()` produces `"a:1"`. Use this instead of manually concatenating a tag in a SQL template. The result is a string expression, uses the configured tag delimiter, and preserves NULL for nullable FKs and LEFT joins. Unlike selecting a bare ID column, the tag is available to SQL functions, comparisons, and aggregates before result decoding.
-
-For SQL that Joist does not model, the `sql` tagged template creates a typed expression, `sql.condition` creates a condition, and `sql.ref` reaches an unmodeled column:
-
-```ts
-// A computed expression, usable in select/orderBy
-sql<number>`${b.order} * ${2}`;
-
-// A condition, i.e. full-text search against an unmodeled column
-where: {
-  and: [sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${words})`];
-}
-
-// CASE expressions, window functions, FILTER, EXISTS...
-sql<boolean>`CASE WHEN ${b.order.in([1, 2])} THEN true ELSE false END`;
-sql<number>`row_number() OVER (PARTITION BY ${b.author_id} ORDER BY ${b.title})::int`;
-sql<number>`count(*) FILTER (WHERE ${br.rating.gte(4)})::int`;
-where: {
-  and: [sql.condition`EXISTS ${query({ from: b, where: { and: [b.author_id.eq(a.id)] }, select: b.id })}`];
-}
-```
-
-Interpolated expressions and conditions render with the alias Joist assigned and participate in join pruning; every other interpolated value becomes a query binding, never string concatenation.
-
-For a predicate that starts with an expression, `.is` prefixes that expression and a space to the template:
-
-```ts
-a.first_name.is`ILIKE ${pattern}`;
-a.age.is`BETWEEN ${min} AND ${max}`;
-sql.ref(ts, "range").is`@> ${asOf}::timestamptz`;
-```
-
-This is shorthand for `sql.condition` with the receiver as its first interpolation. It works on columns, subquery columns, and computed expressions, with the same bindings and join tracking. It does not insert the SQL keyword `IS`: write ``a.age.is`IS NULL` ``, not ``a.age.is`NULL` ``.
-
-## Not (Yet) Supported
-
-- Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
-- `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
-- `DISTINCT ON` — emulate with a `row_number()` ranked subquery
-- Returning entities from a joined (non-`from`) table

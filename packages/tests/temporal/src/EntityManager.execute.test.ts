@@ -685,7 +685,7 @@ describe("EntityManager.execute", () => {
     expect(result.rows[0].time!.toString()).toBe("10:01:00.123456");
     expect(queries).toMatchInlineSnapshot(`
      [
-       "INSERT INTO authors AS a ("firstName", birthday, timestamp, time, created_at) SELECT sq."firstName", sq.birthday, sq.timestamp, sq.time, sq.created_at FROM (SELECT a.created_at AS created_at, a.time AS time, a.timestamp AS timestamp, a.birthday AS birthday, a."firstName" AS "firstName" FROM authors AS a WHERE a.id = $1) AS sq RETURNING a.birthday AS birthday, a.time AS time, a.timestamp AS timestamp, a.created_at AS "createdAt"",
+       "INSERT INTO authors AS a ("firstName", birthday, timestamp, time, created_at) SELECT sq."firstName", sq.birthday, sq.timestamp, sq.time, sq.created_at FROM (SELECT a1.created_at AS created_at, a1.time AS time, a1.timestamp AS timestamp, a1.birthday AS birthday, a1."firstName" AS "firstName" FROM authors AS a1 WHERE a1.id = $1) AS sq RETURNING a.birthday AS birthday, a.time AS time, a.timestamp AS timestamp, a.created_at AS "createdAt"",
      ]
     `);
     expect(em.entities).toEqual([]);
@@ -762,7 +762,7 @@ describe("EntityManager.execute", () => {
       expect(filter).not.toHaveBeenCalled();
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO authors AS a ("firstName", birthday, children_birthdays, maybe_birthdays, timestamps, maybe_timestamps, times, maybe_times) SELECT sq."firstName", sq.birthday, sq.children_birthdays, sq.maybe_birthdays, sq.timestamps, sq.maybe_timestamps, sq.times, sq.maybe_times FROM (SELECT arrays."firstName" AS "firstName", arrays.birthday AS birthday, arrays."childrenBirthdays" AS children_birthdays, arrays.times AS times, arrays.timestamps AS timestamps, arrays."maybeBirthdays" AS maybe_birthdays, arrays."maybeTimes" AS maybe_times, arrays."maybeTimestamps" AS maybe_timestamps FROM (SELECT a."firstName" AS "firstName", a.birthday AS birthday, a.children_birthdays AS "childrenBirthdays", a.times AS times, a.timestamps AS timestamps, a1.children_birthdays AS "maybeBirthdays", a1.timestamps AS "maybeTimestamps", (SELECT a2.times AS value FROM authors AS a2 WHERE a2.id = a.id AND a2.id != $1) AS "maybeTimes" FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a1.id = a.id AND a1.id != $2) AS arrays ORDER BY arrays."firstName" ASC) AS sq RETURNING a.id AS value",
+         "INSERT INTO authors AS a ("firstName", birthday, children_birthdays, maybe_birthdays, timestamps, maybe_timestamps, times, maybe_times) SELECT sq."firstName", sq.birthday, sq.children_birthdays, sq.maybe_birthdays, sq.timestamps, sq.maybe_timestamps, sq.times, sq.maybe_times FROM (SELECT arrays."firstName" AS "firstName", arrays.birthday AS birthday, arrays."childrenBirthdays" AS children_birthdays, arrays.times AS times, arrays.timestamps AS timestamps, arrays."maybeBirthdays" AS maybe_birthdays, arrays."maybeTimes" AS maybe_times, arrays."maybeTimestamps" AS maybe_timestamps FROM (SELECT a1."firstName" AS "firstName", a1.birthday AS birthday, a1.children_birthdays AS "childrenBirthdays", a1.times AS times, a1.timestamps AS timestamps, a2.children_birthdays AS "maybeBirthdays", a2.timestamps AS "maybeTimestamps", (SELECT a3.times AS value FROM authors AS a3 WHERE a3.id = a1.id AND a3.id != $1) AS "maybeTimes" FROM authors AS a1 LEFT OUTER JOIN authors AS a2 ON a2.id = a1.id AND a2.id != $2) AS arrays ORDER BY arrays."firstName" ASC) AS sq RETURNING a.id AS value",
        ]
       `);
       expect(
@@ -862,7 +862,7 @@ describe("EntityManager.execute", () => {
       expect(filter).not.toHaveBeenCalled();
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO book AS b (title, published_at, timestamp_tzs, maybe_timestamp_tzs, author_id) SELECT sq.title, sq.published_at, sq.timestamp_tzs, sq.maybe_timestamp_tzs, sq.author_id FROM (SELECT b.author_id AS author_id, b.published_at AS published_at, b.title AS title, b.timestamp_tzs AS timestamp_tzs, b.maybe_timestamp_tzs AS maybe_timestamp_tzs FROM book AS b WHERE b.deleted_at IS NULL ORDER BY b.id ASC) AS sq RETURNING b.id AS value",
+         "INSERT INTO book AS b (title, published_at, timestamp_tzs, maybe_timestamp_tzs, author_id) SELECT sq.title, sq.published_at, sq.timestamp_tzs, sq.maybe_timestamp_tzs, sq.author_id FROM (SELECT b1.author_id AS author_id, b1.published_at AS published_at, b1.title AS title, b1.timestamp_tzs AS timestamp_tzs, b1.maybe_timestamp_tzs AS maybe_timestamp_tzs FROM book AS b1 WHERE b1.deleted_at IS NULL ORDER BY b1.id ASC) AS sq RETURNING b.id AS value",
        ]
       `);
       expect(
@@ -962,7 +962,7 @@ describe("EntityManager.execute", () => {
     });
     expect(queries).toMatchInlineSnapshot(`
      [
-       "INSERT INTO book AS b (title, published_at, author_id) SELECT sq.title, sq.published_at, sq.author_id FROM (SELECT b.author_id AS author_id, b.published_at AS published_at, b.title AS title FROM book AS b WHERE b.id = $1 AND b.deleted_at IS NULL) AS sq RETURNING b.published_at AS value",
+       "INSERT INTO book AS b (title, published_at, author_id) SELECT sq.title, sq.published_at, sq.author_id FROM (SELECT b1.author_id AS author_id, b1.published_at AS published_at, b1.title AS title FROM book AS b1 WHERE b1.id = $1 AND b1.deleted_at IS NULL) AS sq RETURNING b.published_at AS value",
      ]
     `);
     expect(await knex("book").select("author_id", "timestamp_tzs", "maybe_timestamp_tzs").orderBy("id")).toEqual([

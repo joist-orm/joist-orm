@@ -191,6 +191,8 @@ export {
   type Subquery,
   type SubqueryBrand,
   subqueryBrand,
+  type WithInput,
+  type WithSource,
 } from "./query.ts";
 export {
   convertToLoadHint,

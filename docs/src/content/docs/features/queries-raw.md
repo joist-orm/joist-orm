@@ -1,89 +1,106 @@
 ---
-title: Raw Queries
-description: Documentation for Raw Queries
+title: SQL Queries
+description: Making Lower Level SQL Queries
 sidebar:
   order: 3.2
 ---
 
-Raw queries are Joist's API for low-level `SELECT`s: group bys, aggregates, subqueries, set operations, and arbitrary joins, returning entities, plain, strongly-typed POJOs, or scalar values.
+Joist's primary query API is [em.find](./queries-find), which excels at **finding entities**, but cannot express low-level SQL operations like group bys, aggregates, subqueries, etc.
 
-For immediate SQL `INSERT`, `UPDATE`, and `DELETE` statements, use [`em.execute`](/features/sql-mutations/).
-
-Like [find queries](./queries-find), the `em.query` DSL is "just a POJO" of data--no fluent builders to chain 🎉, but thanks to TypeScript's mapped types, still sufficiently type-safe to catch most common errors/typos 💪.
+When you need these capabilities, Joist provides an `em.query` API for creating arbitrary `SELECT` statements (if you need low-level `INSERT`, `UPDATE`, and `DELETE` use [`em.execute`](/features/sql-mutations/)).
 
 Here's an example of getting the count of books per author:
 
 ```ts
 const [a, b] = tables(Author, Book);
-
 const rows = await em.query({
+  select: { name: a.first_name, bookCount: b.id.count() },
   from: a,
   join: [{ left: b, on: b.author_id.eq(a.id) }],
-  where: { and: [a.age.gte(minAge)] },
+  where: a.age.gte(minAge),
   groupBy: [a.first_name],
-  select: { name: a.first_name, bookCount: b.id.count() },
   orderBy: { bookCount: "DESC" },
   limit: 10,
 });
 // rows is { name: string; bookCount: number }[]
 ```
 
-:::tip[Info]
+We'll discuss more, but the biggest DX win of Joist's `em.query` is that it's **not fluent builders**, i.e. the pervasive `.from("authors").join("books")` syntax common in other ORMs, that originated as a pattern in languages from the 90s, like Java and C++.
 
-Note that we put `select` in "a weird spot": after the `groupBy`, instead of first, where it always appears in SQL.
+Joist realizes that JavaScript and TypeScript excel at **creating data structures**, creating POJOs, and so our API leans into the strengths of the languages we actually use today.
 
-This is because we're ordering the object keys in [SQL evaluation order](https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/).
+## When to use Find vs. Query
 
-This is solely a preference for potentially easier reasoning of the query--the order of the `from`, `join`, etc. keys does not actually affect runtime behavior, so you're free to use whatever key order you like.
+You should prefer `em.find` queries for the ~80-90% of queries in your codebase that are plain `SELECT`s to load entities.
 
-:::
+`em.find`'s killer feature is that, because it is purposely limited to "loading entites", it's able to strictly control the SQL it generates and so **automatically batch every em.find** for bullet-proof N+1 prevention.
 
-:::tip[Info]
+Because `em.query` lets you craft "whatever query you want", Joist is not able to rewrite them into auto-batched variants, and so **every em.query is a real database call**.
 
-Prefer [find queries](./queries-find) for the ~80-90% of queries that are plain entity `SELECT`s — they have join literals, batching, and preloading. `em.query` is the next level down, for the queries `em.find` can't express.
+This is actually very common, in that it's how most other ORMs work anyway, but it's surprising behavior for Joist, given our dedication to N+1 prevention, so it's just something to be aware of when using `em.query`.
 
-**Unlike `em.find`, `em.query` is not batched: each call executes its own SQL statement.** Population can execute additional relation queries.
+## Starting with Tables
 
-:::
+All `em.query`s start with declaring the tables you'll use, using the `table` or `tables` function:
 
-## Tables and generated columns
+```typescript
+import { table, tables } from "joist-orm";
 
-Use `table(Author)` or `tables(Author, Book)` for SQL-shaped `em.query`, `query`, and `em.execute` statements. `alias`/`aliases` and `Alias<T>` belong only to `em.find` and its domain filters; they are not SQL sources or mutation targets.
+// A query with 1 table
+const a = table(Author);
+return em.query({ from: a, ... });
 
-A `Table<T>` exposes physical column names, i.e. `a.first_name` and `b.author_id`, not `a.firstName` or a selectable `b.author`. Column values still use Joist's domain codecs and public ID types. Projection keys are yours to choose: `select: { firstName: a.first_name, authorId: b.author_id }` returns camelCase output keys, and a derived table exposes those chosen keys unchanged.
+// A query with two tables
+const [b, br] = tables(Book, BookReview);
+return em.query({ from: b, join: [{ left: br, ... }]});
+```
 
-Codegen emits `AuthorColumns` and `BookColumns` alongside the existing domain `AuthorFields`/`BookFields` types. The generated `TypeMap` connects each entity to its `columnsType`, exposed through `ColumnsOf<T>`. Columns are keyed by physical storage names and carry value, nullability, and insert/update policy types; domain fields continue to describe entity properties and relationships. Runtime `EntityMetadata.columns` maps each physical name to its owning `fieldName`, so table expressions and mutation assignments reuse the existing serde column and its codecs instead of inventing a second mapping layer.
+The `a`, `b`, and `br` variables are then statically typed to the columns of their respective tables.
 
-Each column descriptor has direct `nullable: true | false`, `insert: "required" | "optional" | "never"`, and `update: true | false` properties, with literal values for that column. There is no nested `columns` tuple. Domain `Fields` descriptors have no SQL policies and retain `nullable: undefined | never` for entity-property nullability. The runtime `EntityMetadata.columns` map and `serde.columns` storage arrays are unchanged.
+Note that, to highlight "this is low-level SQL", column names are purposefully "whatever they are in the database", i.e. snake case if you follow that converison: `a.first_name`, `b.author_id`, etc.
 
-Relationship names remain join sugar: `b.author.as(a)` and `a.books.as(b)` still work. Polymorphic `c.parent.eq(...)`, `.ne(...)`, and `.in(...)` remain predicate sugar that selects the appropriate physical component. This does not make `parent` a selectable column or a supported mutation assignment.
+Column values still use Joist's domain codecs and public ID types.
 
 ## Selecting
 
-The `select` key determines the `rows` return type:
+The `select` key determines the data we actually return over the wire,
+and the resulting `rows` return type. It can take 4 forms:
 
-- **A POJO literal** returns typed rows, one key per column. Values decode exactly like entity fields: ids come back as tagged ids (`"a:1"`), enums as enum values, custom serdes as their domain values.
+- **A POJO literal** that defines each row's column name & value:
 
   ```ts
-  const rows = await em.query({ from: a, select: { id: a.id, name: a.first_name, age: a.age } });
+  const a = table(Author);
+  const rows = await em.query({
+    // Declare a pojo of row fieldName -> db value
+    select: { id: a.id, name: a.first_name, age: a.age },
+    from: a,
+  });
   // { id: AuthorId; name: string; age: number | null }[]
   ```
 
-- **A table** returns that table's entities, loaded through the `EntityManager`'s identity map like `em.find`, but the query itself can use group bys and aggregates:
+  The values are decoded just like entity fields: ids come back as tagged ids (`"a:1"`), enums as enum values, custom serdes as their domain values.
+
+- **A table** reference, which returns that table's entities:
 
   ```ts
+  const a = table(Author);
   const authors = await em.query({
+    // Returns an Author entity
+    select: a,
     from: a,
     join: [{ inner: b, on: b.author_id.eq(a.id) }],
     groupBy: [a.id],
-    select: a,
     orderBy: [{ desc: b.id.count() }],
   });
   ```
 
-  (Currently entities can only be selected using the same table as the `from` key, not from a joined table. `select: a` still hydrates `Author` entities; the table cutover does not turn it into a physical row POJO.)
+  The entities will be loaded through the `EntityManager`'s identity map, just like `em.find`.
 
-- **A subquery** (see [Composition](#composition-query)) selects all of its columns, i.e. `select: bookStats` is that subquery's `SELECT *`. Like entity mode, the selected subquery must be the `from`, not a joined source; select a joined subquery's columns individually.
+- **A subquery** (see [Composition](#composition-query)) selects all of its columns.
+
+  I.e. `select: bookStats` is that subquery's `SELECT *`.
+
+  Currently the selected subquery must be the same as the `from` key, not a separate joined-in query.
 
 - **A single expression** in an ordinary `em.query({ from, select: expr })` returns an array of selected values, without the extra `null` from scalar-subquery context:
 
@@ -152,10 +169,7 @@ const [a, b] = tables(Author, Book);
 const authors = await em.query({
   from: a,
   where: {
-    and: [
-      a.age.gte(18),
-      { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) },
-    ],
+    and: [a.age.gte(18), { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
   },
   select: a,
 });
@@ -625,7 +639,16 @@ This is shorthand for `sql.condition` with the receiver as its first interpolati
 ## Not (Yet) Supported
 
 - Scalar and entity-mode set operands; use named POJO columns and an [outer scalar subquery or ID membership query](#scalar-subqueries-and-entity-membership) instead
-- `INSERT` / `UPDATE` / `DELETE` through `query()` or `em.query`; use [SQL Mutations](/features/sql-mutations/) instead
 - User-authored CTEs (`WITH ...`) — subqueries render as inline derived tables
 - `DISTINCT ON` — emulate with a `row_number()` ranked subquery
 - Returning entities from a joined (non-`from`) table
+
+:::tip[Info]
+
+Note that we put `select` in "a weird spot": after the `groupBy`, instead of first, where it always appears in SQL.
+
+This is because we're ordering the object keys in [SQL evaluation order](https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/).
+
+This is solely a preference for potentially easier reasoning of the query--the order of the `from`, `join`, etc. keys does not actually affect runtime behavior, so you're free to use whatever key order you like.
+
+:::

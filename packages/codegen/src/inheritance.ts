@@ -163,6 +163,25 @@ function expandSingleTableInheritance(
         }
       });
 
+      // A `notNull` column with no database default cannot be pushed down to a subtype: the other
+      // subtypes omit it from their INSERT (see `addInserts`), and the database has nothing to fall back
+      // on. A `notNull` column *with* a default is fine -- the other subtypes simply get the default.
+      const requiredFieldNames = new Set(
+        [...entity.primitives, ...entity.enums, ...entity.pgEnums, ...entity.manyToOnes]
+          .filter((f) => f.notNull && f.columnDefault === null && !("columnGenerated" in f && f.columnGenerated))
+          .map((f) => f.fieldName),
+      );
+      for (const [name, f] of allFields) {
+        if (f.stiType && requiredFieldNames.has(name)) {
+          fail(
+            `${entity.name}.${name} is notNull with no database default, so it cannot be pushed down to the` +
+              ` '${f.stiType}' subtype -- the other subtypes would have no value to insert. Either give the` +
+              ` column a default, make it nullable (stiType will still make it required on ${f.stiType}), or` +
+              ` leave the field on ${entity.name}.`,
+          );
+        }
+      }
+
       // Now split each subType out into its out entity
       for (const [enumCode, subTypeName] of subTypes) {
         // Find all the base entity's fields that belong to us

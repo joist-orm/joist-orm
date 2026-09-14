@@ -651,6 +651,7 @@ export interface TaskOldResolvers {
   publishers: Resolver<TaskOld, {}, readonly Publisher[]>;
   specialNewAuthor: Resolver<TaskOld, {}, Author | null | undefined>;
   specialOldField: Resolver<TaskOld, {}, number | null | undefined>;
+  specialOldFieldWithDefault: Resolver<TaskOld, {}, number>;
   syncDefault: Resolver<TaskOld, {}, string | null | undefined>;
   syncDerived: Resolver<TaskOld, {}, string | null | undefined>;
   tags: Resolver<TaskOld, {}, readonly Tag[]>;
@@ -1963,6 +1964,7 @@ export interface SaveTaskOldInput {
   parentOldTaskId?: string | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialOldField?: number | null | undefined;
+  specialOldFieldWithDefault?: number | null | undefined;
   syncDefault?: string | null | undefined;
   type?: string | null | undefined;
 }
@@ -2075,6 +2077,7 @@ export interface TaskOldFilter {
   id?: string[] | null | undefined;
   parentOldTaskId?: string[] | null | undefined;
   specialOldField?: number[] | null | undefined;
+  specialOldFieldWithDefault?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;
   syncDerived?: string[] | null | undefined;
   type?: TaskType[] | null | undefined;

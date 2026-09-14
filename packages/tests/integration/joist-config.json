@@ -124,6 +124,7 @@
         "asyncDerived": { "derived": "async" },
         "specialNewField": { "stiType": "NEW" },
         "specialOldField": { "notNull": true, "stiType": "TaskOld" },
+        "specialOldFieldWithDefault": { "stiType": "TaskOld" },
         "syncDerived": { "derived": "sync" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },

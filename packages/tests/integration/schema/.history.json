@@ -776,6 +776,7 @@
     "parentOldTaskId",
     "specialNewAuthorId",
     "specialOldField",
+    "specialOldFieldWithDefault",
     "syncDefault",
     "type"
   ],
@@ -985,6 +986,7 @@
     "publishers",
     "specialNewAuthor",
     "specialOldField",
+    "specialOldFieldWithDefault",
     "syncDefault",
     "syncDerived",
     "tags",
@@ -1004,6 +1006,7 @@
     "id",
     "parentOldTaskId",
     "specialOldField",
+    "specialOldFieldWithDefault",
     "syncDefault",
     "syncDerived",
     "type",

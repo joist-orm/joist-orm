@@ -70,6 +70,7 @@ export type TaskOldId = Flavor<string, "Task">;
 export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  specialOldFieldWithDefault: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   publishers: { kind: "m2m"; type: Publisher };
@@ -84,6 +85,7 @@ export interface TaskOldColumns extends TaskColumns {
 
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
+  specialOldFieldWithDefault?: number;
   parentOldTask?: TaskOld | TaskOldId | null;
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
@@ -104,6 +106,7 @@ export interface TaskOldIdsOpts extends TaskIdsOpts {
 
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
+  specialOldFieldWithDefault?: ValueFilter<number, never>;
   parentOldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   copiedFrom?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -115,6 +118,7 @@ export interface TaskOldFilter extends TaskFilter {
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
+  specialOldFieldWithDefault?: ValueGraphQLFilter<number>;
   parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   parentOldTaskId?: ValueGraphQLFilter<TaskOldId>;
   copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
@@ -128,6 +132,7 @@ export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
 
 export interface TaskOldOrder extends TaskOrder {
   specialOldField?: OrderBy;
+  specialOldFieldWithDefault?: OrderBy;
   parentOldTask?: TaskOldOrder;
   copiedFrom?: TaskOldOrder;
 }
@@ -145,9 +150,11 @@ export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 export const taskOldScope = newScopeFn<TaskOld, TaskOldScope>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
+taskOldConfig.addRule(newRequiredRule("specialOldFieldWithDefault"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
+taskOldConfig.setDefault("specialOldFieldWithDefault", 0);
 
 declare module "joist-core" {
   interface TypeMap {
@@ -223,6 +230,14 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   set specialOldField(specialOldField: number) {
     setField(this, "specialOldField", specialOldField);
+  }
+
+  get specialOldFieldWithDefault(): number {
+    return getField(this, "specialOldFieldWithDefault");
+  }
+
+  set specialOldFieldWithDefault(specialOldFieldWithDefault: number) {
+    setField(this, "specialOldFieldWithDefault", specialOldFieldWithDefault);
   }
 
   /**

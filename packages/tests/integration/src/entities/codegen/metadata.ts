@@ -340,6 +340,7 @@ const taskMetaColumns = {
   "duration_in_days": new Column("duration_in_days", false, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "special_new_field": new Column("special_new_field", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "special_old_field": new Column("special_old_field", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
+  "special_old_field_with_default": new Column("special_old_field_with_default", false, true, false, false, true, undefined, new PrimitiveSerde("int")),
   "deleted_at": new Column("deleted_at", true, false, false, false, true, undefined, new DateSerde("timestamp with time zone")),
   "sync_default": new Column("sync_default", true, false, false, false, true, undefined, new PrimitiveSerde("text")),
   "async_default_1": new Column("async_default_1", true, false, false, false, true, undefined, new PrimitiveSerde("text")),
@@ -1334,6 +1335,7 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", taskMetaColumns["id"]), immutable: true },
     "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new SimpleFieldSerde("specialOldField", taskMetaColumns["special_old_field"]), immutable: false },
+    "specialOldFieldWithDefault": { kind: "primitive", fieldName: "specialOldFieldWithDefault", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new SimpleFieldSerde("specialOldFieldWithDefault", taskMetaColumns["special_old_field_with_default"]), immutable: false, default: "schema" },
     "parentOldTask": { kind: "m2o", fieldName: "parentOldTask", fieldIdName: "parentOldTaskId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "tasks", serde: new SimpleFieldSerde("parentOldTask", taskMetaColumns["parent_old_task_id"]), immutable: false },
     "copiedFrom": { kind: "m2o", fieldName: "copiedFrom", fieldIdName: "copiedFromId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "copiedTo", serde: new SimpleFieldSerde("copiedFrom", taskMetaColumns["copied_from_id"]), immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_task_id", serde: undefined, immutable: false },

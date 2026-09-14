@@ -88,7 +88,12 @@ function addInserts(ops: Ops, todo: Todo, fixups: InsertFixup[]): void {
           ops.inserts.push(newInsertOp(meta, group, fixups));
         }
       } else if (meta.inheritanceType === "sti") {
-        ops.inserts.push(newStiInsertOp(meta, todo.inserts, fixups));
+        // One INSERT per subtype, so each statement's column list spans exactly what that subtype can
+        // set. A single statement across subtypes has to bind NULL for the other subtypes' columns,
+        // which defeats their database defaults, and outright fails for notNull ones.
+        for (const group of groupBy(todo.inserts, (e) => getMetadata(e)).values()) {
+          ops.inserts.push(newStiInsertOp(meta, group, fixups));
+        }
       } else {
         throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
@@ -108,21 +113,10 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[], fixups: InsertFix
 }
 
 function newStiInsertOp(root: EntityMetadata, entities: Entity[], fixups: InsertFixup[]): InsertOp {
-  // Get the unique set of subtypes
-  const subTypes = new Set<EntityMetadata>();
-  for (const e of entities) subTypes.add(getMetadata(e));
-  // All the root fields (including id)
-  const fields: Field[] = Object.values(root.fields);
-  // Then the subtype fields that haven't been seen yet (subtypes have the root fields + can share non-root fields)
-  for (const st of subTypes) {
-    for (const f of Object.values(st.fields)) {
-      if (!fields.some((f2) => f2.fieldName === f.fieldName)) {
-        fields.push(f);
-      }
-    }
-  }
+  // `allFields` is the base's fields plus this subtype's own, i.e. everything this subtype can write.
+  // Anything it can't write is left out of the statement entirely, so the database applies its default.
+  const fields: Field[] = Object.values(getMetadata(entities[0]).allFields);
   const columns = fields.filter(hasSerde).flatMap((f) => f.serde.columns);
-  // And then collect the same bindings across each STI
   const columnValues = collectBindings(entities, root.tableName, columns, fixups);
   return { tableName: root.tableName, columns, columnValues };
 }

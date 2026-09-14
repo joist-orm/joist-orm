@@ -403,6 +403,8 @@ export function up(b: MigrationBuilder): void {
     special_new_author_id: foreignKey("authors", { notNull: false }),
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
+    // A notNull column pushed down to a subtype; TaskNew omits it from its INSERT and gets the default
+    special_old_field_with_default: { type: "int", notNull: true, default: 0 },
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
     // Self-referential for both subtypes, but specialized to the specific one

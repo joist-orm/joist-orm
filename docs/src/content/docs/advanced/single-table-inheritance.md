@@ -94,7 +94,8 @@ These hints in `joist-config.json` generally look like:
 3. Adding `notNull: true` to any fields that you want Joist to enforce as not null
    - For example, if you want `canMeow` to be required for all `Cat`s, you can add `notNull: true` to the `canMeow` field
    - Without an explicit `notNull` set, we assume subtype fields are nullable, which is how they're represented in the database
-   - See the "Pros/Cons" section later for why this can't be encoded in the database
+   - See the "Pros/Cons" section later for why the database can't enforce this for you
+   - If the column is `NOT NULL` in the database, it needs a default, because the other subtypes omit it from their `INSERT`s; codegen fails otherwise
 4. On any FKs that point _to_ your base type, add `stiType: "SubType"` to indicate that the FK is only valid for the given subtype.
    - See the `DogPack` example in the above example config
 
@@ -141,9 +142,9 @@ Between Single Table Inheritance (STI) and [Class Table Inheritance](./class-tab
 
 2. With CTI, the schema is safer, because the subtype-only columns can have not-null constraints.
 
-   With STI, if we want `can_bark` to be required for all `Dog`s, we cannot use a `can_bark boolean NOT NULL` in the schema, because the `animals` table will also have `Cat` rows that fundamentally don't have `can_bark` values.
+   With STI, a `can_bark boolean NOT NULL` on the `animals` table would apply to `Cat` rows too, which fundamentally don't have `can_bark` values. It can be done with a default, i.e. `NOT NULL DEFAULT false`, because `Cat`s omit the column from their `INSERT`s and get the default -- but the `Cat` rows then satisfy the constraint with that default, so it no longer proves that a `Dog` supplied a value.
 
-   Instead, we have to indicate in `joist-config.json` that Joist should enforce model-level not-null constraints, which is okay, but not as good as database-level enforcement.
+   Either way, we have to indicate in `joist-config.json` that Joist should enforce model-level not-null constraints, which is okay, but not as good as database-level enforcement.
 
 3. With CTI, we can have foreign keys point directly to subtypes.
 

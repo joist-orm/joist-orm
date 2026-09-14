@@ -163,24 +163,21 @@ function expandSingleTableInheritance(
         }
       });
 
-      // A column that is `notNull` in the database has to be settable by *every* subtype, because STI
-      // inserts use a single column list spanning whichever subtypes are in the flush (`newStiInsertOp`).
-      // A subtype that doesn't know the field contributes NULL, and the insert fails -- but only when two
-      // subtypes happen to be created in the same `em.flush`, which makes this a landmine rather than an
-      // obvious bug. Leave such a field on the base and use a validation rule if only some subtypes should
-      // set it; `stiType` + a nullable column is the way to model "required for just this subtype".
-      const notNullFieldNames = new Set(
+      // A `notNull` column with no database default cannot be pushed down to a subtype: the other
+      // subtypes omit it from their INSERT (see `addInserts`), and the database has nothing to fall back
+      // on. A `notNull` column *with* a default is fine -- the other subtypes simply get the default.
+      const requiredFieldNames = new Set(
         [...entity.primitives, ...entity.enums, ...entity.pgEnums, ...entity.manyToOnes]
-          .filter((f) => f.notNull)
+          .filter((f) => f.notNull && f.columnDefault === null && !("columnGenerated" in f && f.columnGenerated))
           .map((f) => f.fieldName),
       );
       for (const [name, f] of allFields) {
-        if (f.stiType && notNullFieldNames.has(name)) {
+        if (f.stiType && requiredFieldNames.has(name)) {
           fail(
-            `${entity.name}.${name} is notNull in the database, so it cannot be pushed down to a single subtype` +
-              ` with stiType '${f.stiType}' -- the other subtypes would insert NULL. Either make the column` +
-              ` nullable (and keep stiType, which will still make it required on ${f.stiType}), or leave the` +
-              ` field on ${entity.name}.`,
+            `${entity.name}.${name} is notNull with no database default, so it cannot be pushed down to the` +
+              ` '${f.stiType}' subtype -- the other subtypes would have no value to insert. Either give the` +
+              ` column a default, make it nullable (stiType will still make it required on ${f.stiType}), or` +
+              ` leave the field on ${entity.name}.`,
           );
         }
       }

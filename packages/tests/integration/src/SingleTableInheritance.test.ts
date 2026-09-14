@@ -50,6 +50,21 @@ describe("SingleTableInheritance", () => {
     expect(ot).toBeInstanceOf(TaskNew);
   });
 
+  it("inserts each subtype separately so subtype columns keep their defaults", async () => {
+    const em = newEntityManager();
+    newTaskNew(em, { specialNewField: 1 });
+    newTaskOld(em, { specialOldField: 2, specialOldFieldWithDefault: 3 });
+    resetQueryCount();
+    await em.flush();
+    // TaskNew does not know `special_old_field_with_default`, so it is left out of TaskNew's INSERT and
+    // the database applies its default; a single INSERT across both subtypes would bind NULL and fail.
+    const rows = await select("tasks");
+    expect(rows).toMatchObject([
+      { id: 1, type_id: 2, special_new_field: 1, special_old_field_with_default: 0 },
+      { id: 2, type_id: 1, special_old_field: 2, special_old_field_with_default: 3 },
+    ]);
+  });
+
   it("can instantiate a TaskOld", async () => {
     await insertTask({ type: "OLD", special_old_field: 1 });
     const em = newEntityManager();

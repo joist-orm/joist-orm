@@ -1,3 +1,8 @@
+extend type Query {
+  taskOld(id: ID!): TaskOld!
+  taskOlds(filter: TaskOldFilter, limit: Int, offset: Int): TaskOldsPage!
+}
+
 extend type Mutation {
   saveTaskOld(input: SaveTaskOldInput!): SaveTaskOldResult!
 }
@@ -24,6 +29,7 @@ type TaskOld {
   asyncDefault_2: String
   syncDerived: String
   asyncDerived: String
+  specialOldFieldWithDefault: Int!
 }
 
 input SaveTaskOldInput {
@@ -37,15 +43,11 @@ input SaveTaskOldInput {
   syncDefault: String
   asyncDefault_1: String
   asyncDefault_2: String
+  specialOldFieldWithDefault: Int
 }
 
 type SaveTaskOldResult {
   taskOld: TaskOld!
-}
-
-extend type Query {
-  taskOld(id: ID!): TaskOld!
-  taskOlds(filter: TaskOldFilter, limit: Int, offset: Int): TaskOldsPage!
 }
 
 type TaskOldsPage {
@@ -68,4 +70,5 @@ input TaskOldFilter {
   copiedFromId: [ID!]
   specialOldField: [Int!]
   parentOldTaskId: [ID!]
+  specialOldFieldWithDefault: [Int!]
 }

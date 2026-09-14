@@ -94,6 +94,13 @@ export interface TaskColumns {
   "duration_in_days": { type: number; fieldName: "durationInDays"; nullable: false; insert: "required"; update: true };
   "special_new_field": { type: number; fieldName: "specialNewField"; nullable: true; insert: "optional"; update: true };
   "special_old_field": { type: number; fieldName: "specialOldField"; nullable: true; insert: "optional"; update: true };
+  "special_old_field_with_default": {
+    type: number;
+    fieldName: "specialOldFieldWithDefault";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
   "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
   "sync_default": { type: string; fieldName: "syncDefault"; nullable: true; insert: "optional"; update: true };
   "async_default_1": { type: string; fieldName: "asyncDefault_1"; nullable: true; insert: "optional"; update: true };

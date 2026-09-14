@@ -9,6 +9,7 @@ import {
   newTaskItem,
   newTaskNew,
   newTaskOld,
+  newTaskThird,
 } from "src/entities";
 import { insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
@@ -48,6 +49,22 @@ describe("SingleTableInheritance", () => {
     const em2 = newEntityManager();
     const ot = await em2.load("task:1");
     expect(ot).toBeInstanceOf(TaskNew);
+  });
+
+  it("can push a field down to several subtypes but not all of them", async () => {
+    const em = newEntityManager();
+    newTaskNew(em, { sharedSubtypeField: 1 });
+    newTaskOld(em, { sharedSubtypeField: 2 });
+    // `TaskThird` is not in the `stiType` array, so it does not have the field to set at all --
+    // `newTaskThird(em, { sharedSubtypeField: 3 })` would not compile
+    newTaskThird(em);
+    await em.flush();
+    const rows = await select("tasks");
+    expect(rows).toMatchObject([
+      { id: 1, type_id: 2, shared_subtype_field: 1 },
+      { id: 2, type_id: 1, shared_subtype_field: 2 },
+      { id: 3, type_id: 3, shared_subtype_field: null },
+    ]);
   });
 
   it("inserts each subtype separately so subtype columns keep their defaults", async () => {

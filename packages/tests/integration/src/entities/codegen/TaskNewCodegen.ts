@@ -67,6 +67,7 @@ export type TaskNewId = Flavor<string, "Task">;
 export interface TaskNewFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  sharedSubtypeField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
@@ -80,6 +81,7 @@ export interface TaskNewColumns extends TaskColumns {
 
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
+  sharedSubtypeField?: number | null;
   selfReferential?: TaskNew | TaskNewId | null;
   specialNewAuthor?: Author | AuthorId | null;
   newTaskTaskItems?: TaskItem[];
@@ -98,6 +100,7 @@ export interface TaskNewIdsOpts extends TaskIdsOpts {
 
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
+  sharedSubtypeField?: ValueFilter<number, null>;
   selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
@@ -108,6 +111,7 @@ export interface TaskNewFilter extends TaskFilter {
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
+  sharedSubtypeField?: ValueGraphQLFilter<number>;
   selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   selfReferentialId?: ValueGraphQLFilter<TaskNewId>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -121,6 +125,7 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
 
 export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
+  sharedSubtypeField?: OrderBy;
   selfReferential?: TaskNewOrder;
   specialNewAuthor?: AuthorOrder;
   copiedFrom?: TaskNewOrder;
@@ -206,6 +211,14 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   set specialNewField(specialNewField: number | undefined) {
     setField(this, "specialNewField", specialNewField);
+  }
+
+  get sharedSubtypeField(): number | undefined {
+    return getField(this, "sharedSubtypeField");
+  }
+
+  set sharedSubtypeField(sharedSubtypeField: number | undefined) {
+    setField(this, "sharedSubtypeField", sharedSubtypeField);
   }
 
   /**

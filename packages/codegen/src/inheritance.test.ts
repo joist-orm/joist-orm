@@ -2,6 +2,9 @@ import { config as configSchema } from "./config.ts";
 import { type DbMetadata, makeEntity } from "./EntityDbMetadata.ts";
 import { applyInheritanceUpdates } from "./inheritance.ts";
 
+// These cover codegen *rejecting* an invalid `joist-config.json`, which cannot be an integration test:
+// the fixture would have to be broken for the whole package to reproduce it. Everything these rules
+// accept is covered black-box instead, via the `Task` STI fixture. See AGENTS.md.
 describe("inheritance", () => {
   describe("single table inheritance", () => {
     it("fails when a notNull column with no default is pushed down to a subtype", () => {
@@ -12,48 +15,32 @@ describe("inheritance", () => {
       const result = () => applyInheritanceUpdates(config, db);
       // Then we fail, because the other subtype has nothing to insert for it
       expect(result).toThrow(
-        "Task.specialOldField is notNull with no database default, so it cannot be pushed down to the 'TaskOld' subtype",
+        "Task.specialOldField is notNull with no database default, so it cannot be pushed down to 'TaskOld'",
       );
     });
 
-    it("allows a notNull column with a default to be pushed down to a subtype", () => {
-      // Given a notNull column that has a database default
-      const db = newStiDb({ fieldName: "specialOldField", notNull: true, columnDefault: 0 });
-      const config = newStiConfig({ specialOldField: { stiType: "TaskOld" } });
-      // When we expand the subtypes
-      applyInheritanceUpdates(config, db);
-      // Then the subtype owns it, and the other subtype will fall back to the default on insert
-      const [task] = db.entities;
-      expect(task.subTypes.map((st) => [st.name, st.primitives.map((p) => p.fieldName)])).toEqual([
-        ["TaskNew", []],
-        ["TaskOld", ["specialOldField"]],
-      ]);
-    });
-
-    it("allows a nullable column to be pushed down to a subtype", () => {
-      // Given a nullable column that config pushes down to one subtype, and makes required there
-      const db = newStiDb({ fieldName: "specialOldField", notNull: false, columnDefault: null });
-      const config = newStiConfig({ specialOldField: { notNull: true, stiType: "TaskOld" } });
-      // When we expand the subtypes
-      applyInheritanceUpdates(config, db);
-      // Then the subtype owns the field, and it is required on that subtype only
-      const [task] = db.entities;
-      expect(task.primitives).toEqual([]);
-      expect(task.subTypes.map((st) => [st.name, st.primitives.map((p) => [p.fieldName, p.notNull])])).toEqual([
-        ["TaskNew", []],
-        ["TaskOld", [["specialOldField", true]]],
-      ]);
-    });
-
-    it("leaves a notNull column on the base when no subtype claims it", () => {
-      // Given a notNull column that config does not push down
+    it("allows a notNull column with no default when every subtype claims it", () => {
+      // Given a notNull column with no default, claimed by every subtype
       const db = newStiDb({ fieldName: "specialOldField", notNull: true, columnDefault: null });
-      const config = newStiConfig({});
+      const config = newStiConfig({ specialOldField: { stiType: ["TaskNew", "TaskOld"] } });
       // When we expand the subtypes
       applyInheritanceUpdates(config, db);
-      // Then it stays on the base, where every subtype can set it
+      // Then it is allowed, because no subtype is left without a value to insert
       const [task] = db.entities;
-      expect(task.primitives.map((p) => p.fieldName)).toEqual(["specialOldField"]);
+      expect(task.subTypes.map((st) => st.primitives.map((p) => p.fieldName))).toEqual([
+        ["specialOldField"],
+        ["specialOldField"],
+      ]);
+    });
+
+    it("fails on an unknown subtype name in an stiType array", () => {
+      // Given an stiType array naming a subtype that does not exist
+      const db = newStiDb({ fieldName: "specialOldField", notNull: false, columnDefault: null });
+      const config = newStiConfig({ specialOldField: { stiType: ["TaskOld", "TaskBorrowed"] } });
+      // When we expand the subtypes
+      const result = () => applyInheritanceUpdates(config, db);
+      // Then we fail naming the bad entry
+      expect(result).toThrow("specialOldField.stiType 'TaskBorrowed' is invalid");
     });
   });
 });

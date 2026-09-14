@@ -29,6 +29,7 @@ import { Task } from "../Task";
 import { TaskItem } from "../TaskItem";
 import { TaskNew } from "../TaskNew";
 import { TaskOld } from "../TaskOld";
+import { TaskThird } from "../TaskThird";
 import { User } from "../User";
 import {
   adminUserConfig,
@@ -78,6 +79,7 @@ import {
   newTaskItem,
   newTaskNew,
   newTaskOld,
+  newTaskThird,
   newUser,
   parentGroupConfig,
   parentItemConfig,
@@ -92,6 +94,7 @@ import {
   taskItemConfig,
   taskNewConfig,
   taskOldConfig,
+  taskThirdConfig,
   TaskTypes,
   userConfig,
 } from "../entities";
@@ -341,6 +344,7 @@ const taskMetaColumns = {
   "special_new_field": new Column("special_new_field", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "special_old_field": new Column("special_old_field", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "special_old_field_with_default": new Column("special_old_field_with_default", false, true, false, false, true, undefined, new PrimitiveSerde("int")),
+  "shared_subtype_field": new Column("shared_subtype_field", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "deleted_at": new Column("deleted_at", true, false, false, false, true, undefined, new DateSerde("timestamp with time zone")),
   "sync_default": new Column("sync_default", true, false, false, false, true, undefined, new PrimitiveSerde("text")),
   "async_default_1": new Column("async_default_1", true, false, false, false, true, undefined, new PrimitiveSerde("text")),
@@ -1302,6 +1306,7 @@ export const taskNewMeta: EntityMetadata<TaskNew> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", taskMetaColumns["id"]), immutable: true },
     "specialNewField": { kind: "primitive", fieldName: "specialNewField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new SimpleFieldSerde("specialNewField", taskMetaColumns["special_new_field"]), immutable: false },
+    "sharedSubtypeField": { kind: "primitive", fieldName: "sharedSubtypeField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new SimpleFieldSerde("sharedSubtypeField", taskMetaColumns["shared_subtype_field"]), immutable: false },
     "selfReferential": { kind: "m2o", fieldName: "selfReferential", fieldIdName: "selfReferentialId", derived: false, required: false, otherMetadata: () => taskNewMeta, otherFieldName: "selfReferentialTasks", serde: new SimpleFieldSerde("selfReferential", taskMetaColumns["self_referential_id"]), immutable: false },
     "specialNewAuthor": { kind: "m2o", fieldName: "specialNewAuthor", fieldIdName: "specialNewAuthorId", derived: false, required: false, otherMetadata: taskMetaColumns["special_new_author_id"].idMetadata!, otherFieldName: "tasks", serde: new SimpleFieldSerde("specialNewAuthor", taskMetaColumns["special_new_author_id"]), immutable: false },
     "copiedFrom": { kind: "m2o", fieldName: "copiedFrom", fieldIdName: "copiedFromId", derived: false, required: false, otherMetadata: () => taskNewMeta, otherFieldName: "copiedTo", serde: new SimpleFieldSerde("copiedFrom", taskMetaColumns["copied_from_id"]), immutable: false },
@@ -1336,6 +1341,7 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", taskMetaColumns["id"]), immutable: true },
     "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new SimpleFieldSerde("specialOldField", taskMetaColumns["special_old_field"]), immutable: false },
     "specialOldFieldWithDefault": { kind: "primitive", fieldName: "specialOldFieldWithDefault", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new SimpleFieldSerde("specialOldFieldWithDefault", taskMetaColumns["special_old_field_with_default"]), immutable: false, default: "schema" },
+    "sharedSubtypeField": { kind: "primitive", fieldName: "sharedSubtypeField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new SimpleFieldSerde("sharedSubtypeField", taskMetaColumns["shared_subtype_field"]), immutable: false },
     "parentOldTask": { kind: "m2o", fieldName: "parentOldTask", fieldIdName: "parentOldTaskId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "tasks", serde: new SimpleFieldSerde("parentOldTask", taskMetaColumns["parent_old_task_id"]), immutable: false },
     "copiedFrom": { kind: "m2o", fieldName: "copiedFrom", fieldIdName: "copiedFromId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "copiedTo", serde: new SimpleFieldSerde("copiedFrom", taskMetaColumns["copied_from_id"]), immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_task_id", serde: undefined, immutable: false },
@@ -1355,6 +1361,34 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
 };
 
 (TaskOld as any).metadata = taskOldMeta;
+
+export const taskThirdMeta: EntityMetadata<TaskThird> = {
+  cstr: TaskThird,
+  type: "TaskThird",
+  baseType: "Task",
+  inheritanceType: "sti",
+  stiDiscriminatorValue: 3,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "task",
+  tableName: "tasks",
+  supportsEmExecute: false,
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", taskMetaColumns["id"]), immutable: true },
+    "copiedFrom": { kind: "m2o", fieldName: "copiedFrom", fieldIdName: "copiedFromId", derived: false, required: false, otherMetadata: () => taskThirdMeta, otherFieldName: "copiedTo", serde: new SimpleFieldSerde("copiedFrom", taskMetaColumns["copied_from_id"]), immutable: false },
+    "copiedTo": { kind: "o2m", fieldName: "copiedTo", fieldIdName: "copiedToIds", required: false, otherMetadata: () => taskThirdMeta, otherFieldName: "copiedFrom", otherColumnName: "copied_from_id", serde: undefined, immutable: false },
+  },
+  columns: taskMetaColumns,
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: undefined,
+  config: taskThirdConfig,
+  factory: newTaskThird,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(TaskThird as any).metadata = taskThirdMeta;
 
 export const allMetadata = [
   adminUserMeta,
@@ -1385,5 +1419,6 @@ export const allMetadata = [
   userMeta,
   taskNewMeta,
   taskOldMeta,
+  taskThirdMeta,
 ];
 configureMetadata(allMetadata);

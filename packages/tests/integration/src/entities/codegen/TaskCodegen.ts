@@ -64,6 +64,8 @@ import {
   type TaskNewId,
   type TaskOld,
   type TaskOldId,
+  type TaskThird,
+  type TaskThirdId,
   TaskType,
   TaskTypeDetails,
   TaskTypes,
@@ -98,6 +100,13 @@ export interface TaskColumns {
     type: number;
     fieldName: "specialOldFieldWithDefault";
     nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  "shared_subtype_field": {
+    type: number;
+    fieldName: "sharedSubtypeField";
+    nullable: true;
     insert: "optional";
     update: true;
   };
@@ -178,9 +187,11 @@ export interface TaskFilter {
   copiedFrom?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
   copiedFromTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedFromTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   copiedTo?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
   copiedToTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   copiedToTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedToTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
@@ -201,9 +212,11 @@ export interface TaskGraphQLFilter {
   copiedFromId?: ValueGraphQLFilter<TaskId>;
   copiedFromTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedFromTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
   copiedTo?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
   copiedToTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedToTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedToTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
   taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
@@ -364,6 +377,10 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "type") === TaskType.New;
   }
 
+  get isThird(): boolean {
+    return getField(this, "type") === TaskType.Third;
+  }
+
   /**
    * Partial update taking any subset of the entities fields.
    *
@@ -444,6 +461,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     | keyof (FieldsOf<Task> & RelationsOf<Task>)
     | keyof (FieldsOf<TaskNew> & RelationsOf<TaskNew>)
     | keyof (FieldsOf<TaskOld> & RelationsOf<TaskOld>)
+    | keyof (FieldsOf<TaskThird> & RelationsOf<TaskThird>)
   > {
     return newChangesProxy(this) as any;
   }

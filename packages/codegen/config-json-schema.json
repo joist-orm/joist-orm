@@ -72,9 +72,10 @@
                   "propertyNames": { "type": "string" },
                   "additionalProperties": { "type": "string" }
                 },
-                "stiType": { "type": "string" },
+                "stiType": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
                 "notNull": { "type": "boolean" },
-                "hasDefault": { "type": "boolean" }
+                "hasDefault": { "type": "boolean" },
+                "lazy": { "type": "boolean" }
               },
               "additionalProperties": false
             }
@@ -94,7 +95,7 @@
                 "softDeletes": {
                   "anyOf": [{ "type": "string", "const": "include" }, { "type": "string", "const": "exclude" }]
                 },
-                "stiType": { "type": "string" },
+                "stiType": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
                 "subType": { "type": "string" },
                 "skipRecursiveRelations": { "type": "boolean" },
                 "notNull": { "type": "boolean" },

@@ -1,5 +1,6 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
+import { expectTypeOf } from "expect-type";
 import {
   type FieldNode,
   type GraphQLResolveInfo,
@@ -10,7 +11,16 @@ import {
 } from "graphql";
 import { convertInfoToLoadHint, entityResolver } from "joist-graphql-resolver-utils";
 import { getMetadata } from "joist-orm";
-import { Author, BookRange, ParentGroup, Publisher } from "src/entities";
+import {
+  Author,
+  BookRange,
+  Color,
+  FavoriteShape,
+  ParentGroup,
+  Publisher,
+  PublisherSize,
+  PublisherType,
+} from "src/entities";
 import { insertAuthor, insertBook, insertParentGroup, insertPublisher, update } from "src/entities/inserts";
 import { type Resolver } from "src/generated/graphql-types";
 import { newEntityManager } from "src/testEm";
@@ -40,11 +50,79 @@ describe("entityResolver", () => {
   });
 
   it("can load derived enums", async () => {
+    // Given an author with a stored book range
     await insertAuthor({ first_name: "a1", range_of_books: 1 });
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
-    const result = entityResolver(Author).rangeOfBooks(a, {}, {}, undefined!);
+    // When the book range and its detail field are resolved
+    const resolvers = entityResolver(Author);
+    const result = resolvers.rangeOfBooks(a, {}, {}, undefined!);
+    const detail = resolvers.rangeOfBooksDetail(a, {}, {}, undefined!);
+    // Then both fields return the stored enum code without recalculating it
     expect(result).toBe(BookRange.Few);
+    expect(detail).toBe(BookRange.Few);
+    expectTypeOf(resolvers.rangeOfBooksDetail).toEqualTypeOf<typeof resolvers.rangeOfBooks>();
+  });
+
+  it("resolves required and nullable scalar enum details as enum codes", async () => {
+    // Given a publisher with the default Big type and an optional Large size
+    await insertPublisher({ name: "p1", size_id: 2 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    // When the enum fields and their detail fields are resolved
+    const resolvers = entityResolver(Publisher);
+    // Then each detail field returns the same enum code and preserves nullability
+    expect(resolvers.type(p, {}, {}, undefined!)).toBe(PublisherType.Big);
+    expect(resolvers.typeDetail(p, {}, {}, undefined!)).toBe(PublisherType.Big);
+    expect(resolvers.size(p, {}, {}, undefined!)).toBe(PublisherSize.Large);
+    expect(resolvers.sizeDetail(p, {}, {}, undefined!)).toBe(PublisherSize.Large);
+    expectTypeOf(resolvers.typeDetail).toEqualTypeOf<typeof resolvers.type>();
+    expectTypeOf(resolvers.sizeDetail).toEqualTypeOf<typeof resolvers.size>();
+    // @ts-expect-error An optional publisher size cannot back a required GraphQL detail field.
+    const requiredSize: Resolver<Publisher, {}, PublisherSize> = resolvers.sizeDetail;
+    expect(requiredSize).toBe(resolvers.sizeDetail);
+  });
+
+  it("returns undefined for an absent nullable enum detail", async () => {
+    // Given a publisher without an optional size
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    // When the size and its detail field are resolved
+    const resolvers = entityResolver(Publisher);
+    // Then both fields are absent
+    expect(resolvers.size(p, {}, {}, undefined!)).toBeUndefined();
+    expect(resolvers.sizeDetail(p, {}, {}, undefined!)).toBeUndefined();
+  });
+
+  it("does not add detail fields for enum arrays or native PostgreSQL enums", async () => {
+    // Given an author with an enum-table color array and a native PostgreSQL shape enum
+    await insertAuthor({ first_name: "a1", favorite_colors: [1], favorite_shape: FavoriteShape.Circle });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    // When the author's enum fields are resolved
+    const resolvers = entityResolver(Author);
+    // Then the existing fields still return their values without detail companions
+    expect(resolvers.favoriteColors(a, {}, {}, undefined!)).toEqual([Color.Red]);
+    expect(resolvers.favoriteShape(a, {}, {}, undefined!)).toBe(FavoriteShape.Circle);
+    // @ts-expect-error Enum arrays do not have scalar detail resolvers.
+    expect(resolvers.favoriteColorsDetail).toBeUndefined();
+    // @ts-expect-error Native PostgreSQL enums do not have enum-table detail resolvers.
+    expect(resolvers.favoriteShapeDetail).toBeUndefined();
+  });
+
+  it("lets explicit aliases override generated enum detail fields", async () => {
+    // Given a publisher with different type and size codes
+    await insertPublisher({ name: "p1", size_id: 2 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    // And the size detail field is explicitly mapped to the publisher type
+    const resolvers = entityResolver(Publisher, { sizeDetail: "type" });
+    // When the size detail is resolved
+    const detail = resolvers.sizeDetail(p, {}, {}, undefined!);
+    // Then the explicit alias takes precedence without changing the size field
+    expect(detail).toBe(PublisherType.Big);
+    expect(resolvers.size(p, {}, {}, undefined!)).toBe(PublisherSize.Large);
   });
 
   it("m2o calls populate if selection set", async () => {

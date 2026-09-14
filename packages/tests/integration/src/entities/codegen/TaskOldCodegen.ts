@@ -71,6 +71,7 @@ export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   specialOldFieldWithDefault: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  sharedSubtypeField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   publishers: { kind: "m2m"; type: Publisher };
@@ -86,6 +87,7 @@ export interface TaskOldColumns extends TaskColumns {
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
   specialOldFieldWithDefault?: number;
+  sharedSubtypeField?: number | null;
   parentOldTask?: TaskOld | TaskOldId | null;
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
@@ -107,6 +109,7 @@ export interface TaskOldIdsOpts extends TaskIdsOpts {
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
   specialOldFieldWithDefault?: ValueFilter<number, never>;
+  sharedSubtypeField?: ValueFilter<number, null>;
   parentOldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   copiedFrom?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -119,6 +122,7 @@ export interface TaskOldFilter extends TaskFilter {
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
   specialOldFieldWithDefault?: ValueGraphQLFilter<number>;
+  sharedSubtypeField?: ValueGraphQLFilter<number>;
   parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   parentOldTaskId?: ValueGraphQLFilter<TaskOldId>;
   copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
@@ -133,6 +137,7 @@ export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
 export interface TaskOldOrder extends TaskOrder {
   specialOldField?: OrderBy;
   specialOldFieldWithDefault?: OrderBy;
+  sharedSubtypeField?: OrderBy;
   parentOldTask?: TaskOldOrder;
   copiedFrom?: TaskOldOrder;
 }
@@ -238,6 +243,14 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   set specialOldFieldWithDefault(specialOldFieldWithDefault: number) {
     setField(this, "specialOldFieldWithDefault", specialOldFieldWithDefault);
+  }
+
+  get sharedSubtypeField(): number | undefined {
+    return getField(this, "sharedSubtypeField");
+  }
+
+  set sharedSubtypeField(sharedSubtypeField: number | undefined) {
+    setField(this, "sharedSubtypeField", sharedSubtypeField);
   }
 
   /**

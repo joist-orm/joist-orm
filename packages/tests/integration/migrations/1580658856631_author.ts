@@ -392,6 +392,8 @@ export function up(b: MigrationBuilder): void {
   createEnumTable(b, "task_type", [
     ["OLD", "Old"],
     ["NEW", "New"],
+    // A third subtype, so that `stiType` arrays can cover "some but not all" subtypes
+    ["THIRD", "Third"],
   ]);
 
   // For testing single-table inheritance
@@ -405,6 +407,8 @@ export function up(b: MigrationBuilder): void {
     special_old_field: { type: "int", notNull: false },
     // A notNull column pushed down to a subtype; TaskNew omits it from its INSERT and gets the default
     special_old_field_with_default: { type: "int", notNull: true, default: 0 },
+    // A column pushed down to both subtypes at once, i.e. off the base but on each subtype
+    shared_subtype_field: { type: "int", notNull: false },
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
     // Self-referential for both subtypes, but specialized to the specific one

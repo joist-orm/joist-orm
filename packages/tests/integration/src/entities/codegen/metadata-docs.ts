@@ -108,6 +108,11 @@ export const docs = {
     fields: { commentParentInfo: "For testing reacting to poly CommentParent properties." },
     operations: undefined,
   },
+  TaskThird: {
+    comment: "A third subtype, so `stiType` arrays can cover some subtypes but not all of them.",
+    fields: {},
+    operations: undefined,
+  },
 } as const;
 
 export type EntityDocs = typeof docs;

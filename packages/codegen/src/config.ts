@@ -26,7 +26,7 @@ const fieldConfig = z
     type: z.optional(z.string()),
     serde: z.optional(z.string()),
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
-    stiType: z.optional(z.string()),
+    stiType: z.optional(z.union([z.string(), z.array(z.string())])),
     // Allow subclasses to mark fields as required
     notNull: z.optional(z.boolean()),
     // Allow overriding scanEntities default detection for fields with defaults added by helpers
@@ -53,7 +53,7 @@ const relationConfig = z
      */
     softDeletes: z.optional(z.union([z.literal("include"), z.literal("exclude")])),
     // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
-    stiType: z.optional(z.string()),
+    stiType: z.optional(z.union([z.string(), z.array(z.string())])),
     /**
      * Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup).
      *

@@ -90,7 +90,10 @@ These hints in `joist-config.json` generally look like:
 1. Adding an `stiDiscriminator` mapping to the `type` field that Joist will use to know "which subtype is this?"
 2. Adding `stiType: "Dog"` or `stiType: "Cat"` to any column/field (like `canBark` or `canMeow`) in the `animals` table that should be limited to a specific subtype
    - The value of `"Dog"` or `"Cat"` should match a name in the `stiDiscriminator` mapping
-   - Currently, we only support a field being in a single subtype
+   - Use an array, i.e. `stiType: ["Dog", "Cat"]`, for a field that belongs to several subtypes but not all of them
+   - For an FK pointing _to_ your base type (see below), only a lone `stiType` retypes it; naming several leaves it as the base
+     - I.e. given a `dog_packs.leader_id` FK and a `Horse` subtype alongside `Dog` and `Cat`, configuring `Animal.dogPacks` as `stiType: ["Dog", "Cat"]` leaves `DogPack.leader` typed as `Animal`, not `Dog | Cat`
+     - Joist generates a single `ManyToOneReference<DogPack, Dog>` for the FK, i.e. one target entity, so there is nowhere to put a union; naming several subtypes says "any of these", and `Animal` is the type that already means that
 3. Adding `notNull: true` to any fields that you want Joist to enforce as not null
    - For example, if you want `canMeow` to be required for all `Cat`s, you can add `notNull: true` to the `canMeow` field
    - Without an explicit `notNull` set, we assume subtype fields are nullable, which is how they're represented in the database

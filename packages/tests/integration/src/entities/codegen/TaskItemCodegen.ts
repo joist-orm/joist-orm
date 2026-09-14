@@ -53,6 +53,8 @@ import {
   type TaskOldId,
   type TaskOldOrder,
   type TaskOrder,
+  type TaskThird,
+  type TaskThirdId,
 } from "../entities";
 
 export type TaskItemId = Flavor<string, "TaskItem">;
@@ -110,6 +112,7 @@ export interface TaskItemFilter {
   task?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
   taskTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   taskTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  taskTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
 }
 
 export interface TaskItemGraphQLFilter {
@@ -124,6 +127,7 @@ export interface TaskItemGraphQLFilter {
   taskId?: ValueGraphQLFilter<TaskId>;
   taskTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   taskTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  taskTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
 }
 
 export interface TaskItemOrder {

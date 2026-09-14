@@ -33,6 +33,7 @@ const mappers = {
   TaskItem: "src/entities#TaskItem",
   TaskNew: "src/entities#TaskNew",
   TaskOld: "src/entities#TaskOld",
+  TaskThird: "src/entities#TaskThird",
   TaskTypeDetail: "src/entities#TaskType",
   User: "src/entities#User",
 };

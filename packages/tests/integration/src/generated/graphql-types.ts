@@ -625,6 +625,7 @@ export interface TaskNewResolvers {
   publishers: Resolver<TaskNew, {}, readonly Publisher[]>;
   selfReferential: Resolver<TaskNew, {}, TaskNew | null | undefined>;
   selfReferentialTasks: Resolver<TaskNew, {}, readonly TaskNew[]>;
+  sharedSubtypeField: Resolver<TaskNew, {}, number | null | undefined>;
   specialNewAuthor: Resolver<TaskNew, {}, Author | null | undefined>;
   specialNewField: Resolver<TaskNew, {}, number | null | undefined>;
   syncDefault: Resolver<TaskNew, {}, string | null | undefined>;
@@ -649,6 +650,7 @@ export interface TaskOldResolvers {
   oldTaskTaskItems: Resolver<TaskOld, {}, readonly TaskItem[]>;
   parentOldTask: Resolver<TaskOld, {}, Task | null | undefined>;
   publishers: Resolver<TaskOld, {}, readonly Publisher[]>;
+  sharedSubtypeField: Resolver<TaskOld, {}, number | null | undefined>;
   specialNewAuthor: Resolver<TaskOld, {}, Author | null | undefined>;
   specialOldField: Resolver<TaskOld, {}, number | null | undefined>;
   specialOldFieldWithDefault: Resolver<TaskOld, {}, number>;
@@ -1949,6 +1951,7 @@ export interface SaveTaskNewInput {
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
   selfReferentialId?: string | null | undefined;
+  sharedSubtypeField?: number | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialNewField?: number | null | undefined;
   syncDefault?: string | null | undefined;
@@ -1962,6 +1965,7 @@ export interface SaveTaskOldInput {
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
+  sharedSubtypeField?: number | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialOldField?: number | null | undefined;
   specialOldFieldWithDefault?: number | null | undefined;
@@ -2058,6 +2062,7 @@ export interface TaskNewFilter {
   durationInDays?: number[] | null | undefined;
   id?: string[] | null | undefined;
   selfReferentialId?: string[] | null | undefined;
+  sharedSubtypeField?: number[] | null | undefined;
   specialNewAuthorId?: string[] | null | undefined;
   specialNewField?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;
@@ -2076,6 +2081,7 @@ export interface TaskOldFilter {
   durationInDays?: number[] | null | undefined;
   id?: string[] | null | undefined;
   parentOldTaskId?: string[] | null | undefined;
+  sharedSubtypeField?: number[] | null | undefined;
   specialOldField?: number[] | null | undefined;
   specialOldFieldWithDefault?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;

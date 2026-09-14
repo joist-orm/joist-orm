@@ -30,6 +30,7 @@ type TaskOld {
   syncDerived: String
   asyncDerived: String
   specialOldFieldWithDefault: Int!
+  sharedSubtypeField: Int
 }
 
 input SaveTaskOldInput {
@@ -44,6 +45,7 @@ input SaveTaskOldInput {
   asyncDefault_1: String
   asyncDefault_2: String
   specialOldFieldWithDefault: Int
+  sharedSubtypeField: Int
 }
 
 type SaveTaskOldResult {
@@ -71,4 +73,5 @@ input TaskOldFilter {
   specialOldField: [Int!]
   parentOldTaskId: [ID!]
   specialOldFieldWithDefault: [Int!]
+  sharedSubtypeField: [Int!]
 }

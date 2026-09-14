@@ -122,11 +122,12 @@
     "Task": {
       "fields": {
         "asyncDerived": { "derived": "async" },
+        "sharedSubtypeField": { "stiType": ["TaskNew", "TaskOld"] },
         "specialNewField": { "stiType": "NEW" },
         "specialOldField": { "notNull": true, "stiType": "TaskOld" },
         "specialOldFieldWithDefault": { "stiType": "TaskOld" },
         "syncDerived": { "derived": "sync" },
-        "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
+        "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld", "THIRD": "TaskThird" } }
       },
       "relations": {
         "comments": { "stiType": "TaskOld" },

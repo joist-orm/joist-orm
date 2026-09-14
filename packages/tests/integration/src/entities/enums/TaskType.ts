@@ -3,6 +3,7 @@ import type { EnumMetadata } from "joist-orm";
 export enum TaskType {
   Old = "OLD",
   New = "NEW",
+  Third = "THIRD",
 }
 
 export type TaskTypeDetails = { id: number; code: TaskType; name: string };
@@ -10,9 +11,14 @@ export type TaskTypeDetails = { id: number; code: TaskType; name: string };
 const details: Record<TaskType, TaskTypeDetails> = {
   [TaskType.Old]: { id: 1, code: TaskType.Old, name: "Old" },
   [TaskType.New]: { id: 2, code: TaskType.New, name: "New" },
+  [TaskType.Third]: { id: 3, code: TaskType.Third, name: "Third" },
 };
 
-export const TaskTypeDetails = { Old: details[TaskType.Old], New: details[TaskType.New] };
+export const TaskTypeDetails = {
+  Old: details[TaskType.Old],
+  New: details[TaskType.New],
+  Third: details[TaskType.Third],
+};
 
 export const TaskTypes: EnumMetadata<TaskType, TaskTypeDetails, number> = {
   name: "TaskType",

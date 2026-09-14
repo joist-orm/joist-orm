@@ -29,8 +29,10 @@ export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner.ts";
 export {
+  type AndCondition,
   type ConditionGroup,
   type DomainPredicate,
+  type OrCondition,
   type PredicateBrand,
   type SqlCondition,
   type SqlPredicate,

@@ -4,10 +4,19 @@ import { visitConditions, visitQueries } from "../QueryVisitor.ts";
 import { fail } from "../utils.ts";
 
 /**
- * Carries the find tag through each generated recursive filter after argument replacement.
+ * Threads the find tag through each generated recursive filter after argument replacement.
  *
- * Matching related entities read their arguments from a local _find row. Both recursive terms
- * preserve that row's tag, and membership correlates it with the enclosing find's tag.
+ * Before this call, collectAndReplaceArgs rewrites varying filter values to _find.argX,
+ * including conditions inside non-recursive CTEs. I.e. for `mentorsRecursive: { firstName: ? }`,
+ * if firstName's value is assigned arg4, the matching query uses `a1.first_name = _find.arg4`.
+ * If lastName also varies, it gets its own argument, e.g. `a1.last_name = _find.arg5`.
+ * Values shared by all finds stay inline. These arguments store filter values; we do not
+ * add firstName or lastName to the matching query's returned columns.
+ *
+ * This function adds CROSS JOIN _find to that non-recursive matching query so it can read
+ * the arguments. The matching query returns (id, tag); the recursive CTE returns
+ * (match_id, owner_id, tag), regardless of how many fields the filter uses.
+ * Both recursive terms preserve the tag, and EXISTS compares it with the enclosing find's tag.
  * I.e. tag 0 can find Alice's descendants while tag 1 finds Bob's descendants; an author
  * reachable in both traversals remains a separate (tag, match_id, owner_id) in the UNION.
  * Nested matching queries get their own _find binding, so inner CTEs never capture an
@@ -28,12 +37,16 @@ export function batchRecursiveCtes(query: ParsedFindQuery): void {
 }
 
 /**
- * Adds a local _find binding to matching related entities and carries its tag through reachability.
+ * Binds _find in the non-recursive matching query and threads its tag through the recursive terms.
  * The recursive UNION deduplicates the resulting (match_id, owner_id, tag) rows.
  */
 function tagRecursiveCtes(query: ParsedFindQuery): boolean {
   let tagged = false;
   for (const cte of query.ctes ?? []) {
+    // This marker identifies the CTE pair generated for a recursive collection filter.
+    // matchesAlias points to its non-recursive CTE, which also needs _find in its FROM.
+    // An unrelated non-recursive CTE with varying arguments would need its own binding
+    // and tag propagation; this helper only handles the generated pair's known columns.
     if (!cte.recursiveFilter || cte.query.kind !== "recursive") continue;
     tagged = true;
     const { matchesAlias } = cte.recursiveFilter;

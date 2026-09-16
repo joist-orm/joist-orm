@@ -62,7 +62,7 @@ await em.find(Employee, { reportsRecursive: { name: "Bob" } });
 await em.find(Employee, { reportsRecursive: false });
 ```
 
-The nested filter checks related entities at any depth. For example, `managersRecursive: { name: "Alice" }` can match Alice through Bob; Bob does not also have to be named Alice. An entity never counts as its own manager or report. Filters can use entities, IDs, arrays, scopes, nested relations, and `and`/`or`. Multiple conditions within one nested filter must match the same related entity.
+The nested filter will match a related entity at any depth. For example, `managersRecursive: { name: "Alice" }` can match Alice through Bob; Bob does not also have to be named Alice. An entity never counts as its own manager or report. Filters can use entities, IDs, arrays, scopes, nested relations, and `and`/`or`. Multiple conditions within one nested filter must match the same related entity.
 
 - Passing `reportsRecursive: true` finds employees with at least one direct or indirect report.
 - Passing `reportsRecursive: false` or `reportsRecursive: null` finds employees without any reports.

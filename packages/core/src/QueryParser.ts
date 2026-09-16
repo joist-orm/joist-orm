@@ -68,6 +68,8 @@ export interface ExistsCondition {
   subquery: ParsedFindQuery;
   /** Outer aliases referenced by the correlation predicate, for join pruning. */
   outerAliases: string[];
+  /** The generated reachability CTE whose membership must stay within one batched find. */
+  recursiveCte?: string;
 }
 
 // `skipCondition` lives in its own leaf module, shared by domain aliases and SQL expressions
@@ -166,6 +168,8 @@ export interface ParsedCteClause {
     | { kind: "recursive"; seed: ParsedFindQuery; step: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
+  /** Identifies a generated reachability CTE and its matching-endpoint seed for find batching. */
+  recursiveFilter?: { matchesAlias: string };
 }
 
 /**

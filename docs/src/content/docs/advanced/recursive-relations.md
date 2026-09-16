@@ -66,7 +66,9 @@ The nested filter matches one reachable entity. Intermediate entities do not hav
 
 `true` requires a nonempty recursive collection; `false` or `null` requires an empty one. `undefined` and empty filter objects impose no constraint. `{ ne: employee }` requires some reachable employee other than that employee, following ordinary collection inequality semantics.
 
-Joist seeds a recursive CTE with matching endpoints, traverses toward their collection owners, and filters the outer query with `EXISTS`. This avoids duplicate results and allows normal counting, pagination, and population. The recursive filter itself does not load the collection. Finds with different recursive predicates currently execute separately instead of batching together.
+Joist seeds a recursive CTE with matching endpoints, traverses toward their collection owners, and filters the outer query with `EXISTS`. This avoids duplicate results and allows normal counting, pagination, and population. The recursive filter itself does not load the collection.
+
+Concurrent finds with the same filter structure are automatically batched, even when their recursive predicate values differ. Each find's tag stays with its matching endpoints throughout traversal, so nested recursive filters and overlapping paths cannot mix results between finds. Counts, ID queries, and paginated finds also share their recursive traversals within a batch.
 
 Recursive filters use persisted database relationships. By default, soft-deleted endpoints do not match, but traversal can pass through soft-deleted intermediate entities. Use `softDeletes: "include"` to include deleted endpoints and outer entities. Cycles terminate through deduplication; filtering does not throw `RecursiveCycleError`.
 

@@ -85,6 +85,7 @@ export function addRecursiveFilter(
       alias: reachName,
       columns: ["match_id", "owner_id"].map((columnName) => ({ columnName, dbType: targetMeta.idDbType })),
       recursive: true,
+      recursiveFilter: { matchesAlias: matchesName },
       query: { kind: "recursive", seed, step },
     },
   );
@@ -92,6 +93,7 @@ export function addRecursiveFilter(
     kind: "exists",
     negate,
     outerAliases: [ownerAlias],
+    recursiveCte: reachName,
     subquery: {
       selects: ["1"],
       tables: [{ join: "primary", table: reachName, alias: reachName }],

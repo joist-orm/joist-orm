@@ -72,6 +72,9 @@ export function findIdsDataLoader<T extends Entity>(
         query.selects = [`${kq(primary.alias)}.id as id`];
         query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
 
+        // Share recursive traversals across all tags instead of rebuilding them per lateral row.
+        const ctes = query.ctes ?? [];
+        delete query.ctes;
         const query2: ParsedFindQuery = {
           selects: ["_find.tag as tag", "_data.id as id"],
           tables: [
@@ -79,7 +82,7 @@ export function findIdsDataLoader<T extends Entity>(
             { join: "lateral", query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
           ],
           // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(args, entries))],
+          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(args, entries)), ...ctes],
           orderBys: [],
         };
 

@@ -3,7 +3,7 @@ import { type FindFilter, alias } from "joist-orm";
 
 import { AdminUser, Author, type AuthorFilter, Book, TaskOld, User, newAdminUser, newUser } from "./entities";
 import { insertAuthor, insertBook, insertTask, insertUser, insertUserToParent, update } from "./entities/inserts";
-import { knex, newEntityManager, queries, resetQueryCount } from "./testEm";
+import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./testEm";
 
 describe("em.find recursive collections", () => {
   it("finds authors with a matching mentor at any depth", async () => {
@@ -125,20 +125,25 @@ describe("em.find recursive collections", () => {
     expect(books.map((b) => b.id)).toEqual(["b:1"]);
   });
 
-  it("keeps simultaneous finds, counts, and ID queries isolated", async () => {
+  it("batches simultaneous finds, counts, and ID queries with isolated results", async () => {
     // Given Alice mentors Bob, who mentors Carol
     await insertAuthor({ first_name: "Alice" });
     await insertAuthor({ first_name: "Bob", mentor_id: 1 });
     await insertAuthor({ first_name: "Carol", mentor_id: 2 });
     const em = newEntityManager();
+    // And only the concurrent find statements are counted
+    resetQueryCount();
     // When concurrent queries have the same recursive structure but different values
-    const [alice, bob, aliceCount, bobCount, aliceIds, bobIds] = await Promise.all([
+    const [alice, bob, aliceCount, bobCount, aliceIds, bobIds, missing, missingCount, missingIds] = await Promise.all([
       em.find(Author, { mentorsRecursive: { firstName: "Alice" } }),
       em.find(Author, { mentorsRecursive: { firstName: "Bob" } }),
       em.findCount(Author, { mentorsRecursive: { firstName: "Alice" } }),
       em.findCount(Author, { mentorsRecursive: { firstName: "Bob" } }),
       em.findIds(Author, { mentorsRecursive: { firstName: "Alice" } }),
       em.findIds(Author, { mentorsRecursive: { firstName: "Bob" } }),
+      em.find(Author, { mentorsRecursive: { firstName: "Nobody" } }),
+      em.findCount(Author, { mentorsRecursive: { firstName: "Nobody" } }),
+      em.findIds(Author, { mentorsRecursive: { firstName: "Nobody" } }),
     ]);
     // Then each result uses only its own matching endpoints
     expect(alice.map((a) => a.id)).toEqual(["a:2", "a:3"]);
@@ -147,6 +152,10 @@ describe("em.find recursive collections", () => {
     expect(bobCount).toBe(1);
     expect(aliceIds).toEqual(["a:2", "a:3"]);
     expect(bobIds).toEqual(["a:3"]);
+    expect(missing).toEqual([]);
+    expect(missingCount).toBe(0);
+    expect(missingIds).toEqual([]);
+    expect(numberOfQueries).toBe(3);
   });
 
   it("preserves recursive conditions inside ordinary collection filters", async () => {
@@ -266,10 +275,17 @@ describe("em.find recursive collections", () => {
     await update("tasks", { id: 2, copied_from_id: 1 });
     await update("tasks", { id: 3, copied_from_id: 2 });
     const em = newEntityManager();
-    // When an old task must descend from the first old task
-    const tasks = await em.find(TaskOld, { copiedFromsRecursive: { specialOldField: 1 } });
+    // And only the concurrent subtype finds are counted
+    resetQueryCount();
+    // When old tasks must descend from different old endpoints
+    const [tasks, leafCopies] = await Promise.all([
+      em.find(TaskOld, { copiedFromsRecursive: { specialOldField: 1 } }),
+      em.find(TaskOld, { copiedFromsRecursive: { specialOldField: 3 } }),
+    ]);
     // Then the new intermediate task does not prevent reaching the old endpoint
     expect(tasks.map((t) => t.id)).toEqual(["task:3"]);
+    expect(leafCopies).toEqual([]);
+    expect(numberOfQueries).toBe(1);
   });
 
   it("resolves recursive metadata inherited by a CTI subtype", async () => {
@@ -279,10 +295,18 @@ describe("em.find recursive collections", () => {
     const middle = newUser(em, { name: "Middle", parents: [root] });
     const admin = newAdminUser(em, { name: "Admin", parents: [middle] });
     await em.flush();
-    // When the admin subtype is filtered through its inherited recursive relation
-    const admins = await newEntityManager().find(AdminUser, { parentsRecursive: { name: "Root" } });
+    // And a fresh EntityManager counts only the concurrent inherited-relation finds
+    const em2 = newEntityManager();
+    resetQueryCount();
+    // When the admin subtype is filtered through different inherited recursive endpoints
+    const [admins, middleAdmins] = await Promise.all([
+      em2.find(AdminUser, { parentsRecursive: { name: "Root" } }),
+      em2.find(AdminUser, { parentsRecursive: { name: "Middle" } }),
+    ]);
     // Then the base User graph supplies the path to the admin
     expect(admins.map((a) => a.id)).toEqual([admin.id]);
+    expect(middleAdmins.map((a) => a.id)).toEqual([admin.id]);
+    expect(numberOfQueries).toBe(1);
   });
 
   it("terminates on m2m cycles without treating an owner as its own endpoint", async () => {

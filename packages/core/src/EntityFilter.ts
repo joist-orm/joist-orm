@@ -57,7 +57,10 @@ export type EntityFilterObject<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N
 
 export type BooleanFilter<N> = true | false | N;
 
-/** Matches a reachable entity; aliases cannot escape the recursive filter's SQL scope. */
+/**
+ * A copy of EntityFilter's collection filter shape, with `as` prevented because aliases
+ * bound within a recursive filter cannot be used by the enclosing query.
+ */
 export type RecursiveCollectionFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>> =
   | T
   | readonly T[]

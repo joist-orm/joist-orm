@@ -49,7 +49,7 @@ Modeling Trees in relational database has historically been a challenge, requiri
 
 ### Filtering with `em.find`
 
-Generated recursive collections also appear in entity filter types:
+Recursive collections also appear in entity filter types:
 
 ```ts
 // Employees with Alice anywhere in their manager chain.
@@ -64,15 +64,12 @@ await em.find(Employee, { reportsRecursive: false });
 
 The nested filter checks related entities at any depth. For example, `managersRecursive: { name: "Alice" }` can match Alice through Bob; Bob does not also have to be named Alice. An entity never counts as its own manager or report. Filters can use entities, IDs, arrays, scopes, nested relations, and `and`/`or`. Multiple conditions within one nested filter must match the same related entity.
 
-`true` requires a nonempty recursive collection; `false` or `null` requires an empty one. `undefined` and empty filter objects impose no constraint. `{ ne: employee }` requires some reachable employee other than that employee, following ordinary collection inequality semantics.
+- Passing `reportsRecursive: true` finds employees with at least one direct or indirect report.
+- Passing `reportsRecursive: false` or `reportsRecursive: null` finds employees without any reports.
+- `reportsRecursive: undefined` and `reportsRecursive: {}` are ignored.
+- Passing `reportsRecursive: { ne: employee }` requires at least one direct or indirect report other than that employee.
 
-Joist starts a recursive CTE with the related entities that match the filter, follows relationships back to their collection owners, and filters the outer query with `EXISTS`. This avoids duplicate results and allows normal counting, pagination, and population. The recursive filter itself does not load the collection.
-
-Concurrent finds with the same filter structure are automatically batched, even when their recursive filter values differ. Each find's tag stays with its matching related entities as Joist follows relationships, so nested recursive filters and overlapping paths cannot mix results between finds. Counts, ID queries, and paginated finds also share their recursive traversals within a batch.
-
-Recursive filters use persisted database relationships. By default, soft-deleted related entities do not match, but Joist can follow relationships through them. For example, an employee can still match Alice as a recursive manager when Bob, the manager between them, is soft-deleted. Use `softDeletes: "include"` to include soft-deleted related entities and entities returned by the find. Cycles terminate through deduplication; filtering does not throw `RecursiveCycleError`.
-
-Aliases cannot be exported from a recursive collection filter with `as`. Use a scope for alias conditions that only refer to the related entity and its relations. Comparisons between that related entity and an alias in the enclosing find query are not supported.
+By default, soft-deleted related entities do not match, but Joist can follow relationships through them. For example, an employee can still match Alice as a recursive manager when Bob, the manager between them, is soft-deleted. Use `softDeletes: "include"` to include soft-deleted related entities and entities returned by the find. Cycles terminate through deduplication; filtering does not throw `RecursiveCycleError`.
 
 ### Consistent View
 

@@ -34,6 +34,7 @@ import {
   type ReactiveManyToMany,
   type ReactiveManyToManyOtherSide,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setField,
   setOpts,
@@ -96,6 +97,8 @@ export interface EmployeeFilter {
   reports?: EntityFilter<Employee, EmployeeId, FilterOf<Employee>, null | undefined>;
   managersClosure?: EntityFilter<Employee, EmployeeId, FilterOf<Employee>, null | undefined>;
   managerOfClosure?: EntityFilter<Employee, EmployeeId, FilterOf<Employee>, null | undefined>;
+  managersRecursive?: RecursiveCollectionFilter<Employee>;
+  reportsRecursive?: RecursiveCollectionFilter<Employee>;
 }
 
 export interface EmployeeGraphQLFilter {

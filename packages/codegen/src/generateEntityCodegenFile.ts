@@ -18,6 +18,7 @@ import {
 import { type ScopeMember } from "./findEntityScopes.ts";
 import { getStiEntities } from "./inheritance.ts";
 import { keywords } from "./keywords.ts";
+import { recursiveRelations } from "./recursiveRelations.ts";
 import {
   BaseEntity,
   BooleanFilter,
@@ -55,6 +56,7 @@ import {
   ReactiveManyToManyOtherSide,
   ReactiveReference,
   ReadOnlyCollection,
+  RecursiveCollectionFilter,
   RelationsOf,
   SSAssert,
   Scope,
@@ -260,7 +262,7 @@ export function generateEntityCodegenFile(
     }
 
     export interface ${entity.filterName} ${maybeBaseFilter} {
-      ${generateFilterFields(metasByName, meta)}
+      ${generateFilterFields(config, metasByName, meta)}
     }
 
     export interface ${entity.graphqlFilterName} ${maybeBaseGqlFilter} {
@@ -692,7 +694,11 @@ function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
   return [...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
-function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
+function generateFilterFields(
+  config: Config,
+  metasByName: Record<string, EntityDbMetadata>,
+  meta: EntityDbMetadata,
+): Code[] {
   // Always allow filtering on null to do "child.id is null" for detecting "has no children"
   const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.idName}, never> | null;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
@@ -752,7 +758,22 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, met
       }),
     ];
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...m2mEnum, ...polys];
+  const recursive = recursiveRelations(config, meta).map((relation) => {
+    return code`${relation.fieldName}?: ${RecursiveCollectionFilter}<${relation.otherEntity.type}>;`;
+  });
+  return [
+    ...maybeId,
+    ...primitives,
+    ...enums,
+    ...pgEnums,
+    ...m2o,
+    ...o2o,
+    ...o2m,
+    ...m2m,
+    ...m2mEnum,
+    ...polys,
+    ...recursive,
+  ];
 }
 
 function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
@@ -1092,64 +1113,20 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
         return { kind: "super", fieldName, decl };
       }) ?? [];
 
-  // Add any recursive ManyToOne entities
-  const m2oRecursive: Relation[] = meta.manyToOnes
-    .filter((m2o) => m2o.otherEntity.name === meta.name)
-    // Allow disabling recursive relations
-    .filter(
-      (m2o) =>
-        // STI subtypes don't have their own key in config.entities (stripped by stripStiPlaceholders),
-        // so look up the base class name to find skipRecursiveRelations config
-        !(
-          config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
-            ?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true
-        ),
-    )
-    // Skip ReactiveReferences because they don't have an `other` side for us to use
-    .filter((m2o) => !m2o.derived)
-    .flatMap((m2o) => {
-      const { fieldName: m2oName, otherFieldName, otherEntity } = m2o;
-      const parentsField = `${plural(m2oName)}Recursive`;
-      const maybeOneToOne = meta.oneToOnes.find((o2o) => o2o.fieldName === otherFieldName);
-      const childrenField = maybeOneToOne ? `${plural(otherFieldName)}Recursive` : `${otherFieldName}Recursive`;
-      return [
-        {
-          kind: "concrete",
-          fieldName: parentsField,
-          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveParents}("${m2oName}", "${childrenField}")`,
-        },
-        {
-          kind: "concrete",
-          fieldName: childrenField,
-          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveChildren}("${otherFieldName}", "${parentsField}")`,
-        },
-      ];
-    });
-
-  // Add any recursive ManyToMany entities (self-referential m2m)
-  const m2mRecursive: Relation[] = meta.manyToManys
-    .filter((m2m) => m2m.otherEntity.name === meta.name)
-    .filter((m2m) => !m2m.derived)
-    // STI subtypes don't have their own key in config.entities (stripped by stripStiPlaceholders),
-    // so look up the base class name to find skipRecursiveRelations config
-    .filter(
-      (m2m) =>
-        !(
-          config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
-            ?.relations?.[m2m.fieldName]?.skipRecursiveRelations === true
-        ),
-    )
-    .map((m2m) => {
-      const { fieldName, otherFieldName, otherEntity } = m2m;
-      return {
-        kind: "concrete",
-        fieldName: `${fieldName}Recursive`,
-        decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-        init: code`${hasRecursiveM2m}("${fieldName}", "${otherFieldName}Recursive")`,
-      };
-    });
+  const recursive: Relation[] = recursiveRelations(config, meta).map((relation) => {
+    const factory =
+      relation.kind === "parents"
+        ? hasRecursiveParents
+        : relation.kind === "children"
+          ? hasRecursiveChildren
+          : hasRecursiveM2m;
+    return {
+      kind: "concrete",
+      fieldName: relation.fieldName,
+      decl: code`${ReadOnlyCollection}<${entity.type}, ${relation.otherEntity.type}>`,
+      init: code`${factory}("${relation.relationName}", "${relation.otherFieldName}")`,
+    };
+  });
 
   // Add OneToMany
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
@@ -1279,8 +1256,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     lo2m,
     m2o,
     m2oBase,
-    m2oRecursive,
-    m2mRecursive,
+    recursive,
     o2o,
     o2oBase,
     m2m,

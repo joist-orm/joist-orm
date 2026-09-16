@@ -1,9 +1,10 @@
-import {
-  type ColumnCondition,
-  type ParsedExpressionCondition,
-  type ParsedExpressionFilter,
-  type ParsedFindQuery,
-  type RawCondition,
+import type {
+  ColumnCondition,
+  ExistsCondition,
+  ParsedExpressionCondition,
+  ParsedExpressionFilter,
+  ParsedFindQuery,
+  RawCondition,
 } from "./QueryParser.ts";
 import { assertNever } from "./utils.ts";
 
@@ -11,6 +12,7 @@ import { assertNever } from "./utils.ts";
 interface Visitor {
   visitExp?(c: ParsedExpressionFilter): ParsedExpressionFilter | void;
   visitRaw?(c: RawCondition): RawCondition | ParsedExpressionFilter | void;
+  visitExists?(c: ExistsCondition): void;
   visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | RawCondition | null | void;
 }
 
@@ -23,10 +25,21 @@ interface Visitor {
  * If the visitor returns null, the condition or expression will be removed from the tree.
  */
 export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void {
+  visitQueries(query, (query) => {
+    if (query.condition) visitFilter(query.condition, visitor);
+  });
+}
+
+/**
+ * Visits a query and every AST-backed CTE, lateral query, and EXISTS subquery.
+ * Keeps condition collection and argument replacement in the same traversal order.
+ */
+export function visitQueries(query: ParsedFindQuery, visitor: (query: ParsedFindQuery) => void): void {
   const todo = [query];
   while (todo.length > 0) {
     const query = todo.pop()!;
-    if (query.condition) visitFilter(query.condition, visitor);
+    visitor(query);
+    todo.push(...getCteQueries(query));
     // Recurse into lateral subqueries (used by batching/preloading, not EXISTS rewrite)
     for (const table of query.tables) {
       if (table.join === "lateral") {
@@ -38,6 +51,15 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
       visitExistsSubqueries(query.condition, todo);
     }
   }
+}
+
+/** Returns the AST query bodies of CTEs, including both recursive terms. */
+export function getCteQueries(query: ParsedFindQuery): ParsedFindQuery[] {
+  return (query.ctes ?? []).flatMap((cte) => {
+    if (cte.query.kind === "ast") return [cte.query.query];
+    if (cte.query.kind === "recursive") return [cte.query.seed, cte.query.step];
+    return [];
+  });
 }
 
 /** Finds ExistsCondition nodes in a condition tree and pushes their subqueries onto the todo list. */
@@ -79,7 +101,8 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
           pc.conditions[i] = result;
         }
       } else if (c.kind === "exists") {
-        // EXISTS conditions are visited via visitExistsSubqueries, not inline
+        visitor.visitExists?.(c);
+        // EXISTS subqueries are visited via visitExistsSubqueries, not inline
       } else {
         assertNever(c);
       }
@@ -97,6 +120,7 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
       throw new Error("ParsedExpressionCondition overload not support mutating the condition");
     }
   } else if (pc.kind === "exists") {
+    visitor.visitExists?.(pc);
     // EXISTS conditions are handled at the query level
   } else {
     assertNever(pc);

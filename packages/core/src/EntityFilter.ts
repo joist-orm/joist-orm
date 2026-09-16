@@ -58,6 +58,26 @@ export type EntityFilterObject<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N
 export type BooleanFilter<N> = true | false | N;
 
 /**
+ * A copy of EntityFilter's collection filter shape, with `as` prevented because aliases
+ * bound within a recursive filter cannot be used by the enclosing query.
+ */
+export type RecursiveCollectionFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>> =
+  | T
+  | readonly T[]
+  | I
+  | readonly I[]
+  | Scope<T>
+  | ({
+      as?: never;
+      and?: RecursiveCollectionFilter<T, I, F> | readonly RecursiveCollectionFilter<T, I, F>[];
+      or?: RecursiveCollectionFilter<T, I, F> | readonly RecursiveCollectionFilter<T, I, F>[];
+    } & F)
+  | { ne: T | I | null | undefined }
+  | boolean
+  | null
+  | undefined;
+
+/**
  * The root `em.find` `where` shape: an `EntityFilterObject` with `I`/`F`/`N` defaulted.
  *
  * Intentionally a thin alias rather than the source of truth: `as`/`and`/`or` are defined once on

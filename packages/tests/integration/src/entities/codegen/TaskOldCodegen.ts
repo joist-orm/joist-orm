@@ -31,6 +31,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setField,
   setOpts,
@@ -117,6 +118,10 @@ export interface TaskOldFilter extends TaskFilter {
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
   copiedTo?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  parentOldTasksRecursive?: RecursiveCollectionFilter<TaskOld>;
+  tasksRecursive?: RecursiveCollectionFilter<TaskOld>;
+  copiedFromsRecursive?: RecursiveCollectionFilter<TaskOld>;
+  copiedToRecursive?: RecursiveCollectionFilter<TaskOld>;
 }
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {

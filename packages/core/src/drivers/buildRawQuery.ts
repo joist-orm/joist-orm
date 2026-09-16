@@ -51,6 +51,11 @@ export function buildRawQuery(
         const nested = buildRawQuery(cte.query.query, {});
         sql += ` AS (${nested.sql})`;
         bindings.push(...nested.bindings);
+      } else if (cte.query.kind === "recursive") {
+        const seed = buildRawQuery(cte.query.seed, {});
+        const step = buildRawQuery(cte.query.step, {});
+        sql += ` AS ((${seed.sql}) UNION (${step.sql}))`;
+        bindings.push(...seed.bindings, ...step.bindings);
       } else {
         assertNever(cte.query);
       }
@@ -153,6 +158,10 @@ export function buildCteSql(cte: ParsedCteClause): { sql: string; bindings: read
   } else if (cte.query.kind === "ast") {
     const { sql, bindings } = buildRawQuery(cte.query.query, {});
     return { sql: `${prefix} (${sql})`, bindings };
+  } else if (cte.query.kind === "recursive") {
+    const seed = buildRawQuery(cte.query.seed, {});
+    const step = buildRawQuery(cte.query.step, {});
+    return { sql: `${prefix} ((${seed.sql}) UNION (${step.sql}))`, bindings: [...seed.bindings, ...step.bindings] };
   } else {
     assertNever(cte.query);
   }

@@ -28,6 +28,7 @@ import {
   type OptsOf,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setOpts,
   type TaggedId,
@@ -78,6 +79,8 @@ export interface TaskThirdIdsOpts extends TaskIdsOpts {
 export interface TaskThirdFilter extends TaskFilter {
   copiedFrom?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   copiedTo?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null | undefined>;
+  copiedFromsRecursive?: RecursiveCollectionFilter<TaskThird>;
+  copiedToRecursive?: RecursiveCollectionFilter<TaskThird>;
 }
 
 export interface TaskThirdGraphQLFilter extends TaskGraphQLFilter {

@@ -89,6 +89,10 @@ export function buildKnexQuery(
         if (cte.query.bindings) args.push(cte.query.bindings as any);
       } else if (cte.query.kind === "ast") {
         args.push(buildKnexQuery(knex, cte.query.query, {}) as any);
+      } else if (cte.query.kind === "recursive") {
+        args.push(
+          buildKnexQuery(knex, cte.query.seed, {}).union([buildKnexQuery(knex, cte.query.step, {})], true) as any,
+        );
       } else {
         assertNever(cte.query);
       }

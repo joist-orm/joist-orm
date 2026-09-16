@@ -47,6 +47,32 @@ Modeling Trees in relational database has historically been a challenge, requiri
 
 :::
 
+### Filtering with `em.find`
+
+Recursive collections also appear in entity filter types:
+
+```ts
+// Employees with Alice anywhere in their manager chain.
+await em.find(Employee, { managersRecursive: { name: "Alice" } });
+
+// Employees with Bob anywhere among their direct or indirect reports.
+await em.find(Employee, { reportsRecursive: { name: "Bob" } });
+
+// Employees without any direct or indirect reports.
+await em.find(Employee, { reportsRecursive: false });
+```
+
+The nested filter will match a related entity at any depth. For example, `managersRecursive: { name: "Alice" }` can match Alice through Bob; Bob does not also have to be named Alice. Multiple conditions within one nested filter must match the same related entity.
+
+- Filters can use entities, IDs, arrays, scopes, nested relations, and `and`/`or`.
+- An entity never counts as its own parent or child.
+- Passing `reportsRecursive: true` finds employees with at least one direct or indirect report.
+- Passing `reportsRecursive: false` or `reportsRecursive: null` finds employees without any reports.
+- `reportsRecursive: undefined` and `reportsRecursive: {}` are ignored.
+- Passing `reportsRecursive: { ne: employee }` requires at least one direct or indirect report other than that employee.
+
+By default, soft-deleted related entities do not match, but Joist can follow relationships through them. For example, an employee can still match Alice as a recursive manager when Bob, the manager between them, is soft-deleted. Use `softDeletes: "include"` to include soft-deleted related entities and entities returned by the find. Cycles terminate through deduplication; filtering does not throw `RecursiveCycleError`.
+
 ### Consistent View
 
 As with all Joist relations, recursive relations provide a "consistent view" of the entity graph that is always in sync with any WIP/un-flushed mutations you've made.

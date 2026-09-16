@@ -79,6 +79,10 @@ export function findCountDataLoader<T extends Entity>(
         query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
         query.orderBys = [];
 
+        // collectAndReplaceArgs has already called batchRecursiveCtes to thread tags through these CTEs.
+        // Share the CTEs across all tags instead of rebuilding them per lateral row.
+        const ctes = query.ctes ?? [];
+        delete query.ctes;
         const query2: ParsedFindQuery = {
           selects: ["_find.tag as tag", "_data.count as count"],
           tables: [
@@ -87,7 +91,7 @@ export function findCountDataLoader<T extends Entity>(
             { join: "lateral", query: query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
           ],
           // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(args, entries))],
+          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(args, entries)), ...ctes],
           orderBys: [],
         };
 

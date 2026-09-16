@@ -29,6 +29,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setField,
   setOpts,
@@ -107,6 +108,8 @@ export interface TaskNewFilter extends TaskFilter {
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   copiedTo?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
+  copiedFromsRecursive?: RecursiveCollectionFilter<TaskNew>;
+  copiedToRecursive?: RecursiveCollectionFilter<TaskNew>;
 }
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {

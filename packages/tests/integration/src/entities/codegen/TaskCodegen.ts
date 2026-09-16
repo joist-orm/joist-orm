@@ -36,6 +36,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type RelationsOf,
   type Scope,
   setField,
@@ -194,6 +195,8 @@ export interface TaskFilter {
   copiedToTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  copiedFromsRecursive?: RecursiveCollectionFilter<Task>;
+  copiedToRecursive?: RecursiveCollectionFilter<Task>;
 }
 
 export interface TaskGraphQLFilter {

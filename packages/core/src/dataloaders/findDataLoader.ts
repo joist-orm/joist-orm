@@ -21,7 +21,7 @@ import {
   parseAlias,
   parseFindQuery,
 } from "../QueryParser.ts";
-import { visitConditions } from "../QueryVisitor.ts";
+import { hasRecursiveCte, visitConditions } from "../QueryVisitor.ts";
 import { buildUnnestCte } from "../unnest.ts";
 import { assertNever, fail } from "../utils.ts";
 import { fastWhereFilterHash } from "./fastWhereFilterHash.ts";
@@ -485,6 +485,9 @@ function argsEqual(a: any, b: any): boolean {
 }
 
 export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {
+  // Recursive seeds cannot reference the outer _find row. Keep their full values in the
+  // loader key until batching can propagate _find.tag through each recursive term.
+  if (hasRecursiveCte(query)) return `${meta.type}|${whereFilterHash(query)}`;
   // Temporarily swap condition values for `*` so we can see the generic structure of the query,
   // then restore them; this avoids deep-cloning the entire parsed query on every em.find call.
   // Track values per condition object b/c parseFindQuery does not deep copy complex conditions,

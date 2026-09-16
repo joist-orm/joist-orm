@@ -36,6 +36,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setField,
   setOpts,
@@ -207,6 +208,8 @@ export interface BookFilter {
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  prequelsRecursive?: RecursiveCollectionFilter<Book>;
+  sequelsRecursive?: RecursiveCollectionFilter<Book>;
 }
 
 export interface BookGraphQLFilter {

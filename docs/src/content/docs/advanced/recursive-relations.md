@@ -47,6 +47,31 @@ Modeling Trees in relational database has historically been a challenge, requiri
 
 :::
 
+### Filtering with `em.find`
+
+Generated recursive collections also appear in entity filter types:
+
+```ts
+// Employees with Alice anywhere in their manager chain.
+await em.find(Employee, { managersRecursive: { name: "Alice" } });
+
+// Employees with Bob anywhere among their direct or indirect reports.
+await em.find(Employee, { reportsRecursive: { name: "Bob" } });
+
+// Employees without any direct or indirect reports.
+await em.find(Employee, { reportsRecursive: false });
+```
+
+The nested filter matches one reachable entity. Intermediate entities do not have to match it, and an entity never counts as its own manager or report. Filters can use entities, IDs, arrays, scopes, nested relations, and `and`/`or`. Multiple conditions within one nested filter must match the same reachable entity.
+
+`true` requires a nonempty recursive collection; `false` or `null` requires an empty one. `undefined` and empty filter objects impose no constraint. `{ ne: employee }` requires some reachable employee other than that employee, following ordinary collection inequality semantics.
+
+Joist seeds a recursive CTE with matching endpoints, traverses toward their collection owners, and filters the outer query with `EXISTS`. This avoids duplicate results and allows normal counting, pagination, and population. The recursive filter itself does not load the collection. Finds with different recursive predicates currently execute separately instead of batching together.
+
+Recursive filters use persisted database relationships. By default, soft-deleted endpoints do not match, but traversal can pass through soft-deleted intermediate entities. Use `softDeletes: "include"` to include deleted endpoints and outer entities. Cycles terminate through deduplication; filtering does not throw `RecursiveCycleError`.
+
+Aliases cannot be exported from a recursive endpoint with `as`. Use a scope for alias predicates local to the matching endpoint. Comparisons between the endpoint and an alias in the enclosing find query are not supported.
+
 ### Consistent View
 
 As with all Joist relations, recursive relations provide a "consistent view" of the entity graph that is always in sync with any WIP/un-flushed mutations you've made.

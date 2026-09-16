@@ -8,6 +8,7 @@ import {
   type OneToManyField,
   type PrimitiveField,
 } from "./EntityDbMetadata.ts";
+import { recursiveRelations } from "./recursiveRelations.ts";
 import {
   BigIntSerde,
   Column,
@@ -37,6 +38,10 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const { entity, createdAt, updatedAt, deletedAt } = meta;
 
   const fields = generateFields(config, dbMeta, meta, columnReference);
+  const recursive = recursiveRelations(config, meta).map((relation) => {
+    const { otherEntity, ...descriptor } = relation;
+    return [relation.fieldName, descriptor];
+  });
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -73,7 +78,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true},
       fields: ${fields},
       columns: ${meta.primaryKey.columnOwner.metaName}Columns,
-      allFields: {},
+      allFields: {}, ${recursive.length > 0 ? code`recursiveRelations: ${JSON.stringify(Object.fromEntries(recursive))},` : ""}
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
       config: ${entity.configConst},

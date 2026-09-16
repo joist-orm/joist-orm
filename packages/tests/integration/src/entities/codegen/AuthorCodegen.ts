@@ -42,6 +42,7 @@ import {
   type ReactiveManyToManyOtherSide,
   type ReactiveReference,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type Scope,
   setField,
   setOpts,
@@ -368,6 +369,8 @@ export interface AuthorFilter {
   menteesClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
   bestReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
+  mentorsRecursive?: RecursiveCollectionFilter<Author>;
+  menteesRecursive?: RecursiveCollectionFilter<Author>;
 }
 
 export interface AuthorGraphQLFilter {

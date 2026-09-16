@@ -27,6 +27,7 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
   while (todo.length > 0) {
     const query = todo.pop()!;
     if (query.condition) visitFilter(query.condition, visitor);
+    todo.push(...getCteQueries(query));
     // Recurse into lateral subqueries (used by batching/preloading, not EXISTS rewrite)
     for (const table of query.tables) {
       if (table.join === "lateral") {
@@ -38,6 +39,30 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
       visitExistsSubqueries(query.condition, todo);
     }
   }
+}
+
+/** Returns the AST query bodies of CTEs, including both recursive terms. */
+export function getCteQueries(query: ParsedFindQuery): ParsedFindQuery[] {
+  return (query.ctes ?? []).flatMap((cte) => {
+    if (cte.query.kind === "ast") return [cte.query.query];
+    if (cte.query.kind === "recursive") return [cte.query.seed, cte.query.step];
+    return [];
+  });
+}
+
+/** Detects recursive CTEs even when a filter is nested inside another subquery. */
+export function hasRecursiveCte(query: ParsedFindQuery): boolean {
+  const todo = [query];
+  while (todo.length > 0) {
+    const current = todo.pop()!;
+    if (current.ctes?.some((cte) => cte.recursive)) return true;
+    todo.push(...getCteQueries(current));
+    for (const table of current.tables) {
+      if (table.join === "lateral") todo.push(table.query);
+    }
+    if (current.condition) visitExistsSubqueries(current.condition, todo);
+  }
+  return false;
 }
 
 /** Finds ExistsCondition nodes in a condition tree and pushes their subqueries onto the todo list. */

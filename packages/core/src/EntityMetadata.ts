@@ -65,6 +65,8 @@ export interface EntityMetadata<T extends Entity = any> {
   /** Physical storage descriptors, without CTI base columns; STI metadata shares its base table. */
   columns: ColumnDescriptors;
   allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
+  /** Generated recursive collections, separate from persisted fields. */
+  recursiveRelations?: Record<string, RecursiveRelationMetadata>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
@@ -111,6 +113,14 @@ export interface EntityMetadata<T extends Entity = any> {
   stiDiscriminatorColumnName?: string;
   /** If the schema is lacking deferred FKs, this is our insertion order. */
   nonDeferredFkOrder?: number;
+}
+
+/** Describes the immediate relation traversed by a generated recursive collection. */
+export interface RecursiveRelationMetadata {
+  fieldName: string;
+  kind: "parents" | "children" | "m2m";
+  relationName: string;
+  otherFieldName: string;
 }
 
 export type Field =

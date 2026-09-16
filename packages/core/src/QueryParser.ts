@@ -18,6 +18,7 @@ import {
 } from "./index.ts";
 import { kq, kqDot } from "./keywords.ts";
 import { pruneUnusedJoins } from "./QueryParser.pruning.ts";
+import { addRecursiveFilter, findRecursiveRelation } from "./QueryParser.recursive.ts";
 import { visitConditions } from "./QueryVisitor.ts";
 import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "./scopes.ts";
 import { abbreviation, assertNever, fail } from "./utils.ts";
@@ -159,7 +160,10 @@ export interface ParsedCteClause {
   /** The columns, i.e. `tag, arg0, arg1` in the above query. */
   columns?: { columnName: string; dbType: string }[];
   /** The subquery for the AS of the CTE clause. */
-  query: { kind: "raw"; sql: string; bindings: readonly any[] } | { kind: "ast"; query: ParsedFindQuery };
+  query:
+    | { kind: "raw"; sql: string; bindings: readonly any[] }
+    | { kind: "ast"; query: ParsedFindQuery }
+    | { kind: "recursive"; seed: ParsedFindQuery; step: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
 }
@@ -226,6 +230,8 @@ export function parseFindQuery(
     allowMultipleLeftJoins?: boolean;
     optimizeJoinsToExists?: boolean;
   } = {},
+  /** Shares SQL alias allocation with nested recursive filters. */
+  assignAlias?: (tableName: string) => string,
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
@@ -239,6 +245,7 @@ export function parseFindQuery(
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
+    if (assignAlias) return assignAlias(tableName);
     const abbrev = abbreviation(tableName);
     const i = aliases[abbrev] || 0;
     aliases[abbrev] = i + 1;
@@ -398,6 +405,20 @@ export function parseFindQuery(
       if (key === "as") return;
       if (key === "and" || key === "or") {
         addLogicalFilter(meta, tableAlias, key, (subFilter as any)[key], targetCb, parentJoin);
+        return;
+      }
+      const recursive = findRecursiveRelation(meta, key);
+      if (recursive) {
+        const condition = addRecursiveFilter(
+          query,
+          meta,
+          tableAlias,
+          recursive,
+          (subFilter as Record<string, unknown>)[key],
+          opts,
+          getAlias,
+        );
+        if (condition) targetCb.addParsedExpression({ kind: "exp", op: "and", conditions: [condition] });
         return;
       }
       const field = findFilterField(meta, key) ?? fail(`Field '${key}' not found on ${meta.tableName}`);

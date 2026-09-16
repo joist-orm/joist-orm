@@ -10,6 +10,7 @@ import {
   maybeAddIdNotNulls,
   parseAlias,
 } from "./QueryParser.ts";
+import { getCteQueries } from "./QueryVisitor.ts";
 import { assertNever } from "./utils.ts";
 
 /** A collection root plus every join nested under it, i.e. `books b` with `book_reviews br`. */
@@ -51,6 +52,7 @@ export function optimizeCollectionJoins(
   } = {},
 ): void {
   const { allowMultipleLeftJoins = false, optimizeJoinsToExists = true, pruneJoins = true, keepAliases = [] } = opts;
+  for (const cteQuery of getCteQueries(query)) optimizeCollectionJoins(cteQuery, opts);
   for (const table of query.tables) {
     // I.e. batched find/count queries wrap the real query in a LATERAL subquery; optimize that inner query too,
     // but let the outer query decide final pruning so it can keep the lateral alias itself.

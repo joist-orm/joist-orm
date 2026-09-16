@@ -57,6 +57,23 @@ export type EntityFilterObject<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N
 
 export type BooleanFilter<N> = true | false | N;
 
+/** Matches a reachable entity; aliases cannot escape the recursive filter's SQL scope. */
+export type RecursiveCollectionFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>> =
+  | T
+  | readonly T[]
+  | I
+  | readonly I[]
+  | Scope<T>
+  | ({
+      as?: never;
+      and?: RecursiveCollectionFilter<T, I, F> | readonly RecursiveCollectionFilter<T, I, F>[];
+      or?: RecursiveCollectionFilter<T, I, F> | readonly RecursiveCollectionFilter<T, I, F>[];
+    } & F)
+  | { ne: T | I | null | undefined }
+  | boolean
+  | null
+  | undefined;
+
 /**
  * The root `em.find` `where` shape: an `EntityFilterObject` with `I`/`F`/`N` defaulted.
  *

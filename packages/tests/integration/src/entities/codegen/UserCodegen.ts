@@ -36,6 +36,7 @@ import {
   type PartialOrNull,
   type PolymorphicReference,
   type ReadOnlyCollection,
+  type RecursiveCollectionFilter,
   type RelationsOf,
   type Scope,
   setField,
@@ -205,6 +206,8 @@ export interface UserFilter {
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
   favoritePublisherSmallPublisher?: EntityFilter<SmallPublisher, IdOf<SmallPublisher>, FilterOf<SmallPublisher>, null>;
+  parentsRecursive?: RecursiveCollectionFilter<User>;
+  childrenRecursive?: RecursiveCollectionFilter<User>;
 }
 
 export interface UserGraphQLFilter {

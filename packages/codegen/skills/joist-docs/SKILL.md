@@ -1,6 +1,6 @@
 ---
 name: entity-docs
-description: Read and write the `src/entities/<Entity>.md` business-docs that sit next to each Joist entity. Use when working on ANY entity in `src/entities/` (its `.ts`, resolvers, jobs, or tests) — read the sibling `.md` first for the business rationale, worked scenarios, and gotchas the code can't show, and record any non-obvious domain knowledge you learn back into it. Also covers the codegen doc-sync: how `## Overview` and `## Fields`/`### fieldName` sections become entity JSDocs via `yarn joist-codegen`, and what belongs in field docs vs. free-form narrative.
+description: Read the `src/entities/<Entity>.md` business-docs when working on an entity, its resolvers, jobs, or tests. Add only durable, non-obvious domain knowledge that helps readers understand a business rule or avoid a likely mistake; prioritize succinctness, clarity, and discretion. Also covers how `## Overview` and `## Fields`/`### fieldName` sections sync to JSDocs via `yarn joist-codegen`.
 ---
 
 # Entity docs (`src/entities/<Entity>.md`)
@@ -10,10 +10,11 @@ Many Joist entities have a sibling Markdown doc — `src/entities/Author.ts` ↔
 **"why"** that code can't: business rationale, worked scenarios, gotchas, domain vocabulary, and
 cross-entity workflows. They are written for **both humans and agents** — you are a primary audience.
 
-Two jobs, and you should do both as a matter of course:
+Read routinely; write selectively:
 
 1. **Read** the sibling `.md` before/while you work on an entity, to get domain context.
-2. **Write** back to it whenever you learn something useful, weird, or non-obvious.
+2. **Write** only when a concise addition would give future readers important context they cannot
+   readily get from the code or existing docs. Leaving the docs unchanged is often the right outcome.
 
 ## 1. Read it first
 
@@ -27,9 +28,8 @@ have to reverse-engineer or would get subtly wrong:
 - **Gotchas & edge cases** — footguns, "this looks stale but isn't", exemptions
 - **Domain vocabulary** — statuses, flags, and other "esoteric unless you know it" domain concepts
 
-Follow the cross-links (`[Book](Book.md)`, sometimes with anchors like
-`Book.md#Definitions`) into related docs. If the doc is missing or thin, that's your cue to add
-to it once you've figured things out (job #2).
+Follow relevant cross-links (`[Book](Book.md)`, sometimes with anchors like
+`Book.md#Definitions`) into related docs. A missing or thin doc is not by itself a reason to add content.
 
 ## 2. How the file maps to code (the codegen doc-sync)
 
@@ -67,10 +67,10 @@ in the `.ts` gets stomped on the next codegen.
   entries together under the one `## Fields` section (conventionally at the bottom of the file).
 - **Methods don't sync** — only fields/getters/properties/relations get their JSDoc updated.
 
-## 3. Write back what you learn
+## 3. Choose what is worth documenting
 
-When you discover something useful/weird/non-obvious while working — record it. This is the point of the
-files. Good triggers to write:
+Add a note only when the knowledge is durable, non-obvious, and useful for a future domain decision or
+for avoiding a likely mistake. Possible candidates, not a checklist to fill:
 
 - You just figured out **why** an entity or field exists, or what it really models.
 - A **non-obvious business rule**, invariant, or "this only applies to X clients" exemption.
@@ -78,28 +78,35 @@ files. Good triggers to write:
   type.
 - A **cross-entity interaction** or workflow that isn't visible from one file.
 - **Domain vocabulary** a newcomer (human or agent) wouldn't know.
-- A **worked scenario** that makes an abstract entity concrete.
+- A **worked scenario** needed to resolve an ambiguity that a short explanation cannot.
 
-**Don't** document what the code already says plainly (restating a type, signature, or an obvious
-one-liner), or transient implementation detail that will rot.
+**Omit** what the code already says plainly, transient implementation details, exhaustive edge-case
+lists, and a recap of the work just completed. Do not repeat knowledge already documented elsewhere;
+link to it when readers need it. Correct outdated guidance rather than appending a competing explanation.
 
 **Where to put it:**
 
 - Something specific to one field → a `### <fieldName>` block under `## Fields`. It syncs to that
   member's JSDoc, so it shows on hover/`@generated` in the `.ts`.
-- Broad rationale, scenarios, diagrams, cross-entity workflows, DB constraints, glossary → a free-form
-  `##` section (`## Overview` for the headline, or a custom section like `## Employee Onboarding Flow`).
+- The entity's purpose → a short `## Overview`, which syncs to the class JSDoc.
+- Necessary longer explanations or cross-entity workflows → a free-form `##` section, linked from the
+  field doc if needed. Keep synced JSDocs small enough to read comfortably on hover.
 
-**Style** (match the existing docs):
+**Style** (prioritize succinctness and clarity):
 
-- Lead with business meaning and *why*, not mechanics.
-- Use `I.e. ...` worked examples with concrete values.
+- Lead with business meaning and *why*. Use plain language and state each fact once.
+- Default to one sentence for a field and one short paragraph for an overview. Add detail only when
+  shortening it would hide an important rule or make the meaning ambiguous.
+- Use a single brief `I.e. ...` example with concrete values only when it clarifies a difficult rule.
+  Do not add examples, diagrams, or sections merely to make the doc look complete.
 - Cross-link related entities with relative links: `[Book](Book.md)`.
 - Reference field/entity names in backticks.
+- Before finishing, remove any sentence that does not add necessary meaning. Match existing terminology,
+  but do not copy existing verbosity.
 
 ## 4. Workflow to add or update a doc
 
-1. Edit `src/entities/<Entity>.md` (create it if missing — basename must equal the entity, e.g.
+1. If an addition meets the criteria above, edit `src/entities/<Entity>.md` (create it only if needed — basename must equal the entity, e.g.
    `Author.md`). For field docs, use the exact member name as a `### ` heading under `## Fields`.
 2. Sync into the JSDocs:
    ```bash
@@ -114,6 +121,8 @@ touch files under `src/entities/codegen/` (see the repo's generated-files rules)
 
 ## Skeleton for a new doc
 
+Include only the sections and fields that need explanation; this is a structure, not a checklist.
+
 ```markdown
 # <Entity>
 
@@ -123,11 +132,11 @@ touch files under `src/entities/codegen/` (see the repo's generated-files rules)
 
 ## <Some Business Concept>   <!-- free-form: rationale, scenarios, gotchas, diagrams; NOT synced -->
 
-<Prose, `I.e.` examples, mermaid, cross-links to [OtherEntity](OtherEntity.md).>
+<Only if needed: a concise explanation of a non-obvious business concept.>
 
 ## Fields   <!-- each ### below syncs into that member's JSDoc -->
 
 ### someField
 
-<Why it exists / the non-obvious rule or gotcha. Exact field name, single word.>
+<Usually one sentence: why it exists or the important non-obvious rule.>
 ```

@@ -22,13 +22,13 @@ export function findRecursiveRelation(meta: EntityMetadata, name: string): Recur
 }
 
 /**
- * Adds an exact reachability CTE, seeded by entities matching the collection filter.
+ * Adds a recursive CTE that finds entities whose recursive collection contains a matching related entity.
  *
  * Traversal runs backward from matching related entities to collection owners. I.e. for
  * `menteesRecursive: { firstName: "Alice" }`, `match_id` is Alice and `owner_id` starts
  * at her mentor, then moves to her grandmentor. Intermediate authors need not match.
  * UNION deduplicates (match_id, owner_id), so diamonds and cycles terminate; the
- * final EXISTS excludes self-reachability. Matching related entities must pass the
+ * final EXISTS prevents an entity from matching itself. Matching related entities must pass the
  * soft-delete filter, but the path to them can pass through soft-deleted entities.
  */
 export function addRecursiveFilter(

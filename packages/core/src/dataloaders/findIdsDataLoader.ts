@@ -72,7 +72,8 @@ export function findIdsDataLoader<T extends Entity>(
         query.selects = [`${kq(primary.alias)}.id as id`];
         query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
 
-        // Share recursive traversals across all tags instead of rebuilding them per lateral row.
+        // collectAndReplaceArgs has already called batchRecursiveCtes to thread tags through these CTEs.
+        // Share the CTEs across all tags instead of rebuilding them per lateral row.
         const ctes = query.ctes ?? [];
         delete query.ctes;
         const query2: ParsedFindQuery = {

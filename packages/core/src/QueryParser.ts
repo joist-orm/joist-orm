@@ -68,7 +68,11 @@ export interface ExistsCondition {
   subquery: ParsedFindQuery;
   /** Outer aliases referenced by the correlation predicate, for join pruning. */
   outerAliases: string[];
-  /** The generated reachability CTE whose membership must stay within one batched find. */
+  /**
+   * Identifies the recursive CTE used by this EXISTS, e.g. `rr`.
+   * Batching uses it to add `rr.tag = _find.tag` so this find only uses its own matches.
+   * Ordinary EXISTS conditions omit this field and do not get that comparison.
+   */
   recursiveCte?: string;
 }
 
@@ -168,7 +172,7 @@ export interface ParsedCteClause {
     | { kind: "recursive"; seed: ParsedFindQuery; step: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
-  /** Identifies a generated reachability CTE and the query that selects matching related entities for find batching. */
+  /** Links a recursive collection CTE to the query that selects its matching related entities for find batching. */
   recursiveFilter?: { matchesAlias: string };
 }
 

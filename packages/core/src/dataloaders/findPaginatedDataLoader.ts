@@ -78,7 +78,8 @@ export function findPaginatedDataLoader<T extends Entity>(
         const args = collectAndReplaceArgs(query, entries);
         const argsColumns = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
         const columnValues = createColumnValuesFromPrepared(args, entries);
-        // Share recursive traversals across all tags instead of rebuilding them per lateral row.
+        // collectAndReplaceArgs has already called batchRecursiveCtes to thread tags through these CTEs.
+        // Share the CTEs across all tags instead of rebuilding them per lateral row.
         const ctes = query.ctes ?? [];
         delete query.ctes;
         const query2: ParsedFindQuery = {

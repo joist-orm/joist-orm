@@ -213,6 +213,8 @@ export interface CteArg {
  * query's condition as-is from entity0), so it renders as `col = ?` for better query planning.
  *
  * The returned array has the non-constant CTE columns, one {@link CteArg} per `_find.argX`.
+ * This also calls batchRecursiveCtes to thread find tags through recursive filters.
+ * All four find loaders use this shared preparation: entities, counts, IDs, and paginated entities.
  *
  * Because constants are skipped, the 1st CTE column (i.e. for last name) might actually have a
  * binding index of `1` if we've skipped an early constant column (i.e. first name).

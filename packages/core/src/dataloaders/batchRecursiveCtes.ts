@@ -6,7 +6,7 @@ import { fail } from "../utils.ts";
 /**
  * Carries the find tag through each generated recursive filter after argument replacement.
  *
- * Matching endpoints read their arguments from a local _find row. Both recursive terms
+ * Matching related entities read their arguments from a local _find row. Both recursive terms
  * preserve that row's tag, and membership correlates it with the enclosing find's tag.
  * I.e. tag 0 can find Alice's descendants while tag 1 finds Bob's descendants; an author
  * reachable in both traversals remains a separate (tag, match_id, owner_id) in the UNION.
@@ -28,7 +28,7 @@ export function batchRecursiveCtes(query: ParsedFindQuery): void {
 }
 
 /**
- * Adds a local _find binding to matching endpoints and carries its tag through reachability.
+ * Adds a local _find binding to matching related entities and carries its tag through reachability.
  * The recursive UNION deduplicates the resulting (match_id, owner_id, tag) rows.
  */
 function tagRecursiveCtes(query: ParsedFindQuery): boolean {
@@ -42,8 +42,8 @@ function tagRecursiveCtes(query: ParsedFindQuery): boolean {
     const matches = matchesCte.query.query;
     matches.tables.push({ join: "cross", table: "_find", alias: "_find" });
     matches.selects.push(`${kqDot("_find", "tag")} AS tag`);
-    // The recursive UNION deduplicates endpoints. DISTINCT ON just the entity ID here
-    // would incorrectly discard other tags when an endpoint matches multiple finds.
+    // The recursive UNION removes duplicate matches. DISTINCT ON just the entity ID here
+    // would incorrectly discard other tags when a related entity matches multiple finds.
     for (const table of matches.tables) {
       if (table.join === "outer") table.distinct = false;
     }

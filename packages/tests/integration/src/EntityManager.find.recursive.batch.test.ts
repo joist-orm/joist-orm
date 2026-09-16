@@ -27,7 +27,7 @@ describe("em.find recursive batching", () => {
     );
   });
 
-  it("retains every tag when matching endpoints have fanout joins", async () => {
+  it("retains every tag when a matching mentor joins to multiple books", async () => {
     // Given Alice mentors Bob and wrote two books
     await insertAuthor({ first_name: "Alice" });
     await insertAuthor({ first_name: "Bob", mentor_id: 1 });
@@ -79,12 +79,12 @@ describe("em.find recursive batching", () => {
     const em = newEntityManager();
     // And only the concurrent recursive finds are counted
     resetQueryCount();
-    // When each author must fall between different ancestor and descendant endpoints
+    // When each author must have both a matching recursive mentor and a matching recursive mentee
     const [aliceToDave, bobToCarol] = await Promise.all([
       em.find(Author, { mentorsRecursive: { firstName: "Alice" }, menteesRecursive: { firstName: "Dave" } }),
       em.find(Author, { mentorsRecursive: { firstName: "Bob" }, menteesRecursive: { firstName: "Carol" } }),
     ]);
-    // Then endpoints from different tags cannot combine into a false match
+    // Then a mentor matching one find cannot combine with a mentee matching another find
     expect(aliceToDave.map((a) => a.id)).toEqual(["a:2", "a:3"]);
     expect(bobToCarol).toEqual([]);
     expect(numberOfQueries).toBe(1);
@@ -105,7 +105,7 @@ describe("em.find recursive batching", () => {
       or: [{ firstName: "Alice" }, { mentorsRecursive: { firstName: "Bob" } }],
     };
     resetQueryCount();
-    // When the direct name can match without a recursive endpoint
+    // When the author's own name can match without any matching recursive mentor
     const [otherOrAlice, aliceOrBob] = await Promise.all([em.find(Author, first), em.find(Author, second)]);
     // Then each tag preserves its own OR semantics
     expect(otherOrAlice.map((a) => a.id)).toEqual(["a:2", "a:3", "a:4"]);
@@ -113,7 +113,7 @@ describe("em.find recursive batching", () => {
     expect(numberOfQueries).toBe(1);
   });
 
-  it("batches differently sized endpoint ID arrays", async () => {
+  it("batches differently sized mentor ID arrays", async () => {
     // Given a three-author mentor chain
     await insertAuthor({ first_name: "Alice" });
     await insertAuthor({ first_name: "Bob", mentor_id: 1 });
@@ -127,7 +127,7 @@ describe("em.find recursive batching", () => {
       em.find(Author, { mentorsRecursive: ["a:2"] }),
       em.find(Author, { mentorsRecursive: [] }),
     ]);
-    // Then each endpoint array remains associated with its tag
+    // Then each mentor ID array remains associated with its tag
     expect(both.map((a) => a.id)).toEqual(["a:2", "a:3"]);
     expect(bob.map((a) => a.id)).toEqual(["a:3"]);
     expect(neither).toEqual([]);
@@ -220,7 +220,7 @@ describe("em.find recursive batching", () => {
       em.find(User, { parentsRecursive: { name: "Root" } }),
       em.find(User, { parentsRecursive: { name: "Left" } }),
     ]);
-    // Then each traversal terminates and excludes only its own matching endpoint
+    // Then each traversal terminates, and neither Root nor Left counts as their own parent
     expect(root.map((u) => u.id)).toEqual(["u:2", "u:3", "u:4"]);
     expect(left.map((u) => u.id)).toEqual(["u:1", "u:3", "u:4"]);
     expect(numberOfQueries).toBe(1);

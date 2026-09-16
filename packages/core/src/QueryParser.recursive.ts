@@ -24,11 +24,12 @@ export function findRecursiveRelation(meta: EntityMetadata, name: string): Recur
 /**
  * Adds an exact reachability CTE, seeded by entities matching the collection filter.
  *
- * Traversal runs backward from matching endpoints to collection owners. I.e. for
+ * Traversal runs backward from matching related entities to collection owners. I.e. for
  * `menteesRecursive: { firstName: "Alice" }`, `match_id` is Alice and `owner_id` starts
  * at her mentor, then moves to her grandmentor. Intermediate authors need not match.
  * UNION deduplicates (match_id, owner_id), so diamonds and cycles terminate; the
- * final EXISTS excludes self-reachability. Soft deletes constrain endpoints only.
+ * final EXISTS excludes self-reachability. Matching related entities must pass the
+ * soft-delete filter, but the path to them can pass through soft-deleted entities.
  */
 export function addRecursiveFilter(
   query: ParsedFindQuery,
@@ -110,8 +111,8 @@ export function addRecursiveFilter(
   };
 
   /**
-   * Moves one edge from matching endpoints toward collection owners.
-   * The seed reads endpoint IDs; the step preserves match_id while advancing owner_id.
+   * Moves one edge from matching related entities toward collection owners.
+   * The seed reads matching entity IDs; the step preserves match_id while advancing owner_id.
    */
   function traversalQuery(source: string, sourceColumn: string, edgeAlias: string): ParsedFindQuery {
     return {
@@ -168,7 +169,7 @@ function rawComparison(
   };
 }
 
-/** Rejects aliases exported from the recursive endpoint into the enclosing find query. */
+/** Rejects aliases exported from the related entity filter into the enclosing find query. */
 function validateRecursiveAliases(filter: unknown): void {
   if (isScope(filter)) return;
   if (isAlias(filter) || (filter && typeof filter === "object" && "as" in filter && filter.as !== undefined)) {

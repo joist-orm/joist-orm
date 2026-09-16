@@ -168,7 +168,7 @@ export interface ParsedCteClause {
     | { kind: "recursive"; seed: ParsedFindQuery; step: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
-  /** Identifies a generated reachability CTE and its matching-endpoint seed for find batching. */
+  /** Identifies a generated reachability CTE and the query that selects matching related entities for find batching. */
   recursiveFilter?: { matchesAlias: string };
 }
 

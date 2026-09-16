@@ -19,7 +19,7 @@ describe("em.find recursive collections", () => {
     expect(authors[1].mentorsRecursive.isLoaded).toBe(false);
   });
 
-  it("matches all endpoint predicates on the same recursive mentee", async () => {
+  it("matches all filter conditions on the same recursive mentee", async () => {
     // Given Root mentors Middle, who mentors Alice
     await insertAuthor({ first_name: "Root" });
     await insertAuthor({ first_name: "Middle", mentor_id: 1 });
@@ -29,7 +29,7 @@ describe("em.find recursive collections", () => {
     const em = newEntityManager();
     // When a recursive mentee must be Alice and have a matching book
     const authors = await em.find(Author, { menteesRecursive: { firstName: "Alice", books: { title: "Postgres" } } });
-    // Then intermediate mentees need not satisfy the endpoint predicate
+    // Then Root matches through Middle, even though Middle is not Alice and wrote no matching book
     expect(authors.map((a) => a.id)).toEqual(["a:1", "a:2"]);
     // When the name and book predicates match different mentees
     const split = await em.find(Author, { menteesRecursive: { firstName: "Middle", books: { title: "Postgres" } } });
@@ -105,7 +105,7 @@ describe("em.find recursive collections", () => {
     await insertAuthor({ first_name: "Bob", age: 12, mentor_id: 1 });
     await insertAuthor({ first_name: "Carol", age: 10, mentor_id: 2 });
     const em = newEntityManager();
-    // When the endpoint is described by a scope using a local alias
+    // When the matching mentor is described by a scope using a local alias
     const authors = await em.find(Author, { mentorsRecursive: Author.named("Ali").adult });
     // Then both descendants match the scoped ancestor
     expect(authors.map((a) => a.id)).toEqual(["a:2", "a:3"]);
@@ -145,7 +145,7 @@ describe("em.find recursive collections", () => {
       em.findCount(Author, { mentorsRecursive: { firstName: "Nobody" } }),
       em.findIds(Author, { mentorsRecursive: { firstName: "Nobody" } }),
     ]);
-    // Then each result uses only its own matching endpoints
+    // Then each result uses only the mentors matching its own filter
     expect(alice.map((a) => a.id)).toEqual(["a:2", "a:3"]);
     expect(bob.map((a) => a.id)).toEqual(["a:3"]);
     expect(aliceCount).toBe(2);
@@ -168,7 +168,7 @@ describe("em.find recursive collections", () => {
     await insertAuthor({ first_name: "Bob" });
     await insertBook({ title: "Unrelated", author_id: 2 });
     const em = newEntityManager();
-    // When a book must have matching recursive endpoints in both directions
+    // When a book must have First as a recursive prequel and Third as a recursive sequel
     const authors = await em.find(Author, {
       books: { prequelsRecursive: { title: "First" }, sequelsRecursive: { title: "Third" } },
     });
@@ -195,20 +195,20 @@ describe("em.find recursive collections", () => {
     expect(authors[0].books.get.map((b) => b.title)).toEqual(["Postgres"]);
   });
 
-  it("filters soft-deleted endpoints but traverses soft-deleted intermediates", async () => {
+  it("excludes soft-deleted mentors and mentees but follows relationships through them", async () => {
     // Given Alice mentors deleted Bob, who mentors Carol
     await insertAuthor({ first_name: "Alice" });
     await insertAuthor({ first_name: "Bob", mentor_id: 1, deleted_at: new Date() });
     await insertAuthor({ first_name: "Carol", mentor_id: 2 });
     const em = newEntityManager();
-    // When either a live or deleted ancestor is the matching endpoint
+    // When the recursive mentor filter names either live Alice or deleted Bob
     const [alice, bob, included, descendants] = await Promise.all([
       em.find(Author, { mentorsRecursive: { firstName: "Alice" } }),
       em.find(Author, { mentorsRecursive: { firstName: "Bob" } }),
       em.find(Author, { mentorsRecursive: { firstName: "Bob" } }, { softDeletes: "include" }),
       em.find(Author, { menteesRecursive: { firstName: "Carol" } }),
     ]);
-    // Then endpoint visibility does not cut off traversal through Bob
+    // Then Bob is excluded by default, but the relationship between Alice and Carol still matches
     expect(alice.map((a) => a.id)).toEqual(["a:3"]);
     expect(bob).toEqual([]);
     expect(included.map((a) => a.id)).toEqual(["a:3"]);
@@ -266,7 +266,7 @@ describe("em.find recursive collections", () => {
     expect(ancestors.map((u) => u.id)).toEqual(["u:1", "u:2", "u:3"]);
   });
 
-  it("applies STI endpoint constraints without restricting intermediate types", async () => {
+  it("matches related tasks of the requested STI subtype through tasks of another subtype", async () => {
     // Given an old task was copied through a new task into another old task
     await insertTask({ type: "OLD", special_old_field: 1 });
     await insertTask({ type: "NEW" });
@@ -277,12 +277,12 @@ describe("em.find recursive collections", () => {
     const em = newEntityManager();
     // And only the concurrent subtype finds are counted
     resetQueryCount();
-    // When old tasks must descend from different old endpoints
+    // When old tasks must be copies of different old tasks
     const [tasks, leafCopies] = await Promise.all([
       em.find(TaskOld, { copiedFromsRecursive: { specialOldField: 1 } }),
       em.find(TaskOld, { copiedFromsRecursive: { specialOldField: 3 } }),
     ]);
-    // Then the new intermediate task does not prevent reaching the old endpoint
+    // Then the new task between the two old tasks does not prevent the match
     expect(tasks.map((t) => t.id)).toEqual(["task:3"]);
     expect(leafCopies).toEqual([]);
     expect(numberOfQueries).toBe(1);
@@ -298,7 +298,7 @@ describe("em.find recursive collections", () => {
     // And a fresh EntityManager counts only the concurrent inherited-relation finds
     const em2 = newEntityManager();
     resetQueryCount();
-    // When the admin subtype is filtered through different inherited recursive endpoints
+    // When admins must have Root or Middle as a recursive parent through the inherited relation
     const [admins, middleAdmins] = await Promise.all([
       em2.find(AdminUser, { parentsRecursive: { name: "Root" } }),
       em2.find(AdminUser, { parentsRecursive: { name: "Middle" } }),
@@ -309,7 +309,7 @@ describe("em.find recursive collections", () => {
     expect(numberOfQueries).toBe(1);
   });
 
-  it("terminates on m2m cycles without treating an owner as its own endpoint", async () => {
+  it("terminates on m2m cycles without treating a user as their own recursive parent", async () => {
     // Given Root is the parent of Leaf
     await insertUser({ name: "Root" });
     await insertUser({ name: "Leaf" });
@@ -338,12 +338,12 @@ describe("em.find recursive collections", () => {
     const a = alias(Author);
     const em = newEntityManager();
     const filter: AuthorFilter = {
-      // @ts-expect-error Recursive endpoints cannot export their alias to the outer query
+      // @ts-expect-error A recursive mentor filter cannot export its alias to the outer query
       mentorsRecursive: { as: a, firstName: "Alice" },
     };
     // And no database statements have been issued for this filter
     resetQueryCount();
-    // When an endpoint alias is exported from the recursive query
+    // When the matching mentor's alias is exported from the recursive query
     await expect(em.find(Author, filter)).rejects.toThrow(
       "Recursive collection filters do not support exporting aliases",
     );

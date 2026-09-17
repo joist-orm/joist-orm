@@ -1446,6 +1446,146 @@ describe("EntityManager.rawQueries", () => {
       expect([...row.bookIds!].sort()).toEqual(["b:1", "b:2"]);
     });
 
+    it("collects distinct Author ages in order with an aggregate filter", async () => {
+      // Given Authors with duplicate, distinct, and unknown ages
+      await insertAuthor({ first_name: "Alice", age: 30 });
+      await insertAuthor({ first_name: "Bob", age: 20 });
+      await insertAuthor({ first_name: "Carol", age: 30 });
+      await insertAuthor({ first_name: "Dan" });
+      // And an Author whose age must be excluded from only the filtered aggregate
+      await insertAuthor({ first_name: "Excluded", age: 40 });
+      // And an Author table for the age aggregates
+      const em = newEntityManager();
+      const a = table(Author);
+
+      // When collecting distinct ages with descending and ascending null placement
+      const rows = await em.query({
+        from: a,
+        select: {
+          descending: a.age.arrayAgg({
+            distinct: true,
+            orderBy: [{ desc: a.age, nulls: "first" }],
+            filter: { and: [a.first_name.ne("Excluded"), undefined] },
+          }),
+          ascending: a.age.arrayAgg({
+            distinct: true,
+            orderBy: [{ asc: a.age, nulls: "last" }],
+            filter: sql.condition`${a.first_name} != ${"Excluded"}`,
+          }),
+          allAuthors: a.id.count(),
+        },
+      });
+
+      // Then ordering preserves one null element and filtering does not remove other aggregate rows
+      expect(rows).toEqual([{ descending: [null, 30, 20], ascending: [20, 30, null], allAuthors: 5 }]);
+      expectTypeOf(rows).toEqualTypeOf<
+        { descending: (number | null)[] | null; ascending: (number | null)[] | null; allAuthors: number }[]
+      >();
+    });
+
+    it("binds aggregate values, multiple sort expressions, and filters in SQL order", async () => {
+      // Given Authors whose ages tie but whose names differ
+      await insertAuthor({ first_name: "Alice", age: 30 });
+      await insertAuthor({ first_name: "Bob", age: 30 });
+      // And an Author whose age sorts before the tied Authors
+      await insertAuthor({ first_name: "Carol", age: 20 });
+      // And an Author table for bound aggregate expressions
+      const em = newEntityManager();
+      const a = table(Author);
+
+      // When ordering computed names by age and then descending name with a bound filter
+      const rows = await em.query({
+        from: a,
+        select: {
+          names: sql.string`${a.first_name} || ${"!"}`.arrayAgg({
+            orderBy: [undefined, { asc: sql.number`${a.age} + ${1}` }, { desc: a.first_name }],
+            filter: a.age.gte(20),
+          }),
+        },
+      });
+
+      // Then each parameter applies to its own expression and both sort keys determine the array order
+      expect(rows).toEqual([{ names: ["Carol!", "Bob!", "Alice!"] }]);
+      expectTypeOf(rows).toEqualTypeOf<{ names: string[] | null }[]>();
+    });
+
+    it("retains the Book join when only arrayAgg orderBy references it", async () => {
+      // Given an Author with two Books that sort in reverse title order
+      await insertAuthor({ first_name: "Alice" });
+      await insertBook({ title: "Zebra", author_id: 1 });
+      await insertBook({ title: "Apple", author_id: 1 });
+      // And an Author with one Book between those titles
+      await insertAuthor({ first_name: "Bob" });
+      await insertBook({ title: "Middle", author_id: 2 });
+      // And joined Author and Book tables where only the aggregate ordering reads Books
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+
+      // When collecting Author names in Book title order
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b)],
+        select: {
+          names: a.first_name.arrayAgg({ orderBy: [{ asc: b.title }] }),
+        },
+      });
+
+      // Then each Book contributes its Author's name in title order
+      expect(rows).toEqual([{ names: ["Alice", "Bob", "Alice"] }]);
+    });
+
+    it("retains the Book join when only arrayAgg filter references it", async () => {
+      // Given an Author with a Book excluded by the aggregate filter
+      await insertAuthor({ first_name: "Alice" });
+      await insertBook({ title: "Zebra", author_id: 1 });
+      // And another Book that keeps Alice in the aggregate
+      await insertBook({ title: "Apple", author_id: 1 });
+      // And another Author with a matching Book
+      await insertAuthor({ first_name: "Bob" });
+      await insertBook({ title: "Middle", author_id: 2 });
+      // And joined Author and Book tables where only the aggregate filter reads Books
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+
+      // When collecting Author names for Books other than Zebra
+      const rows = await em.query({
+        from: a,
+        join: [a.books.as(b)],
+        select: {
+          names: a.first_name.arrayAgg({ orderBy: [{ asc: a.first_name }], filter: b.title.ne("Zebra") }),
+        },
+      });
+
+      // Then only the two matching Books contribute their Authors' names
+      expect(rows).toEqual([{ names: ["Alice", "Bob"] }]);
+    });
+
+    it("preserves tagged Book ids, empty filters, and per-element fallbacks with arrayAgg options", async () => {
+      // Given an Author with two Books
+      await insertAuthor({ first_name: "Alice" });
+      await insertBook({ title: "Apple", author_id: 1 });
+      await insertBook({ title: "Zebra", author_id: 1 });
+      // And a Book table for filtered id arrays
+      const em = newEntityManager();
+      const b = table(Book);
+
+      // When collecting ids with omitted filters and filters that match no Books
+      const rows = await em.query({
+        from: b,
+        select: {
+          ids: b.id.arrayAgg({ distinct: true, orderBy: [{ desc: b.id }], filter: { and: [undefined] } }),
+          empty: b.id.arrayAgg({ filter: b.title.eq("Missing") }),
+          fallback: b.id.arrayAgg({ filter: b.title.eq("Missing") }).coalesce(["b:9"]),
+          emptyArray: b.id.arrayAgg({ filter: b.title.eq("Missing") }).coalesce([]),
+        },
+      });
+
+      // Then ids keep their tags, omitted filters keep all Books, and empty inputs use the requested fallback
+      expect(rows).toEqual([{ ids: ["b:2", "b:1"], empty: null, fallback: ["b:9"], emptyArray: [] }]);
+      expectTypeOf(rows[0].ids).toEqualTypeOf<Book["id"][] | null>();
+      expectTypeOf(rows[0].fallback).toEqualTypeOf<Book["id"][]>();
+    });
+
     it("decodes arrayAgg element nulls and encodes coalesce fallbacks per element", async () => {
       // Given Author a1 with no Books: the left-joined group aggregates as [null], and the correlated
       // zero-row aggregate is NULL, recovered by coalesce, whose id fallback must encode per element

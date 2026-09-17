@@ -28,6 +28,7 @@ import {
   deferredSym,
   exprBrand,
   isExpr,
+  orderByToSql,
   resolveDeferredConditions,
 } from "./Expr.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
@@ -1554,7 +1555,7 @@ export class Ctx implements ExprContext {
     return fail(`${describeHandle(handle)} is not in this query's from/join`);
   }
 
-  conditionToSql(cond: SqlCondition): SqlFragment | undefined {
+  conditionToSql(cond: QueryCondition): SqlFragment | undefined {
     // Inside another expression (i.e. a `sql` template), keep `a OR b` grouped
     return conditionToSql(cond, this, false);
   }
@@ -1935,17 +1936,6 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
     }
   }
   return result;
-}
-
-function orderByToSql(o: QueryOrderBy, ctx: Ctx): SqlFragment {
-  const [expr, direction] = "asc" in o && o.asc ? [o.asc, "ASC"] : [o.desc, "DESC"];
-  const fragment = asExpr(expr, "orderBy").toSql(ctx);
-  // `nulls` is interpolated into the SQL, so never trust it, i.e. it might cross an `any` boundary
-  if (o.nulls !== undefined && o.nulls !== "first" && o.nulls !== "last") {
-    return fail(`Invalid orderBy nulls '${o.nulls}'`);
-  }
-  const nulls = o.nulls ? ` NULLS ${o.nulls.toUpperCase()}` : "";
-  return { ...fragment, sql: `${fragment.sql} ${direction}${nulls}` };
 }
 
 /**

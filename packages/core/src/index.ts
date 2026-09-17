@@ -96,7 +96,15 @@ export type { EnumMetadata } from "./EnumMetadata.ts";
 // `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
 // (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
 // joist-core, so `toSql`/`decode`/`encode` never show up as something a user could call.
-export { type Expr, type ExprBrand, exprBrand, type ExprLike, type InnerJoin, type LeftJoin } from "./Expr.ts";
+export {
+  type ArrayAggOptions,
+  type Expr,
+  type ExprBrand,
+  exprBrand,
+  type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
+} from "./Expr.ts";
 export { skipCondition } from "./skipCondition.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";

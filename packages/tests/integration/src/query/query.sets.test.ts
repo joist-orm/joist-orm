@@ -2044,25 +2044,32 @@ describe("em.query / sets", () => {
       expect(queries).toEqual([]);
     });
 
-    it("rejects inherited entity selection before constructing a reusable query", async () => {
-      // Given a Publisher table that contains only its physical columns
+    it("allows reusable CTI entity queries but rejects them as set operands", async () => {
+      // Given a Publisher table whose entity mode adds its CTI hydration joins
       const p = table(Publisher);
       // And an EntityManager for untyped execution
       const em = newEntityManager();
-      // And an unsupported entity projection rather than explicit physical columns
+      // And a supported CTI entity projection rather than explicit physical columns
       const publishers = { from: p, select: p };
       // And recording isolated from SQL
       resetQueryCount();
-      // When constructing a reusable read or nesting the unsupported projection
-      // Then incomplete physical rows cannot request entity hydration
-      expect(() => query(publishers as any)).toThrow(
-        "Inherited table Publisher cannot be selected as entities; select its columns individually",
-      );
+
+      // When constructing a reusable CTI entity read
+      const reusable = query(publishers as any);
+
+      // Then entity hydration is available outside set operations
+      expect(reusable).toBeDefined();
+
+      // When nesting inline or reusable entity reads in a set operation
+      // Then set rows still require named POJO projections
       expect(() => query({ union: [publishers, publishers] } as any)).toThrow(
-        "Inherited table Publisher cannot be selected as entities; select its columns individually",
+        "Set operations do not support entity-mode operands",
+      );
+      expect(() => query({ union: [reusable, reusable] } as any)).toThrow(
+        "Set operations do not support entity-mode operands",
       );
       await expect(em.query({ union: [publishers, publishers] } as any)).rejects.toThrow(
-        "Inherited table Publisher cannot be selected as entities; select its columns individually",
+        "Set operations do not support entity-mode operands",
       );
       expect(queries).toEqual([]);
     });

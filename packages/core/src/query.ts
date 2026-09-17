@@ -45,6 +45,7 @@ import {
   type ParsedExpressionFilter,
   filterSoftDeletes,
   lazyExcludedSelects,
+  stiSubtypeFilter,
 } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import {
@@ -61,7 +62,6 @@ import {
   tableMgmt,
 } from "./Tables.ts";
 import { type TypeInfo } from "./TypeInfo.ts";
-import { type TypeMapEntry } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /**
@@ -237,7 +237,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   where?: QueryCondition;
   groupBy?: readonly ExprLike<any>[];
   having?: QueryCondition;
-  select: S & CheckEntitySelect<S>;
+  select: S;
   orderBy?: readonly (CheckedExpressionOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
   limit?: number;
   offset?: number;
@@ -608,16 +608,6 @@ export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { rea
 
 /** A scalar/list query that remains distinguishable from ordinary expressions for EXISTS. */
 export type ScalarQuery<R> = Expr<R | null, never> & { readonly [scalarQueryBrand]: true };
-
-/** Physical inheritance tables cannot supply complete entities; select their columns instead. */
-type CheckEntitySelect<S> = [
-  Extract<
-    TypeMapEntry<S extends { readonly [tableMgmt]: { readonly __entity: infer T } } ? T : never, "inheritanceType">,
-    "cti" | "sti"
-  >,
-] extends [never]
-  ? unknown
-  : "Inherited tables cannot be selected as entities; select their columns individually";
 
 /**
  * Rejects a `select` that a `: Query` annotation widened to the whole `QuerySelect` union.
@@ -1212,12 +1202,6 @@ function validateReadQuery(arg: unknown): asserts arg is AnyReadQuery {
     validateQueryKeys(arg, READ_KEYS, "Read queries");
     if (!("from" in arg && "select" in arg))
       fail("em.query expects a { from, select, ... } object or a query(...) value");
-    if (isTable(arg.select)) {
-      const meta = getTableMetadata(arg.select);
-      if (meta.inheritanceType || meta.baseType || meta.baseTypes.length || meta.subTypes.length) {
-        fail(`Inherited table ${meta.type} cannot be selected as entities; select its columns individually`);
-      }
-    }
   }
   const options = arg as Record<string, unknown>;
   for (const key of ["limit", "offset"]) {
@@ -1673,7 +1657,7 @@ function parseQuery(
   // 2. Generate SQL.
   const softDeletes = q.softDeletes ?? "exclude";
   const from = parseFrom();
-  const joins: ParsedJoin[] = pendingJoins.map((j) => {
+  const userJoins: ParsedJoin[] = pendingJoins.map((j) => {
     const source = j.parseSource();
     // `userOn` is the user's ON alone, so the collapsed-ON check below is not fooled by injections
     const userOn = conditionToSql(j.on, ctx, true);
@@ -1681,8 +1665,11 @@ function parseQuery(
     const fullOn = userOn && injected.length > 0 ? conditionToSql({ and: [j.on, ...injected] }, ctx, true) : userOn;
     return { kind: j.kind, keep: j.keep, source, userOn, fullOn };
   });
-  const { selects, decodeRows, output } = selectsToSql(q, ctx, from);
-  const fromInjected = injectedConditions(from, softDeletes);
+  const cti = ctiEntityPlan(q, from, assigner);
+  const joins = [...cti.joins, ...userJoins];
+  const sti = stiEntityPlan(q, from);
+  const { selects, decodeRows, output } = selectsToSql(q, ctx, from, cti.selects ?? sti.selects);
+  const fromInjected = [...injectedConditions(from, softDeletes), ...sti.conditions];
   const where = conditionToSql(fromInjected.length > 0 ? { and: [q.where, ...fromInjected] } : q.where, ctx, true);
   const having = conditionToSql(q.having, ctx, true);
   const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
@@ -1861,6 +1848,7 @@ function selectsToSql(
   q: AnyQuery,
   ctx: Ctx,
   from: ParsedSource,
+  entitySelects?: SqlFragment[],
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
   if (isTable(select)) {
@@ -1871,7 +1859,7 @@ function selectsToSql(
     }
     const alias = ctx.aliasFor(getTableMgmt(select));
     const meta = getTableMetadata(select);
-    const selects = from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
+    const selects = entitySelects ?? from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
     return {
       selects,
       decodeRows: (em, rows) => em.hydrate(meta.cstr as any, rows),
@@ -1902,6 +1890,135 @@ function selectsToSql(
   const projection = projectionToSql(select, ctx);
   projection.output = joinedOutput(projection.output, q.join);
   return projection;
+}
+
+/**
+ * Builds the mandatory CTI joins and flat row projection needed by entity hydration.
+ *
+ * The joins use the same ParsedJoin path as user joins, but `keep: true` makes them survive pruning.
+ * They are generated only for an entity selection of the from source; POJO and scalar reads keep their
+ * physical-table behavior. User source aliases have already been allocated, so the preferred `_bN` and
+ * `_sN` aliases can be made unique before their projection fragments are built.
+ */
+function ctiEntityPlan(
+  q: AnyQuery,
+  from: ParsedSource,
+  assigner: AliasAssigner,
+): { joins: ParsedJoin[]; selects: SqlFragment[] | undefined } {
+  // CTI expansion belongs only to entity mode. Column projections keep their explicit physical-table shape.
+  if (!isTable(q.select) || from.handle !== getTableMgmt(q.select)) return { joins: [], selects: undefined };
+  const meta = getTableMetadata(q.select);
+  if (meta.inheritanceType !== "cti") return { joins: [], selects: undefined };
+
+  // Start with the selected table. Hydration expects one flat row containing every CTI table's columns.
+  const joins: ParsedJoin[] = [];
+  const selects: SqlFragment[] = from.entitySelects.map((sql) => ({ sql, bindings: [], refs: [from.alias] }));
+
+  // A subtype starts from its own table, so join each base table to recover inherited fields.
+  for (const [i, baseMeta] of meta.baseTypes.entries()) {
+    const alias = assigner.getLiteralAlias(`${from.alias}_b${i}`);
+    joins.push(ctiJoin(from, baseMeta, alias));
+    selects.push(...entitySelectFragments(baseMeta, alias));
+  }
+
+  // A base type needs every subtype table both for subtype fields and for detecting the concrete class.
+  // Record each subtype column's aliases while visiting them because sibling tables can reuse a column name.
+  const subtypeColumns = new Map<string, string[]>();
+  for (const [i, subtypeMeta] of meta.subTypes.entries()) {
+    const alias = assigner.getLiteralAlias(`${from.alias}_s${i}`);
+    joins.push(ctiJoin(from, subtypeMeta, alias));
+    selects.push(...entitySelectFragments(subtypeMeta, alias));
+    for (const field of Object.values(subtypeMeta.fields)) {
+      if (field.fieldName === "id" || !field.serde || (field.kind === "primitive" && field.lazy)) continue;
+      for (const column of field.serde.columns) {
+        const aliases = subtypeColumns.get(column.columnName);
+        if (aliases) aliases.push(alias);
+        else subtypeColumns.set(column.columnName, [alias]);
+      }
+    }
+  }
+
+  // Joined `table.*` projections can overwrite id, so finish with the selected table's canonical entity id.
+  selects.push({
+    sql: `${safeKq(from.alias)}.${kq("id")} AS ${kq("id")}`,
+    bindings: [],
+    refs: [from.alias],
+  });
+  // Collapse same-named sibling fields into the one column name that entity hydration reads.
+  for (const [column, aliases] of subtypeColumns) {
+    if (aliases.length < 2) continue;
+    selects.push({
+      sql: `COALESCE(${aliases.map((alias) => `${safeKq(alias)}.${kq(column)}`).join(", ")}) AS ${kq(column)}`,
+      bindings: [],
+      refs: aliases,
+    });
+  }
+  // The first present subtype row identifies the concrete constructor; `_` means the base table itself.
+  if (meta.subTypes.length > 0) {
+    const subtypeAliases = joins.slice(meta.baseTypes.length).map((join) => join.source.alias);
+    selects.push({
+      sql: `CASE ${subtypeAliases.map((alias) => `WHEN ${safeKq(alias)}.${kq("id")} IS NOT NULL THEN ?`).join(" ")} ELSE '_' END AS ${kq("__class")}`,
+      bindings: meta.subTypes.map((subtype) => subtype.type),
+      refs: subtypeAliases,
+    });
+  }
+  return { joins, selects };
+}
+
+/** Adds the discriminator projection and subtype filter required by STI entity hydration. */
+function stiEntityPlan(
+  q: AnyQuery,
+  from: ParsedSource,
+): { selects: SqlFragment[] | undefined; conditions: ColumnCondition[] } {
+  // As with CTI, only a table selected from itself requests entity hydration and inheritance behavior.
+  if (!isTable(q.select) || from.handle !== getTableMgmt(q.select)) return { selects: undefined, conditions: [] };
+  const meta = getTableMetadata(q.select);
+  if (meta.inheritanceType !== "sti") return { selects: undefined, conditions: [] };
+
+  // STI stores the complete family in one row, so the ordinary physical projection already supplies its fields.
+  const selects: SqlFragment[] = from.entitySelects.map((sql) => ({ sql, bindings: [], refs: [from.alias] }));
+  // `table.*` includes the discriminator. An explicit lazy-safe projection might not, so append it for hydration.
+  if (!(from.entitySelects.length === 1 && from.entitySelects[0] === kqStar(from.alias))) {
+    const discriminator = getBaseMeta(meta).stiDiscriminatorColumnName!;
+    selects.push({
+      sql: `${safeKq(from.alias)}.${kq(discriminator)} AS ${kq(discriminator)}`,
+      bindings: [],
+      refs: [from.alias],
+    });
+  }
+  // Root reads may hydrate any concrete class. Subtype reads must exclude sibling rows to preserve their result type.
+  const condition = stiSubtypeFilter(meta, from.alias);
+  return { selects, conditions: condition ? [condition] : [] };
+}
+
+/** Creates one mandatory CTI join through the selected source's primary key. */
+function ctiJoin(from: ParsedSource, meta: EntityMetadata, alias: string): ParsedJoin {
+  const on = {
+    sql: `${safeKq(from.alias)}.${kq("id")} = ${safeKq(alias)}.${kq("id")}`,
+    bindings: [],
+    refs: [from.alias, alias],
+  };
+  return {
+    kind: "left",
+    source: {
+      handle: { tableName: meta.tableName, meta },
+      alias,
+      sql: `${kq(meta.tableName)} AS ${safeKq(alias)}`,
+      bindings: [],
+      refs: [],
+      entitySelects: [],
+      meta,
+    },
+    userOn: on,
+    fullOn: on,
+    keep: true,
+  };
+}
+
+/** Selects one physical CTI table while preserving lazy-field exclusions. */
+function entitySelectFragments(meta: EntityMetadata, alias: string): SqlFragment[] {
+  const selects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
+  return selects.map((sql) => ({ sql, bindings: [], refs: [alias] }));
 }
 
 function decodeRow(row: any, decoders: readonly (readonly [string, BaseExpr])[]): any {

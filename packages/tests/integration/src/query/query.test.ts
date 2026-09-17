@@ -503,25 +503,81 @@ describe("em.query", () => {
       expect(queries).toMatchInlineSnapshot(`[]`);
     });
 
-    it("rejects entity selects from physical CTI and STI handles before SQL", async () => {
-      // Given physical base and subtype handles that cannot provide complete entities
-      const [p, sp, t, tn] = tables(Publisher, SmallPublisher, Task, TaskNew);
+    it("hydrates CTI base entities through generated subtype joins", async () => {
+      // Given SmallPublisher and LargePublisher rows with a shared physical column
+      await insertPublisher({ id: 1, name: "small", city: "Austin", shared_column: "small-shared" });
+      // And the LargePublisher has its own subtype fields
+      await insertLargePublisher({ id: 2, name: "large", country: "US", shared_column: "large-shared" });
+      // And a Publisher entity query can return either concrete subtype
       const em = newEntityManager();
+      const p = table(Publisher);
       resetQueryCount();
-      // The casts cross the static rejection to verify the runtime guard for untyped callers.
-      await expect(em.query({ from: p, select: p } as any)).rejects.toThrow(
-        "Inherited table Publisher cannot be selected as entities; select its columns individually",
-      );
-      await expect(em.query({ from: sp, select: sp } as any)).rejects.toThrow(
-        "Inherited table SmallPublisher cannot be selected as entities; select its columns individually",
-      );
-      await expect(em.query({ from: t, select: t } as any)).rejects.toThrow(
-        "Inherited table Task cannot be selected as entities; select its columns individually",
-      );
-      await expect(em.query({ from: tn, select: tn } as any)).rejects.toThrow(
-        "Inherited table TaskNew cannot be selected as entities; select its columns individually",
-      );
-      expect(queries).toMatchInlineSnapshot(`[]`);
+
+      // When selecting the CTI root as entities
+      const publishers = await em.query({ from: p, select: p, orderBy: { id: "ASC" } });
+
+      // Then the class tag hydrates each concrete subtype with its base and subtype fields
+      expect(publishers).toMatchEntity([{ name: "small" }, { name: "large" }]);
+      expect(publishers[0]).toBeInstanceOf(SmallPublisher);
+      expect(publishers[1]).toBeInstanceOf(LargePublisher);
+      expect((publishers[0] as SmallPublisher).city).toBe("Austin");
+      expect((publishers[0] as SmallPublisher).sharedColumn).toBe("small-shared");
+      expect((publishers[1] as LargePublisher).country).toBe("US");
+      expect((publishers[1] as LargePublisher).sharedColumn).toBe("large-shared");
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT p.*, p_s0.*, p_s1.*, p.id AS id, COALESCE(p_s0.shared_column, p_s1.shared_column) AS shared_column, CASE WHEN p_s0.id IS NOT NULL THEN $1 WHEN p_s1.id IS NOT NULL THEN $2 ELSE '_' END AS __class FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id WHERE p.deleted_at IS NULL ORDER BY p.id ASC",
+       ]
+      `);
+    });
+
+    it("hydrates CTI subtype entities through a generated base join", async () => {
+      // Given a SmallPublisher with fields split across the base and subtype tables
+      await insertPublisher({ id: 1, name: "small", city: "Austin" });
+      // And a SmallPublisher entity query starts from its subtype table
+      const em = newEntityManager();
+      const sp = table(SmallPublisher);
+      resetQueryCount();
+
+      // When selecting the physical subtype as entities
+      const publishers = await em.query({ from: sp, select: sp });
+
+      // Then hydration receives both tables' fields and retains the requested subtype
+      expect(publishers).toMatchEntity([{ name: "small", city: "Austin" }]);
+      expect(publishers[0]).toBeInstanceOf(SmallPublisher);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT sp.*, sp_b0.*, sp.id AS id FROM small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id",
+       ]
+      `);
+    });
+
+    it("keeps user CTI joins separate from entity hydration joins", async () => {
+      // Given a SmallPublisher selected by an explicit subtype join
+      await insertPublisher({ id: 1, name: "small", city: "Austin" });
+      // And a LargePublisher that the explicit join must filter out
+      await insertLargePublisher({ id: 2, name: "large", country: "US" });
+      // And the root query selects complete Publisher entities
+      const em = newEntityManager();
+      const [p, sp] = tables(Publisher, SmallPublisher);
+      resetQueryCount();
+
+      // When the user join filters roots to SmallPublisher rows
+      const publishers = await em.query({
+        from: p,
+        join: [{ ...p.smallPublisher.inner(sp), keep: true }],
+        select: p,
+      });
+
+      // Then generated joins still own hydration while the user join keeps its filtering semantics
+      expect(publishers).toMatchEntity([{ name: "small" }]);
+      expect(publishers[0]).toBeInstanceOf(SmallPublisher);
+      expect((publishers[0] as SmallPublisher).city).toBe("Austin");
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT p.*, p_s0.*, p_s1.*, p.id AS id, COALESCE(p_s0.shared_column, p_s1.shared_column) AS shared_column, CASE WHEN p_s0.id IS NOT NULL THEN $1 WHEN p_s1.id IS NOT NULL THEN $2 ELSE '_' END AS __class FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN small_publishers AS sp ON p.id = sp.id WHERE p.deleted_at IS NULL",
+       ]
+      `);
     });
 
     it("rejects selecting a joined alias or subquery", async () => {

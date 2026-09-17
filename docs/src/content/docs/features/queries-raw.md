@@ -148,6 +148,128 @@ the same conditions as `where`, including `sql.condition` and `and`/`or` groups.
 and order entries are pruned. No matching values produces `null`; use `.coalesce([])` for an empty array.
 With `distinct: true`, PostgreSQL requires ordering expressions to match the aggregate argument.
 
+### Expression Literals
+
+Use expression literals for `case`, `coalesce`, `nullIf`, `greatest`, and `least` as named values in `select`.
+A plain `select` object always names result columns. Operands can be columns, bound values, or nested expressions:
+
+```ts
+const a = table(Author);
+const names = await em.query({
+  from: a,
+  select: { name: { coalesce: [a.last_name, a.first_name] } },
+});
+// names: { name: string }[]
+```
+
+Spread optional candidates into the operand list to build an expression dynamically:
+
+```ts
+const [a, b] = tables(Author, Book);
+const bookTitles = includeBookTitle ? [b.title] : [];
+const rows = await em.query({
+  from: a,
+  join: [a.books.as(b)],
+  select: { name: { coalesce: [a.last_name, ...bookTitles, a.first_name] } },
+});
+// rows: { name: string }[]
+```
+
+For scalar results, select a column directly or build an expression with `expr(...)`:
+
+```ts
+import { expr } from "joist-orm";
+
+const names = await em.query({
+  from: a,
+  select: expr({ coalesce: [a.last_name, a.first_name] }),
+});
+// names: string[]
+```
+
+Use `expr(...)` to build a reusable expression or call methods such as `.eq(...)`.
+Inline expressions and `expr(...)` use the same validation, codecs, and LEFT-join nullability rules.
+The same distinction applies inside `query(...)`: scalar expression literals use `expr(...)`, while
+derived tables and CTEs name their projected values.
+
+Expression keywords can name result columns: both `select: { coalesce: a.first_name }` and
+`select: { coalesce: { coalesce: [a.last_name, a.first_name] } }` return objects with a `coalesce` column.
+`select: { coalesce: [...] }` is invalid because the named column's value must be an expression, not an operand array.
+
+These expressions match their SQL behavior:
+
+- `coalesce` returns the first non-null value, in list order.
+- CASE returns the first value whose `when` condition is true. Without `else`, no match returns null.
+- A false or SQL NULL condition does not match.
+- A matching CASE arm can return null; an enclosing COALESCE then tries its next candidate.
+- An empty `bookTitles` array leaves just the Author's last and first names as candidates.
+- `nullIf` returns null when its two operands are equal, otherwise it returns the first operand.
+- `greatest` and `least` return the largest and smallest non-null operands; all-null inputs return null.
+
+#### CASE
+
+For several CASE arms, use an array. The first true condition wins, even if its value is null:
+
+```ts
+const ageGroup = expr({
+  case: [
+    { when: a.age.gte(18), then: "Adult" },
+    { when: a.age.gte(0), then: "Child" },
+    { else: "Unknown" },
+  ],
+});
+```
+
+`when` accepts the same conditions as `where`, including `and`, `or`, `exists`, and `sql.condition`.
+An undefined or fully pruned condition removes its arm. If all WHEN arms disappear, the result is the
+final `{ else: ... }` entry, or null when it is omitted. The ELSE entry must be last and appear at most
+once. Use an explicit `null` for a null value; `undefined` is not a value. CASE needs at least one WHEN
+arm, and COALESCE needs at least one candidate.
+
+The result is a reusable expression for `select`, predicates, ordering, or other expressions. Its type
+accounts for nullable columns and LEFT joins. A non-null fallback, such as the last candidate in
+`expr({ coalesce: [b.title, "No book"] })`, makes the result non-null even when Book is LEFT-joined.
+
+Expression branches must have matching SQL types and codecs. Literal branches use the expression's
+encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknown or different codecs
+cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
+literals need a column or other expression that supplies their codec.
+
+#### NULLIF
+
+`nullIf` returns null when its two operands are equal, otherwise it returns the first operand. Use it
+inside COALESCE to treat empty strings as missing:
+
+```ts
+const displayName = expr({
+  coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name],
+});
+```
+
+A null first operand stays null. A null second operand does not match a non-null first operand:
+`expr({ nullIf: [a.first_name, null] })` returns the first name. The inferred NULLIF result type
+conservatively includes null.
+
+#### GREATEST and LEAST
+
+`greatest` and `least` compare operands using PostgreSQL's ordering:
+
+```ts
+const boundedAge = expr({
+  least: [{ greatest: [a.age, 18] }, 65],
+});
+```
+
+Both ignore null operands and return null only when all operands are null. The example returns 18
+when the Author's age is null. A known non-null operand guarantees a non-null result, including when
+other operands come from LEFT joins.
+
+These expression objects nest inside CASE, COALESCE, or each other. They use the same type and codec checks
+as CASE and COALESCE. NULLIF requires exactly two operands; GREATEST and LEAST require at least one.
+Dynamic arrays are accepted, and their lengths are checked at runtime.
+
+### Query conditions
+
 The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:
 
 ```ts

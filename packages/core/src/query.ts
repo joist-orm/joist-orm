@@ -792,44 +792,44 @@ export function recursiveQuery<Name extends string, F extends QuerySource, S ext
  * ```
  */
 export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
-  return new TemplateExpr(strings, values) as any;
+  return typedSql<R>(strings, ...values);
 }
 
 /** Shorthand for `sql<number>`; does not cast or convert the SQL result. */
-sql.number = sql<number>;
+sql.number = typedSql<number>;
 
 /** Shorthand for `sql<number | null>`; does not cast or convert the SQL result. */
-sql.numberOrNull = sql<number | null>;
+sql.numberOrNull = typedSql<number | null>;
 
 /** Shorthand for `sql<number[]>`; does not cast or convert the SQL result. */
-sql.numberArray = sql<number[]>;
+sql.numberArray = typedSql<number[]>;
 
 /** Shorthand for `sql<number[] | null>`; does not cast or convert the SQL result. */
-sql.numberArrayOrNull = sql<number[] | null>;
+sql.numberArrayOrNull = typedSql<number[] | null>;
 
 /** Shorthand for `sql<string>`; does not cast or convert the SQL result. */
-sql.string = sql<string>;
+sql.string = typedSql<string>;
 
 /** Shorthand for `sql<string | null>`; does not cast or convert the SQL result. */
-sql.stringOrNull = sql<string | null>;
+sql.stringOrNull = typedSql<string | null>;
 
 /** Shorthand for `sql<string[]>`; does not cast or convert the SQL result. */
-sql.stringArray = sql<string[]>;
+sql.stringArray = typedSql<string[]>;
 
 /** Shorthand for `sql<string[] | null>`; does not cast or convert the SQL result. */
-sql.stringArrayOrNull = sql<string[] | null>;
+sql.stringArrayOrNull = typedSql<string[] | null>;
 
 /** Shorthand for `sql<boolean>`; does not cast or convert the SQL result. */
-sql.boolean = sql<boolean>;
+sql.boolean = typedSql<boolean>;
 
 /** Shorthand for `sql<boolean | null>`; does not cast or convert the SQL result. */
-sql.booleanOrNull = sql<boolean | null>;
+sql.booleanOrNull = typedSql<boolean | null>;
 
 /** Shorthand for `sql<boolean[]>`; does not cast or convert the SQL result. */
-sql.booleanArray = sql<boolean[]>;
+sql.booleanArray = typedSql<boolean[]>;
 
 /** Shorthand for `sql<boolean[] | null>`; does not cast or convert the SQL result. */
-sql.booleanArrayOrNull = sql<boolean[] | null>;
+sql.booleanArrayOrNull = typedSql<boolean[] | null>;
 
 /** A raw condition for `where`, `having`, or `on`. */
 sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
@@ -2262,4 +2262,9 @@ function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
+}
+
+/** Keeps shorthand declarations callable-only, without recursively copying sql's own shorthand properties. */
+function typedSql<R>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
+  return new TemplateExpr(strings, values) as unknown as Expr<R, never>;
 }

@@ -415,7 +415,7 @@ type ColumnValue<R, K extends PropertyKey> = R extends unknown ? (K extends keyo
  * This is only a TypeScript check: Author.age and Author.age.sum() both pass as numbers, but runtime
  * output-type checks must still reject their different int4/int8 representations.
  */
-type CompatibleValue<L, R> = [NonNullable<L>] extends [NonNullable<R>]
+export type CompatibleValue<L, R> = [NonNullable<L>] extends [NonNullable<R>]
   ? true
   : [NonNullable<R>] extends [NonNullable<L>]
     ? true

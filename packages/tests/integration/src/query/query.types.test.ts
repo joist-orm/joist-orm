@@ -16,6 +16,7 @@ import {
   type SqlPredicate,
   type Subquery,
   alias,
+  expr,
   type exprBrand,
   getAliasMgmt,
   query,
@@ -28,6 +29,7 @@ import {
   Author,
   type AuthorId,
   Book,
+  Color,
   Comment,
   LargePublisher,
   Publisher,
@@ -42,6 +44,12 @@ import {
 import { newEntityManager } from "src/testEm";
 
 describe("em.query / types", () => {
+  it("checks literal fallback types for Book ids and Author colors", () => {
+    // Given fallback assertions against generated Book and Author columns
+    // When the type checker checks valid and invalid array elements
+    // Then invalid fallbacks are checked without executing SQL
+    expect(typeof expressionFallbackTypeAssertions).toBe("function");
+  });
   it("type-checks domain and SQL predicate boundaries", () => {
     // Given predicate assertions using generated Author and Book types
     // When checking which public API accepts each predicate
@@ -59,6 +67,35 @@ describe("em.query / types", () => {
     expect(typeof typeAssertions).toBe("function");
   });
 });
+
+/**
+ * Checks array fallback types against generated Book and Author columns.
+ * The intentionally invalid expressions are checked by TypeScript but never executed.
+ */
+function expressionFallbackTypeAssertions() {
+  // Given Book ids and Author colors with different allowed array elements
+  const [a, b] = tables(Author, Book);
+
+  // When readonly literal arrays supply valid fallbacks
+  const ids = expr({ coalesce: [b.id.arrayAgg(), ["b:1"] as const] });
+  const colors = expr({ coalesce: [a.favorite_colors, [Color.Red] as const] });
+
+  // Then result arrays preserve the column types instead of widening to strings
+  expectTypeOf(ids).toExtend<Expr<Book["id"][], "Book">>();
+  expectTypeOf(colors).toExtend<Expr<Color[], "Author">>();
+
+  // When a fallback adds null elements to a non-null Book id array
+  // Then the literal must match the array element type
+  // @ts-expect-error Book id array elements cannot be null
+  expr({ coalesce: [b.id.arrayAgg(), [null]] });
+  // @ts-expect-error CASE fallbacks have the same element check
+  expr({ case: [{ when: b.id.ne(null), then: b.id.arrayAgg() }, { else: [null] }] });
+
+  // When a fallback contains an unknown color
+  // Then arbitrary strings cannot become Color values
+  // @ts-expect-error This string is not a Color
+  expr({ coalesce: [a.favorite_colors, ["not-a-color"]] });
+}
 
 /**
  * Checks recursive predicate boundaries and the deliberate unbranded escape hatch.

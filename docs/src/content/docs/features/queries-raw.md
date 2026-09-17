@@ -148,10 +148,10 @@ the same conditions as `where`, including `sql.condition` and `and`/`or` groups.
 and order entries are pruned. No matching values produces `null`; use `.coalesce([])` for an empty array.
 With `distinct: true`, PostgreSQL requires ordering expressions to match the aggregate argument.
 
-### CASE and COALESCE
+### Expression Literals
 
-Use plain expression objects directly in `select`. Values can be columns, other expressions,
-bound literals, or nested expression objects. Selecting a single expression returns scalar rows:
+Use expression literals for `case`, `coalesce`, `nullIf`, `greatest`, and `least` directly in `select`.
+Operands can be columns, bound values, or nested expressions. Selecting a single expression returns scalar rows:
 
 ```ts
 const a = table(Author);
@@ -176,11 +176,11 @@ const rows = await em.query({
 // rows: { name: string }[]
 ```
 
-`expr(...)` remains available for building a reusable expression or calling methods such as `.eq(...)`.
+Use `expr(...)` to build a reusable expression or call methods such as `.eq(...)`.
 Inline expressions and `expr(...)` use the same validation, codecs, and LEFT-join nullability rules.
 They also work in `query(...)` selects for scalar subqueries, derived tables, and CTEs.
 
-Expression keywords can still name result columns: `select: { coalesce: a.first_name }` is a named
+Expression keywords can name result columns: `select: { coalesce: a.first_name }` is a named
 projection. The operand shape distinguishes it from the scalar `select: { coalesce: [...] }` form.
 
 These expressions match their SQL behavior:
@@ -190,6 +190,10 @@ These expressions match their SQL behavior:
 - A false or SQL NULL condition does not match.
 - A matching CASE arm can return null; an enclosing COALESCE then tries its next candidate.
 - An empty `bookTitles` array leaves just the Author's last and first names as candidates.
+- `nullIf` returns null when its two operands are equal, otherwise it returns the first operand.
+- `greatest` and `least` return the largest and smallest non-null operands; all-null inputs return null.
+
+#### CASE
 
 For several CASE arms, use an array. The first true condition wins, even if its value is null:
 
@@ -220,7 +224,7 @@ encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknow
 cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
 literals need a column or other expression that supplies their codec.
 
-### NULLIF, GREATEST, and LEAST
+#### NULLIF
 
 `nullIf` returns null when its two operands are equal, otherwise it returns the first operand. Use it
 inside COALESCE to treat empty strings as missing:
@@ -235,7 +239,9 @@ A null first operand stays null. A null second operand does not match a non-null
 `expr({ nullIf: [a.first_name, null] })` returns the first name. The inferred NULLIF result type
 conservatively includes null.
 
-`greatest` and `least` return the largest and smallest operands according to PostgreSQL's ordering:
+#### GREATEST and LEAST
+
+`greatest` and `least` compare operands using PostgreSQL's ordering:
 
 ```ts
 const boundedAge = expr({

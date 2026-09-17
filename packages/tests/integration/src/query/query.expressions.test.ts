@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { type CaseArm, type CaseElse, expr, query, sql, table, tables } from "joist-orm";
+import { type CaseElse, type CaseWhen, expr, query, sql, table, tables } from "joist-orm";
 import { Author, Book, User } from "src/entities";
 import { insertAuthor, insertBook, insertUser, update } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
@@ -460,7 +460,7 @@ describe("em.query / expressions", () => {
       const a = table(Author);
       const arms = [{ when: a.age.gte(18), then: a.first_name }];
       // And a dynamic array whose type does not guarantee that an ELSE is present
-      const dynamic = [...arms, { else: "Unknown" }] satisfies (CaseArm | CaseElse)[];
+      const dynamic = [...arms, { else: "Unknown" }] satisfies (CaseWhen | CaseElse)[];
       // And the Author setup is excluded from the SQL snapshot
       resetQueryCount();
 
@@ -492,7 +492,7 @@ describe("em.query / expressions", () => {
       const a = table(Author);
       const arm = { when: a.id.ne(null), then: a.first_name };
       // And a dynamic array with a WHEN entry after ELSE
-      const entries: (CaseArm | CaseElse)[] = [arm, { else: "Unknown" }, arm];
+      const entries: (CaseWhen | CaseElse)[] = [arm, { else: "Unknown" }, arm];
 
       // When CASE has an ELSE but no WHEN
       // Then an ELSE alone is not a CASE expression
@@ -792,7 +792,8 @@ describe("em.query / expressions", () => {
       const [a, b] = tables(Author, Book);
 
       // When combining those ids into one result
-      // Then one entity's decoder cannot be used for the other entity's ids
+      // Then type checks and runtime decoding both keep Author and Book ids separate
+      // @ts-expect-error AuthorId and BookId are different value types
       expect(() => expr({ coalesce: [a.id, b.id] })).toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: int4 (domain 'key:a', ID target Author) vs int4 (domain 'key:b', ID target Book); mismatched domain, ID target"`,
       );

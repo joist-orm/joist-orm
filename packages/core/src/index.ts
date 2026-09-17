@@ -105,7 +105,7 @@ export {
   type InnerJoin,
   type LeftJoin,
 } from "./Expr.ts";
-export { expr, type CaseArm, type CaseElse, type ExprFromInput, type ExprInput } from "./expression.ts";
+export { expr, type CaseElse, type CaseWhen, type ExprFromInput, type ExprInput } from "./expression.ts";
 export { skipCondition } from "./skipCondition.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";

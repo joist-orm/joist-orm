@@ -5,7 +5,7 @@ import { parseCoalesceExpression } from "./coalesce.ts";
 import { parseGreatestExpression } from "./greatest.ts";
 import { parseLeastExpression } from "./least.ts";
 import { parseNullIfExpression } from "./nullIf.ts";
-import type { ExprInput, ExprName, ParsedExpression } from "./types.ts";
+import type { ExprName, ParsedExpression } from "./types.ts";
 
 // These expressions take operand arrays; CASE uses WHEN/THEN entries instead.
 const exprNames = ["coalesce", "nullIf", "greatest", "least"] as const satisfies readonly ExprName[];
@@ -16,21 +16,6 @@ export function parseExpressionInput(input: unknown): ParsedExpression {
     throw new Error("expr expects an object with case, coalesce, nullIf, greatest, or least");
   }
   return parseExpression(input);
-}
-
-/**
- * Recognizes an expression by its operand shape, not just its key.
- * I.e. { coalesce: [a.last_name, "Unknown"] } is scalar, but { coalesce: a.first_name } names a result column.
- */
-export function isExprInput(value: unknown): value is ExprInput {
-  if (!isObject(value) || value instanceof BaseExpr) return false;
-  for (const name of exprNames) if (name in value && Array.isArray(value[name])) return true;
-  if (!("case" in value)) return false;
-  const arms = value.case;
-  return (
-    Array.isArray(arms) ||
-    (isObject(arms) && !(arms instanceof BaseExpr) && ("when" in arms || "then" in arms || "else" in arms))
-  );
 }
 
 /**

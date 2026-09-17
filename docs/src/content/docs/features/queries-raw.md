@@ -150,20 +150,19 @@ With `distinct: true`, PostgreSQL requires ordering expressions to match the agg
 
 ### Expression Literals
 
-Use expression literals for `case`, `coalesce`, `nullIf`, `greatest`, and `least` directly in `select`.
-Operands can be columns, bound values, or nested expressions. Selecting a single expression returns scalar rows:
+Use expression literals for `case`, `coalesce`, `nullIf`, `greatest`, and `least` as named values in `select`.
+A plain `select` object always names result columns. Operands can be columns, bound values, or nested expressions:
 
 ```ts
 const a = table(Author);
 const names = await em.query({
   from: a,
-  select: { coalesce: [a.last_name, a.first_name] },
+  select: { name: { coalesce: [a.last_name, a.first_name] } },
 });
-// names: string[]
+// names: { name: string }[]
 ```
 
-For named results, put expression objects under the projection keys. Spread optional candidates into
-the operand list to build an expression dynamically:
+Spread optional candidates into the operand list to build an expression dynamically:
 
 ```ts
 const [a, b] = tables(Author, Book);
@@ -176,12 +175,26 @@ const rows = await em.query({
 // rows: { name: string }[]
 ```
 
+For scalar results, select a column directly or build an expression with `expr(...)`:
+
+```ts
+import { expr } from "joist-orm";
+
+const names = await em.query({
+  from: a,
+  select: expr({ coalesce: [a.last_name, a.first_name] }),
+});
+// names: string[]
+```
+
 Use `expr(...)` to build a reusable expression or call methods such as `.eq(...)`.
 Inline expressions and `expr(...)` use the same validation, codecs, and LEFT-join nullability rules.
-They also work in `query(...)` selects for scalar subqueries, derived tables, and CTEs.
+The same distinction applies inside `query(...)`: scalar expression literals use `expr(...)`, while
+derived tables and CTEs name their projected values.
 
-Expression keywords can name result columns: `select: { coalesce: a.first_name }` is a named
-projection. The operand shape distinguishes it from the scalar `select: { coalesce: [...] }` form.
+Expression keywords can name result columns: both `select: { coalesce: a.first_name }` and
+`select: { coalesce: { coalesce: [a.last_name, a.first_name] } }` return objects with a `coalesce` column.
+`select: { coalesce: [...] }` is invalid because the named column's value must be an expression, not an operand array.
 
 These expressions match their SQL behavior:
 
@@ -198,8 +211,6 @@ These expressions match their SQL behavior:
 For several CASE arms, use an array. The first true condition wins, even if its value is null:
 
 ```ts
-import { expr } from "joist-orm";
-
 const ageGroup = expr({
   case: [
     { when: a.age.gte(18), then: "Adult" },

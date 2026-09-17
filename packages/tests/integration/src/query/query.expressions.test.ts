@@ -7,7 +7,56 @@ import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query / expressions", () => {
   describe("select", () => {
-    it("selects a scalar CASE without mistaking case for a projection key", async () => {
+    it("treats expression literals under keyword keys as named columns", async () => {
+      // Given an Author without a last name
+      await insertAuthor({ first_name: "Alice", age: 30 });
+      // And an Author table with fixture SQL excluded from the snapshot
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+
+      // When expression keywords are used as projection names
+      const rows = await em.query({
+        from: a,
+        select: {
+          coalesce: { coalesce: [a.last_name, a.first_name] },
+          case: { case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Child" }] },
+        },
+        orderBy: [{ coalesce: "ASC" }, { case: "ASC" }],
+      });
+
+      // Then each object key names a result column, including when its value uses the same keyword
+      expect(rows).toEqual([{ coalesce: "Alice", case: "Alice" }]);
+      expectTypeOf(rows).toEqualTypeOf<{ coalesce: string; case: string }[]>();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT COALESCE(a.last_name, a.first_name) AS coalesce, (CASE WHEN (a.age >= $1) THEN a.first_name ELSE $2::varchar END) AS "case" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY coalesce ASC, "case" ASC",
+       ]
+      `);
+    });
+
+    it("rejects operand arrays used as named select values", async () => {
+      // Given an Author table for selecting name candidates
+      const em = newEntityManager();
+      const a = table(Author);
+
+      // When a coalesce column is given an operand array instead of an expression
+      // Then the object is rejected as an invalid projection rather than interpreted as scalar SQL
+      await expect(
+        // @ts-expect-error Named projection values must be expressions, not operand arrays
+        em.query({ from: a, select: { coalesce: [a.last_name, a.first_name] } }),
+      ).rejects.toThrow("select.coalesce must be a column, an expression, or an expression literal");
+
+      // When a case column is given WHEN entries instead of an expression
+      // Then CASE also requires an explicit expr wrapper for a scalar select
+      await expect(
+        // @ts-expect-error CASE entries alone are not a named projection value
+        em.query({ from: a, select: { case: [{ when: a.age.gte(18), then: a.first_name }] } }),
+      ).rejects.toThrow("select.case must be a column, an expression, or an expression literal");
+      expect(queries).toMatchInlineSnapshot(`[]`);
+    });
+
+    it("selects a scalar CASE with expr", async () => {
       // Given an adult Author
       await insertAuthor({ first_name: "Alice", age: 30 });
       // And an Author whose age is unknown
@@ -17,10 +66,10 @@ describe("em.query / expressions", () => {
       const a = table(Author);
       resetQueryCount();
 
-      // When a CASE array is the entire select
+      // When an explicit CASE expression is the entire select
       const rows = await em.query({
         from: a,
-        select: { case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Unknown" }] },
+        select: expr({ case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Unknown" }] }),
         orderBy: [{ asc: a.id }],
       });
 
@@ -34,7 +83,7 @@ describe("em.query / expressions", () => {
       `);
     });
 
-    it("selects scalar Author names with COALESCE", async () => {
+    it("selects scalar Author names with expr", async () => {
       // Given an Author without a last name
       await insertAuthor({ first_name: "Alice" });
       // And an Author with a last name
@@ -44,10 +93,10 @@ describe("em.query / expressions", () => {
       const a = table(Author);
       resetQueryCount();
 
-      // When selecting the first available Author name directly
+      // When selecting the first available Author name with an explicit expression
       const rows = await em.query({
         from: a,
-        select: { coalesce: [a.last_name, a.first_name] },
+        select: expr({ coalesce: [a.last_name, a.first_name] }),
         orderBy: [{ asc: a.id }],
       });
 
@@ -105,12 +154,17 @@ describe("em.query / expressions", () => {
       // And a scalar Book query correlated to each Author
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
-      const firstBook = query({ from: b, where: b.author_id.eq(a.id), select: { nullIf: [b.id, "b:9"] }, limit: 1 });
+      const firstBook = query({
+        from: b,
+        where: b.author_id.eq(a.id),
+        select: expr({ nullIf: [b.id, "b:9"] }),
+        limit: 1,
+      });
       // And a scalar query selecting an outer Author column, which must keep correlation working
       const outerName = query({
         from: b,
         where: b.author_id.eq(a.id),
-        select: { coalesce: [a.last_name, a.first_name] },
+        select: expr({ coalesce: [a.last_name, a.first_name] }),
         limit: 1,
       });
       resetQueryCount();
@@ -195,7 +249,7 @@ describe("em.query / expressions", () => {
       // And a reusable scalar select checked with satisfies Query
       const em = newEntityManager();
       const a = table(Author);
-      const input = { from: a, select: { coalesce: [a.last_name, a.first_name] } } as const satisfies Query;
+      const input = { from: a, select: expr({ coalesce: [a.last_name, a.first_name] }) } satisfies Query;
       resetQueryCount();
 
       // When executing the read through the execute API
@@ -514,41 +568,45 @@ describe("em.query / expressions", () => {
       // When NULLIF has one operand
       // Then both TypeScript and runtime validation require a second operand
       // @ts-expect-error NULLIF requires exactly two values
-      await expect(em.query({ from: a, select: { nullIf: [a.age] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { nullIf: [a.age] } } })).rejects.toThrow(
         "NULLIF needs exactly two values",
       );
 
       // When NULLIF has three operands
       // Then both fixed and dynamic argument lists are rejected
       // @ts-expect-error NULLIF requires exactly two values
-      await expect(em.query({ from: a, select: { nullIf: [a.age, 1, 2] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { nullIf: [a.age, 1, 2] } } })).rejects.toThrow(
         "NULLIF needs exactly two values",
       );
-      await expect(em.query({ from: a, select: { nullIf: comparisons } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { nullIf: comparisons } } })).rejects.toThrow(
         "NULLIF needs exactly two values",
       );
 
       // When GREATEST has no operands
       // Then both fixed and dynamic argument lists are rejected
       // @ts-expect-error GREATEST requires a value
-      await expect(em.query({ from: a, select: { greatest: [] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { greatest: [] } } })).rejects.toThrow(
         "GREATEST needs at least one value",
       );
-      await expect(em.query({ from: a, select: { greatest: ages } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { greatest: ages } } })).rejects.toThrow(
         "GREATEST needs at least one value",
       );
 
       // When LEAST has no operands
       // Then both fixed and dynamic argument lists are rejected
       // @ts-expect-error LEAST requires a value
-      await expect(em.query({ from: a, select: { least: [] } })).rejects.toThrow("LEAST needs at least one value");
-      await expect(em.query({ from: a, select: { least: ages } })).rejects.toThrow("LEAST needs at least one value");
+      await expect(em.query({ from: a, select: { value: { least: [] } } })).rejects.toThrow(
+        "LEAST needs at least one value",
+      );
+      await expect(em.query({ from: a, select: { value: { least: ages } } })).rejects.toThrow(
+        "LEAST needs at least one value",
+      );
 
       // When NULLIF compares an age to a string
       // Then its operands must have compatible types
       await expect(
         // @ts-expect-error Ages are numbers
-        em.query({ from: a, select: { nullIf: [a.age, "Unknown"] } }),
+        em.query({ from: a, select: { value: { nullIf: [a.age, "Unknown"] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected int4 (domain Number), got 'Unknown' (string)"`,
       );
@@ -557,7 +615,7 @@ describe("em.query / expressions", () => {
       // Then its operands must have compatible types
       await expect(
         // @ts-expect-error Ages are numbers
-        em.query({ from: a, select: { greatest: [a.age, "Unknown"] } }),
+        em.query({ from: a, select: { value: { greatest: [a.age, "Unknown"] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected int4 (domain Number), got 'Unknown' (string)"`,
       );
@@ -566,7 +624,7 @@ describe("em.query / expressions", () => {
       // Then its operands must have compatible types
       await expect(
         // @ts-expect-error Ages are numbers
-        em.query({ from: a, select: { least: [a.age, "Unknown"] } }),
+        em.query({ from: a, select: { value: { least: [a.age, "Unknown"] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected int4 (domain Number), got 'Unknown' (string)"`,
       );
@@ -744,17 +802,19 @@ describe("em.query / expressions", () => {
       // When CASE has an ELSE but no WHEN
       // Then an ELSE alone is not a CASE expression
       // @ts-expect-error CASE requires a WHEN before ELSE
-      await expect(em.query({ from: a, select: { case: [{ else: "Unknown" }] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { case: [{ else: "Unknown" }] } } })).rejects.toThrow(
         "CASE needs a WHEN arm before ELSE",
       );
 
       // When a WHEN follows ELSE
       // Then both fixed and dynamic arrays require ELSE to be last
       // @ts-expect-error ELSE must be last
-      await expect(em.query({ from: a, select: { case: [arm, { else: "Unknown" }, arm] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { case: [arm, { else: "Unknown" }, arm] } } })).rejects.toThrow(
         "CASE ELSE must be last",
       );
-      await expect(em.query({ from: a, select: { case: entries } })).rejects.toThrow("CASE ELSE must be last");
+      await expect(em.query({ from: a, select: { value: { case: entries } } })).rejects.toThrow(
+        "CASE ELSE must be last",
+      );
 
       // When a named CASE has ELSE before WHEN
       // Then named projections also check CASE ordering before SQL
@@ -770,13 +830,13 @@ describe("em.query / expressions", () => {
       // Then only one final ELSE is allowed
       await expect(
         // @ts-expect-error Only one ELSE is allowed
-        em.query({ from: a, select: { case: [arm, { else: "First" }, { else: "Second" }] } }),
+        em.query({ from: a, select: { value: { case: [arm, { else: "First" }, { else: "Second" }] } } }),
       ).rejects.toThrow("CASE ELSE must be last");
 
       // When ELSE appears outside the CASE array
       // Then the former sibling syntax is rejected
       // @ts-expect-error ELSE belongs inside the CASE array
-      await expect(em.query({ from: a, select: { case: [arm], else: "Unknown" } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { case: [arm], else: "Unknown" } } })).rejects.toThrow(
         "Unknown expression key 'else'",
       );
       expect(queries).toMatchInlineSnapshot(`[]`);
@@ -1037,7 +1097,7 @@ describe("em.query / expressions", () => {
       // Then scalar ordering requires an expression rather than a projection key
       await expect(
         // @ts-expect-error A scalar select has no named output columns
-        em.query({ from: a, select: { coalesce: [a.last_name, a.first_name] }, orderBy: { coalesce: "ASC" } }),
+        em.query({ from: a, select: expr({ coalesce: [a.last_name, a.first_name] }), orderBy: { coalesce: "ASC" } }),
       ).rejects.toThrow("the keyed orderBy form needs a POJO or entity select");
       expect(queries).toMatchInlineSnapshot(`[]`);
     });
@@ -1069,7 +1129,7 @@ describe("em.query / expressions", () => {
       // When combining them despite their shared TypeScript number type
       // Then the error names the SQL types that need different result handling
       await expect(
-        em.query({ from: a, select: { coalesce: [a.age, a.age.sum()] } }),
+        em.query({ from: a, select: { value: { coalesce: [a.age, a.age.sum()] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: int4 (domain Number) vs int8 (domain Number); mismatched SQL type"`,
       );
@@ -1085,7 +1145,7 @@ describe("em.query / expressions", () => {
       // Then the error distinguishes their conversion domains
       await expect(
         // @ts-expect-error Strings and PasswordValues are different value types
-        em.query({ from: u, select: { coalesce: [u.name, u.password] } }),
+        em.query({ from: u, select: { value: { coalesce: [u.name, u.password] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: varchar (domain String) vs varchar (domain { toDb: [Function: toDb], fromDb: [Function: fromDb] }); mismatched domain"`,
       );
@@ -1101,7 +1161,7 @@ describe("em.query / expressions", () => {
       // Then type checks and runtime decoding both keep Author and Book ids separate
       await expect(
         // @ts-expect-error AuthorId and BookId are different value types
-        em.query({ from: a, select: { coalesce: [a.id, b.id] } }),
+        em.query({ from: a, select: { value: { coalesce: [a.id, b.id] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: int4 (domain 'key:a', ID target Author) vs int4 (domain 'key:b', ID target Book); mismatched domain, ID target"`,
       );
@@ -1117,7 +1177,7 @@ describe("em.query / expressions", () => {
       // When combining them without runtime evidence of a shared result codec
       // Then the raw annotation cannot select the Author column's decoder
       await expect(
-        em.query({ from: a, select: { coalesce: [a.first_name, rawName] } }),
+        em.query({ from: a, select: { value: { coalesce: [a.first_name, rawName] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: varchar (domain String) vs unknown codec; mismatched unknown codec"`,
       );
@@ -1147,13 +1207,13 @@ describe("em.query / expressions", () => {
 
       // When building COALESCE from the empty name list
       // Then runtime validation rejects the missing values
-      await expect(em.query({ from: a, select: { coalesce: names } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { coalesce: names } } })).rejects.toThrow(
         "COALESCE needs at least one value",
       );
 
       // When building CASE from the empty conditional name list
       // Then an ELSE alone does not supply a CASE arm
-      await expect(em.query({ from: a, select: { case: [...arms, { else: "Unknown" }] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { case: [...arms, { else: "Unknown" }] } } })).rejects.toThrow(
         "CASE needs a WHEN arm before ELSE",
       );
       expect(queries).toMatchInlineSnapshot(`[]`);
@@ -1172,40 +1232,44 @@ describe("em.query / expressions", () => {
       // When describing an empty COALESCE
       // Then both TypeScript and runtime validation reject it
       // @ts-expect-error COALESCE needs a value
-      await expect(em.query({ from: a, select: { coalesce: [] } })).rejects.toThrow(
+      await expect(em.query({ from: a, select: { value: { coalesce: [] } } })).rejects.toThrow(
         "COALESCE needs at least one value",
       );
 
       // When describing a CASE without arms
       // Then both TypeScript and runtime validation reject it
       // @ts-expect-error CASE needs an arm
-      await expect(em.query({ from: a, select: { case: [] } })).rejects.toThrow("CASE needs at least one arm");
+      await expect(em.query({ from: a, select: { value: { case: [] } } })).rejects.toThrow(
+        "CASE needs at least one arm",
+      );
 
       // When mixing numeric and string literals
       // Then neither CASE nor COALESCE can select one compatible value type
-      // @ts-expect-error Numeric and string values are incompatible
-      await expect(em.query({ from: a, select: { coalesce: [1, "name"] } })).rejects.toThrowErrorMatchingInlineSnapshot(
+      await expect(
+        // @ts-expect-error Numeric and string values are incompatible
+        em.query({ from: a, select: { value: { coalesce: [1, "name"] } } }),
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected float8 (domain Number), got 'name' (string)"`,
       );
       await expect(
         // @ts-expect-error Numeric and string branches are incompatible
-        em.query({ from: a, select: { case: [{ when: a.id.ne(null), then: 1 }, { else: "name" }] } }),
+        em.query({ from: a, select: { value: { case: [{ when: a.id.ne(null), then: 1 }, { else: "name" }] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected float8 (domain Number), got 'name' (string)"`,
       );
 
       // When a branch uses undefined instead of SQL NULL
       // Then the value must be explicit
-      // @ts-expect-error Undefined is not a SQL value
-      await expect(em.query({ from: a, select: { case: { when: a.id.ne(null), then: undefined } } })).rejects.toThrow(
-        "Use null for a SQL NULL value",
-      );
+      await expect(
+        // @ts-expect-error Undefined is not a SQL value
+        em.query({ from: a, select: { value: { case: { when: a.id.ne(null), then: undefined } } } }),
+      ).rejects.toThrow("Use null for a SQL NULL value");
 
       // When using a number as an Author name fallback
       // Then column-backed expressions also reject incompatible literal types
       await expect(
         // @ts-expect-error An Author name is not a number
-        em.query({ from: a, select: { coalesce: [a.first_name, 42] } }),
+        em.query({ from: a, select: { value: { coalesce: [a.first_name, 42] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected varchar (domain String), got 42 (number)"`,
       );
@@ -1214,21 +1278,24 @@ describe("em.query / expressions", () => {
       // Then column expressions must also have compatible result types
       await expect(
         // @ts-expect-error Names and ages are incompatible
-        em.query({ from: a, select: { coalesce: [a.first_name, a.age] } }),
+        em.query({ from: a, select: { value: { coalesce: [a.first_name, a.age] } } }),
       ).rejects.toThrow("Expression operands need matching SQL types and codecs");
 
       // When mixing CASE and COALESCE keys in one expression object
       // Then the extra key is rejected instead of ignored
       await expect(
-        // @ts-expect-error An expression object has exactly one operation
-        em.query({ from: a, select: { coalesce: [a.first_name], case: { when: a.id.ne(null), then: a.first_name } } }),
+        em.query({
+          from: a,
+          // @ts-expect-error An expression object has exactly one operation
+          select: { value: { coalesce: [a.first_name], case: { when: a.id.ne(null), then: a.first_name } } },
+        }),
       ).rejects.toThrow("Unknown expression key 'case'");
 
       // When a CASE arm has a misspelled result key
       // Then the missing THEN value is rejected
       await expect(
         // @ts-expect-error Each arm needs then
-        em.query({ from: a, select: { case: { when: a.id.ne(null), value: a.first_name } } }),
+        em.query({ from: a, select: { value: { case: { when: a.id.ne(null), value: a.first_name } } } }),
       ).rejects.toThrow("A CASE arm needs when and then");
       expect(queries).toMatchInlineSnapshot(`[]`);
     });

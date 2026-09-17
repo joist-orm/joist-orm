@@ -11,7 +11,6 @@ import { parseExpressionInput } from "./parseExpression.ts";
 import type { CheckInput, ExprFromInput, ExprInput, ParsedExpression, ResultCodec } from "./types.ts";
 
 export type { CaseElse, CaseWhen } from "./case.ts";
-export { isExprInput } from "./parseExpression.ts";
 export type { CheckInput, ExprFromInput, ExprInput, ExpressionSources, ExpressionValue } from "./types.ts";
 
 /** Builds a reusable SQL value expression, binding literal values as parameters. */

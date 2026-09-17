@@ -12,6 +12,7 @@ import {
 } from "./Expr.ts";
 import type { CompatibleValue, MaybeNull, QueryCondition, QueryJoins } from "./query.ts";
 import type { TypeInfo } from "./TypeInfo.ts";
+import { assertNever } from "./utils.ts";
 
 /** One condition and the value to return when it is true. */
 export interface CaseWhen {
@@ -261,7 +262,10 @@ export function isExprInput(value: unknown): value is ExprInput {
 type ParsedExpression =
   | BaseExpr
   | ParsedLiteralExpression
-  | { kind: ExprName; operands: ParsedExpression[] }
+  | { kind: "coalesce"; candidates: [ParsedExpression, ...ParsedExpression[]] }
+  | { kind: "nullIf"; value: ParsedExpression; equals: ParsedExpression }
+  | { kind: "greatest"; values: [ParsedExpression, ...ParsedExpression[]] }
+  | { kind: "least"; values: [ParsedExpression, ...ParsedExpression[]] }
   | ParsedCaseExpression;
 
 /** A bound value whose encoder is selected from the surrounding expression. */
@@ -270,12 +274,17 @@ interface ParsedLiteralExpression {
   value: unknown;
 }
 
-/** A CASE with a uniform WHEN list and a separate ELSE value, defaulting to SQL NULL. */
+/** A CASE has at least one WHEN and an optional ELSE; no ELSE means SQL NULL. */
 interface ParsedCaseExpression {
   kind: "case";
-  arms: { when: QueryCondition | undefined; then: ParsedExpression }[];
-  otherwise: ParsedExpression;
-  hasElse: boolean;
+  whens: [ParsedCaseWhen, ...ParsedCaseWhen[]];
+  else?: ParsedExpression;
+}
+
+/** A CASE condition and its parsed result expression. */
+interface ParsedCaseWhen {
+  when: QueryCondition | undefined;
+  then: ParsedExpression;
 }
 
 /** The conversions shared by all result values, separate from their SQL rendering. */
@@ -341,7 +350,25 @@ function parseExpression(input: unknown): ParsedExpression {
         name === "nullIf" ? "NULLIF needs exactly two values" : `${name.toUpperCase()} needs at least one value`,
       );
     }
-    return { kind: name, operands: operands.map((operand) => parseExpression(operand)) };
+    if (name === "nullIf") {
+      return { kind: "nullIf", value: parseExpression(operands[0]), equals: parseExpression(operands[1]) };
+    }
+    // Validation above guarantees a first operand; keep that guarantee in the parsed type.
+    const [first, ...rest] = operands;
+    const values: [ParsedExpression, ...ParsedExpression[]] = [
+      parseExpression(first),
+      ...rest.map((operand) => parseExpression(operand)),
+    ];
+    switch (name) {
+      case "coalesce":
+        return { kind: "coalesce", candidates: values };
+      case "greatest":
+        return { kind: "greatest", values };
+      case "least":
+        return { kind: "least", values };
+      default:
+        return assertNever(name);
+    }
   }
   if (isObject(input) && "case" in input) {
     checkKeys(input, ["case"]);
@@ -356,28 +383,24 @@ function parseExpression(input: unknown): ParsedExpression {
  */
 function parseCaseExpression(input: unknown): ParsedCaseExpression {
   const entries = Array.isArray(input) ? input : [input];
-  const parsed: ParsedCaseExpression = {
-    kind: "case",
-    arms: [],
-    otherwise: parseExpression(null),
-    hasElse: false,
-  };
+  const whens: ParsedCaseWhen[] = [];
+  let fallback: ParsedExpression | undefined;
   for (const [i, entry] of entries.entries()) {
     if (isObject(entry) && "else" in entry) {
       checkKeys(entry, ["else"]);
-      if (parsed.arms.length === 0) throw new Error("CASE needs a WHEN arm before ELSE");
+      if (whens.length === 0) throw new Error("CASE needs a WHEN arm before ELSE");
       if (i !== entries.length - 1) throw new Error("CASE ELSE must be last");
-      parsed.otherwise = parseExpression(entry.else);
-      parsed.hasElse = true;
+      fallback = parseExpression(entry.else);
     } else {
       if (!isObject(entry) || !("when" in entry) || !("then" in entry))
         throw new Error("A CASE arm needs when and then");
       checkKeys(entry, ["when", "then"]);
-      parsed.arms.push({ when: entry.when as QueryCondition | undefined, then: parseExpression(entry.then) });
+      whens.push({ when: entry.when as QueryCondition | undefined, then: parseExpression(entry.then) });
     }
   }
-  if (parsed.arms.length === 0) throw new Error("CASE needs at least one arm");
-  return parsed;
+  if (whens.length === 0) throw new Error("CASE needs at least one arm");
+  const [first, ...rest] = whens;
+  return { kind: "case", whens: [first, ...rest], else: fallback };
 }
 
 /**
@@ -419,12 +442,30 @@ function chooseExpressionCodec(parsed: ParsedExpression): ResultCodec {
   return new LiteralCodec(types[0] ?? { dbType: "text", domain: String });
 }
 
-/** Finds parsed operands that share a codec, including NULLIF's comparison operand but not CASE conditions. */
+/**
+ * Finds parsed operands that share a codec, including NULLIF's comparison operand but not CASE conditions.
+ * Each kind selects its own value fields; only CASE's THEN and ELSE expressions contribute a result codec.
+ */
 function expressionLeaves(parsed: ParsedExpression): (BaseExpr | ParsedLiteralExpression)[] {
-  if (parsed instanceof BaseExpr || parsed.kind === "literal") return [parsed];
-  return parsed.kind !== "case"
-    ? parsed.operands.flatMap((operand) => expressionLeaves(operand))
-    : [...parsed.arms.flatMap((arm) => expressionLeaves(arm.then)), ...expressionLeaves(parsed.otherwise)];
+  if (parsed instanceof BaseExpr) return [parsed];
+  switch (parsed.kind) {
+    case "literal":
+      return [parsed];
+    case "coalesce":
+      return parsed.candidates.flatMap((candidate) => expressionLeaves(candidate));
+    case "nullIf":
+      return [...expressionLeaves(parsed.value), ...expressionLeaves(parsed.equals)];
+    case "greatest":
+    case "least":
+      return parsed.values.flatMap((value) => expressionLeaves(value));
+    case "case":
+      return [
+        ...parsed.whens.flatMap((entry) => expressionLeaves(entry.then)),
+        ...(parsed.else ? expressionLeaves(parsed.else) : []),
+      ];
+    default:
+      return assertNever(parsed);
+  }
 }
 
 /**
@@ -433,46 +474,85 @@ function expressionLeaves(parsed: ParsedExpression): (BaseExpr | ParsedLiteralEx
  */
 function expressionToSql(parsed: ParsedExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
   if (parsed instanceof BaseExpr) return parsed.toSql(ctx);
-  if (parsed.kind === "literal") {
-    const dbType = codec.outputType?.dbType;
-    return {
-      sql: dbType ? `?::${dbType}` : "?",
-      bindings: [parsed.value === null ? null : codec.encode(parsed.value)],
-      refs: [],
-    };
+  switch (parsed.kind) {
+    case "literal": {
+      const dbType = codec.outputType?.dbType;
+      return {
+        sql: dbType ? `?::${dbType}` : "?",
+        bindings: [parsed.value === null ? null : codec.encode(parsed.value)],
+        refs: [],
+      };
+    }
+    case "coalesce":
+      return functionToSql("COALESCE", parsed.candidates, ctx, codec);
+    case "nullIf":
+      return functionToSql("NULLIF", [parsed.value, parsed.equals], ctx, codec);
+    case "greatest":
+      return functionToSql("GREATEST", parsed.values, ctx, codec);
+    case "least":
+      return functionToSql("LEAST", parsed.values, ctx, codec);
+    case "case":
+      return caseToSql(parsed, ctx, codec);
+    default:
+      return assertNever(parsed);
   }
-  if (parsed.kind !== "case") {
-    const parts = joinFragments(
-      parsed.operands.map((operand) => expressionToSql(operand, ctx, codec)),
-      ", ",
-    );
-    return { ...parts, sql: `${parsed.kind.toUpperCase()}(${parts.sql})` };
-  }
+}
+
+/** Renders a function call after its parsed kind has supplied the arguments in SQL order. */
+function functionToSql(
+  name: string,
+  args: readonly ParsedExpression[],
+  ctx: ExprContext,
+  codec: ResultCodec,
+): SqlFragment {
+  const parts = joinFragments(
+    args.map((arg) => expressionToSql(arg, ctx, codec)),
+    ", ",
+  );
+  return { ...parts, sql: `${name}(${parts.sql})` };
+}
+
+/** Removes CASE entries with omitted conditions, falling back to ELSE or SQL NULL if none remain. */
+function caseToSql(parsed: ParsedCaseExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
   const parts: SqlFragment[] = [];
-  for (const arm of parsed.arms) {
-    const when = arm.when === undefined ? undefined : ctx.conditionToSql(arm.when);
+  for (const entry of parsed.whens) {
+    const when = entry.when === undefined ? undefined : ctx.conditionToSql(entry.when);
     if (!when) continue;
-    const branch = joinFragments([when, expressionToSql(arm.then, ctx, codec)], " THEN ");
+    const branch = joinFragments([when, expressionToSql(entry.then, ctx, codec)], " THEN ");
     parts.push({ ...branch, sql: `WHEN ${branch.sql}` });
   }
-  const otherwise = expressionToSql(parsed.otherwise, ctx, codec);
+  const otherwise = expressionToSql(parsed.else ?? { kind: "literal", value: null }, ctx, codec);
   if (parts.length === 0) return otherwise;
-  if (parsed.hasElse) parts.push({ ...otherwise, sql: `ELSE ${otherwise.sql}` });
+  if (parsed.else) parts.push({ ...otherwise, sql: `ELSE ${otherwise.sql}` });
   const body = joinFragments(parts, " ");
   return { ...body, sql: `(CASE ${body.sql} END)` };
 }
 
-/** A direct column can become null through a LEFT join, so only independent values prove NOT NULL here. */
+/**
+ * Reports nullability from the fields of each parsed expression kind.
+ * A direct column can become null through a LEFT join, so only independent values prove NOT NULL here.
+ */
 function expressionNullable(parsed: ParsedExpression): boolean | undefined {
   if (parsed instanceof BaseExpr) return parsed.sqlSource ? undefined : parsed.sqlNullable;
-  if (parsed.kind === "literal") return parsed.value === null;
-  if (parsed.kind === "nullIf") return true;
-  if (parsed.kind !== "case")
-    return parsed.operands.some((operand) => expressionNullable(operand) === false) ? false : undefined;
-  return expressionNullable(parsed.otherwise) === false &&
-    parsed.arms.every((arm) => expressionNullable(arm.then) === false)
-    ? false
-    : undefined;
+  switch (parsed.kind) {
+    case "literal":
+      return parsed.value === null;
+    case "nullIf":
+      return true;
+    case "coalesce":
+      return parsed.candidates.some((candidate) => expressionNullable(candidate) === false) ? false : undefined;
+    case "greatest":
+    case "least":
+      return parsed.values.some((value) => expressionNullable(value) === false) ? false : undefined;
+    case "case":
+      return parsed.else &&
+        expressionNullable(parsed.else) === false &&
+        parsed.whens.every((entry) => expressionNullable(entry.then) === false)
+        ? false
+        : undefined;
+    default:
+      return assertNever(parsed);
+  }
 }
 
 /** Supplies predictable PostgreSQL types for standalone primitive literals. */

@@ -6,7 +6,7 @@ import { assertNever } from "../utils.ts";
 import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "./types.ts";
 
 /**
- * Chooses one decoder for all possible result values. Columns must agree on SQL type and domain;
+ * Chooses one decoder for all possible result values. Columns must agree on a compatible SQL type and domain;
  * literals use that column's encoder. This is conservative: PostgreSQL may accept other combinations,
  * but Joist cannot safely choose their decoder. I.e. Author.id and Book.id both store integers but use different tags.
  */
@@ -19,12 +19,12 @@ export function chooseExpressionCodec(parsed: ParsedExpression): ResultCodec {
       if (other === first) continue;
       const a = first.outputType;
       const b = other.outputType;
-      if (!a || !b || a.dbType !== b.dbType || a.domain !== b.domain || a.idMeta !== b.idMeta) {
+      if (!a || !b || !compatibleDbTypes(a.dbType, b.dbType) || a.domain !== b.domain || a.idMeta !== b.idMeta) {
         const mismatches =
           !a || !b
             ? ["unknown codec"]
             : [
-                ...(a.dbType !== b.dbType ? ["SQL type"] : []),
+                ...(!compatibleDbTypes(a.dbType, b.dbType) ? ["SQL type"] : []),
                 ...(a.domain !== b.domain ? ["domain"] : []),
                 ...(a.idMeta !== b.idMeta ? ["ID target"] : []),
               ];
@@ -116,4 +116,11 @@ function describeType(type: TypeInfo | undefined): string {
   if (!type) return "unknown codec";
   const domain = typeof type.domain === "function" ? type.domain.name : inspect(type.domain, { depth: 0 });
   return `${type.dbType} (domain ${domain}${type.idMeta ? `, ID target ${type.idMeta.type}` : ""})`;
+}
+
+const compatibleStringDbTypes = new Set(["text", "varchar"]);
+
+/** Allows PostgreSQL scalar string types that resolve to a common string result. */
+function compatibleDbTypes(a: string, b: string): boolean {
+  return a === b || (compatibleStringDbTypes.has(a) && compatibleStringDbTypes.has(b));
 }

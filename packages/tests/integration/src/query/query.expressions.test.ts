@@ -110,6 +110,78 @@ describe("em.query / expressions", () => {
       `);
     });
 
+    it("coalesces text before varchar", async () => {
+      // Given an Author for the Book's required relationship
+      await insertAuthor({ first_name: "Alice" });
+      // And a Book with text notes and a varchar title
+      await insertBook({ title: "Varchar title", author_id: 1 });
+      // And a Book table with fixture SQL excluded from the snapshot
+      const em = newEntityManager();
+      const b = table(Book);
+      resetQueryCount();
+
+      // When text is the first COALESCE candidate and varchar is the fallback
+      const rows = await em.query({ from: b, select: expr({ coalesce: [b.notes, b.title] }) });
+
+      // Then PostgreSQL resolves the string types and Joist decodes a non-null string
+      expect(rows).toEqual(["notes"]);
+      expectTypeOf(rows).toEqualTypeOf<string[]>();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT COALESCE(b.notes, b.title) AS value FROM books AS b WHERE b.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("coalesces varchar before text", async () => {
+      // Given an Author for the Book's required relationship
+      await insertAuthor({ first_name: "Alice" });
+      // And a Book with a varchar title and text notes
+      await insertBook({ title: "Varchar title", author_id: 1 });
+      // And a Book table with fixture SQL excluded from the snapshot
+      const em = newEntityManager();
+      const b = table(Book);
+      resetQueryCount();
+
+      // When varchar is the first COALESCE candidate and text is the fallback
+      const rows = await em.query({ from: b, select: expr({ coalesce: [b.title, b.notes] }) });
+
+      // Then PostgreSQL resolves the string types in the reverse order and Joist decodes a non-null string
+      expect(rows).toEqual(["Varchar title"]);
+      expectTypeOf(rows).toEqualTypeOf<string[]>();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT COALESCE(b.title, b.notes) AS value FROM books AS b WHERE b.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("selects CASE branches with text and varchar results", async () => {
+      // Given an Author for the Book's required relationship
+      await insertAuthor({ first_name: "Alice" });
+      // And a Book with a text note selected by its varchar title
+      await insertBook({ title: "Varchar title", author_id: 1 });
+      // And a Book table with fixture SQL excluded from the snapshot
+      const em = newEntityManager();
+      const b = table(Book);
+      resetQueryCount();
+
+      // When CASE returns text from one branch and varchar from the other
+      const rows = await em.query({
+        from: b,
+        select: expr({ case: [{ when: b.title.eq("Varchar title"), then: b.notes }, { else: b.title }] }),
+      });
+
+      // Then PostgreSQL resolves one string result type and Joist preserves its non-null string type and decoding
+      expect(rows).toEqual(["notes"]);
+      expectTypeOf(rows).toEqualTypeOf<string[]>();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT (CASE WHEN (b.title = $1) THEN b.notes ELSE b.title END) AS value FROM books AS b WHERE b.deleted_at IS NULL",
+       ]
+      `);
+    });
+
     it("keeps expression keywords available as named projection keys", async () => {
       // Given an Author with no last name and an unknown age
       await insertAuthor({ first_name: "Alice" });
@@ -1136,7 +1208,7 @@ describe("em.query / expressions", () => {
       expect(queries).toMatchInlineSnapshot(`[]`);
     });
 
-    it("reports different codecs for User text columns", async () => {
+    it("keeps rejecting custom and ordinary string domains", async () => {
       // Given a User name and password with different value conversions
       const em = newEntityManager();
       const u = table(User);

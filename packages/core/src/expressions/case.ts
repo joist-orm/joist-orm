@@ -2,7 +2,7 @@ import { type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
 import type { QueryCondition } from "../query.ts";
 import { expressionNullable, expressionToSql } from "./expression.ts";
 import { checkKeys, isObject, parseExpression } from "./parseExpression.ts";
-import type { ParsedExpression, ResultCodec } from "./types.ts";
+import type { CheckExpression, ParsedExpression, ResultCodec } from "./types.ts";
 
 /** One condition and the value to return when it is true. */
 export interface CaseWhen {
@@ -22,6 +22,45 @@ export interface CaseElse {
 export interface CaseInput {
   readonly case: CaseWhen | readonly (CaseWhen | CaseElse)[];
 }
+
+/** The values returned by CASE's THEN and ELSE entries. */
+export type CaseArmValue<A> = A extends readonly unknown[]
+  ? CaseArmValue<A[number]>
+  : A extends { readonly then: infer V }
+    ? V
+    : A extends { readonly else: infer V }
+      ? V
+      : never;
+
+/** A single CASE entry must be WHEN; an array can also have a final ELSE. */
+export type CheckCase<A, R> = A extends readonly []
+  ? "CASE needs at least one arm"
+  : A extends readonly unknown[]
+    ? { readonly [K in keyof A]: CheckCaseEntry<A[K], R> } & CheckCaseOrder<A>
+    : A extends CaseWhen
+      ? CheckCaseEntry<A, R>
+      : never;
+
+/** Checks THEN/ELSE values and rejects extra keys on an entry. */
+type CheckCaseEntry<A, R> = A extends CaseWhen
+  ? { readonly [K in keyof A]: K extends "then" ? CheckExpression<A[K], R> : K extends "when" ? unknown : never }
+  : A extends CaseElse
+    ? { readonly [K in keyof A]: K extends "else" ? CheckExpression<A[K], R> : never }
+    : never;
+
+/** Fixed CASE arrays can be checked now; dynamic arrays get the same checks at runtime. */
+type CheckCaseOrder<A extends readonly unknown[], HasWhen extends boolean = false> = A extends readonly [
+  infer H,
+  ...infer T,
+]
+  ? H extends { readonly else: unknown }
+    ? HasWhen extends true
+      ? T extends readonly []
+        ? unknown
+        : "CASE ELSE must be last"
+      : "CASE needs a WHEN arm before ELSE"
+    : CheckCaseOrder<T, true>
+  : unknown;
 
 /** A CASE has at least one WHEN and an optional ELSE; no ELSE means SQL NULL. */
 export interface ParsedCaseExpression {

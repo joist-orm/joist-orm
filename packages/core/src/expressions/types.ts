@@ -1,6 +1,6 @@
 import type { BaseExpr, Expr, ExprBrand, ExprLike, exprBrand } from "../Expr.ts";
 import type { CompatibleValue, MaybeNull, QueryJoins } from "../query.ts";
-import type { CaseElse, CaseInput, CaseWhen, ParsedCaseExpression } from "./case.ts";
+import type { CaseArmValue, CaseInput, CheckCase, ParsedCaseExpression } from "./case.ts";
 import type { CoalesceInput, ParsedCoalesceExpression } from "./coalesce.ts";
 import type { GreatestInput, ParsedGreatestExpression } from "./greatest.ts";
 import type { LeastInput, ParsedLeastExpression } from "./least.ts";
@@ -97,15 +97,6 @@ type CoalesceValue<A extends readonly unknown[], J extends QueryJoins> = A exten
         | (null extends ExpressionValue<Last, J> ? (null extends CoalesceValue<Before, J> ? null : never) : never)
     : ExpressionValue<A[number], J> | null;
 
-/** The values returned by CASE's THEN and ELSE entries. */
-type CaseArmValue<A> = A extends readonly unknown[]
-  ? CaseArmValue<A[number]>
-  : A extends { readonly then: infer V }
-    ? V
-    : A extends { readonly else: infer V }
-      ? V
-      : never;
-
 /** Conditions affect which value is chosen, but do not make that value nullable through a LEFT join. */
 export type ExpressionSources<V> = unknown extends V
   ? string
@@ -133,7 +124,7 @@ type CompatibleValues<V, All = V> = false extends (
   : unknown;
 
 /** Checks nested expression shapes and literal fallbacks in one pass; R is the type supplied by existing expressions. */
-type CheckExpression<V, R> =
+export type CheckExpression<V, R> =
   V extends ExprLike<unknown>
     ? unknown
     : V extends ExprArgsInput
@@ -170,36 +161,6 @@ type CheckOperands<A extends readonly unknown[], Name extends ExprName, R> = (Na
   : A extends readonly []
     ? `${Uppercase<Name>} needs at least one value`
     : unknown) & { readonly [K in keyof A]: CheckExpression<A[K], R> } & CompatibleValues<A[number]>;
-
-/** A single CASE entry must be WHEN; an array can also have a final ELSE. */
-type CheckCase<A, R> = A extends readonly []
-  ? "CASE needs at least one arm"
-  : A extends readonly unknown[]
-    ? { readonly [K in keyof A]: CheckCaseEntry<A[K], R> } & CheckCaseOrder<A>
-    : A extends CaseWhen
-      ? CheckCaseEntry<A, R>
-      : never;
-
-/** Checks THEN/ELSE values and rejects extra keys on an entry. */
-type CheckCaseEntry<A, R> = A extends CaseWhen
-  ? { readonly [K in keyof A]: K extends "then" ? CheckExpression<A[K], R> : K extends "when" ? unknown : never }
-  : A extends CaseElse
-    ? { readonly [K in keyof A]: K extends "else" ? CheckExpression<A[K], R> : never }
-    : never;
-
-/** Fixed CASE arrays can be checked now; dynamic arrays get the same checks at runtime. */
-type CheckCaseOrder<A extends readonly unknown[], HasWhen extends boolean = false> = A extends readonly [
-  infer H,
-  ...infer T,
-]
-  ? H extends { readonly else: unknown }
-    ? HasWhen extends true
-      ? T extends readonly []
-        ? unknown
-        : "CASE ELSE must be last"
-      : "CASE needs a WHEN arm before ELSE"
-    : CheckCaseOrder<T, true>
-  : unknown;
 
 /** Valid inputs need no extra constraint; this keeps spread arrays from losing their fixed final operand. */
 export type CheckInput<I> = [I] extends [CheckExpression<I, Exclude<BranchResult<I>, null>>]

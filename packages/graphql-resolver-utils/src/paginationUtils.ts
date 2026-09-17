@@ -28,8 +28,8 @@ export async function countQuery<T extends Entity>(ctx: ContextWithEm, base: Pag
   // I.e. ordering Authors by Book title must still count the joined Author/Book rows.
   if (Array.isArray(base.orderBy)) {
     for (const [index, order] of base.orderBy.entries()) {
-      const expression = order?.asc ?? order?.desc;
-      if (expression) select[`order${index}`] = expression;
+      const sort = order?.sort;
+      if (typeof sort === "object" && sort !== null && order.order !== undefined) select[`order${index}`] = sort;
     }
   }
   const rows = query({ ...base, select, orderBy: undefined, limit: undefined, offset: undefined });

@@ -63,7 +63,7 @@ describe("plainDate", () => {
     const rows = await em.query({
       from: a,
       select: { birthday: a.birthday, childrenBirthdays: a.children_birthdays, maybeBirthdays: a.maybe_birthdays },
-      orderBy: [{ asc: a.firstName }],
+      orderBy: [{ sort: a.firstName, order: "ASC" }],
     });
     // Then dates decode to PlainDate values while empty arrays and SQL NULL remain distinct
     expect(rows).toEqual([

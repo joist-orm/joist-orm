@@ -98,7 +98,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ asc: a.first_name }] };
+    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
 
     // When only the upper range bound is defined
     // Then Authors above that bound are excluded
@@ -124,7 +124,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ asc: a.first_name }] };
+    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
 
     // When comparing a JSON address with an explicit equality operator
     // Then the object is a scalar value rather than a filter operator map
@@ -149,7 +149,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ asc: a.first_name }] };
+    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
 
     // When selecting Authors by missing last name
     // Then null means SQL NULL rather than an omitted condition
@@ -192,7 +192,7 @@ describe("em.query / where", () => {
     const unsaved = newAuthor(em);
     // And a Book table ordered by title
     const b = table(Book);
-    const base = { from: b, select: b.title, orderBy: [{ asc: b.title }] };
+    const base = { from: b, select: b.title, orderBy: [{ sort: b.title, order: "ASC" }] } as const;
 
     // When selecting Books by an Author entity, ID, or mixed list
     resetQueryCount();
@@ -242,7 +242,7 @@ describe("em.query / where", () => {
       join: [a.books.inner(b)],
       where: { and: [b.where(omitted), { or: [condition, a.age.eq(40)] }] },
       select: { name: a.first_name },
-      orderBy: [{ asc: a.first_name }],
+      orderBy: [{ sort: a.first_name, order: "ASC" }],
     });
 
     // When executing the same composed condition twice

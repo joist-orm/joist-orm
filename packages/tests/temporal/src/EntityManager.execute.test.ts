@@ -750,7 +750,7 @@ describe("EntityManager.execute", () => {
             maybe_times: arrays.maybeTimes,
             maybe_timestamps: arrays.maybeTimestamps,
           },
-          orderBy: [{ asc: arrays.firstName }],
+          orderBy: [{ sort: arrays.firstName, order: "ASC" }],
         },
         returning: target.id,
       });
@@ -844,8 +844,8 @@ describe("EntityManager.execute", () => {
         timestamp_tzs: source.timestamp_tzs,
         maybe_timestamp_tzs: source.maybe_timestamp_tzs,
       },
-      orderBy: [{ asc: source.id }],
-    };
+      orderBy: [{ sort: source.id, order: "ASC" }],
+    } as const;
     // And all Temporal codecs are observed after raw SQL has established the source values
     const decode = jest.spyOn(CustomSerdeAdapter.prototype, "mapFromDb");
     const encode = jest.spyOn(CustomSerdeAdapter.prototype, "mapToDbValue");

@@ -676,10 +676,10 @@ describe("em.execute", () => {
         from: source,
         where: source.name.ne("Missing"),
         select: { name: source.name },
-        orderBy: [{ asc: source.name }],
+        orderBy: [{ sort: source.name, order: "ASC" }],
         offset: 1,
         limit: 1,
-      };
+      } as const;
       resetQueryCount();
       // When INSERT consumes the read POJO or its reusable query value directly
       const result = await em.execute({ insert: target, from: reusable ? query(read) : read, returning: target.name });
@@ -1173,13 +1173,19 @@ describe("em.execute", () => {
       const scalar = await em.execute({
         from: a,
         select: a.age,
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ sort: a.first_name, order: "ASC" }],
         offset: 1,
         limit: 1,
       });
       // And a reusable named read returns the same page with its Author id codec
       const named = await em.execute(
-        query({ from: a, select: { id: a.id, age: a.age }, orderBy: [{ asc: a.first_name }], offset: 1, limit: 1 }),
+        query({
+          from: a,
+          select: { id: a.id, age: a.age },
+          orderBy: [{ sort: a.first_name, order: "ASC" }],
+          offset: 1,
+          limit: 1,
+        }),
       );
       // Then counts describe the selected page, not all source rows
       expect(scalar).toEqual({ rowCount: 1, rows: [null] });

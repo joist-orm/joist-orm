@@ -29,7 +29,7 @@ describe("em.query / ctes", () => {
       from: a,
       join: [{ inner: stats, on: stats.authorId.eq(a.id) }],
       select: { name: a.first_name, count: stats.count },
-      orderBy: [{ asc: a.id }],
+      orderBy: [{ sort: a.id, order: "ASC" }],
     });
     // Then each Author has their own count
     expect(rows).toEqual([
@@ -680,7 +680,12 @@ describe("em.query / ctes", () => {
       resetQueryCount();
       // When reading the CTE
       // And ordered, because a recursive CTE's own row order is whatever the walk happens to produce
-      const rows = await em.query({ with: tree, from: tree, select: tree, orderBy: [{ asc: tree.id }] });
+      const rows = await em.query({
+        with: tree,
+        from: tree,
+        select: tree,
+        orderBy: [{ sort: tree.id, order: "ASC" }],
+      });
       // Then every Author reachable from a root is returned, each once
       expect(rows).toEqual([
         { id: "a:1", name: "root" },
@@ -718,7 +723,12 @@ describe("em.query / ctes", () => {
       );
       resetQueryCount();
       // When walking the cycle
-      const rows = await em.query({ with: chain, from: chain, select: chain, orderBy: [{ asc: chain.id }] });
+      const rows = await em.query({
+        with: chain,
+        from: chain,
+        select: chain,
+        orderBy: [{ sort: chain.id, order: "ASC" }],
+      });
       // Then each Author appears once and the walk terminates
       expect(rows).toEqual([
         { id: "a:1", mentorId: "a:2" },

@@ -198,7 +198,7 @@ function typeAssertions() {
       from: namedNames,
       select: namedNames,
       where: namedNames.name.ne(""),
-      orderBy: [{ asc: sql<string>`lower(${namedNames.name})` }],
+      orderBy: [{ sort: sql<string>`lower(${namedNames.name})`, order: "ASC" }],
     }),
   ).resolves.toEqualTypeOf<{ name: string }[]>();
   expectTypeOf(
@@ -298,7 +298,7 @@ function typeAssertions() {
   expectTypeOf(
     em.query({
       union: [
-        { ...authorNames, orderBy: [{ asc: a.age }], distinct: true, limit: 1, offset: 1 },
+        { ...authorNames, orderBy: [{ sort: a.age, order: "ASC" }], distinct: true, limit: 1, offset: 1 },
         { ...bookNames, orderBy: { name: "DESC" }, softDeletes: "include", pruneJoins: false },
       ],
       orderBy: { name: "ASC" },
@@ -512,9 +512,9 @@ function typeAssertions() {
   // @ts-expect-error: directions use uppercase SQL literals
   query({ union: readonlyNames, orderBy: { name: "asc" } });
   // @ts-expect-error: a compound cannot order by a branch expression
-  em.query({ union: readonlyNames, orderBy: [{ asc: a.first_name }] });
+  em.query({ union: readonlyNames, orderBy: [{ sort: a.first_name, order: "ASC" }] });
   // @ts-expect-error: arbitrary expression ordering requires an ordinary outer query
-  query({ union: readonlyNames, orderBy: [{ desc: sql<string>`lower(${a.first_name})` }] });
+  query({ union: readonlyNames, orderBy: [{ sort: sql<string>`lower(${a.first_name})`, order: "DESC" }] });
 
   // When an otherwise compatible outer row hides an invalid nested compound
   // Then recursive checks validate the nested operands, not just the outer result shape

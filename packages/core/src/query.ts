@@ -89,8 +89,8 @@ import { fail } from "./utils.ts";
  * values keyed off its own `select` keys.
  *
  * `table()`/`tables()` and `query()` are the only free functions a query needs, plus the `sql` tagged
- * template as the escape hatch for SQL with no modeled shape. Everything else is in-DSL: join kinds and
- * sort directions are keyword keys (`{ left: b, on }`, `{ desc: x }`), SQL functions are methods on
+ * template as the escape hatch for SQL with no modeled shape. Everything else is in-DSL: join kinds are
+ * keyword keys (`{ left: b, on }`), SQL functions are methods on
  * expressions (`b.id.count()`, `b.title.max()`, `x.coalesce(0)`), conditions are methods
  * (`a.age.gte(18)`), and pruning is `undefined`: an `undefined` condition drops out, and a join nothing
  * references anymore drops with it (see "Pruning" below).
@@ -162,21 +162,12 @@ export interface RecursiveOptions {
   union?: "all" | "distinct";
 }
 
-/**
- * An expression order-by entry: the direction is the key and the expression is the value, unlike
- * the keyed form's field name and `"ASC" | "DESC"` value. `never` on the other key keeps an
- * entry to one direction, the same trick `ConditionGroup` uses for `and`/`or`. `nulls` is
- * `NULLS FIRST/LAST`.
- *
- * When select keys are known, exclude them so a keyed sort cannot be silently ignored inside an
- * expression entry. An untyped `Query` has no known keys to exclude.
- */
-export type QueryOrderBy<S = never> = (
-  | { readonly asc: ExprLike<any>; readonly desc?: never }
-  | { readonly desc: ExprLike<any>; readonly asc?: never }
-) & { readonly nulls?: "first" | "last" } & (string extends OrderByKey<S>
-    ? unknown
-    : { readonly [K in Exclude<OrderByKey<S>, "asc" | "desc" | "nulls">]?: never });
+/** An expression order-by entry. An undefined order prunes the complete entry. */
+export type ExpressionOrderBy = {
+  readonly sort: ExprLike<unknown>;
+  readonly order: "ASC" | "DESC" | undefined;
+  readonly nulls?: "first" | "last";
+};
 
 export type OrderByDirection =
   | "ASC"
@@ -192,7 +183,7 @@ export type OrderByDirection =
  * The keys are the keys of a POJO/subquery `select` (rendered as SQL output-column names, so ordering
  * by an aggregate does not repeat its expression), or the entity's sortable fields in entity mode.
  * An `undefined` direction prunes the entry, like any other condition. For expressions that are not
- * in `select`, mix in `{ asc: expr }` / `{ desc: expr }` entries in the array form.
+ * in `select`, mix in `{ sort, order }` entries in the array form.
  */
 export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
   ? T extends Entity
@@ -204,6 +195,14 @@ export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __enti
 
 /** All sortable keys across select variants, not just the keys shared by every variant. */
 type OrderByKey<S> = S extends unknown ? keyof OrderByKeys<S> : never;
+
+/** Prevents a selected keyed sort from being silently mixed into an expression entry. */
+type CheckedExpressionOrderBy<S> = ExpressionOrderBy &
+  (string extends OrderByKey<S>
+    ? unknown
+    : [S] extends [{ readonly [tableMgmt]: unknown }]
+      ? unknown
+      : { readonly [K in Exclude<OrderByKey<S>, keyof ExpressionOrderBy>]?: never });
 
 /** The three select shapes: a source, an existing scalar expression, or a POJO naming result columns. */
 export type QuerySelect = QuerySource | ExprLike<unknown> | Record<string, SelectExpression>;
@@ -239,7 +238,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   groupBy?: readonly ExprLike<any>[];
   having?: QueryCondition;
   select: S & CheckEntitySelect<S>;
-  orderBy?: readonly (QueryOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
+  orderBy?: readonly (CheckedExpressionOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
   limit?: number;
   offset?: number;
   distinct?: boolean;
@@ -1933,7 +1932,7 @@ const ORDER_BY_DIRECTIONS: string[] = [
  * Generates ORDER BY SQL in entry order for keyed/expression arrays or a single keyed object.
  *
  * Expression entries retain bindings and alias references for join pruning. Undefined entries and
- * directions are omitted.
+ * directions are omitted before expression references are collected.
  */
 function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
   const { orderBy, select } = q;
@@ -1941,9 +1940,10 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
   const result: SqlFragment[] = [];
   for (const entry of Array.isArray(orderBy) ? orderBy : [orderBy]) {
     if (entry === undefined) continue;
-    // A select key can also be named asc or desc, so distinguish entries by their values, not their keys.
-    if (isExpr(entry.asc) || isExpr(entry.desc)) {
-      result.push(orderByToSql(entry, ctx));
+    // A select key can also be named sort, order, or nulls, so distinguish by the sort value.
+    if (isExpr(entry.sort)) {
+      const fragment = orderByToSql(entry, ctx);
+      if (fragment) result.push(fragment);
       continue;
     }
     for (const [key, dir] of Object.entries(entry)) {

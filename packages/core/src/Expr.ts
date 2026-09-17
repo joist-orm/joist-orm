@@ -1,7 +1,7 @@
 import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "./conditions.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
-import type { QueryCondition, QueryOrderBy } from "./query.ts";
+import type { ExpressionOrderBy, QueryCondition } from "./query.ts";
 import type { RawCondition } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { type TypeInfo, arrayOutputType } from "./TypeInfo.ts";
@@ -59,7 +59,7 @@ export type ExprLike<R> = { readonly [exprBrand]: ExprBrand<R, any> };
 export interface ArrayAggOptions {
   distinct?: boolean;
   /** With DISTINCT, PostgreSQL requires ordering expressions to match the aggregate argument. */
-  orderBy?: readonly (QueryOrderBy | undefined)[];
+  orderBy?: readonly (ExpressionOrderBy | undefined)[];
   /** Undefined conditions are pruned, as in a query's where clause. */
   filter?: QueryCondition;
 }
@@ -475,9 +475,11 @@ export class FnExpr extends BaseExpr {
       ", ",
     );
     const ordering = joinFragments(
-      (this.opts.aggregate?.orderBy ?? [])
-        .filter((entry) => entry !== undefined)
-        .map((entry) => orderByToSql(entry, ctx)),
+      (this.opts.aggregate?.orderBy ?? []).flatMap((entry) => {
+        if (entry === undefined) return [];
+        const fragment = orderByToSql(entry, ctx);
+        return fragment ? [fragment] : [];
+      }),
       ", ",
     );
     const filter = this.opts.aggregate?.filter;
@@ -637,19 +639,25 @@ function decodeNumber(value: unknown): unknown {
   return typeof value === "string" ? Number(value) : value;
 }
 
-/** Renders an expression order for either a query or an aggregate. */
-export function orderByToSql(o: QueryOrderBy, ctx: ExprContext): SqlFragment {
-  const [expr, direction] = "asc" in o && o.asc ? [o.asc, "ASC"] : [o.desc, "DESC"];
-  if (!(expr instanceof BaseExpr)) {
+/** Renders an expression order for either a query or an aggregate, or prunes an undefined order. */
+export function orderByToSql(o: ExpressionOrderBy, ctx: ExprContext): SqlFragment | undefined {
+  if (!(o.sort instanceof BaseExpr)) {
     return fail("orderBy must be an expression, i.e. a table column, aggregate, sql`...`, or scalar query(...)");
   }
-  const fragment = expr.toSql(ctx);
+  if (Object.keys(o).some((key) => key !== "sort" && key !== "order" && key !== "nulls")) {
+    return fail("Expression orderBy entries only accept sort, order, and nulls");
+  }
+  if (o.order === undefined) return undefined;
+  if (o.order !== "ASC" && o.order !== "DESC") {
+    return fail(`Invalid orderBy direction '${o.order}'`);
+  }
   // `nulls` is interpolated into the SQL, so never trust it, i.e. it might cross an `any` boundary
   if (o.nulls !== undefined && o.nulls !== "first" && o.nulls !== "last") {
     return fail(`Invalid orderBy nulls '${o.nulls}'`);
   }
+  const fragment = o.sort.toSql(ctx);
   const nulls = o.nulls ? ` NULLS ${o.nulls.toUpperCase()}` : "";
-  return { ...fragment, sql: `${fragment.sql} ${direction}${nulls}` };
+  return { ...fragment, sql: `${fragment.sql} ${o.order}${nulls}` };
 }
 
 function identity(value: unknown): unknown {

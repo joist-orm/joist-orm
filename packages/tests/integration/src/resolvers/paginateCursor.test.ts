@@ -243,7 +243,7 @@ describe("paginateCursor", () => {
       from: a,
       select: a,
       join: [{ inner: b, on: b.author_id.eq(a.id) }],
-      orderBy: [{ asc: b.title }],
+      orderBy: [{ sort: b.title, order: "ASC" }],
     } satisfies Query;
 
     // When cursor pagination replaces Book ordering with Author ID ordering

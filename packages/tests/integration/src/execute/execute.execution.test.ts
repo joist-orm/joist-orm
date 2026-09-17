@@ -448,7 +448,11 @@ describe("em.execute / execution", () => {
         await em.transaction(async () => {
           const updated = await em.execute({ update: t, set: { name: "Immediate" }, where: t.id.eq("t:1") });
           // And an execute read runs before the callback returns
-          const read = await em.execute({ from: t, select: { id: t.id, name: t.name }, orderBy: [{ asc: t.id }] });
+          const read = await em.execute({
+            from: t,
+            select: { id: t.id, name: t.name },
+            orderBy: [{ sort: t.id, order: "ASC" }],
+          });
 
           // Then execute has neither flushed the pending Tag nor made it visible within the transaction
           expect(updated).toEqual({ rowCount: 1, rows: [] });
@@ -473,7 +477,11 @@ describe("em.execute / execution", () => {
         flush.mockRestore();
       }
       expect(
-        await newEntityManager().query({ from: t, select: { id: t.id, name: t.name }, orderBy: [{ asc: t.id }] }),
+        await newEntityManager().query({
+          from: t,
+          select: { id: t.id, name: t.name },
+          orderBy: [{ sort: t.id, order: "ASC" }],
+        }),
       ).toEqual([
         { id: "t:1", name: "Immediate" },
         { id: "t:10", name: "Pending" },

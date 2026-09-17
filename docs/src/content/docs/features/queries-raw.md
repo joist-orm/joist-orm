@@ -77,7 +77,7 @@ The `select` key determines the `rows` return type:
     join: [{ inner: b, on: b.author_id.eq(a.id) }],
     groupBy: [a.id],
     select: a,
-    orderBy: [{ desc: b.id.count() }],
+    orderBy: [{ sort: b.id.count(), order: "DESC" }],
   });
   ```
 
@@ -138,7 +138,7 @@ They also have common SQL functions as methods, such as aggregates:
 ```ts
 const titles = b.title.arrayAgg({
   distinct: true,
-  orderBy: [{ desc: b.title, nulls: "first" }],
+  orderBy: [{ sort: b.title, order: "DESC", nulls: "first" }],
   filter: b.title.ne("Untitled"),
 });
 ```
@@ -212,11 +212,7 @@ For several CASE arms, use an array. The first true condition wins, even if its 
 
 ```ts
 const ageGroup = expr({
-  case: [
-    { when: a.age.gte(18), then: "Adult" },
-    { when: a.age.gte(0), then: "Child" },
-    { else: "Unknown" },
-  ],
+  case: [{ when: a.age.gte(18), then: "Adult" }, { when: a.age.gte(0), then: "Child" }, { else: "Unknown" }],
 });
 ```
 
@@ -289,10 +285,7 @@ const [a, b] = tables(Author, Book);
 const authors = await em.query({
   from: a,
   where: {
-    and: [
-      a.age.gte(18),
-      { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) },
-    ],
+    and: [a.age.gte(18), { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
   },
   select: a,
 });
@@ -459,19 +452,22 @@ const rows = await em.query({
 
 Entries are applied in array order. A single keyed object is shorthand, i.e. `orderBy: { bookCount: "DESC", name: "ASC NULLS LAST" }` produces the same ordering.
 
-The **expression form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — including fields you didn't select, with `{ asc: expr }` / `{ desc: expr }` entries and an optional `nulls: "first" | "last"`:
+The **expression form** takes arbitrary expressions — a column, an aggregate, or a `sql` template — including fields you didn't select. Each entry has a `sort` expression, an `order: "ASC" | "DESC" | undefined`, and an optional `nulls: "first" | "last"`:
 
 ```ts
-orderBy: [{ desc: b.id.count() }, { asc: a.first_name, nulls: "last" }];
+orderBy: [
+  { sort: b.id.count(), order: "DESC" },
+  { sort: a.first_name, order: "ASC", nulls: "last" },
+];
 ```
 
 Keyed and expression entries can also be mixed:
 
 ```ts
-orderBy: [{ bookCount: "DESC" }, { asc: a.first_name, nulls: "last" }];
+orderBy: [{ bookCount: "DESC" }, { sort: a.first_name, order: "ASC", nulls: "last" }];
 ```
 
-Both forms allow `undefined` (entries or directions) so conditional spreads work. Prefer the keyed form whenever what you're ordering by is already in `select`. [Set operations](#set-operations) only support the keyed form at their root.
+Both forms allow `undefined` entries. A keyed direction of `undefined` prunes that key; an expression order of `undefined` prunes the complete entry before its expression references are collected, so it does not retain an otherwise-unused join. Prefer the keyed form whenever what you're ordering by is already in `select`. [Set operations](#set-operations) only support the keyed form at their root.
 
 ## Composition: `query()`
 
@@ -598,7 +594,11 @@ Because the value is the same [derived table](#derived-tables) either way, movin
 `as` names the CTE; without it Joist generates one. `with` takes a single value or an array, and CTEs may read _earlier_ entries in that array:
 
 ```ts
-const prolific = query({ from: bookStats, where: bookStats.bookCount.gte(2), select: { authorId: bookStats.authorId } });
+const prolific = query({
+  from: bookStats,
+  where: bookStats.bookCount.gte(2),
+  select: { authorId: bookStats.authorId },
+});
 const rows = await em.query({
   with: [bookStats, prolific],
   from: a,
@@ -754,7 +754,7 @@ const rows = await em.query({
   from: names,
   where: names.name.ne(""),
   select: names,
-  orderBy: [{ asc: sql<string>`lower(${names.name})` }],
+  orderBy: [{ sort: sql<string>`lower(${names.name})`, order: "ASC" }],
 });
 ```
 
@@ -787,7 +787,7 @@ The outer single-expression subquery can consume many compound rows in `IN`. Use
 const firstAuthorId = query({
   from: ids,
   select: ids.id,
-  orderBy: [{ asc: ids.id }],
+  orderBy: [{ sort: ids.id, order: "ASC" }],
   limit: 1,
 }).coalesce("a:1");
 // Expr<AuthorId, never>

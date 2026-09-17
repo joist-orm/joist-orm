@@ -801,17 +801,35 @@ sql.number = sql<number>;
 /** Shorthand for `sql<number | null>`; does not cast or convert the SQL result. */
 sql.numberOrNull = sql<number | null>;
 
+/** Shorthand for `sql<number[]>`; does not cast or convert the SQL result. */
+sql.numberArray = sql<number[]>;
+
+/** Shorthand for `sql<number[] | null>`; does not cast or convert the SQL result. */
+sql.numberArrayOrNull = sql<number[] | null>;
+
 /** Shorthand for `sql<string>`; does not cast or convert the SQL result. */
 sql.string = sql<string>;
 
 /** Shorthand for `sql<string | null>`; does not cast or convert the SQL result. */
 sql.stringOrNull = sql<string | null>;
 
+/** Shorthand for `sql<string[]>`; does not cast or convert the SQL result. */
+sql.stringArray = sql<string[]>;
+
+/** Shorthand for `sql<string[] | null>`; does not cast or convert the SQL result. */
+sql.stringArrayOrNull = sql<string[] | null>;
+
 /** Shorthand for `sql<boolean>`; does not cast or convert the SQL result. */
 sql.boolean = sql<boolean>;
 
 /** Shorthand for `sql<boolean | null>`; does not cast or convert the SQL result. */
 sql.booleanOrNull = sql<boolean | null>;
+
+/** Shorthand for `sql<boolean[]>`; does not cast or convert the SQL result. */
+sql.booleanArray = sql<boolean[]>;
+
+/** Shorthand for `sql<boolean[] | null>`; does not cast or convert the SQL result. */
+sql.booleanArrayOrNull = sql<boolean[] | null>;
 
 /** A raw condition for `where`, `having`, or `on`. */
 sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {

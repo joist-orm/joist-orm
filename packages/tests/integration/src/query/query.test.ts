@@ -101,7 +101,7 @@ describe("em.query", () => {
         label: sql.stringOrNull`${a.age}::text`,
         adult: sql.booleanOrNull`${a.age.gte(18)}`,
       },
-      orderBy: [{ asc: a.first_name }],
+      orderBy: [{ expr: a.first_name, direction: "ASC" }],
     });
 
     // Then known ages produce typed values and unknown ages remain null
@@ -305,7 +305,7 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         select: { authorId: a.id, name: a.first_name, age: a.age, range: a.range_of_books },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { authorId: "a:1", name: "a1", age: 30, range: BookRange.Few },
@@ -329,7 +329,7 @@ describe("em.query", () => {
         from: u,
         join: [{ left: m, on: u.manager_id.eq(m.id) }],
         select: { name: u.name, password: u.password, managerPassword: m.password },
-        orderBy: [{ asc: u.name }],
+        orderBy: [{ expr: u.name, direction: "ASC" }],
       });
       // Then stored passwords decode to PasswordValue while missing passwords or managers remain null
       expect(rows).toEqual([
@@ -358,7 +358,7 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         select: { name: a.first_name, colors: a.favorite_colors },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { name: "a1", colors: [Color.Red, Color.Green] },
@@ -366,11 +366,9 @@ describe("em.query", () => {
         { name: "a3", colors: [] },
       ]);
       // Bare scalar selects must also preserve NULL without the POJO decoder's null handling.
-      expect(await em.query({ from: a, select: a.favorite_colors, orderBy: [{ asc: a.first_name }] })).toEqual([
-        [Color.Red, Color.Green],
-        null,
-        [],
-      ]);
+      expect(
+        await em.query({ from: a, select: a.favorite_colors, orderBy: [{ expr: a.first_name, direction: "ASC" }] }),
+      ).toEqual([[Color.Red, Color.Green], null, []]);
       expect(await em.loadAll(Author, ["a:1", "a:2", "a:3"])).toMatchEntity([
         { favoriteColors: [Color.Red, Color.Green] },
         { favoriteColors: [] },
@@ -393,7 +391,7 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         select: { name: a.first_name, address: a.business_address },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       // Then AddressSchema strips a1's extra key while a2's missing address remains null
       expect(rows).toEqual([
@@ -426,7 +424,7 @@ describe("em.query", () => {
       const [a] = tables(Author);
       // And a subquery that exposes only adult Author ids and names
       const adults = query({ from: a, where: { and: [a.age.gte(18)] }, select: { id: a.id, name: a.first_name } });
-      const rows = await em.query({ from: adults, select: adults, orderBy: [{ asc: adults.name }] });
+      const rows = await em.query({ from: adults, select: adults, orderBy: [{ expr: adults.name, direction: "ASC" }] });
       expect(rows).toEqual([{ id: "a:1", name: "a1" }]);
     });
 
@@ -438,7 +436,11 @@ describe("em.query", () => {
       const em = newEntityManager();
       const [p] = tables(Publisher);
       resetQueryCount();
-      const publishers = await em.query({ from: p, select: { name: p.name }, orderBy: [{ asc: p.id }] });
+      const publishers = await em.query({
+        from: p,
+        select: { name: p.name },
+        orderBy: [{ expr: p.id, direction: "ASC" }],
+      });
       expect(publishers).toEqual([{ name: "small" }, { name: "large" }]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -556,7 +558,11 @@ describe("em.query", () => {
       const evil = query({ from: a, select: { name: a.first_name }, as: 'x" --' });
       resetQueryCount();
       const star = await em.query({ from: evil, select: evil });
-      const column = await em.query({ from: evil, select: { n: evil.name }, orderBy: [{ asc: evil.name }] });
+      const column = await em.query({
+        from: evil,
+        select: { n: evil.name },
+        orderBy: [{ expr: evil.name, direction: "ASC" }],
+      });
       expect(star).toEqual([{ name: "a1" }]);
       expect(column).toEqual([{ n: "a1" }]);
       expect(queries).toMatchInlineSnapshot(`
@@ -672,7 +678,7 @@ describe("em.query", () => {
         from: a,
         join: [{ left: b, on: b.author_id.eq(a.id) }],
         select: { author: a.first_name, title: b.title },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { author: "a1", title: "b1" },
@@ -724,7 +730,7 @@ describe("em.query", () => {
         from: a,
         join: [a.publisher.as(p), p.smallPublisher(sp)],
         select: { author: a.first_name, publisher: p.name, city: sp.city },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { author: "small", publisher: "small", city: "sf" },
@@ -1032,7 +1038,7 @@ describe("em.query", () => {
             { or: [{ notExists: books }, { and: [a.first_name.eq("published"), { exists: books }] }] },
           ],
         },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       // Then both adult alternatives survive, but the underage Author does not
       expect(adults).toEqual(["published", "unpublished"]);
@@ -1115,7 +1121,7 @@ describe("em.query", () => {
         from: a,
         select: a.first_name,
         where: { exists: counts },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const uncounted = await em.query({ from: a, select: a.first_name, where: { notExists: counts } });
       // Then a zero count is still a row, so every Author satisfies EXISTS
@@ -1146,7 +1152,7 @@ describe("em.query", () => {
             from: b,
             where: b.author_id.eq(a.id),
             select: b.id,
-            orderBy: [{ asc: b.id }],
+            orderBy: [{ expr: b.id, direction: "ASC" }],
             offset: 1,
             limit: 1,
           }),
@@ -1207,7 +1213,7 @@ describe("em.query", () => {
           },
         ],
         select: { name: a.first_name, title: b.title },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       // Then the unreviewed Books do not join, but their Author remains
       expect(reviewed).toEqual([
@@ -1270,7 +1276,7 @@ describe("em.query", () => {
         join: [a.mentor.as(m)],
         select: a.first_name,
         where: { notExists: mentorBooks },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       // Then Authors without mentors survive the left join and satisfy NOT EXISTS
       expect(others).toEqual(["mentor", "alone"]);
@@ -1464,12 +1470,12 @@ describe("em.query", () => {
         select: {
           descending: a.age.arrayAgg({
             distinct: true,
-            orderBy: [{ desc: a.age, nulls: "first" }],
+            orderBy: [{ expr: a.age, direction: "DESC", nulls: "first" }],
             filter: { and: [a.first_name.ne("Excluded"), undefined] },
           }),
           ascending: a.age.arrayAgg({
             distinct: true,
-            orderBy: [{ asc: a.age, nulls: "last" }],
+            orderBy: [{ expr: a.age, direction: "ASC", nulls: "last" }],
             filter: sql.condition`${a.first_name} != ${"Excluded"}`,
           }),
           allAuthors: a.id.count(),
@@ -1498,7 +1504,11 @@ describe("em.query", () => {
         from: a,
         select: {
           names: sql.string`${a.first_name} || ${"!"}`.arrayAgg({
-            orderBy: [undefined, { asc: sql.number`${a.age} + ${1}` }, { desc: a.first_name }],
+            orderBy: [
+              undefined,
+              { expr: sql.number`${a.age} + ${1}`, direction: "ASC" },
+              { expr: a.first_name, direction: "DESC" },
+            ],
             filter: a.age.gte(20),
           }),
         },
@@ -1526,12 +1536,38 @@ describe("em.query", () => {
         from: a,
         join: [a.books.as(b)],
         select: {
-          names: a.first_name.arrayAgg({ orderBy: [{ asc: b.title }] }),
+          names: a.first_name.arrayAgg({ orderBy: [{ expr: b.title, direction: "ASC" }] }),
         },
       });
 
       // Then each Book contributes its Author's name in title order
       expect(rows).toEqual([{ names: ["Alice", "Bob", "Alice"] }]);
+    });
+
+    it("prunes an arrayAgg order and its otherwise-unused join when direction is undefined", async () => {
+      // Given an Author without Books, so an unpruned inner join would remove the Author
+      await insertAuthor({ first_name: "Alice" });
+      // And joined Author and Book tables where only the disabled aggregate order reads Books
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+
+      // When collecting Author names with an undefined Book title direction
+      resetQueryCount();
+      const rows = await em.query({
+        from: a,
+        join: [a.books.inner(b)],
+        select: {
+          names: a.first_name.arrayAgg({ orderBy: [{ expr: b.title, direction: undefined }] }),
+        },
+      });
+
+      // Then the aggregate order and Book join are both absent
+      expect(rows).toEqual([{ names: ["Alice"] }]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT array_agg(a.first_name) AS names FROM authors AS a WHERE a.deleted_at IS NULL",
+       ]
+      `);
     });
 
     it("retains the Book join when only arrayAgg filter references it", async () => {
@@ -1552,7 +1588,10 @@ describe("em.query", () => {
         from: a,
         join: [a.books.as(b)],
         select: {
-          names: a.first_name.arrayAgg({ orderBy: [{ asc: a.first_name }], filter: b.title.ne("Zebra") }),
+          names: a.first_name.arrayAgg({
+            orderBy: [{ expr: a.first_name, direction: "ASC" }],
+            filter: b.title.ne("Zebra"),
+          }),
         },
       });
 
@@ -1573,7 +1612,11 @@ describe("em.query", () => {
       const rows = await em.query({
         from: b,
         select: {
-          ids: b.id.arrayAgg({ distinct: true, orderBy: [{ desc: b.id }], filter: { and: [undefined] } }),
+          ids: b.id.arrayAgg({
+            distinct: true,
+            orderBy: [{ expr: b.id, direction: "DESC" }],
+            filter: { and: [undefined] },
+          }),
           empty: b.id.arrayAgg({ filter: b.title.eq("Missing") }),
           fallback: b.id.arrayAgg({ filter: b.title.eq("Missing") }).coalesce(["b:9"]),
           emptyArray: b.id.arrayAgg({ filter: b.title.eq("Missing") }).coalesce([]),
@@ -1622,7 +1665,7 @@ describe("em.query", () => {
         join: [{ inner: b, on: b.author_id.eq(a.id) }],
         groupBy: [a.id],
         select: a,
-        orderBy: [{ desc: b.id.count() }],
+        orderBy: [{ expr: b.id.count(), direction: "DESC" }],
       });
       expect(authors).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
     });
@@ -1645,7 +1688,7 @@ describe("em.query", () => {
         from: a,
         where: { and: [a.range_of_books.between(BookRange.Few, BookRange.Lot), a.first_name.search("alice smith")] },
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       expect(rows).toEqual(["Alice Mary Smith", "ALICE SMITH"]);
       expect(queries).toMatchInlineSnapshot(`
@@ -1675,7 +1718,7 @@ describe("em.query", () => {
         from: a,
         where: a.favorite_colors.ncontains([Color.Red, Color.Green]),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const overlaps = await em.query({
         from: a,
@@ -1686,7 +1729,7 @@ describe("em.query", () => {
         from: a,
         where: a.favorite_colors.noverlaps([Color.Green]),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       expect(contains).toEqual(["Both"]);
       expect(ncontains).toEqual(["Red", "Empty"]);
@@ -1697,14 +1740,14 @@ describe("em.query", () => {
         join: [a.mentor.inner(m)],
         where: m.favorite_colors.contains(a.favorite_colors),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const notContainingMentor = await em.query({
         from: a,
         join: [a.mentor.inner(m)],
         where: a.favorite_colors.ncontains(m.favorite_colors),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const overlappingMentor = await em.query({
         from: a,
@@ -1826,14 +1869,14 @@ describe("em.query", () => {
         join: [a.publisher.as(p), p.smallPublisher(sp)],
         where: { and: [sp.city.eq(undefined), sp.city.search(""), sp.city.between(undefined, "Z")] },
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const prunedGroup = await em.query({
         from: a,
         join: [a.publisher.as(p), p.smallPublisher(sp)],
         where: { and: [sp.city.eq("sf"), sp.city.search(undefined)], pruneIfUndefined: "any" },
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       expect(filtered).toEqual(["Published"]);
       expect(omitted).toEqual(["Published", "Unpublished"]);
@@ -1863,13 +1906,13 @@ describe("em.query", () => {
         from: a,
         where: a.range_of_books.ne(null),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const included = await em.query({
         from: a,
         where: a.range_of_books.in([BookRange.Few, null]),
         select: a.first_name,
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
       const excluded = await em.query({
         from: a,
@@ -1918,7 +1961,7 @@ describe("em.query", () => {
         from: u,
         where: u.password.in([password, null]),
         select: u.name,
-        orderBy: [{ asc: u.id }],
+        orderBy: [{ expr: u.id, direction: "ASC" }],
       });
       const excluded = await em.query({ from: u, where: u.password.nin([password]), select: u.name });
       const absent = await em.query({ from: u, where: u.password.eq(null), select: u.name });
@@ -2180,7 +2223,7 @@ describe("em.query", () => {
         from: a,
         where: { and: [a.first_name.eq(nameFilter)] },
         select: { name: a.first_name },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
       expect(queries).toMatchInlineSnapshot(`
@@ -2207,7 +2250,7 @@ describe("em.query", () => {
         join: [{ inner: b, on: b.author_id.eq(a.id) }],
         where: { and: [b.title.eq(titleFilter)] },
         select: { name: a.first_name },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
       expect(queries).toMatchInlineSnapshot(`
@@ -2461,9 +2504,40 @@ describe("em.query", () => {
         em.query({
           from: a,
           select: { name: a.first_name },
-          orderBy: [{ asc: a.first_name, nulls: "last;--" as any }],
+          orderBy: [{ expr: a.first_name, nulls: "last;--" as any, direction: "ASC" }],
         }),
       ).rejects.toThrow(new Error("Invalid orderBy nulls 'last;--'"));
+    });
+
+    it("rejects an invalid expression orderBy direction", async () => {
+      // Given an injected SQL fragment instead of an expression direction
+      const em = newEntityManager();
+      const [a] = tables(Author);
+
+      // When reading Authors with the unchecked direction
+      const read = em.query({
+        from: a,
+        select: { name: a.first_name },
+        orderBy: [{ expr: a.first_name, direction: "ASC; DROP TABLE" as any }],
+      });
+
+      // Then the direction is rejected before SQL executes
+      await expect(read).rejects.toThrow(new Error("Invalid orderBy direction 'ASC; DROP TABLE'"));
+    });
+
+    it("rejects an expression orderBy without expr", async () => {
+      // Given an aggregate expression order without its required expression
+      const em = newEntityManager();
+      const [a] = tables(Author);
+
+      // When reading the aggregate through an unchecked boundary
+      const read = em.query({
+        from: a,
+        select: a.first_name.arrayAgg({ orderBy: [{ direction: "ASC" } as any] }),
+      });
+
+      // Then the missing expression is reported as a caller error
+      await expect(read).rejects.toThrow("orderBy must be an expression");
     });
 
     it.each(["object", "array"])("rejects an invalid orderBy direction in the %s form", async (form) => {
@@ -2496,7 +2570,7 @@ describe("em.query", () => {
         from: a,
         join: [{ left: b, on: b.author_id.eq(a.id) }],
         select: { name: a.first_name, age: a.age },
-        orderBy: [{ age: "ASC" }, { asc: b.title }],
+        orderBy: [{ age: "ASC" }, { expr: b.title, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { name: "a2", age: 20 },
@@ -2510,7 +2584,45 @@ describe("em.query", () => {
       `);
     });
 
-    it("orders select keys named asc, desc, and nulls as keyed array entries", async () => {
+    it("prunes an expression order and its otherwise-unused join when direction is undefined", async () => {
+      // Given an Author whose Book join is only referenced by a disabled expression order
+      await insertAuthor({ first_name: "a1" });
+      // And joined Author and Book tables for the disabled order
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      resetQueryCount();
+
+      // When ordering by Book title with an undefined direction
+      const rows = await em.query({
+        from: a,
+        join: [{ left: b, on: b.author_id.eq(a.id) }],
+        select: { name: a.first_name },
+        orderBy: [{ expr: b.title, direction: undefined }],
+      });
+
+      // Then the order and the Book join are both absent
+      expect(rows).toEqual([{ name: "a1" }]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
+       ]
+      `);
+    });
+
+    it("rejects the removed expression orderBy syntax", async () => {
+      // Given the old direction-keyed expression order at an unchecked boundary
+      const em = newEntityManager();
+      // And an Author table used by that expression
+      const [a] = tables(Author);
+
+      // When reading Authors with the removed order shape
+      const read = em.query({ from: a, select: { name: a.first_name }, orderBy: [{ asc: a.first_name }] as any });
+
+      // Then the old shape is rejected instead of interpreted as expression ordering
+      await expect(read).rejects.toThrow("Invalid orderBy direction");
+    });
+
+    it("orders selected keys that match expression order properties as keyed array entries", async () => {
       // Given Author a1 aged 20
       await insertAuthor({ first_name: "a1", age: 20 });
       // And another Author named a1 of the same age, so descending id must break the tie
@@ -2524,18 +2636,24 @@ describe("em.query", () => {
       resetQueryCount();
       const rows = await em.query({
         from: a,
-        select: { asc: a.age, desc: a.first_name, nulls: a.id },
-        orderBy: [{ asc: "DESC" }, { desc: "ASC" }, { nulls: "DESC" }],
+        select: {
+          asc: a.age,
+          desc: a.first_name,
+          nulls: a.id,
+          expr: a.age,
+          direction: a.first_name,
+        },
+        orderBy: [{ asc: "DESC" }, { desc: "ASC" }, { nulls: "DESC" }, { expr: "DESC" }, { direction: "ASC" }],
       });
       expect(rows).toEqual([
-        { asc: 20, desc: "a1", nulls: "a:2" },
-        { asc: 20, desc: "a1", nulls: "a:1" },
-        { asc: 20, desc: "a2", nulls: "a:3" },
-        { asc: 10, desc: "a0", nulls: "a:4" },
+        { asc: 20, desc: "a1", nulls: "a:2", expr: 20, direction: "a1" },
+        { asc: 20, desc: "a1", nulls: "a:1", expr: 20, direction: "a1" },
+        { asc: 20, desc: "a2", nulls: "a:3", expr: 20, direction: "a2" },
+        { asc: 10, desc: "a0", nulls: "a:4", expr: 10, direction: "a0" },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT a.age AS "asc", a.first_name AS "desc", a.id AS nulls FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "asc" DESC, "desc" ASC, nulls DESC",
+         "SELECT a.age AS "asc", a.first_name AS "desc", a.id AS nulls, a.age AS expr, a.first_name AS direction FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "asc" DESC, "desc" ASC, nulls DESC, expr DESC, direction ASC",
        ]
       `);
     });
@@ -2594,13 +2712,16 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         select: { name: a.first_name },
-        orderBy: [{ desc: a.age, nulls: "last" }, { asc: a.first_name }],
+        orderBy: [
+          { expr: a.age, direction: "DESC", nulls: "last" },
+          { expr: a.first_name, direction: "ASC" },
+        ],
       });
       expect(rows).toEqual([{ name: "a3" }, { name: "a1" }, { name: "a2" }]);
       const page = await em.query({
         from: a,
         select: { name: a.first_name },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
         limit: 1,
         offset: 1,
       });
@@ -2618,7 +2739,10 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         select: { name: a.first_name },
-        orderBy: [{ desc: sql<number>`${a.age} * 2` }, secondary ? { asc: a.first_name } : undefined],
+        orderBy: [
+          { expr: sql<number>`${a.age} * 2`, direction: "DESC" },
+          { expr: a.first_name, direction: secondary ? "ASC" : undefined },
+        ],
       });
       expect(rows).toEqual([{ name: "a2" }, { name: "a1" }]);
     });
@@ -2636,7 +2760,7 @@ describe("em.query", () => {
         from: p,
         distinct: true,
         select: { size: p.size_id },
-        orderBy: [{ asc: p.size_id }],
+        orderBy: [{ expr: p.size_id, direction: "ASC" }],
       });
       expect(rows).toEqual([{ size: PublisherSize.Small }, { size: PublisherSize.Large }]);
     });
@@ -2694,7 +2818,7 @@ describe("em.query", () => {
         from: a,
         join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
         select: { name: a.first_name, bookCount: bookStats.bookCount.coalesce(0), lastTitle: bookStats.lastTitle },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { name: "a1", bookCount: 2, lastTitle: "b2" },
@@ -2792,7 +2916,7 @@ describe("em.query", () => {
           // The subquery closes over `a`; count returns 0 for no Books, and coalesce removes the scalar's nullable type
           bookCount: query({ from: b, where: { and: [b.author_id.eq(a.id)] }, select: b.id.count() }).coalesce(0),
         },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { name: "a1", bookCount: 1 },
@@ -2830,7 +2954,7 @@ describe("em.query", () => {
       const page = await em.query({
         ...base,
         select: { name: a.first_name },
-        orderBy: [{ asc: a.first_name }],
+        orderBy: [{ expr: a.first_name, direction: "ASC" }],
         limit: 1,
       });
       const [{ total }] = await em.query({ ...base, select: { total: a.id.count() } });
@@ -2931,7 +3055,7 @@ describe("em.query", () => {
       const tasks = await em.query({
         from: tn,
         select: { id: tn.id, special: tn.special_new_field },
-        orderBy: [{ asc: tn.id }],
+        orderBy: [{ expr: tn.id, direction: "ASC" }],
       });
       expect(tasks).toEqual([
         { id: "task:1", special: 1 },
@@ -2988,7 +3112,7 @@ describe("em.query", () => {
         from: t,
         join: [t.taskNew(tn)],
         select: { id: t.id, newId: tn.id },
-        orderBy: [{ asc: t.id }],
+        orderBy: [{ expr: t.id, direction: "ASC" }],
       });
       expect(tasks).toEqual([
         { id: "task:1", newId: "task:1" },
@@ -3230,7 +3354,7 @@ describe("em.query", () => {
           title: b.title,
           needsReview: sql<boolean>`CASE WHEN ${b.order.in([1, 2])} AND ${br.id} IS NULL THEN true ELSE false END`,
         },
-        orderBy: [{ asc: b.title }],
+        orderBy: [{ expr: b.title, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { title: "b1", needsReview: false },
@@ -3252,7 +3376,7 @@ describe("em.query", () => {
           title: b.title,
           rank: sql<number>`row_number() OVER (PARTITION BY ${b.author_id} ORDER BY ${b.title} DESC)::int`,
         },
-        orderBy: [{ asc: b.title }],
+        orderBy: [{ expr: b.title, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { title: "b1", rank: 2 },
@@ -3286,7 +3410,7 @@ describe("em.query", () => {
         from: ranked,
         where: { and: [ranked.rank.eq(1)] },
         select: { authorId: ranked.authorId, title: ranked.title },
-        orderBy: [{ asc: ranked.authorId }],
+        orderBy: [{ expr: ranked.authorId, direction: "ASC" }],
       });
       expect(rows).toEqual([
         { authorId: "a:1", title: "b2" },
@@ -3401,7 +3525,10 @@ describe("em.query", () => {
         and: [{ or: [a.id.in(query({ from: b, select: b.author_id })), a.age.eq(null)] }],
       },
       select: { name: a.first_name, senior: isSenior },
-      orderBy: [{ desc: isSenior, nulls: "last" }, { asc: a.first_name }],
+      orderBy: [
+        { expr: isSenior, direction: "DESC", nulls: "last" },
+        { expr: a.first_name, direction: "ASC" },
+      ],
     });
     expect(rows).toEqual([
       { name: "a3", senior: true },

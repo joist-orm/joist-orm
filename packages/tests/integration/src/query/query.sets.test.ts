@@ -1215,7 +1215,7 @@ describe("em.query / sets", () => {
         from: names,
         where: names.name.ne(""),
         select: names,
-        orderBy: [{ asc: sql<string>`lower(${names.name})` }],
+        orderBy: [{ expr: sql<string>`lower(${names.name})`, direction: "ASC" }],
       });
       // Then derived columns retain their values and resolve the quoted source name
       expect(rows).toEqual([{ name: "apple" }, { name: "Zebra" }]);
@@ -2262,8 +2262,8 @@ describe("em.query / sets", () => {
         // And invalid sorts that either leave the output-key scope or contain SQL punctuation
         const sorts = {
           "missing key": { age: "ASC" },
-          "branch column": [{ asc: a.first_name }],
-          expression: [{ asc: sql<string>`lower(${a.first_name})` }],
+          "branch column": [{ expr: a.first_name, direction: "ASC" }],
+          expression: [{ expr: sql<string>`lower(${a.first_name})`, direction: "ASC" }],
           "invalid direction": { name: "ASC; DROP TABLE authors" },
         };
         // And a compound with one of those invalid root orderings
@@ -2736,7 +2736,7 @@ describe("em.query / sets", () => {
       // And recording isolated from fixture inserts
       resetQueryCount();
       // When executing an inline scalar read ordered within its own ordinary SELECT
-      const rows = await em.query({ from: a, select: a.id, orderBy: [{ asc: a.id }] });
+      const rows = await em.query({ from: a, select: a.id, orderBy: [{ expr: a.id, direction: "ASC" }] });
       // Then each Author is one scalar row, with no POJO wrapper or cardinality error
       expect(rows).toEqual(["a:1", "a:2"]);
       expect(queries).toHaveLength(1);

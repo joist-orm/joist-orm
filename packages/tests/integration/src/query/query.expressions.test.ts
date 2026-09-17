@@ -70,7 +70,7 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: expr({ case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Unknown" }] }),
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then each row is the chosen name, not an object with a case property
@@ -97,7 +97,7 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: expr({ coalesce: [a.last_name, a.first_name] }),
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then each row is the first available name
@@ -176,7 +176,7 @@ describe("em.query / expressions", () => {
           id: { coalesce: [firstBook, "b:10"] },
           name: { coalesce: [outerName, "No books"] },
         },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then query returns scalar expressions with codecs and correlation intact
@@ -289,7 +289,7 @@ describe("em.query / expressions", () => {
           lastName: { nullIf: [a.last_name, ""] },
           name: { coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name] },
         },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then empty and null last names use the first name, while other last names remain unchanged
@@ -324,7 +324,7 @@ describe("em.query / expressions", () => {
         from: a,
         join: [a.books.as(b)],
         select: { name: { nullIf: [a.first_name, b.title] } },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then equal values return null, but a null comparison operand leaves the Author name intact
@@ -365,7 +365,7 @@ describe("em.query / expressions", () => {
           nullableGreatest: { greatest: [a.age, null] },
           nullableLeast: { least: [null, a.age] },
         },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then null operands are ignored, and only all-null inputs return null
@@ -869,7 +869,7 @@ describe("em.query / expressions", () => {
             ],
           },
         },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then CASE stops at the first true arm, even when that arm returns null
@@ -903,7 +903,7 @@ describe("em.query / expressions", () => {
         from: a,
         join: [a.books.as(b)],
         select: { name: { case: { when: b.id.ne(null), then: a.first_name } } },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then the Book's presence decides which Author names are returned
@@ -964,7 +964,7 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: { name: { case: [{ when: { exists: books }, then: a.first_name }, { else: "No books" }] } },
-        orderBy: [{ asc: a.id }],
+        orderBy: [{ expr: a.id, direction: "ASC" }],
       });
 
       // Then the CASE condition checks Books separately for each Author

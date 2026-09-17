@@ -161,7 +161,7 @@ describe("paginateLimit", () => {
       from: a,
       select: a,
       join: [{ inner: b, on: b.author_id.eq(a.id) }],
-      orderBy: [{ asc: b.title }],
+      orderBy: [{ expr: b.title, direction: "ASC" }],
     } satisfies Query;
 
     // When requesting Authors in Book title order

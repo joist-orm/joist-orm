@@ -48,7 +48,9 @@ export async function paginateCursor<T extends Entity, F extends object = Pagina
       ? await ctx.em.findGql(type, filter, { limit, orderBy })
       : await queryEntities(ctx, {
           ...withCursorQuery(type, args),
-          orderBy: [args.last ? { desc: type.select.id } : { asc: type.select.id }],
+          orderBy: [
+            args.last ? { expr: type.select.id, direction: "DESC" } : { expr: type.select.id, direction: "ASC" },
+          ],
           limit,
           offset: undefined,
         });

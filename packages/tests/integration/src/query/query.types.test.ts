@@ -476,14 +476,14 @@ async function typeAssertions() {
   sp.group_id;
   // @ts-expect-error: Publisher's physical table has no subtype city column
   p.city;
-  // @ts-expect-error: inherited root tables cannot hydrate entities
-  em.query({ from: p, select: p });
-  // @ts-expect-error: inherited subtype tables cannot hydrate entities
-  em.query({ from: sp, select: sp });
-  // @ts-expect-error: reusable reads also reject inherited entity selection
-  query({ from: p, select: p });
-  // @ts-expect-error: execute reads also reject inherited entity selection
-  em.execute({ from: sp, select: sp });
+  // When selecting CTI root and subtype tables as entities
+  const publishers = em.query({ from: p, select: p });
+  const smallPublishers = em.query({ from: sp, select: sp });
+  const reusablePublishers = query({ from: p, select: p });
+  // Then entity mode retains the requested domain types while runtime hydration resolves concrete root rows
+  expectTypeOf(publishers).resolves.toEqualTypeOf<Publisher[]>();
+  expectTypeOf(smallPublishers).resolves.toEqualTypeOf<SmallPublisher[]>();
+  expectTypeOf(em.query(reusablePublishers)).resolves.toEqualTypeOf<Publisher[]>();
 
   // Given STI handles that all expose the same physical tasks schema
   const [task, oldTask, newTask] = tables(Task, TaskOld, TaskNew);
@@ -510,12 +510,16 @@ async function typeAssertions() {
   >();
   expectTypeOf<ResultOf<typeof task.special_old_field>>().toEqualTypeOf<number | null>();
   expectTypeOf<ResultOf<typeof newTask.special_old_field>>().toEqualTypeOf<number | null>();
-  // @ts-expect-error: STI roots cannot hydrate entities from a physical read
-  em.query({ from: task, select: task });
-  // @ts-expect-error: STI subtypes cannot hydrate entities from a reusable physical read
-  query({ from: oldTask, select: oldTask });
-  // @ts-expect-error: execute shares the STI entity-selection restriction
-  em.execute({ from: newTask, select: newTask });
+  // When selecting STI root and subtype tables as entities
+  const tasks = em.query({ from: task, select: task });
+  const oldTasks = query({ from: oldTask, select: oldTask });
+  // Then root reads retain the base type and subtype reads retain their narrowed type
+  expectTypeOf(tasks).resolves.toEqualTypeOf<Task[]>();
+  expectTypeOf(em.query(oldTasks)).resolves.toEqualTypeOf<TaskOld[]>();
+  expectTypeOf(em.execute({ from: newTask, select: newTask })).resolves.toMatchTypeOf<{
+    rows: TaskNew[];
+    rowCount: number;
+  }>();
 
   // === Mistakes that must not compile
   // Given a nonliteral Author read carrying the reserved `ctes` spelling, which `with` does not replace

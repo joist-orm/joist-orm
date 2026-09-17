@@ -1,10 +1,9 @@
+import { Author, Publisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { oneTo } from "src/utils";
 
-import { Author, Publisher } from "./entities";
-
-describe("EntityManager.findIds.batch", () => {
+describe("em.findIds", () => {
   it("batches findIds queries with same structure", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2", last_name: "l2" });

@@ -41,7 +41,7 @@ import {
 } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
-describe("EntityManager.rawQueries.types", () => {
+describe("em.query / types", () => {
   it("type-checks domain and SQL predicate boundaries", () => {
     // Given predicate assertions using generated Author and Book types
     // When checking which public API accepts each predicate

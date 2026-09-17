@@ -35,10 +35,9 @@ import {
   insertUser,
   select,
 } from "src/entities/inserts";
+import { jan1 } from "src/testDates";
 import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
-
-import { jan1 } from "./testDates";
-import { zeroTo } from "./utils";
+import { zeroTo } from "src/utils";
 
 describe("ClassTableInheritance", () => {
   it("reports the right properties", () => {

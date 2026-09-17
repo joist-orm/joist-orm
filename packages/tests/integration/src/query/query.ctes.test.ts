@@ -4,7 +4,7 @@ import { Author, type AuthorId, Book, Publisher } from "src/entities";
 import { insertAuthor, insertBook, insertPublisher, select, update } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
-describe("EntityManager.rawQueries.ctes", () => {
+describe("em.query / ctes", () => {
   it("adds a joined query value to a WITH clause", async () => {
     // Given Author a1 with two Books
     await insertAuthor({ first_name: "a1" });

@@ -22,7 +22,7 @@ const am = getMetadata(Author);
 const bam = getMetadata(BookAdvance);
 const opts = { softDeletes: "include" } as const;
 
-describe("EntityManager.ctiQueries", () => {
+describe("em.find / cti", () => {
   it("finds against child with simple parent filter", async () => {
     const em = newEntityManager();
     const sp1 = newSmallPublisher(em, { name: "p1" });

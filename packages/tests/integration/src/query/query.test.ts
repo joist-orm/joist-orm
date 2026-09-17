@@ -60,7 +60,7 @@ import { ZodError } from "zod";
  * Author/Book/BookReview scenarios cover relationship filters, aggregate reports, reusable page/count
  * queries, and raw SQL expressions, including how optional filters affect joins and returned rows.
  */
-describe("EntityManager.rawQueries", () => {
+describe("em.query", () => {
   it("selects typed SQL shortcuts for an Author", async () => {
     // Given an Author with a known name and age
     await insertAuthor({ first_name: "Alice", age: 30 });

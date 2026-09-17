@@ -1,12 +1,11 @@
 import { promiseHooks } from "node:v8";
 
 import { RecursiveCycleError, setDefaultEntityLimit } from "joist-orm";
+import { Author, Book, Publisher, SmallPublisher, newAuthor, newBook, newPublisher } from "src/entities";
 import { insertAuthor, insertBook, insertPublisher, update } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
-import { Author, Book, Publisher, SmallPublisher, newAuthor, newBook, newPublisher } from "./entities";
-
-describe("EntityManager.populate", () => {
+describe("em.populate", () => {
   it("can populate many-to-one", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

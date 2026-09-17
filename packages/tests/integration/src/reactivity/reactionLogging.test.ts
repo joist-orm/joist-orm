@@ -5,7 +5,7 @@ import { newEntityManager } from "src/testEm";
 
 let output: string[] = [];
 
-describe("ReactionLogging", () => {
+describe("reactionLogging", () => {
   describe("validation", () => {
     it("sees primitive sets", async () => {
       // Given a new Author whose primitive values queue reactive work

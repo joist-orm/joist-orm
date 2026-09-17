@@ -1,4 +1,5 @@
 import { Lens, getLens, getMetadata, lensToLoadHint, lensToPath, loadLensPath, testing } from "joist-orm";
+import { Author, Book, Image, Publisher, Tag, TaskItem, TaskNew, newAuthor, newBook } from "src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -13,11 +14,9 @@ import {
 } from "src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
-import { Author, Book, Image, Publisher, Tag, TaskItem, TaskNew, newAuthor, newBook } from "./entities";
-
 const { isAllSqlPaths } = testing;
 
-describe("EntityManager.lens", () => {
+describe("em.lens", () => {
   it("can navigate references", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

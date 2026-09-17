@@ -3,7 +3,7 @@ import { newEntityManager, testDriver } from "src/testEm";
 
 import { Publisher, SmallPublisher } from "./entities";
 
-describe("EntityManager.types", () => {
+describe("EntityManager.decimals", () => {
   it("supports decimals", async () => {
     const em = newEntityManager();
     // Given we make an entity with some decimals

@@ -33,7 +33,7 @@ import { PasswordValue, PasswordValueSerde } from "src/entities/types";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
-describe("EntityManager.execute", () => {
+describe("em.execute", () => {
   it.each([Publisher, SmallPublisher, LargePublisher, Task, TaskNew, TaskOld, User, AdminUser])(
     "rejects inherited entity reads for %p before SQL",
     async (entity) => {

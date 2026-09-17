@@ -1,4 +1,5 @@
 import { ParsedExpressionCondition, ParsedFindQuery, Plugin, aliases, getMetadata, parseFindQuery } from "joist-orm";
+import { AdvanceStatus, Author, Book, BookReview, Comment, Tag } from "src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -12,13 +13,11 @@ import {
 } from "src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
-import { AdvanceStatus, Author, Book, BookReview, Comment, Tag } from "./entities";
-
 const am = getMetadata(Author);
 
 const opts = { softDeletes: "include" } as const;
 
-describe("EntityManager.lateralJoins", () => {
+describe("em.find / exists", () => {
   // -----------------------------------------------------------------------
   // These "approach" tests use pure SQL to demonstrate the before/after of the
   // EXISTS rewrite. Each test first runs the naive multi-JOIN query that

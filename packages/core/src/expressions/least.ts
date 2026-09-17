@@ -1,6 +1,5 @@
 import type { ExprContext, SqlFragment } from "../Expr.ts";
-import { expressionNullable } from "./expressionNullable.ts";
-import { functionToSql } from "./expressionToSql.ts";
+import { expressionNullable, functionToSql } from "./expression.ts";
 import { parseNonEmptyOperands } from "./parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "./types.ts";
 

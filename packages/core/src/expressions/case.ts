@@ -1,7 +1,6 @@
 import { type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
 import type { QueryCondition } from "../query.ts";
-import { expressionNullable } from "./expressionNullable.ts";
-import { expressionToSql } from "./expressionToSql.ts";
+import { expressionNullable, expressionToSql } from "./expression.ts";
 import { checkKeys, isObject, parseExpression } from "./parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "./types.ts";
 

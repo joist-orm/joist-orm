@@ -38,7 +38,7 @@ import {
   type ExpressionValue,
   buildExpr,
   isExprInput,
-} from "./expression.ts";
+} from "./expressions/expression.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
 import {

@@ -1,5 +1,5 @@
 import type { ExprContext, SqlFragment } from "../Expr.ts";
-import { functionToSql } from "./expressionToSql.ts";
+import { functionToSql } from "./expression.ts";
 import { parseExpression } from "./parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "./types.ts";
 

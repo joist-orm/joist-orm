@@ -32,7 +32,7 @@ type ListName = (typeof listNames)[number];
 type ListInput = { [K in ListName]: { readonly [P in K]: readonly unknown[] } }[ListName];
 type ListValues<V> = Extract<V[keyof V & ListName], readonly unknown[]>;
 
-/** An object passed to expr, i.e. { coalesce: [a.last_name, a.first_name] }. Values can include nested objects. */
+/** An expression object used in select or passed to expr, i.e. { coalesce: [a.last_name, a.first_name] }. */
 export type ExprInput =
   | {
       [K in ListName]: { readonly [P in K]: readonly unknown[] } & {
@@ -113,7 +113,7 @@ type ArmValue<A> = A extends readonly unknown[]
       : never;
 
 /** Conditions affect which value is chosen, but do not make that value nullable through a LEFT join. */
-type ExpressionSources<V> = unknown extends V
+export type ExpressionSources<V> = unknown extends V
   ? string
   : V extends ExprLike<unknown>
     ? V[typeof exprBrand]["__source"]
@@ -225,16 +225,36 @@ type CheckArmLiterals<A, R> = A extends readonly unknown[]
 type CheckListLiterals<A, R> = { readonly [K in keyof A]: CheckLiterals<A[K], R> };
 
 /** Valid inputs need no extra constraint; this keeps spread arrays from losing their fixed final operand. */
-type CheckInput<I> = [I] extends [CheckExpression<I> & CheckLiterals<I, Exclude<BranchResult<I>, null>>]
+export type CheckInput<I> = [I] extends [CheckExpression<I> & CheckLiterals<I, Exclude<BranchResult<I>, null>>]
   ? unknown
   : CheckExpression<I> & CheckLiterals<I, Exclude<BranchResult<I>, null>>;
 
 /** Builds a reusable SQL value expression, binding literal values as parameters. */
 export function expr<const I extends ExprInput>(input: I & CheckInput<NoInfer<I>>): ExprFromInput<I> {
+  return buildExpr(input) as unknown as ExprFromInput<I>;
+}
+
+/** Normalizes explicit and inline expression objects through the same validation and codec checks. */
+export function buildExpr(input: unknown): BaseExpr {
   if (!isObject(input) || (!("case" in input) && !listNames.some((name) => name in input))) {
     throw new Error("expr expects an object with case, coalesce, nullIf, greatest, or least");
   }
-  return new ChoiceExpr(parseValue(input)) as unknown as ExprFromInput<I>;
+  return new ChoiceExpr(parseValue(input));
+}
+
+/**
+ * Recognizes an expression by its operand shape, not just its key.
+ * I.e. { coalesce: [a.last_name, "Unknown"] } is scalar, but { coalesce: a.first_name } names a result column.
+ */
+export function isExprInput(value: unknown): value is ExprInput {
+  if (!isObject(value) || value instanceof BaseExpr) return false;
+  for (const name of listNames) if (name in value && Array.isArray(value[name])) return true;
+  if (!("case" in value)) return false;
+  const arms = value.case;
+  return (
+    Array.isArray(arms) ||
+    (isObject(arms) && !(arms instanceof BaseExpr) && ("when" in arms || "then" in arms || "else" in arms))
+  );
 }
 
 type Value =

@@ -150,19 +150,38 @@ With `distinct: true`, PostgreSQL requires ordering expressions to match the agg
 
 ### CASE and COALESCE
 
-Use `expr` to choose among values with plain objects. Values can be columns, other expressions,
-bound literals, or nested expression objects. Spread optional candidates into the list:
+Use plain expression objects directly in `select`. Values can be columns, other expressions,
+bound literals, or nested expression objects. Selecting a single expression returns scalar rows:
 
 ```ts
-import { expr, tables } from "joist-orm";
+const a = table(Author);
+const names = await em.query({
+  from: a,
+  select: { coalesce: [a.last_name, a.first_name] },
+});
+// names: string[]
+```
 
+For named results, put expression objects under the projection keys. Spread optional candidates into
+the operand list to build an expression dynamically:
+
+```ts
 const [a, b] = tables(Author, Book);
 const bookTitles = includeBookTitle ? [b.title] : [];
-const displayName = expr({
-  coalesce: [a.last_name, ...bookTitles, a.first_name],
+const rows = await em.query({
+  from: a,
+  join: [a.books.as(b)],
+  select: { name: { coalesce: [a.last_name, ...bookTitles, a.first_name] } },
 });
-// Use displayName in a query from a, with a.books.as(b) in its joins.
+// rows: { name: string }[]
 ```
+
+`expr(...)` remains available for building a reusable expression or calling methods such as `.eq(...)`.
+Inline expressions and `expr(...)` use the same validation, codecs, and LEFT-join nullability rules.
+They also work in `query(...)` selects for scalar subqueries, derived tables, and CTEs.
+
+Expression keywords can still name result columns: `select: { coalesce: a.first_name }` is a named
+projection. The operand shape distinguishes it from the scalar `select: { coalesce: [...] }` form.
 
 These expressions match their SQL behavior:
 
@@ -175,6 +194,8 @@ These expressions match their SQL behavior:
 For several CASE arms, use an array. The first true condition wins, even if its value is null:
 
 ```ts
+import { expr } from "joist-orm";
+
 const ageGroup = expr({
   case: [
     { when: a.age.gte(18), then: "Adult" },

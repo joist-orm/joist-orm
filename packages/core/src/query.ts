@@ -15,7 +15,6 @@ import { type EntityMetadata, getBaseMeta } from "./EntityMetadata.ts";
 import {
   BaseExpr,
   type Expr,
-  type ExprBrand,
   type ExprContext,
   type ExprLike,
   type InnerJoin,
@@ -31,7 +30,15 @@ import {
   orderByToSql,
   resolveDeferredConditions,
 } from "./Expr.ts";
-import type { ExpressionValue } from "./expression.ts";
+import {
+  type CheckInput,
+  type ExprFromInput,
+  type ExprInput,
+  type ExpressionSources,
+  type ExpressionValue,
+  buildExpr,
+  isExprInput,
+} from "./expression.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
 import {
@@ -192,7 +199,7 @@ export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __enti
   ? T extends Entity
     ? { readonly [K in keyof Table<T> as Table<T>[K] extends ExprLike<any> ? K : never]?: OrderByDirection | undefined }
     : never
-  : S extends { readonly [exprBrand]: any }
+  : S extends SelectExpression
     ? never
     : { readonly [K in keyof S & string]?: OrderByDirection | undefined };
 
@@ -200,7 +207,22 @@ export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __enti
 type OrderByKey<S> = S extends unknown ? keyof OrderByKeys<S> : never;
 
 /** The three select shapes: entity mode, single-expression mode (scalar/list subqueries), and POJO mode. */
-export type QuerySelect = QuerySource | ExprLike<any> | Record<string, ExprLike<any>>;
+export type QuerySelect = QuerySource | SelectExpression | Record<string, SelectExpression>;
+
+/** A selected expression may already be built or be an inline SQL expression object. */
+export type SelectExpression = ExprLike<unknown> | ExprInput;
+
+/** Inline inputs use the same domain types and LEFT-join rules as expr(input). */
+type SelectValue<V, J extends QueryJoins> = ExpressionValue<V extends ExprInput ? ExprFromInput<V> : V, J>;
+
+/** Checks inline operands without treating projection names such as coalesce as expression operators. */
+type CheckSelect<S> = QuerySelect extends S
+  ? unknown
+  : S extends QuerySource | ExprLike<unknown>
+    ? unknown
+    : S extends ExprInput
+      ? CheckInput<S>
+      : { readonly [K in keyof S]: S[K] extends ExprInput ? CheckInput<S[K]> : unknown };
 
 /**
  * Everything but the source, in SQL evaluation order: FROM/JOIN, WHERE, GROUP BY, HAVING, SELECT,
@@ -265,7 +287,7 @@ type MutationKey = "insert" | "update" | "delete" | "values" | "set" | "returnin
  * union. `{ from: a, select: a.id }` cannot: even one-column set operands must give that column a name.
  */
 export type SetOperand =
-  | Query<Record<string, ExprLike<unknown>> | Subquery<unknown, string>>
+  | Query<Record<string, SelectExpression> | Subquery<unknown, string>>
   | Subquery<unknown, string>
   | SetQuery<readonly SetOperand[]>;
 
@@ -500,7 +522,13 @@ export type CheckReadQuery<Q> = SetOperand extends Q
       : Q extends { readonly [entityQueryBrand]: unknown }
         ? { readonly [K in keyof Q]: K extends typeof entityQueryBrand ? unknown : never }
         : Q extends { readonly from: unknown; readonly select: unknown }
-          ? { readonly [K in keyof Q]: K extends keyof Clauses | "from" | "as" ? unknown : never }
+          ? {
+              readonly [K in keyof Q]: K extends "select"
+                ? CheckSelect<Q[K]>
+                : K extends keyof Clauses | "from" | "as"
+                  ? unknown
+                  : never;
+            }
           : {
               readonly [K in keyof Q]: K extends SetOperation
                 ? Q[K] extends readonly unknown[]
@@ -560,12 +588,11 @@ export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [table
   ? T
   : S extends { readonly [subqueryBrand]: { readonly __row: infer R } }
     ? R
-    : S extends { readonly [exprBrand]: ExprBrand<unknown, string> }
-      ? ExpressionValue<S, J>
+    : S extends SelectExpression
+      ? SelectValue<S, J>
       : {
-          [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<unknown, string> }
-            ? ExpressionValue<S[K], J>
-            : never;
+          // Inline inputs retain readonly tuples for inference; result rows are still mutable.
+          -readonly [K in keyof S]: S[K] extends SelectExpression ? SelectValue<S[K], J> : never;
         };
 
 // =====================================================================================================
@@ -632,7 +659,7 @@ export type QueryValue<S, J extends QueryJoins, Name extends string> = S extends
   readonly [tableMgmt]: { readonly __entity: infer T extends Entity };
 }
   ? EntityQuery<T>
-  : S extends { readonly [exprBrand]: ExprBrand<unknown, any> }
+  : S extends SelectExpression
     ? ScalarQuery<QueryRow<S, J>>
     : Subquery<QueryRow<S, J>, Name>;
 
@@ -669,19 +696,24 @@ export type CheckScope<S, F, J extends QueryJoins> = [S] extends [never]
     ? NameOf<S> extends NameOf<F>
       ? unknown
       : { select: `'${NameOf<S> & string}' is a joined source, not the from; select its columns individually` }
-    : [S] extends [Record<string, ExprLike<any>>]
-      ? {
-          select: {
-            [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<any, infer Src> }
-              ? string extends Src
-                ? unknown
-                : [Exclude<Src, InScope<F, J>>] extends [never]
-                  ? unknown
-                  : `table '${Exclude<Src, InScope<F, J>> & string}' is not in from/join`
-              : unknown;
-          };
-        }
-      : unknown;
+    : [S] extends [SelectExpression]
+      ? // Scalar subqueries can select columns from their enclosing query.
+        unknown
+      : [S] extends [Record<string, SelectExpression>]
+        ? {
+            select: {
+              [K in keyof S]: CheckExpressionScope<S[K], InScope<F, J>>;
+            };
+          }
+        : unknown;
+
+/** Includes columns nested in inline CASE values and fallbacks in the existing scope check. */
+type CheckExpressionScope<V, Scope> =
+  string extends ExpressionSources<V>
+    ? unknown
+    : [Exclude<ExpressionSources<V>, Scope>] extends [never]
+      ? unknown
+      : `table '${Exclude<ExpressionSources<V>, Scope> & string}' is not in from/join`;
 
 /** The one argument type `query()` and `em.query()` share: a `Query` POJO plus its source, name, and checks. */
 export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends QueryJoins, Name extends string> = Query<
@@ -691,7 +723,7 @@ export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends Que
   from: F;
   as?: Name;
 } & CheckScope<S, F, J> &
-  NotWidened<S>;
+  NotWidened<S> & { select: CheckSelect<NoInfer<S>> };
 
 /**
  * Turns a `Query` POJO into a value. The select shape decides which (`QueryValue`):
@@ -716,7 +748,7 @@ export function query<const Q extends SetQuery<readonly SetOperand[]>, Name exte
 ): Subquery<SetQueryRow<Q>, Name>;
 export function query<
   F extends QuerySource,
-  S extends QuerySelect = never,
+  const S extends QuerySelect = never,
   J extends QueryJoins = [],
   Name extends string = "?",
 >(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name>;
@@ -756,7 +788,12 @@ export function query(q: AnyReadQuery): unknown {
  *
  * Unlike `query()`, the name is required, because the step term must name it.
  */
-export function recursiveQuery<Name extends string, F extends QuerySource, S extends QuerySelect, J extends QueryJoins>(
+export function recursiveQuery<
+  Name extends string,
+  F extends QuerySource,
+  const S extends QuerySelect,
+  J extends QueryJoins,
+>(
   name: Name,
   base: QueryArg<F, S, J, Name>,
   step: (self: Subquery<QueryRow<S, J>, Name>) => SetOperand,
@@ -1105,7 +1142,7 @@ function isEntityQueryValue(value: unknown): value is { [entityQueryBrand]: Subq
   return typeof value === "object" && value !== null && entityQueryBrand in value;
 }
 
-function isPlainSelect(select: unknown): select is Record<string, ExprLike<any>> {
+function isPlainSelect(select: unknown): select is Record<string, SelectExpression> {
   return (
     typeof select === "object" &&
     select !== null &&
@@ -1298,14 +1335,15 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
 
 /** Validates the projection before compiling SQL or exposing reusable query columns. */
 function projectionOutput(select: unknown): QueryOutput {
-  if (isExpr(select)) return { kind: "scalar", columns: [["value", asExpr(select, "select")]] };
+  if (isExpr(select) || isExprInput(select))
+    return { kind: "scalar", columns: [["value", asSelectExpr(select, "select")]] };
   if (isPlainSelect(select)) {
     const columns: [string, BaseExpr][] = [];
     // Enumerate once: a projection proxy must not be revisited just to check for symbol keys.
     for (const key of Reflect.ownKeys(select)) {
       if (typeof key !== "string") fail("Projection keys must be strings");
       if (Object.prototype.propertyIsEnumerable.call(select, key))
-        columns.push([key, asExpr(select[key], `select.${key}`)]);
+        columns.push([key, asSelectExpr(select[key], `select.${key}`)]);
     }
     if (columns.length === 0) fail("A named expression projection must not be empty");
     return { kind: "pojo", columns };
@@ -1929,7 +1967,7 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
         const fragment = asNode(column).toSql(ctx);
         result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
       } else {
-        if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
+        if (isExpr(select) || isExprInput(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
         const keys = isSubqueryValue(select) ? select[subqueryBrand].columnKeys() : Object.keys(select as object);
         if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
         result.push({ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] });
@@ -2245,6 +2283,11 @@ export function withFragment(ctes: ParsedCte[]): SqlFragment {
 function asExpr(value: unknown, where: string): BaseExpr {
   if (value instanceof BaseExpr) return value;
   return fail(`${where} must be an expression, i.e. a table column, aggregate, sql\`...\`, or scalar query(...)`);
+}
+
+/** Builds inline select expressions while leaving existing expression instances intact. */
+function asSelectExpr(value: unknown, where: string): BaseExpr {
+  return isExprInput(value) ? buildExpr(value) : asExpr(value, where);
 }
 
 function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {

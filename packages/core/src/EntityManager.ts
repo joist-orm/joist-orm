@@ -568,12 +568,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: { populate: H },
   ): Promise<Loaded<T, H>[]>;
   public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
-  public query<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
+  public query<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoins = []>(
     q: QueryArg<F, S, J, never>,
   ): Promise<QueryRow<S, J>[]>;
   public query<
     F extends QuerySource,
-    S extends QuerySelect,
+    const S extends QuerySelect,
     const H extends LoadHint<Extract<QueryRow<S, J>, EntityW>>,
     J extends QueryJoins = [],
   >(
@@ -611,7 +611,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public execute<const Q extends SetQuery<readonly SetOperand[]>>(
     statement: Q & CheckSetQuery<Q>,
   ): Promise<ExecuteResult<SetQueryRow<Q>>>;
-  public execute<F extends QuerySource, S extends QuerySelect = never, J extends QueryJoins = []>(
+  public execute<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoins = []>(
     statement: QueryArg<F, S, J, never>,
   ): Promise<ExecuteResult<QueryRow<S, J>>>;
   public execute(statement: unknown): Promise<ExecuteResult<unknown>> {

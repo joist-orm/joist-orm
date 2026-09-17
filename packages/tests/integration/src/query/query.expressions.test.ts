@@ -6,6 +6,286 @@ import { PasswordValue } from "src/entities/types";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query / expression descriptions", () => {
+  it("treats empty Author last names as missing before choosing a fallback", async () => {
+    // Given an Author whose last name is an empty string
+    await insertAuthor({ first_name: "Alice", last_name: "" });
+    // And an Author whose last name is SQL NULL
+    await insertAuthor({ first_name: "Bob", last_name: null });
+    // And an Author with a nonempty last name
+    await insertAuthor({ first_name: "Carol", last_name: "Clark" });
+    // And an Author table for choosing display names
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When NULLIF removes empty strings before COALESCE chooses a name
+    const rows = await em.query({
+      from: a,
+      select: {
+        lastName: expr({ nullIf: [a.last_name, ""] }),
+        name: expr({ coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name] }),
+      },
+      orderBy: [{ asc: a.id }],
+    });
+
+    // Then empty and null last names use the first name, while other last names remain unchanged
+    expect(rows).toEqual([
+      { lastName: null, name: "Alice" },
+      { lastName: null, name: "Bob" },
+      { lastName: "Clark", name: "Clark" },
+    ]);
+    expectTypeOf(rows).toEqualTypeOf<{ lastName: string | null; name: string }[]>();
+  });
+
+  it("retains the Book join when only NULLIF's comparison operand references it", async () => {
+    // Given an Author with a Book whose title matches her name
+    await insertAuthor({ first_name: "Alice" });
+    await insertBook({ title: "Alice", author_id: 1 });
+    // And an Author without Books
+    await insertAuthor({ first_name: "Bob" });
+    // And a LEFT-joined Book table used only for comparison
+    const em = newEntityManager();
+    const [a, b] = tables(Author, Book);
+
+    // When comparing Author names to their Book titles
+    const rows = await em.query({
+      from: a,
+      join: [a.books.as(b)],
+      select: { name: expr({ nullIf: [a.first_name, b.title] }) },
+      orderBy: [{ asc: a.id }],
+    });
+
+    // Then equal values return null, but a null comparison operand leaves the Author name intact
+    expect(rows).toEqual([{ name: null }, { name: "Bob" }]);
+    expectTypeOf(rows).toEqualTypeOf<{ name: string | null }[]>();
+  });
+
+  it("bounds Author ages with nested GREATEST and LEAST expressions", async () => {
+    // Given an Author younger than the lower age bound
+    await insertAuthor({ first_name: "Alice", age: 10 });
+    // And an Author within the age bounds
+    await insertAuthor({ first_name: "Bob", age: 30 });
+    // And an Author older than the upper age bound
+    await insertAuthor({ first_name: "Carol", age: 80 });
+    // And an Author whose age is unknown
+    await insertAuthor({ first_name: "Dan" });
+    // And an Author table for comparing ages
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When comparing ages with both non-null bounds and SQL NULL
+    const rows = await em.query({
+      from: a,
+      select: {
+        greatest: expr({ greatest: [a.age, null, 18] }),
+        least: expr({ least: [a.age, null, 65] }),
+        bounded: expr({ least: [{ greatest: [a.age, 18] }, 65] }),
+        nullableGreatest: expr({ greatest: [a.age, null] }),
+        nullableLeast: expr({ least: [null, a.age] }),
+      },
+      orderBy: [{ asc: a.id }],
+    });
+
+    // Then null operands are ignored, and only all-null inputs return null
+    expect(rows).toEqual([
+      { greatest: 18, least: 10, bounded: 18, nullableGreatest: 10, nullableLeast: 10 },
+      { greatest: 30, least: 30, bounded: 30, nullableGreatest: 30, nullableLeast: 30 },
+      { greatest: 80, least: 65, bounded: 65, nullableGreatest: 80, nullableLeast: 80 },
+      { greatest: 18, least: 65, bounded: 18, nullableGreatest: null, nullableLeast: null },
+    ]);
+    expectTypeOf(rows).toEqualTypeOf<
+      {
+        greatest: number;
+        least: number;
+        bounded: number;
+        nullableGreatest: number | null;
+        nullableLeast: number | null;
+      }[]
+    >();
+  });
+
+  it("ignores missing LEFT-joined Book titles when a non-null name is available", async () => {
+    // Given an Author without Books
+    await insertAuthor({ first_name: "Alice" });
+    // And a LEFT-joined Book table whose title will be null
+    const em = newEntityManager();
+    const [a, b] = tables(Author, Book);
+
+    // When comparing missing titles with and without a non-null Author name
+    const rows = await em.query({
+      from: a,
+      join: [a.books.as(b)],
+      select: {
+        greatest: expr({ greatest: [b.title, a.first_name] }),
+        least: expr({ least: [a.first_name, b.title] }),
+        missingGreatest: expr({ greatest: [b.title] }),
+        missingLeast: expr({ least: [b.title, null] }),
+        missingFirst: expr({ nullIf: [b.title, a.first_name] }),
+      },
+    });
+
+    // Then GREATEST and LEAST can return the Author name, while NULLIF keeps its null first operand
+    expect(rows).toEqual([
+      {
+        greatest: "Alice",
+        least: "Alice",
+        missingGreatest: null,
+        missingLeast: null,
+        missingFirst: null,
+      },
+    ]);
+    expectTypeOf(rows).toEqualTypeOf<
+      {
+        greatest: string;
+        least: string;
+        missingGreatest: string | null;
+        missingLeast: string | null;
+        missingFirst: string | null;
+      }[]
+    >();
+  });
+
+  it("supports mapped NULLIF candidates and dynamic comparison lists", async () => {
+    // Given an Author with an empty last name
+    await insertAuthor({ first_name: "Alice", last_name: "", age: 30 });
+    // And a dynamic list of Author names to normalize
+    const em = newEntityManager();
+    const a = table(Author);
+    const names = [a.last_name, a.first_name];
+    // And a possibly empty list of extra age bounds
+    const bounds: number[] = [];
+
+    // When mapping NULLIF descriptions and adding fixed bounds around a dynamic list
+    const rows = await em.query({
+      from: a,
+      select: {
+        name: expr({ coalesce: [...names.map((name) => ({ nullIf: [name, ""] })), "Unknown"] }),
+        greatest: expr({ greatest: [a.age, ...bounds, 18] }),
+        least: expr({ least: [65, ...bounds, a.age] }),
+        middleBound: expr({ greatest: [...bounds, 18, a.age] }),
+        dynamic: expr({ greatest: [a.age, ...bounds] }),
+      },
+    });
+
+    // Then fixed non-null candidates guarantee values even when the extra bounds are empty
+    expect(rows).toEqual([{ name: "Alice", greatest: 30, least: 30, middleBound: 30, dynamic: 30 }]);
+    expectTypeOf(rows).toEqualTypeOf<
+      { name: string; greatest: number; least: number; middleBound: number; dynamic: number | null }[]
+    >();
+  });
+
+  it("preserves Book id codecs in NULLIF, GREATEST, and LEAST", async () => {
+    // Given an Author with a Book
+    await insertAuthor({ first_name: "Alice" });
+    await insertBook({ title: "Apple", author_id: 1 });
+    // And a Book table for comparing stored integer ids with tagged literal ids
+    const em = newEntityManager();
+    const b = table(Book);
+    const greatest = expr({ greatest: [b.id, "b:10"] });
+
+    // When selecting id comparisons through a derived table and reusing their codec in a predicate
+    const ids = query({
+      from: b,
+      where: greatest.eq("b:10"),
+      select: {
+        equal: expr({ nullIf: [b.id, "b:1"] }),
+        different: expr({ nullIf: [b.id, "b:10"] }),
+        nullFirst: expr({ nullIf: [null, b.id] }),
+        greatest,
+        least: expr({ least: ["b:10", b.id] }),
+      },
+    });
+    const rows = await em.query({ from: ids, select: ids });
+
+    // Then PostgreSQL compares integer ids and Joist returns the selected ids with Book tags
+    expect(rows).toEqual([{ equal: null, different: "b:1", nullFirst: null, greatest: "b:10", least: "b:1" }]);
+    expectTypeOf(rows).toEqualTypeOf<
+      {
+        equal: Book["id"] | null;
+        different: Book["id"] | null;
+        nullFirst: null;
+        greatest: Book["id"];
+        least: Book["id"];
+      }[]
+    >();
+  });
+
+  it("binds literal NULLIF, GREATEST, and LEAST operands in SQL order", async () => {
+    // Given an Author to select one row of computed values
+    await insertAuthor({ first_name: "Alice" });
+    // And a fresh query log for the expression SQL
+    const em = newEntityManager();
+    const a = table(Author);
+    resetQueryCount();
+
+    // When nesting comparisons with distinct parameter values
+    const rows = await em.query({
+      from: a,
+      select: {
+        value: expr({ greatest: [{ nullIf: [12, 12] }, { least: [8, 3] }, 7] }),
+        different: expr({ nullIf: [4, 5] }),
+        nullComparison: expr({ nullIf: [4, null] }),
+        allNull: expr({ least: [null, null] }),
+      },
+    });
+
+    // Then parameter order matches SQL order and numeric results remain numbers
+    expect(rows).toEqual([{ value: 7, different: 4, nullComparison: 4, allNull: null }]);
+    expectTypeOf(rows).toEqualTypeOf<
+      { value: number; different: number | null; nullComparison: number | null; allNull: null }[]
+    >();
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "SELECT GREATEST(NULLIF($1::float8, $2::float8), LEAST($3::float8, $4::float8), $5::float8) AS value, NULLIF($6::float8, $7::float8) AS different, NULLIF($8::float8, $9::float8) AS "nullComparison", LEAST($10::text, $11::text) AS "allNull" FROM authors AS a WHERE a.deleted_at IS NULL",
+     ]
+    `);
+  });
+
+  it("rejects invalid operand counts and incompatible types in value comparisons", () => {
+    // Given an Author table and an empty dynamic list of age candidates
+    const a = table(Author);
+    const ages: (typeof a.age)[] = [];
+    // And a dynamic NULLIF argument list with three values instead of two
+    const comparisons: number[] = [1, 2, 3];
+
+    // When NULLIF has one operand
+    // Then both TypeScript and runtime validation require a second operand
+    // @ts-expect-error NULLIF requires exactly two values
+    expect(() => expr({ nullIf: [a.age] })).toThrow("NULLIF needs exactly two values");
+
+    // When NULLIF has three operands
+    // Then both fixed and dynamic argument lists are rejected
+    // @ts-expect-error NULLIF requires exactly two values
+    expect(() => expr({ nullIf: [a.age, 1, 2] })).toThrow("NULLIF needs exactly two values");
+    expect(() => expr({ nullIf: comparisons })).toThrow("NULLIF needs exactly two values");
+
+    // When GREATEST has no operands
+    // Then both fixed and dynamic argument lists are rejected
+    // @ts-expect-error GREATEST requires a value
+    expect(() => expr({ greatest: [] })).toThrow("GREATEST needs at least one value");
+    expect(() => expr({ greatest: ages })).toThrow("GREATEST needs at least one value");
+
+    // When LEAST has no operands
+    // Then both fixed and dynamic argument lists are rejected
+    // @ts-expect-error LEAST requires a value
+    expect(() => expr({ least: [] })).toThrow("LEAST needs at least one value");
+    expect(() => expr({ least: ages })).toThrow("LEAST needs at least one value");
+
+    // When NULLIF compares an age to a string
+    // Then its operands must have compatible types
+    // @ts-expect-error Ages are numbers
+    expect(() => expr({ nullIf: [a.age, "Unknown"] })).toThrow("Expression values must have compatible types");
+
+    // When GREATEST compares an age to a string
+    // Then its operands must have compatible types
+    // @ts-expect-error Ages are numbers
+    expect(() => expr({ greatest: [a.age, "Unknown"] })).toThrow("Expression values must have compatible types");
+
+    // When LEAST compares an age to a string
+    // Then its operands must have compatible types
+    // @ts-expect-error Ages are numbers
+    expect(() => expr({ least: [a.age, "Unknown"] })).toThrow("Expression values must have compatible types");
+  });
+
   it("tries each conditional Author name until one is not null", async () => {
     // Given an Author whose last name is unknown
     await insertAuthor({ first_name: "Alice", last_name: null });
@@ -285,9 +565,7 @@ describe("em.query / expression descriptions", () => {
 
     // When combining those ids into one result
     // Then one entity's decoder cannot be used for the other entity's ids
-    expect(() => expr({ coalesce: [a.id, b.id] })).toThrow(
-      "CASE and COALESCE expressions need matching SQL types and codecs",
-    );
+    expect(() => expr({ coalesce: [a.id, b.id] })).toThrow("Expression operands need matching SQL types and codecs");
   });
 
   it("rejects unknown result codecs even when their TypeScript types agree", () => {
@@ -298,7 +576,7 @@ describe("em.query / expression descriptions", () => {
     // When combining them without runtime evidence of a shared result codec
     // Then the raw annotation cannot select the Author column's decoder
     expect(() => expr({ coalesce: [a.first_name, rawName] })).toThrow(
-      "CASE and COALESCE expressions need matching SQL types and codecs",
+      "Expression operands need matching SQL types and codecs",
     );
   });
 
@@ -336,9 +614,9 @@ describe("em.query / expression descriptions", () => {
     const a = table(Author);
 
     // When passing a literal instead of a description
-    // Then the entry point requires CASE or COALESCE
+    // Then the entry point requires a supported expression description
     // @ts-expect-error The root must be an expression description
-    expect(() => expr(42)).toThrow("expr expects a CASE or COALESCE description");
+    expect(() => expr(42)).toThrow("expr expects a case, coalesce, nullIf, greatest, or least description");
 
     // When describing an empty COALESCE
     // Then both TypeScript and runtime validation reject it
@@ -353,10 +631,10 @@ describe("em.query / expression descriptions", () => {
     // When mixing numeric and string literals
     // Then neither CASE nor COALESCE can select one compatible value type
     // @ts-expect-error Numeric and string values are incompatible
-    expect(() => expr({ coalesce: [1, "name"] })).toThrow("CASE and COALESCE values must have compatible types");
+    expect(() => expr({ coalesce: [1, "name"] })).toThrow("Expression values must have compatible types");
     // @ts-expect-error Numeric and string branches are incompatible
     expect(() => expr({ case: { when: a.id.ne(null), then: 1 }, else: "name" })).toThrow(
-      "CASE and COALESCE values must have compatible types",
+      "Expression values must have compatible types",
     );
 
     // When a branch uses undefined instead of SQL NULL
@@ -367,7 +645,7 @@ describe("em.query / expression descriptions", () => {
     // When using a number as an Author name fallback
     // Then column-backed descriptions also reject incompatible literal types
     // @ts-expect-error An Author name is not a number
-    expect(() => expr({ coalesce: [a.first_name, 42] })).toThrow("CASE and COALESCE values must have compatible types");
+    expect(() => expr({ coalesce: [a.first_name, 42] })).toThrow("Expression values must have compatible types");
 
     // When mixing CASE and COALESCE keys in one description
     // Then the extra key is rejected instead of ignored

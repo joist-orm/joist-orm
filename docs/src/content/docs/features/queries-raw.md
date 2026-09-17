@@ -197,6 +197,37 @@ encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknow
 cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
 literals need a column or other expression that supplies their codec.
 
+### NULLIF, GREATEST, and LEAST
+
+`nullIf` returns null when its two operands are equal, otherwise it returns the first operand. Use it
+inside COALESCE to treat empty strings as missing:
+
+```ts
+const displayName = expr({
+  coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name],
+});
+```
+
+A null first operand stays null. A null second operand does not match a non-null first operand:
+`expr({ nullIf: [a.first_name, null] })` returns the first name. The inferred NULLIF result type
+conservatively includes null.
+
+`greatest` and `least` return the largest and smallest operands according to PostgreSQL's ordering:
+
+```ts
+const boundedAge = expr({
+  least: [{ greatest: [a.age, 18] }, 65],
+});
+```
+
+Both ignore null operands and return null only when all operands are null. The example returns 18
+when the Author's age is null. A known non-null operand guarantees a non-null result, including when
+other operands come from LEFT joins.
+
+These descriptions nest inside CASE, COALESCE, or each other. They use the same type and codec checks
+as CASE and COALESCE. NULLIF requires exactly two operands; GREATEST and LEAST require at least one.
+Dynamic arrays are accepted, and their lengths are checked at runtime.
+
 ### Query conditions
 
 The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:

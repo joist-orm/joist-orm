@@ -150,26 +150,27 @@ With `distinct: true`, PostgreSQL requires ordering expressions to match the agg
 
 ### CASE and COALESCE
 
-Use `expr` to choose among values with object descriptions. Values can be columns, other expressions,
-bound literals, or nested descriptions:
+Use `expr` to choose among values with plain objects. Values can be columns, other expressions,
+bound literals, or nested expression objects. Spread optional candidates into the list:
 
 ```ts
-import { expr } from "joist-orm";
+import { expr, tables } from "joist-orm";
 
-const marketName = expr({
-  coalesce: [
-    { case: { when: selfMarket.id.isNotNull(), then: p.custom_name } },
-    standaloneMarket.custom_name,
-    ...markets.map((market, i) => ({
-      case: { when: market.id.isNotNull(), then: parents[i].custom_name },
-    })),
-  ],
+const [a, b] = tables(Author, Book);
+const bookTitles = includeBookTitle ? [b.title] : [];
+const displayName = expr({
+  coalesce: [a.last_name, ...bookTitles, a.first_name],
 });
+// Use displayName in a query from a, with a.books.as(b) in its joins.
 ```
 
-`coalesce` returns the first non-null value, in list order. A CASE without `else` returns null when its
-condition is false or SQL NULL. Even if the condition is true, a null `then` value lets COALESCE try the
-next candidate. An empty `markets` array leaves the first two candidates in place.
+These expressions match their SQL behavior:
+
+- `coalesce` returns the first non-null value, in list order.
+- CASE returns the first value whose `when` condition is true. Without `else`, no match returns null.
+- A false or SQL NULL condition does not match.
+- A matching CASE arm can return null; an enclosing COALESCE then tries its next candidate.
+- An empty `bookTitles` array leaves just the Author's last and first names as candidates.
 
 For several CASE arms, use an array. The first true condition wins, even if its value is null:
 
@@ -178,15 +179,16 @@ const ageGroup = expr({
   case: [
     { when: a.age.gte(18), then: "Adult" },
     { when: a.age.gte(0), then: "Child" },
+    { else: "Unknown" },
   ],
-  else: "Unknown",
 });
 ```
 
 `when` accepts the same conditions as `where`, including `and`, `or`, `exists`, and `sql.condition`.
-An undefined or fully pruned condition removes its arm. If all arms disappear, the result is `else`,
-or null when `else` is omitted. Use an explicit `null` for a null value; `undefined` is not a value.
-CASE needs at least one arm, and COALESCE needs at least one candidate.
+An undefined or fully pruned condition removes its arm. If all WHEN arms disappear, the result is the
+final `{ else: ... }` entry, or null when it is omitted. The ELSE entry must be last and appear at most
+once. Use an explicit `null` for a null value; `undefined` is not a value. CASE needs at least one WHEN
+arm, and COALESCE needs at least one candidate.
 
 The result is a reusable expression for `select`, predicates, ordering, or other expressions. Its type
 accounts for nullable columns and LEFT joins. A non-null fallback, such as the last candidate in
@@ -224,7 +226,7 @@ Both ignore null operands and return null only when all operands are null. The e
 when the Author's age is null. A known non-null operand guarantees a non-null result, including when
 other operands come from LEFT joins.
 
-These descriptions nest inside CASE, COALESCE, or each other. They use the same type and codec checks
+These expression objects nest inside CASE, COALESCE, or each other. They use the same type and codec checks
 as CASE and COALESCE. NULLIF requires exactly two operands; GREATEST and LEAST require at least one.
 Dynamic arrays are accepted, and their lengths are checked at runtime.
 

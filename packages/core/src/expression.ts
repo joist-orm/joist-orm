@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+
 import {
   BaseExpr,
   type Expr,
@@ -15,6 +17,14 @@ import type { TypeInfo } from "./TypeInfo.ts";
 export interface CaseArm {
   readonly when: QueryCondition | undefined;
   readonly then: unknown;
+  readonly else?: never;
+}
+
+/** The fallback value, allowed only as the last entry in a CASE array. */
+export interface CaseElse {
+  readonly else: unknown;
+  readonly when?: never;
+  readonly then?: never;
 }
 
 const listNames = ["coalesce", "nullIf", "greatest", "least"] as const;
@@ -22,29 +32,29 @@ type ListName = (typeof listNames)[number];
 type ListInput = { [K in ListName]: { readonly [P in K]: readonly unknown[] } }[ListName];
 type ListValues<V> = Extract<V[keyof V & ListName], readonly unknown[]>;
 
-/** SQL value expressions; operands can be expressions, literals, or nested descriptions. */
-export type ExprDescription =
+/** An object passed to expr, i.e. { coalesce: [a.last_name, a.first_name] }. Values can include nested objects. */
+export type ExprInput =
   | {
       [K in ListName]: { readonly [P in K]: readonly unknown[] } & {
         readonly [P in Exclude<ListName | "case" | "else", K>]?: never;
       };
     }[ListName]
-  | ({ readonly case: CaseArm | readonly CaseArm[]; readonly else?: unknown } & {
-      readonly [K in ListName]?: never;
+  | ({ readonly case: CaseArm | readonly (CaseArm | CaseElse)[] } & {
+      readonly [K in ListName | "else"]?: never;
     });
 
-declare const descriptionBrand: unique symbol;
+declare const inputBrand: unique symbol;
 
-/** Retains the description so query results can account for LEFT joins in each candidate separately. */
-export type DescribedExpr<D> = Expr<DescriptionResult<D, []>, ExpressionSources<D>> & {
-  readonly [descriptionBrand]: D;
+/** Retains the input object so query results can account for LEFT joins in each candidate separately. */
+export type ExprFromInput<I> = Expr<InputResult<I, []>, ExpressionSources<I>> & {
+  readonly [inputBrand]: I;
 };
 
 /** Resolves values with the selecting query's joins; an unknown input stays unknown instead of recursing into it. */
 export type ExpressionValue<V, J extends QueryJoins> = unknown extends V
   ? V
-  : V extends { readonly [descriptionBrand]: infer D }
-    ? DescriptionResult<D, J>
+  : V extends { readonly [inputBrand]: infer I }
+    ? InputResult<I, J>
     : V extends { readonly [exprBrand]: ExprBrand<infer R, infer S> }
       ? MaybeNull<R, S, J>
       : V extends ListInput
@@ -56,7 +66,9 @@ export type ExpressionValue<V, J extends QueryJoins> = unknown extends V
                 | Exclude<ExpressionValue<ListValues<V>[number], J>, null>
                 | (null extends CoalesceValue<ListValues<V>, J> ? null : never)
         : V extends { readonly case: infer A }
-          ? ExpressionValue<ArmValue<A>, J> | (V extends { readonly else: infer E } ? ExpressionValue<E, J> : null)
+          ?
+              | ExpressionValue<ArmValue<A>, J>
+              | (A extends readonly [...unknown[], { readonly else: unknown }] ? never : null)
           : V extends string
             ? string
             : V extends number
@@ -70,9 +82,9 @@ export type ExpressionValue<V, J extends QueryJoins> = unknown extends V
                     : V;
 
 /** Literal fallbacks use the expression's domain, i.e. "b:9" stays a BookId when paired with Book.id. */
-type DescriptionResult<D, J extends QueryJoins> = [Exclude<BranchResult<D>, null>] extends [never]
-  ? ExpressionValue<D, J>
-  : Exclude<BranchResult<D>, null> | (null extends ExpressionValue<D, J> ? null : never);
+type InputResult<I, J extends QueryJoins> = [Exclude<BranchResult<I>, null>] extends [never]
+  ? ExpressionValue<I, J>
+  : Exclude<BranchResult<I>, null> | (null extends ExpressionValue<I, J> ? null : never);
 type BranchResult<V> = unknown extends V
   ? never
   : V extends ExprLike<infer R>
@@ -80,7 +92,7 @@ type BranchResult<V> = unknown extends V
     : V extends ListInput
       ? BranchResult<V extends { readonly nullIf: readonly unknown[] } ? ListValues<V>[0] : ListValues<V>[number]>
       : V extends { readonly case: infer A }
-        ? BranchResult<ArmValue<A>> | (V extends { readonly else: infer E } ? BranchResult<E> : never)
+        ? BranchResult<ArmValue<A>>
         : never;
 
 /** A fixed non-null candidate guarantees a result; a possibly empty candidate array does not. */
@@ -96,7 +108,9 @@ type ArmValue<A> = A extends readonly unknown[]
   ? ArmValue<A[number]>
   : A extends { readonly then: infer V }
     ? V
-    : never;
+    : A extends { readonly else: infer V }
+      ? V
+      : never;
 
 /** Conditions affect which value is chosen, but do not make that value nullable through a LEFT join. */
 type ExpressionSources<V> = unknown extends V
@@ -106,7 +120,7 @@ type ExpressionSources<V> = unknown extends V
     : V extends ListInput
       ? ExpressionSources<ListValues<V>[number]>
       : V extends { readonly case: infer A }
-        ? ExpressionSources<ArmValue<A>> | (V extends { readonly else: infer E } ? ExpressionSources<E> : never)
+        ? ExpressionSources<ArmValue<A>>
         : never;
 
 /** Literal strings and numbers may differ in value while still sharing a SQL result type. */
@@ -127,12 +141,12 @@ type CompatibleValues<V> =
     ? "Expression values must have compatible types"
     : unknown;
 
-/** Checks nested descriptions without replacing the caller's inferred tuples or mapped arrays. */
+/** Checks nested expression objects without replacing the caller's inferred tuples or mapped arrays. */
 type CheckExpression<V> =
   V extends ExprLike<unknown>
     ? unknown
     : V extends ListInput
-      ? V extends ExprDescription
+      ? V extends ExprInput
         ? {
             readonly [K in keyof V]: K extends ListName
               ? V[K] extends readonly unknown[]
@@ -142,11 +156,8 @@ type CheckExpression<V> =
           }
         : never
       : V extends { readonly case: infer A }
-        ? { readonly case: CheckArms<A> } & CompatibleValues<
-            ArmValue<A> | (V extends { readonly else: infer E } ? E : null)
-          > &
-            (V extends { readonly else: infer E } ? { readonly else: CheckExpression<E> } : unknown) & {
-              readonly [K in Exclude<keyof V, "case" | "else">]: never;
+        ? { readonly case: CheckArms<A> } & CompatibleValues<ArmValue<A>> & {
+              readonly [K in Exclude<keyof V, "case">]: never;
             }
         : V extends undefined
           ? "Use null for a SQL NULL value"
@@ -163,10 +174,29 @@ type CheckValues<A extends readonly unknown[], Name extends ListName> = (Name ex
 type CheckArms<A> = A extends readonly []
   ? "CASE needs at least one arm"
   : A extends readonly unknown[]
-    ? { readonly [K in keyof A]: CheckArms<A[K]> }
+    ? { readonly [K in keyof A]: CheckCaseEntry<A[K]> } & CheckCaseOrder<A>
     : A extends CaseArm
-      ? { readonly [K in keyof A]: K extends "then" ? CheckExpression<A[K]> : K extends "when" ? unknown : never }
+      ? CheckCaseEntry<A>
       : never;
+type CheckCaseEntry<A> = A extends CaseArm
+  ? { readonly [K in keyof A]: K extends "then" ? CheckExpression<A[K]> : K extends "when" ? unknown : never }
+  : A extends CaseElse
+    ? { readonly [K in keyof A]: K extends "else" ? CheckExpression<A[K]> : never }
+    : never;
+
+/** Fixed CASE arrays can be checked now; dynamic arrays get the same checks at runtime. */
+type CheckCaseOrder<A extends readonly unknown[], HasWhen extends boolean = false> = A extends readonly [
+  infer H,
+  ...infer T,
+]
+  ? H extends { readonly else: unknown }
+    ? HasWhen extends true
+      ? T extends readonly []
+        ? unknown
+        : "CASE ELSE must be last"
+      : "CASE needs a WHEN arm before ELSE"
+    : CheckCaseOrder<T, true>
+  : unknown;
 
 /** Literal branches must fit the column's value type, including enum values and array element nullability. */
 type CheckLiterals<V, R> = [R] extends [never]
@@ -176,9 +206,7 @@ type CheckLiterals<V, R> = [R] extends [never]
     : V extends ListInput
       ? { readonly [K in keyof V]: K extends ListName ? CheckListLiterals<V[K], R> : unknown }
       : V extends { readonly case: infer A }
-        ? { readonly case: CheckArmLiterals<A, R> } & (V extends { readonly else: infer E }
-            ? { readonly else: CheckLiterals<E, R> }
-            : unknown)
+        ? { readonly case: CheckArmLiterals<A, R> }
         : V extends null
           ? unknown
           : V extends readonly (infer E)[]
@@ -192,21 +220,21 @@ type CheckLiterals<V, R> = [R] extends [never]
               : "Literal values must match the expression";
 type CheckArmLiterals<A, R> = A extends readonly unknown[]
   ? { readonly [K in keyof A]: CheckArmLiterals<A[K], R> }
-  : { readonly [K in keyof A]: K extends "then" ? CheckLiterals<A[K], R> : unknown };
+  : { readonly [K in keyof A]: K extends "then" | "else" ? CheckLiterals<A[K], R> : unknown };
 
 type CheckListLiterals<A, R> = { readonly [K in keyof A]: CheckLiterals<A[K], R> };
 
 /** Valid inputs need no extra constraint; this keeps spread arrays from losing their fixed final operand. */
-type CheckDescription<D> = [D] extends [CheckExpression<D> & CheckLiterals<D, Exclude<BranchResult<D>, null>>]
+type CheckInput<I> = [I] extends [CheckExpression<I> & CheckLiterals<I, Exclude<BranchResult<I>, null>>]
   ? unknown
-  : CheckExpression<D> & CheckLiterals<D, Exclude<BranchResult<D>, null>>;
+  : CheckExpression<I> & CheckLiterals<I, Exclude<BranchResult<I>, null>>;
 
 /** Builds a reusable SQL value expression, binding literal values as parameters. */
-export function expr<const D extends ExprDescription>(description: D & CheckDescription<NoInfer<D>>): DescribedExpr<D> {
-  if (!isObject(description) || (!("case" in description) && !listNames.some((name) => name in description))) {
-    throw new Error("expr expects a case, coalesce, nullIf, greatest, or least description");
+export function expr<const I extends ExprInput>(input: I & CheckInput<NoInfer<I>>): ExprFromInput<I> {
+  if (!isObject(input) || (!("case" in input) && !listNames.some((name) => name in input))) {
+    throw new Error("expr expects an object with case, coalesce, nullIf, greatest, or least");
   }
-  return new ChoiceExpr(parseValue(description)) as unknown as DescribedExpr<D>;
+  return new ChoiceExpr(parseValue(input)) as unknown as ExprFromInput<I>;
 }
 
 type Value =
@@ -262,8 +290,8 @@ class LiteralCodec {
 }
 
 /**
- * Validates descriptions and copies their value lists before rendering SQL.
- * Nested descriptions stay together so their literals can use a column's codec from another branch.
+ * Validates expression objects such as { coalesce: [b.id, "b:9"] } and copies their operand arrays.
+ * Nested expression objects stay together so their literals can use a column's codec from another branch.
  * I.e. COALESCE(Book.id, CASE ... THEN "b:9" END) must encode "b:9" as an integer.
  */
 function parseValue(value: unknown): Value {
@@ -281,21 +309,40 @@ function parseValue(value: unknown): Value {
     return { kind: name, values: values.map((v) => parseValue(v)) };
   }
   if (isObject(value) && "case" in value) {
-    checkKeys(value, ["case", "else"]);
-    const arms = Array.isArray(value.case) ? value.case : [value.case];
-    if (arms.length === 0) throw new Error("CASE needs at least one arm");
-    return {
-      kind: "case",
-      arms: arms.map((arm) => {
-        if (!isObject(arm) || !("when" in arm) || !("then" in arm)) throw new Error("A CASE arm needs when and then");
-        checkKeys(arm, ["when", "then"]);
-        return { when: arm.when as QueryCondition | undefined, then: parseValue(arm.then) };
-      }),
-      otherwise: parseValue("else" in value ? value.else : null),
-      hasElse: "else" in value,
-    };
+    checkKeys(value, ["case"]);
+    return parseCase(value.case);
   }
   return { kind: "literal", value };
+}
+
+/**
+ * Reads WHEN entries and an optional final ELSE into the values needed for SQL rendering.
+ * Requires at least one WHEN, even if its condition may later be pruned.
+ */
+function parseCase(input: unknown): Extract<Value, { kind: "case" }> {
+  const entries = Array.isArray(input) ? input : [input];
+  const result: Extract<Value, { kind: "case" }> = {
+    kind: "case",
+    arms: [],
+    otherwise: parseValue(null),
+    hasElse: false,
+  };
+  for (const [i, entry] of entries.entries()) {
+    if (isObject(entry) && "else" in entry) {
+      checkKeys(entry, ["else"]);
+      if (result.arms.length === 0) throw new Error("CASE needs a WHEN arm before ELSE");
+      if (i !== entries.length - 1) throw new Error("CASE ELSE must be last");
+      result.otherwise = parseValue(entry.else);
+      result.hasElse = true;
+    } else {
+      if (!isObject(entry) || !("when" in entry) || !("then" in entry))
+        throw new Error("A CASE arm needs when and then");
+      checkKeys(entry, ["when", "then"]);
+      result.arms.push({ when: entry.when as QueryCondition | undefined, then: parseValue(entry.then) });
+    }
+  }
+  if (result.arms.length === 0) throw new Error("CASE needs at least one arm");
+  return result;
 }
 
 /**
@@ -313,7 +360,17 @@ function chooseCodec(value: Value): ResultCodec {
       const a = first.outputType;
       const b = other.outputType;
       if (!a || !b || a.dbType !== b.dbType || a.domain !== b.domain || a.idMeta !== b.idMeta) {
-        throw new Error("Expression operands need matching SQL types and codecs");
+        const mismatches =
+          !a || !b
+            ? ["unknown codec"]
+            : [
+                ...(a.dbType !== b.dbType ? ["SQL type"] : []),
+                ...(a.domain !== b.domain ? ["domain"] : []),
+                ...(a.idMeta !== b.idMeta ? ["ID target"] : []),
+              ];
+        throw new Error(
+          `Expression operands need matching SQL types and codecs: ${describeType(a)} vs ${describeType(b)}; mismatched ${mismatches.join(", ")}`,
+        );
       }
     }
     for (const leaf of leaves) {
@@ -321,8 +378,9 @@ function chooseCodec(value: Value): ResultCodec {
     }
     return first;
   }
-  const types = leaves.map((v) => literalType((v as { value: unknown }).value)).filter((v) => v !== undefined);
-  if (types.some((t) => t.domain !== types[0].domain)) throw new Error("Expression values must have compatible types");
+  const literals = leaves.filter((v): v is Extract<Value, { kind: "literal" }> => !(v instanceof BaseExpr));
+  const types = literals.map((v) => literalType(v.value)).filter((v) => v !== undefined);
+  for (const literal of literals) checkLiteral(literal.value, types[0]);
   return new LiteralCodec(types[0] ?? { dbType: "text", domain: String });
 }
 
@@ -402,8 +460,17 @@ function checkLiteral(value: unknown, type: TypeInfo | undefined): void {
     (domain === BigInt && typeof value !== "bigint") ||
     (domain === Date && !(value instanceof Date))
   ) {
-    throw new Error("Expression values must have compatible types");
+    throw new Error(
+      `Expression values must have compatible types: expected ${describeType(type)}, got ${inspect(value)} (${typeof value})`,
+    );
   }
+}
+
+/** Names the storage type, conversion domain, and entity tag involved in a codec mismatch. */
+function describeType(type: TypeInfo | undefined): string {
+  if (!type) return "unknown codec";
+  const domain = typeof type.domain === "function" ? type.domain.name : inspect(type.domain, { depth: 0 });
+  return `${type.dbType} (domain ${domain}${type.idMeta ? `, ID target ${type.idMeta.type}` : ""})`;
 }
 
 /** Rejects misspelled or mixed expression keys rather than silently ignoring them. */
@@ -413,7 +480,7 @@ function checkKeys(value: object, allowed: string[]): void {
   }
 }
 
-/** Narrows description objects without treating null as an object. */
+/** Narrows expression input objects without treating null as an object. */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

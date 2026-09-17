@@ -30,7 +30,7 @@ import {
   select,
 } from "src/entities/inserts";
 
-describe("EntityManager.reactions", () => {
+describe("reactions", () => {
   it.withCtx("creates the right internal reactions", async () => {
     const fn = expect.any(Function);
     expect(getInternalReactions(Author)).toMatchObject([

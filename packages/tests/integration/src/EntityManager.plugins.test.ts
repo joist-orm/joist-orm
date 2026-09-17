@@ -4,7 +4,7 @@ import { insertAuthor, insertBook, insertPublisher, insertTag, select } from "sr
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
-describe("EntityManger.plugins", () => {
+describe("EntityManager.plugins", () => {
   describe("ImmutableEntitiesPlugin", () => {
     it.withCtx("prevents writes to immutable entities", async (ctx) => {
       const { em } = ctx;

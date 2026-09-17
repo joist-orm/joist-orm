@@ -1,11 +1,10 @@
 import { getEmInternalApi } from "joist-orm";
+import { Author, newPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 import { zeroTo } from "src/utils";
 
-import { Author, newPublisher } from "./entities";
-
-describe("EntityManager.findWithNewOrChanged", () => {
+describe("em.findWithNewOrChanged", () => {
   it("finds existing, unloaded entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

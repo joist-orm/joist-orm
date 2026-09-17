@@ -32,7 +32,7 @@ import { PasswordValue } from "src/entities/types";
 import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
 import { ZodError } from "zod";
 
-describe("EntityManager.setQueries", () => {
+describe("em.query / sets", () => {
   describe("union", () => {
     it("removes duplicate rows within an operand", async () => {
       // Given an Author named Alice

@@ -13,7 +13,7 @@ import {
 import { Author, type AuthorId, Book, type BookId, Comment } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
-describe("EntityManager.setQueries.types", () => {
+describe("em.query / sets / types", () => {
   it("type-checks without executing queries", () => {
     // Given compile-time assertions that include deliberately invalid read queries
     // When referencing the assertion function instead of calling it

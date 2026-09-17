@@ -2,7 +2,7 @@ import { buildQuery } from "joist-knex";
 import { Book } from "src/entities";
 import { knex } from "src/testEm";
 
-describe("QueryParser", () => {
+describe("knex / quoting", () => {
   it("quotes with abbreviation", () => {
     // This is technically testing the old knex-based flow/quoting...
     const q = buildQuery(knex, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });

@@ -19,7 +19,7 @@ import { newEntityManager } from "src/testEm";
 
 const sm = expect.stringMatching;
 
-describe("EntityManager.reactiveRules", () => {
+describe("reactiveRules", () => {
   it.withCtx("runs m2o reactive rules", async ({ em }) => {
     // Given a Book with a rule on its m2o author.firstName
     const a = newAuthor(em, { firstName: "a1" });

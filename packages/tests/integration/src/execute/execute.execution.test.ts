@@ -5,7 +5,7 @@ import { insertAuthor, insertBook, insertTag, select } from "src/entities/insert
 import { newEntityManager, pool, queries, recordQuery, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
-describe("EntityManager.execute.execution", () => {
+describe("em.execute / execution", () => {
   describe("permissions", () => {
     it.each(["read-only", "in-memory-writes"] as const)(
       "rejects every mutation in %s mode before SQL",

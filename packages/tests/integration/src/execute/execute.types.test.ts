@@ -42,7 +42,7 @@ import {
 import { type Address, type IpAddress, PasswordValue, type Quotes } from "src/entities/types";
 import { newEntityManager } from "src/testEm";
 
-describe("EntityManager.execute.types", () => {
+describe("em.execute / types", () => {
   it("type-checks without executing statements", () => {
     // Given compile-time assertions containing valid and deliberately invalid SQL statements
     // When referencing the assertion function without calling it

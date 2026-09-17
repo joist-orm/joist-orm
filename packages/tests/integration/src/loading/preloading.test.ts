@@ -1,4 +1,5 @@
 import { testing } from "joist-orm";
+import { Author, Book, Critic, LargePublisher, Publisher } from "src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -15,11 +16,9 @@ import {
 import { jan1, jan2 } from "src/testDates";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
-import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
-
 const { partitionHint } = testing;
 
-describe("EntityManager.joins", () => {
+describe("preloading", () => {
   it("preloads o2m, m2o, and o2o relations", async () => {
     // Given a tree of Authors + Books + BookReviews + Comments
     await insertAuthor({ first_name: "a1" });

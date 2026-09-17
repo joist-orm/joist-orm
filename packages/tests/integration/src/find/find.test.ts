@@ -12,26 +12,6 @@ import {
   parseFindQuery,
 } from "joist-orm";
 import {
-  insertAuthor,
-  insertAuthorToTag,
-  insertBook,
-  insertBookReview,
-  insertComment,
-  insertCritic,
-  insertImage,
-  insertLargePublisher,
-  insertPublisher,
-  insertSmallPublisher,
-  insertSmallPublisherGroup,
-  insertTag,
-  insertUser,
-  update,
-} from "src/entities/inserts";
-import { PasswordValue } from "src/entities/types";
-import { jan1, jan2, jan3 } from "src/testDates";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
-
-import {
   Author,
   AuthorFilter,
   AuthorGraphQLFilter,
@@ -63,8 +43,27 @@ import {
   newAuthor,
   newBook,
   newTag,
-} from "./entities";
-import { twoOf } from "./utils";
+} from "src/entities";
+import {
+  insertAuthor,
+  insertAuthorToTag,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertCritic,
+  insertImage,
+  insertLargePublisher,
+  insertPublisher,
+  insertSmallPublisher,
+  insertSmallPublisherGroup,
+  insertTag,
+  insertUser,
+  update,
+} from "src/entities/inserts";
+import { PasswordValue } from "src/entities/types";
+import { jan1, jan2, jan3 } from "src/testDates";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import { twoOf } from "src/utils";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);
@@ -82,7 +81,7 @@ function parseAndOptimizeFindQuery(...args: Parameters<typeof parseFindQuery>): 
   return query;
 }
 
-describe("EntityManager.queries", () => {
+describe("em.find", () => {
   it("can find all", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

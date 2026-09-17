@@ -24,7 +24,7 @@ import { PasswordValue } from "src/entities/types";
 import { jan1, jan2 } from "src/testDates";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
-describe("EntityManager.rawQueries.where", () => {
+describe("em.query / where", () => {
   it("maps local domain names and encodes enum, date, and custom values", async () => {
     // Given an Author with a graduation date and a native enum preference
     await insertAuthor({ first_name: "Alice", graduated: jan1, favorite_shape: FavoriteShape.Circle });

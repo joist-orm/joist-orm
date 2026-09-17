@@ -1,19 +1,4 @@
 import {
-  insertAuthor,
-  insertBook,
-  insertBookReview,
-  insertComment,
-  insertLargePublisher,
-  insertPublisher,
-  insertPublisherGroup,
-  insertTag,
-  select,
-  update,
-} from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
-import { zeroTo } from "src/utils";
-
-import {
   Author,
   Book,
   Comment,
@@ -25,10 +10,24 @@ import {
   newBook,
   newPublisher,
   newTag,
-} from "./entities";
-import { jan1 } from "./testDates";
+} from "src/entities";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertLargePublisher,
+  insertPublisher,
+  insertPublisherGroup,
+  insertTag,
+  select,
+  update,
+} from "src/entities/inserts";
+import { jan1 } from "src/testDates";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { zeroTo } from "src/utils";
 
-describe("EntityManager.findOrCreate", () => {
+describe("em.findOrCreate", () => {
   it("can find with findOrCreate", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });

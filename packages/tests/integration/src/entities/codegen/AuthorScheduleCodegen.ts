@@ -60,7 +60,7 @@ export interface AuthorScheduleFields {
 }
 
 export interface AuthorScheduleColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<AuthorSchedule>;
     entity: AuthorSchedule;
@@ -68,10 +68,10 @@ export interface AuthorScheduleColumns {
     insert: "optional";
     update: false;
   };
-  "overview": { type: string; fieldName: "overview"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "author_id": {
+  overview: { type: string; fieldName: "overview"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";

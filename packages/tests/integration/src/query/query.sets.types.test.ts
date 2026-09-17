@@ -34,11 +34,11 @@ function typeAssertions() {
   // And Author, Book, and Comment aliases with distinct field and id domains
   const [a, b, c] = tables(Author, Book, Comment);
   // And required Author names and Book titles projected under the same output key
-  const authorNames = { from: a, select: { name: a.first_name } } satisfies Query;
+  const authorNames = { from: a, select: { name: a.firstName } } satisfies Query;
   // And a compatible Book branch with a different source column name
   const bookNames = { from: b, select: { name: b.title } } satisfies Query;
   // And nullable Author last names with the same output key
-  const lastNames = { from: a, select: { name: a.last_name } } satisfies Query;
+  const lastNames = { from: a, select: { name: a.lastName } } satisfies Query;
 
   // When applying each operation to two known compatible operands
   // Then all six operations infer the selected POJO, not an entity or an unknown row
@@ -90,7 +90,7 @@ function typeAssertions() {
   // Given a required Book title made nullable only by its branch's LEFT join
   const leftBookNames = {
     from: a,
-    join: [{ left: b, on: b.author_id.eq(a.id) }],
+    join: [{ left: b, on: b.authorId.eq(a.id) }],
     select: { name: b.title },
   } satisfies Query;
   // And a reusable query value that must retain that branch's actual nullable row
@@ -120,14 +120,14 @@ function typeAssertions() {
       union: [
         {
           from: a,
-          groupBy: [a.first_name],
-          select: { name: a.first_name, title: a.first_name, count: a.id.count() },
+          groupBy: [a.firstName],
+          select: { name: a.firstName, title: a.firstName, count: a.id.count() },
         },
         {
           from: a,
-          join: [{ left: b, on: b.author_id.eq(a.id) }],
-          groupBy: [a.first_name, b.title],
-          select: { name: a.first_name, title: b.title, count: b.id.count() },
+          join: [{ left: b, on: b.authorId.eq(a.id) }],
+          groupBy: [a.firstName, b.title],
+          select: { name: a.firstName, title: b.title, count: b.id.count() },
         },
       ],
     }),
@@ -157,7 +157,7 @@ function typeAssertions() {
   // And Book orders made nullable by a LEFT join rather than by their field definition
   const leftOrders = {
     from: a,
-    join: [{ left: b, on: b.author_id.eq(a.id) }],
+    join: [{ left: b, on: b.authorId.eq(a.id) }],
     select: b.order,
   } satisfies Query;
   // When constructing ordinary scalar subqueries and executing scalar SELECT inputs
@@ -204,8 +204,8 @@ function typeAssertions() {
   expectTypeOf(
     em.query({
       from: a,
-      join: [{ left: namedNames, on: namedNames.name.eq(a.first_name) }],
-      select: { author: a.first_name, name: namedNames.name, fallback: namedNames.name.coalesce("") },
+      join: [{ left: namedNames, on: namedNames.name.eq(a.firstName) }],
+      select: { author: a.firstName, name: namedNames.name, fallback: namedNames.name.coalesce("") },
     }),
   ).resolves.toEqualTypeOf<{ author: string; name: string | null; fallback: string }[]>();
 
@@ -240,7 +240,7 @@ function typeAssertions() {
   expectTypeOf(em.query(nameOrOrderInput)).resolves.toEqualTypeOf<({ name: string } | { order: number })[]>();
 
   // Given matching name/detail key sets with opposite insertion order and different detail nullability
-  const authorDetails = { from: a, select: { name: a.first_name, detail: a.last_name } } satisfies Query;
+  const authorDetails = { from: a, select: { name: a.firstName, detail: a.lastName } } satisfies Query;
   // And a reusable Book projection whose first key is detail rather than name
   const bookDetails = query({ from: b, select: { detail: b.notes, name: b.title }, as: "book_details" });
   // When combining projections by their keys rather than their insertion order
@@ -254,7 +254,7 @@ function typeAssertions() {
   expectTypeOf(
     query({
       union: [
-        { from: a, select: { union: a.first_name } },
+        { from: a, select: { union: a.firstName } },
         { from: b, select: { union: b.title } },
       ],
       orderBy: { union: "ASC" },
@@ -265,7 +265,7 @@ function typeAssertions() {
   // Given Author PK and Book FK branches that both select Author ids
   const authorIds = { from: a, select: { id: a.id } } satisfies Query;
   // And the same id domain reached through Book.author, not Book.id
-  const bookAuthorIds = { from: b, select: { id: b.author_id } } satisfies Query;
+  const bookAuthorIds = { from: b, select: { id: b.authorId } } satisfies Query;
   // When combining PK and FK values in either operand order
   const ids = query({ union: [authorIds, bookAuthorIds], as: "author_ids" });
   // And selecting the compound's Author ids through an ordinary scalar subquery for membership checks
@@ -276,7 +276,7 @@ function typeAssertions() {
   expectTypeOf(scalarIds).toEqualTypeOf<ScalarQuery<AuthorId>>();
   expectTypeOf(em.query({ from: ids, select: ids.id })).resolves.toEqualTypeOf<AuthorId[]>();
   ids.id.eq("a:1");
-  ids.id.eq(b.author_id);
+  ids.id.eq(b.authorId);
   expectTypeOf(ids.id.coalesce("a:1")).toEqualTypeOf<Expr<AuthorId, never>>();
   a.id.in(scalarIds);
   c.parent.in(scalarIds);
@@ -378,13 +378,13 @@ function typeAssertions() {
   // @ts-expect-error: FROM belongs to a branch, not the compound
   em.query({ union: readonlyNames, from: a });
   // @ts-expect-error: SELECT belongs to a branch, not the compound
-  query({ union: readonlyNames, select: { name: a.first_name } });
+  query({ union: readonlyNames, select: { name: a.firstName } });
   // @ts-expect-error: JOIN belongs to a branch, not the compound
-  em.query({ union: readonlyNames, join: [{ left: b, on: b.author_id.eq(a.id) }] });
+  em.query({ union: readonlyNames, join: [{ left: b, on: b.authorId.eq(a.id) }] });
   // @ts-expect-error: WHERE belongs to a branch or an outer query
-  query({ union: readonlyNames, where: a.first_name.ne("") });
+  query({ union: readonlyNames, where: a.firstName.ne("") });
   // @ts-expect-error: GROUP BY belongs to a branch or an outer query
-  em.query({ union: readonlyNames, groupBy: [a.first_name] });
+  em.query({ union: readonlyNames, groupBy: [a.firstName] });
   // @ts-expect-error: HAVING belongs to a branch or an outer query
   query({ union: readonlyNames, having: a.id.count().gt(0) });
   // @ts-expect-error: DISTINCT is a branch clause, not a compound flag
@@ -512,9 +512,9 @@ function typeAssertions() {
   // @ts-expect-error: directions use uppercase SQL literals
   query({ union: readonlyNames, orderBy: { name: "asc" } });
   // @ts-expect-error: a compound cannot order by a branch expression
-  em.query({ union: readonlyNames, orderBy: [{ sort: a.first_name, order: "ASC" }] });
+  em.query({ union: readonlyNames, orderBy: [{ sort: a.firstName, order: "ASC" }] });
   // @ts-expect-error: arbitrary expression ordering requires an ordinary outer query
-  query({ union: readonlyNames, orderBy: [{ sort: sql<string>`lower(${a.first_name})`, order: "DESC" }] });
+  query({ union: readonlyNames, orderBy: [{ sort: sql<string>`lower(${a.firstName})`, order: "DESC" }] });
 
   // When an otherwise compatible outer row hides an invalid nested compound
   // Then recursive checks validate the nested operands, not just the outer result shape
@@ -534,19 +534,19 @@ function typeAssertions() {
   query({ union: [{ intersect: [{ from: b, select: b.title }, authorNames] }, bookNames] });
   // prettier-ignore
   // @ts-expect-error: an all-scalar inline compound is not a later POJO set operand
-  query({ union: [authorNames, { union: [{ from: a, select: a.first_name }, { from: b, select: b.title }] }] });
+  query({ union: [authorNames, { union: [{ from: a, select: a.firstName }, { from: b, select: b.title }] }] });
   // @ts-expect-error: an all-scalar reusable compound is not a first POJO set operand
   em.query({ union: [{ except: [orders, ages] }, bookNames] });
   // @ts-expect-error: nested ordering must reject unknown keys in variable-held objects too
   query({ union: [authorNames, { except: [authorNames, bookNames], orderBy: unknownOrder }] });
   // @ts-expect-error: nested compound roots cannot own WHERE clauses
-  em.query({ union: [authorNames, { union: [authorNames, bookNames], where: a.first_name.ne("") }] });
+  em.query({ union: [authorNames, { union: [authorNames, bookNames], where: a.firstName.ne("") }] });
 
   // Given an ordinary Query with its original explicit select and join type parameters
-  const joinedAuthors: Query<{ name: typeof a.first_name; title: typeof b.title }, typeof leftBookNames.join> = {
+  const joinedAuthors: Query<{ name: typeof a.firstName; title: typeof b.title }, typeof leftBookNames.join> = {
     from: a,
     join: leftBookNames.join,
-    select: { name: a.first_name, title: b.title },
+    select: { name: a.firstName, title: b.title },
   };
   // And an ordinary POJO widened too far by a bare Query annotation
   const widenedQuery: Query = authorNames;
@@ -577,9 +577,9 @@ function typeAssertions() {
   // @ts-expect-error: direct execution still rejects a widened select
   em.query(widenedQuery);
   // @ts-expect-error: ordinary queries still require a source alias or a query value
-  query({ from: authorNames, select: { name: a.first_name } });
+  query({ from: authorNames, select: { name: a.firstName } });
   // @ts-expect-error: the set overload must not bypass ordinary source validation
-  em.query({ from: authorNames, select: { name: a.first_name } });
+  em.query({ from: authorNames, select: { name: a.firstName } });
   // @ts-expect-error: Book is absent from this ordinary query's source scope
   query({ from: a, select: { title: b.title } });
   // @ts-expect-error: direct execution must retain the same ordinary scope check
@@ -587,10 +587,10 @@ function typeAssertions() {
   // @ts-expect-error: an ordinary query still requires SELECT
   query({ from: a });
   // @ts-expect-error: an ordinary query still requires FROM
-  em.query({ select: { name: a.first_name } });
+  em.query({ select: { name: a.firstName } });
 
   // Given a reusable POJO with an output key that also names an ordinary query clause
-  const selectedNames = query({ from: a, select: { select: a.first_name } });
+  const selectedNames = query({ from: a, select: { select: a.firstName } });
   // When composing and sorting that POJO instead of inspecting its select-named expression as a clause
   const selectedUnion = query({ union: [selectedNames, selectedNames], orderBy: { select: "ASC" }, as: "selected" });
   // Then the subquery brand, not its column names, determines table identity

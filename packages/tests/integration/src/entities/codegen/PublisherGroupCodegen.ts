@@ -73,7 +73,7 @@ export interface PublisherGroupFields {
 }
 
 export interface PublisherGroupColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<PublisherGroup>;
     entity: PublisherGroup;
@@ -81,23 +81,23 @@ export interface PublisherGroupColumns {
     insert: "optional";
     update: false;
   };
-  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
-  "number_of_book_reviews": {
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  numberOfBookReviews: {
     type: number;
     fieldName: "numberOfBookReviews";
     nullable: false;
     insert: "required";
     update: true;
   };
-  "number_of_book_reviews_formatted": {
+  numberOfBookReviewsFormatted: {
     type: string;
     fieldName: "numberOfBookReviewsFormatted";
     nullable: false;
     insert: "required";
     update: true;
   };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface PublisherGroupOpts {

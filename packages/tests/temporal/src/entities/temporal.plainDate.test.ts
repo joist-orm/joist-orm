@@ -62,7 +62,7 @@ describe("plainDate", () => {
     // When projecting each Author's birthday and birthday arrays
     const rows = await em.query({
       from: a,
-      select: { birthday: a.birthday, childrenBirthdays: a.children_birthdays, maybeBirthdays: a.maybe_birthdays },
+      select: { birthday: a.birthday, childrenBirthdays: a.childrenBirthdays, maybeBirthdays: a.maybeBirthdays },
       orderBy: [{ sort: a.firstName, order: "ASC" }],
     });
     // Then dates decode to PlainDate values while empty arrays and SQL NULL remain distinct

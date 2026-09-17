@@ -20,7 +20,7 @@ const authorMetaColumns = {
   "delete": new Column("delete", true, false, false, false, true, undefined, new PrimitiveSerde("boolean")),
   "createdAt": new Column("createdAt", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
   "updatedAt": new Column("updatedAt", false, false, false, true, true, undefined, new ZonedDateTimeSerde("timestamp with time zone")),
-  "favorite_colors": new Column("favorite_colors", true, true, false, false, true, undefined, new EnumArrayFieldSerde("int[]", Colors)),
+  "favoriteColors": new Column("favorite_colors", true, true, false, false, true, undefined, new EnumArrayFieldSerde("int[]", Colors)),
 } satisfies ColumnDescriptors;
 const bookMetaColumns = { "id": new Column("id", false, true, false, false, true, () => bookMeta, new KeySerde("b", "int")), "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")), "authorId": new Column("authorId", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")) } satisfies ColumnDescriptors;
 
@@ -40,7 +40,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new SimpleFieldSerde("delete", authorMetaColumns["delete"]), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updatedAt"]), immutable: false },
-    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new SimpleFieldSerde("favoriteColors", authorMetaColumns["favorite_colors"]), immutable: false, default: "schema" },
+    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new SimpleFieldSerde("favoriteColors", authorMetaColumns["favoriteColors"]), immutable: false, default: "schema" },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
   },
   columns: authorMetaColumns,

@@ -76,11 +76,11 @@ export interface CriticFields {
 }
 
 export interface CriticColumns {
-  "id": { fieldName: "id"; type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "favorite_large_publisher_id": {
+  id: { fieldName: "id"; type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  favoriteLargePublisherId: {
     type: IdOf<LargePublisher>;
     entity: LargePublisher;
     fieldName: "favoriteLargePublisher";
@@ -88,7 +88,7 @@ export interface CriticColumns {
     insert: "optional";
     update: true;
   };
-  "group_id": {
+  groupId: {
     type: IdOf<PublisherGroup>;
     entity: PublisherGroup;
     fieldName: "group";

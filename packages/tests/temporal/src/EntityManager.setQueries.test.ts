@@ -73,8 +73,8 @@ describe("EntityManager.setQueries", () => {
     // When subtracting one Book's publication instant from all publication instants
     const rows = await em.query({
       except: [
-        { from: b, select: { publishedAt: b.published_at } },
-        { from: other, where: other.id.eq(removed.id), select: { publishedAt: other.published_at } },
+        { from: b, select: { publishedAt: b.publishedAt } },
+        { from: other, where: other.id.eq(removed.id), select: { publishedAt: other.publishedAt } },
       ],
     });
 
@@ -116,14 +116,14 @@ describe("EntityManager.setQueries", () => {
     // And a named compound exposing the agreed field codecs to the outer query
     const dates = query({
       union: [
-        { from: a, select: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.created_at } },
+        { from: a, select: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.createdAt } },
         {
           from: other,
           select: {
             birthday: other.birthday,
             time: other.time,
             timestamp: other.timestamp,
-            createdAt: other.created_at,
+            createdAt: other.createdAt,
           },
         },
       ],
@@ -191,7 +191,7 @@ describe("EntityManager.setQueries", () => {
       { from: a, select: { value: a.birthday.arrayAgg() } },
       { from: a, select: { value: a.time.arrayAgg() } },
       { from: a, select: { value: a.timestamp.arrayAgg() } },
-      { from: b, select: { value: b.published_at.arrayAgg() } },
+      { from: b, select: { value: b.publishedAt.arrayAgg() } },
     ] as const;
     // And isolated recording so an empty log proves rejection before PostgreSQL
     resetQueryCount();

@@ -64,18 +64,11 @@ export interface ChildItemFields {
 }
 
 export interface ChildItemColumns {
-  "id": {
-    fieldName: "id";
-    type: IdOf<ChildItem>;
-    entity: ChildItem;
-    nullable: false;
-    insert: "optional";
-    update: false;
-  };
-  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "child_group_id": {
+  id: { fieldName: "id"; type: IdOf<ChildItem>; entity: ChildItem; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  childGroupId: {
     type: IdOf<ChildGroup>;
     entity: ChildGroup;
     fieldName: "childGroup";
@@ -83,7 +76,7 @@ export interface ChildItemColumns {
     insert: "required";
     update: true;
   };
-  "parent_item_id": {
+  parentItemId: {
     type: IdOf<ParentItem>;
     entity: ParentItem;
     fieldName: "parentItem";

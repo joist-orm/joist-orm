@@ -199,7 +199,7 @@ describe("reactionLogging", () => {
          "    Author.rf -> [ a#1 ]↩",
          "    took 0 millis (em.entities=1)↩",
          "Validating from 1 changed entities... (em.entities=1)↩",
-         "  Walked 1 Author.(self) paths, found 1 Author.addRule(AuthorCodegen.ts:533) to validate↩",
+         "  Walked 1 Author.(self) paths, found 1 Author.addRule(AuthorCodegen.ts:527) to validate↩",
          "    [ a#1 ] -> [ a#1 ]↩",
          "  Walked 1 Author.(self) paths, found 1 Author.addRule(Author.ts:478) to validate↩",
          "    [ a#1 ] -> [ a#1 ]↩",

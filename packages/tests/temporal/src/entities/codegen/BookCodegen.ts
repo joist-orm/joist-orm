@@ -72,51 +72,45 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "published_at": {
+  id: { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  publishedAt: {
     type: Temporal.ZonedDateTime;
     fieldName: "publishedAt";
     nullable: false;
     insert: "required";
     update: true;
   };
-  "timestamp_tzs": {
+  timestampTzs: {
     type: Temporal.ZonedDateTime[];
     fieldName: "timestampTzs";
     nullable: false;
     insert: "optional";
     update: true;
   };
-  "maybe_timestamp_tzs": {
+  maybeTimestampTzs: {
     type: Temporal.ZonedDateTime[];
     fieldName: "maybeTimestampTzs";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "created_at": {
+  createdAt: {
     type: Temporal.ZonedDateTime;
     fieldName: "createdAt";
     nullable: false;
     insert: "optional";
     update: true;
   };
-  "updated_at": {
+  updatedAt: {
     type: Temporal.ZonedDateTime;
     fieldName: "updatedAt";
     nullable: false;
     insert: "optional";
     update: true;
   };
-  "deleted_at": {
-    type: Temporal.ZonedDateTime;
-    fieldName: "deletedAt";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "author_id": {
+  deletedAt: { type: Temporal.ZonedDateTime; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";

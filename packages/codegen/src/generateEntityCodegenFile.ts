@@ -248,7 +248,7 @@ export function generateEntityCodegenFile(
     }
 
     export interface ${entityName}Columns ${maybeBaseColumns} {
-      ${Object.entries(columns).map(([name, descriptor]) => code`${JSON.stringify(name)}: ${descriptor};`)}
+      ${Object.entries(columns).map(([name, descriptor]) => code`${camelCase(name)}: ${descriptor};`)}
     }
 
     export interface ${entity.optsName} ${maybeBaseOpts} {

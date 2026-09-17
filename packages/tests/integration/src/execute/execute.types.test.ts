@@ -69,7 +69,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // And all Book SQL-required inputs, including fields with configuration-only defaults
   const values = {
     title: "Imported Book",
-    author_id: authorId,
+    authorId: authorId,
     notes: "Imported without hooks",
   } satisfies InsertValues<Book>;
 
@@ -86,7 +86,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   const insert = {
     insert: b,
     values,
-    returning: { id: b.id, author: b.author_id, title: b.title },
+    returning: { id: b.id, author: b.authorId, title: b.title },
   } satisfies InsertStatement<Book>;
   // And a reusable UPDATE with target-column arithmetic and scalar RETURNING
   const update = {
@@ -100,7 +100,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     delete: b,
     where: b.id.eq(bookId),
     softDeletes: "include",
-    returning: b.reviewer_id,
+    returning: b.reviewerId,
   } satisfies DeleteStatement<Book>;
   // When executing these POJOs without explicit execution type arguments
   // Then satisfies retains exact scalar and POJO envelopes, including ID flavors and SQL NULL
@@ -134,7 +134,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<{ title: string; acknowledgements: string | null }>>();
   expectTypeOf(
-    em.execute({ delete: b, allowAll: true, returning: { id: b.id, reviewer: b.reviewer_id } }),
+    em.execute({ delete: b, allowAll: true, returning: { id: b.id, reviewer: b.reviewerId } }),
   ).resolves.toEqualTypeOf<ExecuteResult<{ id: BookId; reviewer: AuthorId | null }>>();
   expectTypeOf(em.execute({ delete: b, allowAll: true, returning: b.title })).resolves.toEqualTypeOf<
     ExecuteResult<string>
@@ -143,8 +143,8 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
 
   // Given readonly bulk rows with different optional keys and a permitted explicit serial primary key
   const bulk = [
-    { ...values, id: bookId, author_id: author, order: undefined, acknowledgements: null },
-    { ...values, order: sql<number>`DEFAULT`, prequel_id: bookId },
+    { ...values, id: bookId, authorId: author, order: undefined, acknowledgements: null },
+    { ...values, order: sql<number>`DEFAULT`, prequelId: bookId },
   ] as const;
   // And a scalar subquery whose source belongs to its own lexical scope
   const source = table(Book, "source");
@@ -161,8 +161,8 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       update: b,
-      set: { title: b.title, reviewer_id: undefined, notes: sql<string>`DEFAULT` },
-      where: { and: [b.author_id.eq(authorId), b.order.gt(0)] },
+      set: { title: b.title, reviewerId: undefined, notes: sql<string>`DEFAULT` },
+      where: { and: [b.authorId.eq(authorId), b.order.gt(0)] },
       softDeletes: "exclude",
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<never>>();
@@ -174,25 +174,25 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   ).resolves.toEqualTypeOf<ExecuteResult<string | null>>();
 
   // Given an Author import with a required persisted derived field and timestamps omitted by convention
-  const authorValues = { first_name: "Imported", number_of_books: 0 } satisfies InsertValues<Author>;
+  const authorValues = { firstName: "Imported", numberOfBooks: 0 } satisfies InsertValues<Author>;
   // And native values for physical fields, including derived arrays and nullable enum storage
   const nativeValues = {
     ...authorValues,
     initials: "I",
-    book_comments: null,
-    nick_names: ["First"],
-    nick_names_upper: ["FIRST"],
+    bookComments: null,
+    nickNames: ["First"],
+    nickNamesUpper: ["FIRST"],
     graduated: new Date(),
-    number_of_atoms: 1n,
+    numberOfAtoms: 1n,
     address: { street: "Main Street" },
-    business_address: { street: "Office Street" },
+    businessAddress: { street: "Office Street" },
     quotes: ["A quote"],
     certificate: new Uint8Array([1]),
-    range_of_books: BookRange.Few,
-    favorite_colors: [Color.Red],
-    favorite_shape: FavoriteShape.Circle,
-    mentor_id: author,
-    favorite_book_id: bookId,
+    rangeOfBooks: BookRange.Few,
+    favoriteColors: [Color.Red],
+    favoriteShape: FavoriteShape.Circle,
+    mentorId: author,
+    favoriteBookId: bookId,
   } satisfies InsertValues<Author>;
   // And a RETURNING projection checked as a reusable POJO rather than an entity alias
   const nativeInsert = {
@@ -200,19 +200,19 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     values: nativeValues,
     returning: {
       id: a.id,
-      numberOfBooks: a.number_of_books,
-      nickNames: a.nick_names,
+      numberOfBooks: a.numberOfBooks,
+      nickNames: a.nickNames,
       graduated: a.graduated,
-      atoms: a.number_of_atoms,
+      atoms: a.numberOfAtoms,
       address: a.address,
-      businessAddress: a.business_address,
+      businessAddress: a.businessAddress,
       quotes: a.quotes,
       certificate: a.certificate,
-      range: a.range_of_books,
-      colors: a.favorite_colors,
-      shape: a.favorite_shape,
-      publisher: a.publisher_id,
-      createdAt: a.created_at,
+      range: a.rangeOfBooks,
+      colors: a.favoriteColors,
+      shape: a.favoriteShape,
+      publisher: a.publisherId,
+      createdAt: a.createdAt,
     },
   } satisfies InsertStatement<Author>;
   // When inserting native values and explicitly backfilling persisted derived columns
@@ -238,30 +238,30 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       update: a,
-      set: { number_of_books: 2, initials: "AB", nick_names_upper: ["A"], favorite_book_id: bookId },
+      set: { numberOfBooks: 2, initials: "AB", nickNamesUpper: ["A"], favoriteBookId: bookId },
       allowAll: true,
-      returning: a.number_of_books,
+      returning: a.numberOfBooks,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
   expectTypeOf(
     em.execute({
       update: a,
       set: {
-        favorite_colors: null,
+        favoriteColors: null,
         address: null,
-        business_address: null,
+        businessAddress: null,
         quotes: null,
         graduated: null,
-        number_of_atoms: null,
+        numberOfAtoms: null,
         certificate: null,
-        mentor_id: null,
+        mentorId: null,
       },
       allowAll: true,
-      returning: a.favorite_colors,
+      returning: a.favoriteColors,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<Color[] | null>>();
   expectTypeOf(
-    em.execute({ update: a, set: { favorite_colors: [] }, allowAll: true, returning: a.favorite_colors }),
+    em.execute({ update: a, set: { favoriteColors: [] }, allowAll: true, returning: a.favoriteColors }),
   ).resolves.toEqualTypeOf<ExecuteResult<Color[] | null>>();
   expectTypeOf(
     em.execute({
@@ -272,7 +272,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
         bigint: 1n,
         decimal: 1.5,
         real: 1.5,
-        double_precision: 1.5,
+        doublePrecision: 1.5,
         json: { imported: true },
       },
       returning: stat.decimal,
@@ -292,7 +292,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     PasswordValue | ExprLike<PasswordValue | null> | null | undefined
   >();
   expectTypeOf<User["passwordHistory"]>().toEqualTypeOf<PasswordValue[] | undefined>();
-  expectTypeOf<UpdateValues<User>["password_history"]>().toEqualTypeOf<
+  expectTypeOf<UpdateValues<User>["passwordHistory"]>().toEqualTypeOf<
     PasswordValue[] | ExprLike<PasswordValue[] | null> | null | undefined
   >();
   expectTypeOf<AuthorStat["decimalSamples"]>().toEqualTypeOf<number[] | undefined>();
@@ -300,9 +300,9 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       update: stat,
-      set: { decimal_samples: [1.25], bigint_samples: [9007199254740993n] },
+      set: { decimalSamples: [1.25], bigintSamples: [9007199254740993n] },
       allowAll: true,
-      returning: { decimal: stat.decimal_samples, bigint: stat.bigint_samples },
+      returning: { decimal: stat.decimalSamples, bigint: stat.bigintSamples },
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<{ decimal: number[] | null; bigint: bigint[] | null }>>();
   const user = table(User);
@@ -310,30 +310,30 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     em.execute({
       insert: tag,
       values: { name: "Password audit" },
-      returning: query({ from: user, select: user.password_history, limit: 1 }),
+      returning: query({ from: user, select: user.passwordHistory, limit: 1 }),
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<PasswordValue[] | null>>();
   // @ts-expect-error: numeric samples retain number elements
-  em.execute({ update: stat, set: { decimal_samples: ["1.25"] }, allowAll: true });
+  em.execute({ update: stat, set: { decimalSamples: ["1.25"] }, allowAll: true });
   // @ts-expect-error: bigint samples cannot accept potentially imprecise numbers
-  em.execute({ update: stat, set: { bigint_samples: [1] }, allowAll: true });
+  em.execute({ update: stat, set: { bigintSamples: [1] }, allowAll: true });
   // @ts-expect-error: custom array elements are PasswordValue objects, not encoded strings
-  user.password_history.eq(["encoded"]);
-  expectTypeOf<InsertValues<User>["ip_address"]>().toEqualTypeOf<
+  user.passwordHistory.eq(["encoded"]);
+  expectTypeOf<InsertValues<User>["ipAddress"]>().toEqualTypeOf<
     IpAddress | ExprLike<IpAddress | null> | null | undefined
   >();
-  expectTypeOf<InsertValues<Book>["author_id"]>().toEqualTypeOf<Author | AuthorId | ExprLike<AuthorId>>();
-  expectTypeOf<UpdateValues<Book>["reviewer_id"]>().toEqualTypeOf<
+  expectTypeOf<InsertValues<Book>["authorId"]>().toEqualTypeOf<Author | AuthorId | ExprLike<AuthorId>>();
+  expectTypeOf<UpdateValues<Book>["reviewerId"]>().toEqualTypeOf<
     Author | AuthorId | ExprLike<AuthorId | null> | null | undefined
   >();
-  expectTypeOf<InsertValues<Author>["number_of_books"]>().toEqualTypeOf<number | ExprLike<number>>();
-  expectTypeOf<InsertValues<Book>["created_at"]>().toEqualTypeOf<Date | ExprLike<Date> | undefined>();
+  expectTypeOf<InsertValues<Author>["numberOfBooks"]>().toEqualTypeOf<number | ExprLike<number>>();
+  expectTypeOf<InsertValues<Book>["createdAt"]>().toEqualTypeOf<Date | ExprLike<Date> | undefined>();
 
   // Given a reusable read POJO selecting every required Book column in physical names
   const sourceRead = {
     from: source,
-    where: source.author_id.eq(authorId),
-    select: { title: source.title, author_id: source.author_id, notes: source.notes },
+    where: source.authorId.eq(authorId),
+    select: { title: source.title, authorId: source.authorId, notes: source.notes },
     orderBy: { title: "ASC" },
     limit: 2,
     offset: 1,
@@ -341,7 +341,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // And the same named columns reordered through a reusable query value
   const sourceValue = query({
     from: source,
-    select: { notes: source.notes, title: source.title, author_id: source.author_id },
+    select: { notes: source.notes, title: source.title, authorId: source.authorId },
   });
   // And a compound source retaining both branches and their matching output domains
   const compound = { unionAll: [sourceRead, sourceValue], orderBy: { title: "DESC" }, limit: 3 } satisfies SetQuery;
@@ -362,16 +362,16 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     ExecuteResult<string>
   >();
   expectTypeOf(
-    em.execute({ insert: tag, from: { from: a, select: { name: a.first_name } }, returning: tag.id }),
+    em.execute({ insert: tag, from: { from: a, select: { name: a.firstName } }, returning: tag.id }),
   ).resolves.toEqualTypeOf<ExecuteResult<TagId>>();
   expectTypeOf(
     em.execute({
       insert: a,
       from: {
         from: a,
-        select: { first_name: a.first_name, number_of_books: a.number_of_books, last_name: a.last_name },
+        select: { firstName: a.firstName, numberOfBooks: a.numberOfBooks, lastName: a.lastName },
       },
-      returning: a.last_name,
+      returning: a.lastName,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<string | null>>();
 
@@ -379,7 +379,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   const authorIds = query({
     unionAll: [
       { from: a, select: { id: a.id } },
-      { from: source, select: { id: source.author_id } },
+      { from: source, select: { id: source.authorId } },
     ],
   });
   // And an ordinary scalar wrapper naming the compound's ID column for assignment and membership
@@ -389,9 +389,9 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       update: b,
-      set: { author_id: scalarIds.coalesce(authorId) },
-      where: b.author_id.in(scalarIds),
-      returning: b.author_id,
+      set: { authorId: scalarIds.coalesce(authorId) },
+      where: b.authorId.in(scalarIds),
+      returning: b.authorId,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<AuthorId>>();
 
@@ -404,16 +404,16 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(em.execute({ from: b, select: b.title })).resolves.toEqualTypeOf<ExecuteResult<string>>();
   expectTypeOf(em.execute(scalarRead)).resolves.toEqualTypeOf<ExecuteResult<number | null>>();
   expectTypeOf(em.execute(sourceRead)).resolves.toEqualTypeOf<
-    ExecuteResult<{ title: string; author_id: AuthorId; notes: string }>
+    ExecuteResult<{ title: string; authorId: AuthorId; notes: string }>
   >();
   expectTypeOf(em.execute(sourceValue)).resolves.toEqualTypeOf<
-    ExecuteResult<{ notes: string; title: string; author_id: AuthorId }>
+    ExecuteResult<{ notes: string; title: string; authorId: AuthorId }>
   >();
   expectTypeOf(em.execute(compound)).resolves.toEqualTypeOf<
-    ExecuteResult<{ title: string; author_id: AuthorId; notes: string }>
+    ExecuteResult<{ title: string; authorId: AuthorId; notes: string }>
   >();
   expectTypeOf(em.execute(query(compound))).resolves.toEqualTypeOf<
-    ExecuteResult<{ title: string; author_id: AuthorId; notes: string }>
+    ExecuteResult<{ title: string; authorId: AuthorId; notes: string }>
   >();
   expectTypeOf(em.execute({ from: b, select: b })).resolves.toEqualTypeOf<ExecuteResult<Book>>();
   expectTypeOf(em.execute(entityRead)).resolves.toEqualTypeOf<ExecuteResult<Book>>();
@@ -434,13 +434,13 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When required SQL inputs are missing, undefined, null, or given the wrong native domain
   // Then configuration defaults, factories, and ORM-derived flags do not relax physical constraints
   // @ts-expect-error: Book.title is SQL-required
-  em.execute({ insert: b, values: { author_id: authorId, notes: "Imported" } });
+  em.execute({ insert: b, values: { authorId: authorId, notes: "Imported" } });
   // @ts-expect-error: Book.author has only a configuration default
   em.execute({ insert: b, values: { title: "Imported", notes: "Imported" } });
   // @ts-expect-error: Book.notes has only a configuration default
-  em.execute({ insert: b, values: { title: "Imported", author_id: authorId } });
+  em.execute({ insert: b, values: { title: "Imported", authorId: authorId } });
   // @ts-expect-error: persisted derived Author.numberOfBooks is physically NOT NULL without a SQL default
-  em.execute({ insert: a, values: { first_name: "Imported" } });
+  em.execute({ insert: a, values: { firstName: "Imported" } });
   // @ts-expect-error: every bulk row must supply the required Book fields
   em.execute({ insert: b, values: [values, { title: "Incomplete" }] });
   // @ts-expect-error: an empty row is not the supported empty-array shortcut
@@ -448,13 +448,13 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: undefined cannot omit required Book.notes
   em.execute({ insert: b, values: { ...values, notes: undefined } });
   // @ts-expect-error: null cannot replace required Book.author
-  em.execute({ insert: b, values: { ...values, author_id: null } });
+  em.execute({ insert: b, values: { ...values, authorId: null } });
   // @ts-expect-error: null cannot replace a required scalar field
   em.execute({ update: b, set: { title: null }, allowAll: true });
   // @ts-expect-error: persisted derived columns retain physical NOT NULL
-  em.execute({ update: a, set: { number_of_books: null }, allowAll: true });
+  em.execute({ update: a, set: { numberOfBooks: null }, allowAll: true });
   // @ts-expect-error: optional server-supplied timestamps are not nullable
-  em.execute({ insert: b, values: { ...values, created_at: null } });
+  em.execute({ insert: b, values: { ...values, createdAt: null } });
   // @ts-expect-error: Book.order uses numbers, not strings
   em.execute({ update: b, set: { order: "1" }, allowAll: true });
   // @ts-expect-error: expression domains must match assignments
@@ -462,9 +462,9 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: zero-row scalar subqueries are nullable until a fallback is supplied
   em.execute({ insert: b, values: { ...values, title: sourceTitle } });
   // @ts-expect-error: Book IDs cannot satisfy an Author FK
-  em.execute({ insert: b, values: { ...values, author_id: bookId } });
+  em.execute({ insert: b, values: { ...values, authorId: bookId } });
   // @ts-expect-error: nullable FKs still retain the Author ID brand
-  em.execute({ update: b, set: { reviewer_id: bookId }, allowAll: true });
+  em.execute({ update: b, set: { reviewerId: bookId }, allowAll: true });
   // @ts-expect-error: an explicit INSERT primary key must have the target's ID brand
   em.execute({ insert: b, values: { ...values, id: authorId } });
   // @ts-expect-error: UPDATE cannot write a primary key, even to its current value
@@ -472,23 +472,23 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: UPDATE key exclusion applies before pruning undefined
   em.execute({ update: b, set: { title: "Revised", id: undefined }, allowAll: true });
   // @ts-expect-error: a persisted Author is not a persisted Book reference
-  em.execute({ update: b, set: { prequel_id: author }, allowAll: true });
+  em.execute({ update: b, set: { prequelId: author }, allowAll: true });
   // @ts-expect-error: dates remain native Date values
   em.execute({ update: a, set: { graduated: "2026-01-01" }, allowAll: true });
   // @ts-expect-error: bigint inputs must not become numeric database representations
-  em.execute({ update: a, set: { number_of_atoms: 1 }, allowAll: true });
+  em.execute({ update: a, set: { numberOfAtoms: 1 }, allowAll: true });
   // @ts-expect-error: arrays check each native element
-  em.execute({ update: a, set: { nick_names: [1] }, allowAll: true });
+  em.execute({ update: a, set: { nickNames: [1] }, allowAll: true });
   // @ts-expect-error: enum arrays cannot accept another enum's values
-  em.execute({ update: a, set: { favorite_colors: [BookRange.Few] }, allowAll: true });
+  em.execute({ update: a, set: { favoriteColors: [BookRange.Few] }, allowAll: true });
   // @ts-expect-error: enum scalar inputs are not enum arrays
-  em.execute({ update: a, set: { range_of_books: [BookRange.Few] }, allowAll: true });
+  em.execute({ update: a, set: { rangeOfBooks: [BookRange.Few] }, allowAll: true });
   // @ts-expect-error: native enums reject arbitrary database strings
-  em.execute({ update: a, set: { favorite_shape: "hexagon" }, allowAll: true });
+  em.execute({ update: a, set: { favoriteShape: "hexagon" }, allowAll: true });
   // @ts-expect-error: JSON domain fields retain their schema shape
   em.execute({ update: a, set: { address: { street: 1 } }, allowAll: true });
   // @ts-expect-error: Zod inputs retain required object properties
-  em.execute({ update: a, set: { business_address: {} }, allowAll: true });
+  em.execute({ update: a, set: { businessAddress: {} }, allowAll: true });
   // @ts-expect-error: structured arrays retain their element domain
   em.execute({ update: a, set: { quotes: [1] }, allowAll: true });
   // @ts-expect-error: binary values are native byte arrays, not encoded strings
@@ -508,10 +508,8 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   em.execute({ update: b, set: unknownSet, allowAll: true });
   // @ts-expect-error: nonliteral bulk rows cannot hide unknown fields
   em.execute({ insert: b, values: unknownBulk });
-  // @ts-expect-error: ID convenience properties are not physical domain fields
-  em.execute({ update: b, set: { title: "Revised", authorId }, allowAll: true });
   // @ts-expect-error: nested creation is not a persisted reference
-  em.execute({ insert: b, values: { ...values, author_id: { firstName: "New" } } });
+  em.execute({ insert: b, values: { ...values, authorId: { firstName: "New" } } });
   // @ts-expect-error: polymorphic references have no supported single-column assignment
   em.execute({ update: c, set: { parent: authorId }, allowAll: true });
   // @ts-expect-error: many-to-many collections cannot be assigned
@@ -522,11 +520,11 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   em.execute({ update: b, set: { sequel: bookId }, allowAll: true });
 
   // Given nonliteral INSERT SELECT projections with missing, extra, nullable, or incompatible fields
-  const missingSource = { from: source, select: { title: source.title, author_id: source.author_id } } satisfies Query;
+  const missingSource = { from: source, select: { title: source.title, authorId: source.authorId } } satisfies Query;
   // And an extra key that is not a writable Book field
   const extraSource = { ...sourceRead, select: { ...sourceRead.select, name: source.title } } satisfies Query;
   // And an otherwise complete projection whose Author ID instead comes from Book.id
-  const wrongIdSource = { ...sourceRead, select: { ...sourceRead.select, author_id: source.id } } satisfies Query;
+  const wrongIdSource = { ...sourceRead, select: { ...sourceRead.select, authorId: source.id } } satisfies Query;
   // And an otherwise complete projection with a physically nullable title
   const nullableSource = {
     ...sourceRead,
@@ -558,15 +556,15 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   em.execute({ insert: b, from: query(leftSource) });
   // prettier-ignore
   // @ts-expect-error: source native arrays must match target element types
-  em.execute({ insert: a, from: { from: a, select: { first_name: a.first_name, number_of_books: a.number_of_books, favorite_colors: a.nick_names } } });
+  em.execute({ insert: a, from: { from: a, select: { firstName: a.firstName, numberOfBooks: a.numberOfBooks, favoriteColors: a.nickNames } } });
   // @ts-expect-error: SQL-required persisted derived fields are also required in sources
-  em.execute({ insert: a, from: { from: a, select: { first_name: a.first_name } } });
+  em.execute({ insert: a, from: { from: a, select: { firstName: a.firstName } } });
   // @ts-expect-error: a widened operand cannot prove the target's required keys or column domains
   em.execute({ insert: b, from: widenedSource });
   // @ts-expect-error: scalar sources need a named target key even for a one-required-field target
-  em.execute({ insert: tag, from: { from: a, select: a.first_name } });
+  em.execute({ insert: tag, from: { from: a, select: a.firstName } });
   // @ts-expect-error: scalar query values are expressions, not named INSERT sources
-  em.execute({ insert: tag, from: query({ from: a, select: a.first_name }) });
+  em.execute({ insert: tag, from: query({ from: a, select: a.firstName }) });
   // @ts-expect-error: entity-mode SELECT is not a row-shaped INSERT source
   em.execute({ insert: b, from: { from: source, select: source } });
   // @ts-expect-error: entity query values cannot be INSERT sources
@@ -718,7 +716,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: a table-name string is not a target alias
   em.execute({ delete: "books", allowAll: true });
   // @ts-expect-error: a reference expression is not a target alias
-  em.execute({ delete: b.author_id, allowAll: true });
+  em.execute({ delete: b.authorId, allowAll: true });
   // @ts-expect-error: a collection join factory is not a target alias
   em.execute({ delete: a.books, allowAll: true });
   // @ts-expect-error: derived read tables are not writable targets
@@ -805,11 +803,11 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: ordinary read execution retains source-scope checks
   em.execute({ from: a, select: { title: b.title } });
   // @ts-expect-error: ordinary read ordering only addresses selected output keys
-  em.execute({ from: a, select: { name: a.first_name }, orderBy: { age: "ASC" } });
+  em.execute({ from: a, select: { name: a.firstName }, orderBy: { age: "ASC" } });
   // @ts-expect-error: reads still require SELECT
   em.execute({ from: a });
   // @ts-expect-error: reads still require FROM
-  em.execute({ select: { name: a.first_name } });
+  em.execute({ select: { name: a.firstName } });
 
   // Given a function parameter retaining the full public SetOperand union, without initializer narrowing
   // When an INSERT source has no known target keys or field domains
@@ -851,11 +849,11 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // Given an INSERT annotation with an optional, readonly RETURNING projection
   let annotatedInsert: InsertStatement<Book, Readonly<typeof insert.returning>> = insert;
   // And an UPDATE annotation with an optional nullable scalar RETURNING expression
-  const annotatedUpdate: UpdateStatement<Book, typeof b.reviewer_id> = {
+  const annotatedUpdate: UpdateStatement<Book, typeof b.reviewerId> = {
     update: b,
-    set: { reviewer_id: null },
+    set: { reviewerId: null },
     allowAll: true,
-    returning: Math.random() > 0.5 ? b.reviewer_id : undefined,
+    returning: Math.random() > 0.5 ? b.reviewerId : undefined,
   };
   // And a DELETE annotation that explicitly has no RETURNING projection
   const annotatedDelete: DeleteStatement<Book, undefined> = { delete: b, allowAll: true };
@@ -883,7 +881,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   annotatedInsert = insertWithSoftDeletes;
 
   // Given a one-column Tag source whose remaining columns have server-side providers
-  const tagSource = { from: a, select: { name: a.first_name } } satisfies Query;
+  const tagSource = { from: a, select: { name: a.firstName } } satisfies Query;
   // And the same Tag source represented by a reusable query value
   const tagSourceValue = query(tagSource);
   // And a Book INSERT annotation using the default source generic for an ordinary read POJO

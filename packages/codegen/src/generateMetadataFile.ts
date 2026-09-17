@@ -1,3 +1,4 @@
+import { camelCase } from "change-case";
 import { type Code, type Import, code, imp } from "ts-poet";
 
 import { type Config } from "./config.ts";
@@ -363,21 +364,22 @@ function columnArgs(
   return code`${!column.columnNotNull}, ${column.columnDefault != null && !column.columnGenerated}, ${column.columnGenerated}, ${insertOptional}, true, ${idMetadata ?? "undefined"}`;
 }
 
-/** Declares all physical codecs before any domain metadata; ID targets remain lazy. */
+/** Declares all physical codecs by their SQL API names before any domain metadata; ID targets remain lazy. */
 export function generateColumnDeclarations(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   if (meta.inheritanceType === "sti" && meta.baseClassName) return code``;
   const columns: Record<string, Code> = {};
   generateFields(config, dbMeta, meta.physicalMetadata ?? meta, (column, codec, args) => {
-    const name = column.columnName;
-    if (codec) columns[name] = code`new ${Column}(${q(name)}, ${args}, ${codec})`.asOneline();
-    return code`${meta.entity.metaName}Columns[${q(name)}]`;
+    const columnName = column.columnName;
+    const apiName = camelCase(columnName);
+    if (codec) columns[apiName] = code`new ${Column}(${q(columnName)}, ${args}, ${codec})`.asOneline();
+    return code`${meta.entity.metaName}Columns[${q(apiName)}]`;
   });
   return code`const ${meta.entity.metaName}Columns = ${columns} satisfies ${ColumnDescriptors};`;
 }
 
-/** Emits a direct reference to the single physical descriptor. */
+/** Emits a direct reference to a descriptor by its SQL API name. */
 function columnReference(column: Pick<PrimitiveField, "columnName" | "columnOwner">): Code {
-  return code`${column.columnOwner.metaName}Columns[${q(column.columnName)}]`;
+  return code`${column.columnOwner.metaName}Columns[${q(camelCase(column.columnName))}]`;
 }
 
 function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: number | boolean | string | null }): Code | "" {

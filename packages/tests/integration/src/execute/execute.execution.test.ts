@@ -141,7 +141,7 @@ describe("em.execute / execution", () => {
         expect(queries).toMatchInlineSnapshot(`[]`);
 
         // When a read executes during the hook rather than during a validation rule
-        const read = await em.execute({ from: a, select: a.first_name });
+        const read = await em.execute({ from: a, select: a.firstName });
 
         // Then it sees persisted state without flushing the pending name
         expect(read).toEqual({ rowCount: 1, rows: ["Original"] });
@@ -393,9 +393,9 @@ describe("em.execute / execution", () => {
         const result = em.transaction(async () => {
           await em.execute({
             update: a,
-            set: { first_name: "Rolled back" },
+            set: { firstName: "Rolled back" },
             where: a.id.eq("a:1"),
-            returning: a.business_address,
+            returning: a.businessAddress,
           });
         });
 
@@ -429,7 +429,7 @@ describe("em.execute / execution", () => {
 
       // Then a separate connection confirms rollback without hydrating the still-invalid address
       expect(await select("authors")).toMatchObject([{ first_name: "Original", business_address: { street: 123 } }]);
-      expect(await newEntityManager().query({ from: a, select: a.first_name })).toEqual(["Original"]);
+      expect(await newEntityManager().query({ from: a, select: a.firstName })).toEqual(["Original"]);
     });
 
     it("does not flush during execute but retains the existing transaction-end flush", async () => {

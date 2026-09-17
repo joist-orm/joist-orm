@@ -45,8 +45,8 @@ describe("em.query / sets", () => {
       // When combining both names with an empty right operand
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
         ],
       });
       // Then duplicates from the left operand collapse even without a match on the right
@@ -64,8 +64,8 @@ describe("em.query / sets", () => {
       // When both operands contribute Alice
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then PostgreSQL returns one copy in one query
@@ -88,8 +88,8 @@ describe("em.query / sets", () => {
       // When each operand selects one Alice
       const rows = await em.query({
         union: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
         orderBy: { age: "ASC" },
       });
@@ -146,8 +146,8 @@ describe("em.query / sets", () => {
       // When combining both names with an empty right operand
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
         ],
       });
       // Then both left-side copies remain
@@ -165,8 +165,8 @@ describe("em.query / sets", () => {
       // When each operand contributes one Alice
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then both copies are returned by one query
@@ -189,8 +189,8 @@ describe("em.query / sets", () => {
       // When each operand contributes one complete row
       const rows = await em.query({
         unionAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
         orderBy: { age: "ASC" },
       });
@@ -243,9 +243,9 @@ describe("em.query / sets", () => {
       // When each operand contributes one copy
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then the third operand contributes a third copy
@@ -269,8 +269,8 @@ describe("em.query / sets", () => {
       // When intersecting Alice/Bob with Bob/Carol
       const rows = await em.query({
         intersect: [
-          { from: a, where: a.id.ne("a:3"), select: { name: a.first_name } },
-          { from: a, where: a.id.ne("a:1"), select: { name: a.first_name } },
+          { from: a, where: a.id.ne("a:3"), select: { name: a.firstName } },
+          { from: a, where: a.id.ne("a:1"), select: { name: a.firstName } },
         ],
       });
       // Then only the shared name survives
@@ -293,8 +293,8 @@ describe("em.query / sets", () => {
       // When both operands contain both copies
       const rows = await em.query({
         intersect: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then INTERSECT removes multiplicity from the matching row
@@ -312,8 +312,8 @@ describe("em.query / sets", () => {
       // When comparing the two complete rows
       const rows = await em.query({
         intersect: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
       });
       // Then matching names alone do not produce a matching row
@@ -427,8 +427,8 @@ describe("em.query / sets", () => {
       // When the left has one copy and the right has two
       const rows = await em.query({
         intersectAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then only the smaller left count survives
@@ -446,8 +446,8 @@ describe("em.query / sets", () => {
       // When the left has two copies and the right has one
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
         ],
       });
       // Then only the smaller right count survives
@@ -467,8 +467,8 @@ describe("em.query / sets", () => {
       // When both left copies have a matching right copy
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then ALL retains both copies instead of deduplicating them
@@ -491,8 +491,8 @@ describe("em.query / sets", () => {
       // When comparing the two complete rows
       const rows = await em.query({
         intersectAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
       });
       // Then ALL changes counts, not whole-row equality
@@ -565,9 +565,9 @@ describe("em.query / sets", () => {
       // When the first two operands contribute two copies and the third contributes one
       const rows = await em.query({
         intersectAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
         ],
       });
       // Then the minimum count is one, not the first pair's count of two
@@ -595,8 +595,8 @@ describe("em.query / sets", () => {
       // When one right copy matches both left copies
       const rows = await em.query({
         except: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
         ],
       });
       // Then EXCEPT removes the name entirely rather than subtracting only one copy
@@ -619,8 +619,8 @@ describe("em.query / sets", () => {
       // When subtracting an empty operand from two equal left rows
       const rows = await em.query({
         except: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
         ],
       });
       // Then the unmatched name survives only once
@@ -655,8 +655,8 @@ describe("em.query / sets", () => {
       // When subtracting the older Alice from the younger Alice
       const rows = await em.query({
         except: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
       });
       // Then a matching name alone does not remove the left row
@@ -731,8 +731,8 @@ describe("em.query / sets", () => {
       // When subtracting one matching copy from two
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
         ],
       });
       // Then one unmatched copy remains
@@ -755,8 +755,8 @@ describe("em.query / sets", () => {
       // When subtracting two copies from one
       const rows = await em.query({
         exceptAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
       });
       // Then excess right copies do not become result rows
@@ -774,8 +774,8 @@ describe("em.query / sets", () => {
       // When no right row subtracts either left copy
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:0"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:0"), select: { name: a.firstName } },
         ],
       });
       // Then ALL retains both unmatched copies
@@ -793,8 +793,8 @@ describe("em.query / sets", () => {
       // When subtracting the older Alice from the younger Alice
       const rows = await em.query({
         exceptAll: [
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name, age: a.age } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name, age: a.age } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName, age: a.age } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName, age: a.age } },
         ],
       });
       // Then ALL changes counts, not whole-row equality
@@ -848,9 +848,9 @@ describe("em.query / sets", () => {
       // When each later operand subtracts one copy from the accumulated left result
       const rows = await em.query({
         exceptAll: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:1"), select: { name: a.first_name } },
-          { from: a, where: a.id.eq("a:2"), select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:1"), select: { name: a.firstName } },
+          { from: a, where: a.id.eq("a:2"), select: { name: a.firstName } },
         ],
       });
       // Then no copies remain, rather than the two copies from right association
@@ -875,8 +875,8 @@ describe("em.query / sets", () => {
       // And a reversed reusable projection with DISTINCT and pagination owned by its branch
       const reversed = query({
         from: a,
-        select: { name: a.first_name, count: sql<number>`random()`.count() },
-        groupBy: [a.first_name],
+        select: { name: a.firstName, count: sql<number>`random()`.count() },
+        groupBy: [a.firstName],
         distinct: true,
         orderBy: { count: "DESC" },
         limit: 1,
@@ -889,8 +889,8 @@ describe("em.query / sets", () => {
           {
             from: a,
             where: a.id.eq("a:0"),
-            groupBy: [a.first_name],
-            select: { count: a.id.count(), name: a.first_name },
+            groupBy: [a.firstName],
+            select: { count: a.id.count(), name: a.firstName },
           },
           reversed,
         ],
@@ -912,13 +912,13 @@ describe("em.query / sets", () => {
       const select = new Proxy(
         {
           id: a.id,
-          name: a.first_name,
-          lastName: a.last_name,
+          name: a.firstName,
+          lastName: a.lastName,
           age: a.age,
-          createdAt: a.created_at,
-          updatedAt: a.updated_at,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
           initials: a.initials,
-          popular: a.is_popular,
+          popular: a.isPopular,
         },
         {
           ownKeys(target) {
@@ -946,7 +946,7 @@ describe("em.query / sets", () => {
       // And an Author alias for the reusable projection
       const a = table(Author);
       // And a table-shaped query whose select property is a column, not a query clause
-      const names = query({ from: a, select: { select: a.first_name } });
+      const names = query({ from: a, select: { select: a.firstName } });
       // And a named compound that orders by that output key
       const combined = query({ union: [names, names], orderBy: { select: "ASC" }, as: "names" });
       // When using the compound as an ordinary derived source
@@ -965,12 +965,12 @@ describe("em.query / sets", () => {
       // And separate Author and Book aliases
       const [a, b] = tables(Author, Book);
       // And an immutable first projection defining the canonical output order
-      const author = Object.freeze({ from: a, select: Object.freeze({ name: a.first_name, detail: a.last_name }) });
+      const author = Object.freeze({ from: a, select: Object.freeze({ name: a.firstName, detail: a.lastName }) });
       // And an immutable second projection with the opposite key insertion order
       const book = Object.freeze({
         from: b,
-        join: [{ inner: a, on: b.author_id.eq(a.id) }],
-        select: Object.freeze({ detail: a.first_name, name: b.title }),
+        join: [{ inner: a, on: b.authorId.eq(a.id) }],
+        select: Object.freeze({ detail: a.firstName, name: b.title }),
       });
       // And an immutable tuple owned by the caller
       const operands = Object.freeze([author, book] as const);
@@ -1009,7 +1009,7 @@ describe("em.query / sets", () => {
       // And a named branch whose reversed projection has its own DISTINCT, ordering, limit, and offset
       const page = query({
         from: a,
-        select: { detail: a.last_name, name: a.first_name },
+        select: { detail: a.lastName, name: a.firstName },
         distinct: true,
         orderBy: { name: "ASC" },
         limit: 1,
@@ -1020,7 +1020,7 @@ describe("em.query / sets", () => {
       resetQueryCount();
       // When combining an inline a1 branch with the paginated reusable branch
       const rows = await em.query({
-        unionAll: [{ from: a, where: a.id.eq("a:1"), select: { name: a.first_name, detail: a.last_name } }, page],
+        unionAll: [{ from: a, where: a.id.eq("a:1"), select: { name: a.firstName, detail: a.lastName } }, page],
         orderBy: { name: "ASC" },
       });
       // Then reordering output columns does not move the page or DISTINCT into the outer scope
@@ -1094,8 +1094,8 @@ describe("em.query / sets", () => {
           unionAll: [
             {
               from: a,
-              where: a.first_name.ne("absent author"),
-              select: { name: a.first_name },
+              where: a.firstName.ne("absent author"),
+              select: { name: a.firstName },
               orderBy: { name: "ASC" },
               limit: 2,
               offset: 1,
@@ -1140,7 +1140,7 @@ describe("em.query / sets", () => {
         // And an Author alias for the readonly branches
         const a = table(Author);
         // And a quoted display key that must remain one output identifier
-        const select = { 'Display "Name"': a.first_name, age: a.age, union: a.first_name };
+        const select = { 'Display "Name"': a.firstName, age: a.age, union: a.firstName };
         // And an absent optional name direction, leaving age as the only sort
         const byName: "ASC" | undefined = undefined;
         // When the age sort is the only supplied direction, with explicit NULLS FIRST
@@ -1172,8 +1172,8 @@ describe("em.query / sets", () => {
       // And a named compound with an output column that is also an operation keyword
       const names = query({
         union: [
-          { from: a, select: { union: a.first_name } },
-          { from: a, select: { union: a.first_name } },
+          { from: a, select: { union: a.firstName } },
+          { from: a, select: { union: a.firstName } },
         ],
         as: "names",
       });
@@ -1203,7 +1203,7 @@ describe("em.query / sets", () => {
       // And a compound name containing a quote and SQL punctuation that must remain one identifier
       const names = query({
         union: [
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
           { from: b, select: { name: b.title } },
         ],
         as: 'names" --',
@@ -1242,7 +1242,7 @@ describe("em.query / sets", () => {
       // And a PK branch selecting a1
       const pk = { from: a, where: a.id.eq("a:1"), select: { id: a.id } } satisfies Query;
       // And an FK branch selecting a2
-      const fk = { from: b, select: { id: b.author_id } } satisfies Query;
+      const fk = { from: b, select: { id: b.authorId } } satisfies Query;
       // When combining the same Author-id domain in either order
       const rows = await em.query({ union: order === "PK first" ? [pk, fk] : [fk, pk], orderBy: { id: "ASC" } });
       // Then neither output is tagged as a Book id and the first decoder does not change the results
@@ -1262,7 +1262,7 @@ describe("em.query / sets", () => {
       // And a named compound with the FK branch first
       const ids = query({
         union: [
-          { from: b, select: { id: b.author_id } },
+          { from: b, select: { id: b.authorId } },
           { from: a, select: { id: a.id } },
         ],
         as: "author_ids",
@@ -1304,7 +1304,7 @@ describe("em.query / sets", () => {
       const ids = query({
         union: [
           { from: inner, where: inner.id.eq("a:1"), select: { id: inner.id } },
-          { from: b, select: { id: b.author_id } },
+          { from: b, select: { id: b.authorId } },
         ],
         as: "author_ids",
       });
@@ -1317,7 +1317,7 @@ describe("em.query / sets", () => {
         const rows = await em.query({
           from: a,
           join: [{ left: ids, on: ids.id.eq(a.id) }],
-          select: { name: a.first_name, id: ids.id, fallback: ids.id.coalesce("a:9") },
+          select: { name: a.firstName, id: ids.id, fallback: ids.id.coalesce("a:9") },
           orderBy: { name: "ASC" },
         });
         // Then the absent row remains NULL and only coalesce produces the encoded Author-id fallback
@@ -1363,7 +1363,7 @@ describe("em.query / sets", () => {
         // And a POJO PK query selecting a1
         const pk = query({ from: a, where: a.id.eq("a:1"), select: { id: a.id } });
         // And a compatible POJO FK query selecting a2 through its Book
-        const fk = query({ from: b, select: { id: b.author_id } });
+        const fk = query({ from: b, select: { id: b.authorId } });
         // And a compound whose agreed target domain must not depend on which branch owns the first column
         const ids = query({ union: order === "PK first" ? [pk, fk] : [fk, pk], as: "author_ids" });
         // When filtering Comment parents with an ordinary scalar projection of the compound id
@@ -1390,11 +1390,11 @@ describe("em.query / sets", () => {
         // And a nullable projection of the missing left-joined Book
         const nullable = {
           from: a,
-          join: [{ left: b, on: b.author_id.eq(a.id) }],
+          join: [{ left: b, on: b.authorId.eq(a.id) }],
           select: { name: b.title },
         } satisfies Query;
         // And a nonnullable projection of the Author's own name
-        const required = { from: a, select: { name: a.first_name } } satisfies Query;
+        const required = { from: a, select: { name: a.firstName } } satisfies Query;
         // When either branch can be the first branch supplying the output schema
         const rows = await em.query({
           union: order === "nullable first" ? [nullable, required] : [required, nullable],
@@ -1457,8 +1457,8 @@ describe("em.query / sets", () => {
           bigint: 1n,
           decimal: 1.25,
           real: 1.25,
-          double_precision: 1.25,
-          decimal_samples: [1.25],
+          doublePrecision: 1.25,
+          decimalSamples: [1.25],
         },
       });
       // When combining a decimal column with PostgreSQL's numeric AVG output
@@ -1476,7 +1476,7 @@ describe("em.query / sets", () => {
       const arrays = await em.query({
         union: [
           { from: values, select: { samples: values.value.arrayAgg() } },
-          { from: s, select: { samples: s.decimal_samples } },
+          { from: s, select: { samples: s.decimalSamples } },
         ],
       });
       // Then both array representations deduplicate and decode their fractional elements as numbers
@@ -1496,7 +1496,7 @@ describe("em.query / sets", () => {
       // When both aggregates return text even though their input columns are varchar
       const rows = await em.query({
         union: [
-          { from: a, select: { name: a.first_name.min() } },
+          { from: a, select: { name: a.firstName.min() } },
           { from: b, select: { name: b.title.max() } },
         ],
         orderBy: { name: "ASC" },
@@ -1526,21 +1526,21 @@ describe("em.query / sets", () => {
           {
             from: a,
             select: {
-              name: a.first_name,
-              range: a.range_of_books,
-              shape: a.favorite_shape,
-              address: a.business_address,
-              createdAt: a.created_at,
+              name: a.firstName,
+              range: a.rangeOfBooks,
+              shape: a.favoriteShape,
+              address: a.businessAddress,
+              createdAt: a.createdAt,
             },
           },
           {
             from: other,
             select: {
-              name: other.first_name,
-              range: other.range_of_books,
-              shape: other.favorite_shape,
-              address: other.business_address,
-              createdAt: other.created_at,
+              name: other.firstName,
+              range: other.rangeOfBooks,
+              shape: other.favoriteShape,
+              address: other.businessAddress,
+              createdAt: other.createdAt,
             },
           },
         ],
@@ -1571,8 +1571,8 @@ describe("em.query / sets", () => {
       // When UNION compares physically unequal JSONB rows before the schema strips extra keys
       const rows = await em.query({
         union: [
-          { from: a, where: a.id.eq("a:1"), select: { address: a.business_address } },
-          { from: a, where: a.id.eq("a:2"), select: { address: a.business_address } },
+          { from: a, where: a.id.eq("a:1"), select: { address: a.businessAddress } },
+          { from: a, where: a.id.eq("a:2"), select: { address: a.businessAddress } },
         ],
       });
       // Then both SQL rows survive even though their decoded JavaScript values are equal
@@ -1589,8 +1589,8 @@ describe("em.query / sets", () => {
       // When executing a codec-compatible compound over invalid stored JSON
       const result = em.query({
         union: [
-          { from: a, select: { address: a.business_address } },
-          { from: a, select: { address: a.business_address } },
+          { from: a, select: { address: a.businessAddress } },
+          { from: a, select: { address: a.businessAddress } },
         ],
       });
       // Then runtime schema validation is retained after the set operation
@@ -1653,13 +1653,13 @@ describe("em.query / sets", () => {
       const [u, other] = tables(User, User);
       const histories = query({
         union: [
-          { from: u, select: { history: u.password_history } },
-          { from: other, select: { history: other.password_history } },
+          { from: u, select: { history: u.passwordHistory } },
+          { from: other, select: { history: other.passwordHistory } },
         ],
         as: "histories",
       });
       // When filtering both a physical alias and the compound's derived array column
-      const direct = await em.query({ from: u, where: u.password_history.eq(history), select: u.password_history });
+      const direct = await em.query({ from: u, where: u.passwordHistory.eq(history), select: u.passwordHistory });
       const combined = await em.query({ from: histories, where: histories.history.eq(history), select: histories });
       const found = await em.find(User, { passwordHistory: { eq: history } });
       // Then each path encodes elements, preserves SQL NULL, and decodes the same domain array
@@ -1683,8 +1683,8 @@ describe("em.query / sets", () => {
       // When combining a physical varchar array with array_agg(varchar)
       const rows = await em.query({
         union: [
-          { from: a, select: { names: a.nick_names } },
-          { from: other, select: { names: other.first_name.arrayAgg() } },
+          { from: a, select: { names: a.nickNames } },
+          { from: other, select: { names: other.firstName.arrayAgg() } },
         ],
       });
       // Then compatible array domains deduplicate and decode without converting the elements
@@ -1703,8 +1703,8 @@ describe("em.query / sets", () => {
       // When combining both array representations without entity getter defaults
       const rows = await em.query({
         union: [
-          { from: a, select: { names: a.nick_names } },
-          { from: a, select: { names: a.nick_names } },
+          { from: a, select: { names: a.nickNames } },
+          { from: a, select: { names: a.nickNames } },
         ],
         orderBy: { names: "ASC NULLS LAST" },
       });
@@ -1725,7 +1725,7 @@ describe("em.query / sets", () => {
       const empty = query({
         union: [
           { from: a, where: a.id.eq("a:9"), select: { ids: a.id.arrayAgg() } },
-          { from: b, where: b.id.eq("b:9"), select: { ids: b.author_id.arrayAgg() } },
+          { from: b, where: b.id.eq("b:9"), select: { ids: b.authorId.arrayAgg() } },
         ],
         as: "empty_ids",
       });
@@ -1733,7 +1733,7 @@ describe("em.query / sets", () => {
       const ids = query({
         union: [
           { from: a, select: { ids: a.id.arrayAgg() } },
-          { from: b, select: { ids: b.author_id.arrayAgg() } },
+          { from: b, select: { ids: b.authorId.arrayAgg() } },
         ],
         as: "author_ids",
       });
@@ -1937,11 +1937,11 @@ describe("em.query / sets", () => {
       // And an EntityManager for untyped projection validation
       const em = newEntityManager();
       // And a later branch whose key set differs from the first branch's name/age contract
-      const select = shape === "missing" ? { name: a.first_name } : { name: a.first_name, age: a.age, id: a.id };
+      const select = shape === "missing" ? { name: a.firstName } : { name: a.firstName, age: a.age, id: a.id };
       // And an invalid compound whose first branch defines the name/age contract
       const invalid = {
         union: [
-          { from: a, select: { name: a.first_name, age: a.age } },
+          { from: a, select: { name: a.firstName, age: a.age } },
           { from: a, select },
         ],
       };
@@ -1960,9 +1960,9 @@ describe("em.query / sets", () => {
       // And an EntityManager for untyped execution
       const em = newEntityManager();
       // And a reusable branch exposing name rather than title
-      const names = query({ from: a, select: { name: a.first_name } });
+      const names = query({ from: a, select: { name: a.firstName } });
       // And another reusable branch with the same codec but a different output key
-      const titles = query({ from: a, select: { title: a.first_name } });
+      const titles = query({ from: a, select: { title: a.firstName } });
       // And recording isolated from SQL
       resetQueryCount();
       // When reusable values with unequal key sets become set operands
@@ -2183,8 +2183,8 @@ describe("em.query / sets", () => {
       // And matching expressions whose physical array codec is deliberately unsupported
       const invalid = {
         union: [
-          { from: a, select: { colors: a.favorite_colors } },
-          { from: a, select: { colors: a.favorite_colors } },
+          { from: a, select: { colors: a.favoriteColors } },
+          { from: a, select: { colors: a.favoriteColors } },
         ],
       };
       // And recording isolated from SQL
@@ -2205,7 +2205,7 @@ describe("em.query / sets", () => {
       const invalid = {
         union: [
           { from: a, select: { address: a.address } },
-          { from: a, select: { address: a.business_address } },
+          { from: a, select: { address: a.businessAddress } },
         ],
       };
       // And recording isolated from SQL
@@ -2246,7 +2246,7 @@ describe("em.query / sets", () => {
       // And an enum projection mixed with a numeric projection under the same key
       const invalid = {
         union: [
-          { from: a, select: { value: a.range_of_books } },
+          { from: a, select: { value: a.rangeOfBooks } },
           { from: a, select: { value: a.age } },
         ],
       };
@@ -2269,15 +2269,15 @@ describe("em.query / sets", () => {
         // And invalid sorts that either leave the output-key scope or contain SQL punctuation
         const sorts = {
           "missing key": { age: "ASC" },
-          "branch column": [{ sort: a.first_name, order: "ASC" }],
-          expression: [{ sort: sql<string>`lower(${a.first_name})`, order: "ASC" }],
+          "branch column": [{ sort: a.firstName, order: "ASC" }],
+          expression: [{ sort: sql<string>`lower(${a.firstName})`, order: "ASC" }],
           "invalid direction": { name: "ASC; DROP TABLE authors" },
         };
         // And a compound with one of those invalid root orderings
         const invalid = {
           union: [
-            { from: a, select: { name: a.first_name } },
-            { from: a, select: { name: a.first_name } },
+            { from: a, select: { name: a.firstName } },
+            { from: a, select: { name: a.firstName } },
           ],
           orderBy: sorts[kind],
         };
@@ -2299,8 +2299,8 @@ describe("em.query / sets", () => {
       // And a second branch illegally referencing the first branch's Author alias
       const invalid = {
         union: [
-          { from: a, select: { name: a.first_name } },
-          { from: b, where: b.author_id.eq(a.id), select: { name: b.title } },
+          { from: a, select: { name: a.firstName } },
+          { from: b, where: b.authorId.eq(a.id), select: { name: b.title } },
         ],
       };
       // And recording isolated from SQL
@@ -2323,8 +2323,8 @@ describe("em.query / sets", () => {
       // And a compound whose second branch references the outer Author from a derived-table source
       const books = query({
         union: [
-          { from: b, where: b.title.eq("absent"), select: { authorId: b.author_id } },
-          { from: b, where: b.author_id.eq(a.id), select: { authorId: b.author_id } },
+          { from: b, where: b.title.eq("absent"), select: { authorId: b.authorId } },
+          { from: b, where: b.authorId.eq(a.id), select: { authorId: b.authorId } },
         ],
         as: "books",
       });
@@ -2344,8 +2344,8 @@ describe("em.query / sets", () => {
       // And a valid POJO compound of Author names rather than Author ids
       const names = query({
         union: [
-          { from: a, select: { name: a.first_name } },
-          { from: a, select: { name: a.first_name } },
+          { from: a, select: { name: a.firstName } },
+          { from: a, select: { name: a.firstName } },
         ],
         as: "author_names",
       });
@@ -2442,7 +2442,7 @@ describe("em.query / sets", () => {
       // And an Author alias reused in outer and nested source scopes
       const a = table(Author);
       // And one condition object shared by all occurrences, not a new condition per scope
-      const shared = a.first_name.ne("absent");
+      const shared = a.firstName.ne("absent");
       // And a POJO branch that resolves that condition under its own Author alias
       const branch = { from: a, where: shared, select: { id: a.id } };
       // And either the ordinary subquery or a compound containing two copies of that branch
@@ -2456,7 +2456,7 @@ describe("em.query / sets", () => {
       const rows = await em.query({
         from: a,
         where: { and: [shared, a.id.in(query({ from: ids, select: ids.id }))] },
-        select: { name: a.first_name },
+        select: { name: a.firstName },
       });
       // Then each occurrence uses its local alias and the outer condition is not overwritten
       expect(rows).toEqual([{ name: "Alice" }]);
@@ -2497,9 +2497,9 @@ describe("em.query / sets", () => {
         unionAll: [
           {
             from: b,
-            groupBy: [b.author_id],
+            groupBy: [b.authorId],
             having: b.id.count().gt(1),
-            select: { id: b.author_id, count: b.id.count() },
+            select: { id: b.authorId, count: b.id.count() },
           },
           {
             from: a,
@@ -2551,7 +2551,7 @@ describe("em.query / sets", () => {
       const rows = await em.query({
         from: a,
         join: [a.books.as(b)],
-        select: { name: a.first_name, comment: query({ from: ids, select: ids.id }) },
+        select: { name: a.firstName, comment: query({ from: ids, select: ids.id }) },
         orderBy: { name: "ASC" },
       });
       // Then the join survives pruning and the unmatched Author receives SQL NULL
@@ -2577,7 +2577,7 @@ describe("em.query / sets", () => {
       // And outer Author and inner Book aliases
       const [a, b] = tables(Author, Book);
       // And a reusable cross-column condition tied to alias handles rather than SQL alias strings
-      const author = b.author_id.eq(a.id);
+      const author = b.authorId.eq(a.id);
       // And a reusable compound containing that condition
       const ids = query({
         union: [
@@ -2640,11 +2640,11 @@ describe("em.query / sets", () => {
       // When one branch prunes its unused join and the other retains it and includes soft-deleted Authors
       const rows = await em.query({
         unionAll: [
-          { from: a, join: [a.books.inner(b)], select: { name: a.first_name } },
+          { from: a, join: [a.books.inner(b)], select: { name: a.firstName } },
           {
             from: a,
             join: [a.books.inner(b)],
-            select: { name: a.first_name },
+            select: { name: a.firstName },
             pruneJoins: false,
             softDeletes: "include",
           },
@@ -2702,8 +2702,8 @@ describe("em.query / sets", () => {
       // When combining unfiltered subtype reads of the same physical table
       const unfiltered = await em.query({
         unionAll: [
-          { from: tn, select: { days: tn.duration_in_days } },
-          query({ from: to, select: { days: to.duration_in_days } }),
+          { from: tn, select: { days: tn.durationInDays } },
+          query({ from: to, select: { days: to.durationInDays } }),
         ],
         orderBy: { days: "ASC" },
       });
@@ -2714,8 +2714,8 @@ describe("em.query / sets", () => {
       // When combining each subtype's duration without deduplication
       const rows = await em.query({
         unionAll: [
-          { from: tn, where: tn.type_id.eq(TaskType.New), select: { days: tn.duration_in_days } },
-          query({ from: to, where: to.type_id.eq(TaskType.Old), select: { days: to.duration_in_days } }),
+          { from: tn, where: tn.typeId.eq(TaskType.New), select: { days: tn.durationInDays } },
+          query({ from: to, where: to.typeId.eq(TaskType.Old), select: { days: to.durationInDays } }),
         ],
         orderBy: { days: "ASC" },
       });
@@ -2773,7 +2773,7 @@ describe("em.query / sets", () => {
       const ids = query({
         union: [
           { from: inner, where: inner.id.eq("a:1"), select: { id: inner.id } },
-          query({ from: b, select: { id: b.author_id } }),
+          query({ from: b, select: { id: b.authorId } }),
         ],
         as: "author_ids",
       });
@@ -2784,7 +2784,7 @@ describe("em.query / sets", () => {
         from: a,
         where: a.id.in(query({ from: ids, select: ids.id })),
         select: a,
-        orderBy: { first_name: "ASC" },
+        orderBy: { firstName: "ASC" },
       });
       // Then membership hydrates only the selected Authors in one database query
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
@@ -2808,8 +2808,8 @@ describe("em.query / sets", () => {
       // And a POJO compound with one nonempty branch
       const ids = query({
         union: [
-          { from: b, where: b.id.eq("b:1"), select: { id: b.author_id } },
-          { from: b, where: b.id.eq("b:9"), select: { id: b.author_id } },
+          { from: b, where: b.id.eq("b:1"), select: { id: b.authorId } },
+          { from: b, where: b.id.eq("b:9"), select: { id: b.authorId } },
         ],
         as: "author_ids",
       });
@@ -2829,8 +2829,8 @@ describe("em.query / sets", () => {
       // And an empty POJO compound whose known domain is Author ids
       const ids = query({
         union: [
-          { from: b, select: { id: b.author_id } },
-          { from: b, select: { id: b.author_id } },
+          { from: b, select: { id: b.authorId } },
+          { from: b, select: { id: b.authorId } },
         ],
         as: "author_ids",
       });

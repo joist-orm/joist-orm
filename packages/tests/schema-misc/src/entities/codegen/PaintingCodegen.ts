@@ -60,11 +60,11 @@ export interface PaintingFields {
 }
 
 export interface PaintingColumns {
-  "id": { fieldName: "id"; type: IdOf<Painting>; entity: Painting; nullable: false; insert: "required"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "createdAt": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updatedAt": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "artistId": {
+  id: { fieldName: "id"; type: IdOf<Painting>; entity: Painting; nullable: false; insert: "required"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  artistId: {
     type: IdOf<Artist>;
     entity: Artist;
     fieldName: "artist";

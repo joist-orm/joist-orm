@@ -61,9 +61,9 @@ export interface T2AuthorFields {
 }
 
 export interface T2AuthorColumns {
-  "id": { fieldName: "id"; type: IdOf<T2Author>; entity: T2Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
-  "favorite_book_id": {
+  id: { fieldName: "id"; type: IdOf<T2Author>; entity: T2Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  favoriteBookId: {
     type: IdOf<T2Book>;
     entity: T2Book;
     fieldName: "favoriteBook";

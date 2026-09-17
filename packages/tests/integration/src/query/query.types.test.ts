@@ -78,7 +78,7 @@ function expressionFallbackTypeAssertions() {
 
   // When readonly literal arrays supply valid fallbacks
   const ids = expr({ coalesce: [b.id.arrayAgg(), ["b:1"] as const] });
-  const colors = expr({ coalesce: [a.favorite_colors, [Color.Red] as const] });
+  const colors = expr({ coalesce: [a.favoriteColors, [Color.Red] as const] });
 
   // Then result arrays preserve the column types instead of widening to strings
   expectTypeOf(ids).toExtend<Expr<Book["id"][], "Book">>();
@@ -94,7 +94,7 @@ function expressionFallbackTypeAssertions() {
   // When a fallback contains an unknown color
   // Then arbitrary strings cannot become Color values
   // @ts-expect-error This string is not a Color
-  expr({ coalesce: [a.favorite_colors, ["not-a-color"]] });
+  expr({ coalesce: [a.favoriteColors, ["not-a-color"]] });
 }
 
 /**
@@ -118,7 +118,7 @@ function predicateTypeAssertions() {
   const domainGroup = { and: [{ or: [domain.firstName.eq("Alice"), custom, skipCondition, undefined] }] };
   // And recursive SQL conditions with a skipped optional filter
   const sqlGroup = {
-    or: [{ and: [a.first_name.eq("Alice"), a.where({ age: 30 }), sql.condition`${a.age} > ${18}`, skipCondition] }],
+    or: [{ and: [a.firstName.eq("Alice"), a.where({ age: 30 }), sql.condition`${a.age} > ${18}`, skipCondition] }],
   };
   // And a legacy raw condition without either brand
   const raw: RawCondition = { kind: "raw", aliases: ["a"], condition: "a.age > ?", bindings: [18], pruneable: false };
@@ -135,7 +135,7 @@ function predicateTypeAssertions() {
   // Then domain and SQL groups retain separate leaves while legacy conditions fit both
   expectTypeOf(custom).toEqualTypeOf<RawCondition & PredicateBrand<"domain">>();
   expectTypeOf(domain.firstName.eq("Alice")).toEqualTypeOf<ExpressionCondition>();
-  expectTypeOf(a.first_name.eq("Alice")).toEqualTypeOf<SqlCondition>();
+  expectTypeOf(a.firstName.eq("Alice")).toEqualTypeOf<SqlCondition>();
   expectTypeOf(a.id.count().gt(0)).toEqualTypeOf<SqlCondition>();
   expectTypeOf(sql.condition`${a.age} > ${18}`).toEqualTypeOf<SqlCondition>();
   expectTypeOf(domainGroup).toExtend<ExpressionFilter>();
@@ -163,10 +163,10 @@ function predicateTypeAssertions() {
   Author.adult.where(() => skipCondition).find(em);
   em.query({ from: a, where: sqlGroup, having: sqlGroup, join: [{ inner: b, on: sqlGroup }], select: a.id });
   em.query({ from: a, where: { and: [raw, column, skipCondition] }, select: a.id });
-  em.execute({ update: a, set: { first_name: "Alice" }, where: sqlGroup });
+  em.execute({ update: a, set: { firstName: "Alice" }, where: sqlGroup });
   em.execute({ delete: a, where: { and: [raw, column, skipCondition] } });
   const exists = {
-    or: [sqlGroup, { exists: query({ from: b, where: b.author_id.eq(a.id), select: b.id }) }],
+    or: [sqlGroup, { exists: query({ from: b, where: b.authorId.eq(a.id), select: b.id }) }],
   } satisfies QueryCondition;
   em.query({ from: a, where: exists, select: a.id });
   // And optional existence queries that are omitted by the caller
@@ -215,7 +215,7 @@ async function populateTypeAssertions() {
 
   // When selecting Authors with a join and a nested population hint
   const authors = await em.query(
-    { from: a, join: [{ inner: b, on: b.author_id.eq(a.id) }], select: a },
+    { from: a, join: [{ inner: b, on: b.authorId.eq(a.id) }], select: a },
     { populate: { books: "author" } },
   );
 
@@ -232,7 +232,7 @@ async function populateTypeAssertions() {
   // @ts-expect-error Scalar results cannot be populated
   em.query({ from: a, select: a.id }, { populate: "books" });
   // @ts-expect-error Reusable POJO queries cannot be populated
-  em.query(query({ from: a, select: { name: a.first_name } }), { populate: "books" });
+  em.query(query({ from: a, select: { name: a.firstName } }), { populate: "books" });
 }
 
 /**
@@ -249,17 +249,17 @@ async function typeAssertions() {
   // === Table columns are typed expressions: `Expr<R, Src>` where `R` is the decoded result type and
   // === `Src` is the source key that left-join nullability and scope checking look up
   // A required primitive keeps its bare type
-  expectTypeOf<ResultOf<typeof a.first_name>>().toEqualTypeOf<string>();
+  expectTypeOf<ResultOf<typeof a.firstName>>().toEqualTypeOf<string>();
   // A nullable primitive carries `| null` from the field itself, before any joins are considered
   expectTypeOf<ResultOf<typeof a.age>>().toEqualTypeOf<number | null>();
   // The id column decodes to the entity's tagged id type, not `string`
   expectTypeOf<ResultOf<typeof a.id>>().toEqualTypeOf<AuthorId>();
   // An m2o FK column decodes to the *other* entity's id type
-  expectTypeOf<ResultOf<typeof b.author_id>>().toEqualTypeOf<AuthorId>();
+  expectTypeOf<ResultOf<typeof b.authorId>>().toEqualTypeOf<AuthorId>();
   // A nullable m2o FK is `| null`
-  expectTypeOf<ResultOf<typeof a.publisher_id>>().toEqualTypeOf<PublisherId | null>();
+  expectTypeOf<ResultOf<typeof a.publisherId>>().toEqualTypeOf<PublisherId | null>();
   // The default source key is the entity's own type name
-  expectTypeOf<SourceOf<typeof a.first_name>>().toEqualTypeOf<"Author">();
+  expectTypeOf<SourceOf<typeof a.firstName>>().toEqualTypeOf<"Author">();
   // Aggregates are source-less (`never`): a left join can never make `count(...)` itself null
   expectTypeOf<SourceOf<ReturnType<typeof b.id.count>>>().toEqualTypeOf<never>();
 
@@ -268,14 +268,14 @@ async function typeAssertions() {
   const entities = em.query({ from: a, select: a });
   expectTypeOf(entities).resolves.toEqualTypeOf<Author[]>();
   // POJO mode: one key per column, each with its decoded type (tagged ids, field nullability)
-  const pojo = em.query({ from: a, select: { id: a.id, name: a.first_name, age: a.age } });
+  const pojo = em.query({ from: a, select: { id: a.id, name: a.firstName, age: a.age } });
   expectTypeOf(pojo).resolves.toEqualTypeOf<{ id: AuthorId; name: string; age: number | null }[]>();
 
   // === `query(...)` turns the same POJO into a derived table with typed columns
   const bookStats = query({
     from: b,
-    groupBy: [b.author_id],
-    select: { authorId: b.author_id, bookCount: b.id.count(), lastTitle: b.title.max() },
+    groupBy: [b.authorId],
+    select: { authorId: b.authorId, bookCount: b.id.count(), lastTitle: b.title.max() },
     as: "book_stats",
   });
   // Each column keeps its inner result type and takes the `as` name as its source key
@@ -296,14 +296,14 @@ async function typeAssertions() {
   const inner = em.query({
     from: a,
     join: [{ inner: bookStats, on: bookStats.authorId.eq(a.id) }],
-    select: { name: a.first_name, bookCount: bookStats.bookCount },
+    select: { name: a.firstName, bookCount: bookStats.bookCount },
   });
   expectTypeOf(inner).resolves.toEqualTypeOf<{ name: string; bookCount: number }[]>();
   // Left join: the same column picks up `| null`, and `.coalesce(0)` recovers the non-null type
   const left = em.query({
     from: a,
     join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
-    select: { name: a.first_name, bookCount: bookStats.bookCount, safe: bookStats.bookCount.coalesce(0) },
+    select: { name: a.firstName, bookCount: bookStats.bookCount, safe: bookStats.bookCount.coalesce(0) },
   });
   expectTypeOf(left).resolves.toEqualTypeOf<{ name: string; bookCount: number | null; safe: number }[]>();
 
@@ -314,10 +314,10 @@ async function typeAssertions() {
   const mentors = em.query({
     from: a,
     join: [
-      { left: m, on: a.mentor_id.eq(m.id) },
-      { left: p, on: a.publisher_id.eq(p.id) },
+      { left: m, on: a.mentorId.eq(m.id) },
+      { left: p, on: a.publisherId.eq(p.id) },
     ],
-    select: { mentee: a.first_name, mentor: m.first_name, publisher: p.name },
+    select: { mentee: a.firstName, mentor: m.firstName, publisher: p.name },
   });
   expectTypeOf(mentors).resolves.toEqualTypeOf<{ mentee: string; mentor: string | null; publisher: string | null }[]>();
 
@@ -325,17 +325,17 @@ async function typeAssertions() {
   // A single-expression select is a scalar subquery: `| null` because it can return no row
   // Given Book and Author aliases linked by Book.author_id
   // When selecting the Book count for an Author as a scalar subquery
-  const scalar = query({ from: b, where: { and: [b.author_id.eq(a.id)] }, select: b.id.count() });
+  const scalar = query({ from: b, where: { and: [b.authorId.eq(a.id)] }, select: b.id.count() });
   // Then the count query retains its scalar brand and nullable expression result
   expectTypeOf(scalar).toEqualTypeOf<ScalarQuery<number>>();
   // A single-column subquery is an IN-list target, checked against the column's id type
-  a.id.in(query({ from: b, select: b.author_id }));
+  a.id.in(query({ from: b, select: b.authorId }));
 
   // === A whole query is a value
   // `satisfies Query` checks the shape but keeps the literal `select` type...
   const q = {
     from: a,
-    select: { name: a.first_name },
+    select: { name: a.firstName },
     orderBy: [{ name: "ASC" }, { sort: a.age, order: "ASC" }],
   } satisfies Query;
   const direct = em.query(q);
@@ -346,13 +346,13 @@ async function typeAssertions() {
 
   // === The keyed orderBy form
   // Keys must be keys of `select`, with uppercase SQL direction literals (NULLS FIRST/LAST suffixes allowed)
-  em.query({ from: a, select: { name: a.first_name }, orderBy: { name: "ASC NULLS LAST" } });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "ASC NULLS LAST" } });
   // In entity mode the keys are the table's sortable columns instead
-  em.query({ from: a, select: a, orderBy: { first_name: "DESC" } });
+  em.query({ from: a, select: a, orderBy: { firstName: "DESC" } });
   // Keyed and expression entries can share a readonly array without widening the selected row type
   const ordered = em.query({
     from: a,
-    select: { name: a.first_name, age: a.age },
+    select: { name: a.firstName, age: a.age },
     orderBy: [
       undefined,
       { age: undefined },
@@ -363,7 +363,7 @@ async function typeAssertions() {
   });
   expectTypeOf(ordered).resolves.toEqualTypeOf<{ name: string; age: number | null }[]>();
   // Physical columns and derived-table output names are also accepted in keyed array entries
-  em.query({ from: a, select: a, orderBy: [{ first_name: "DESC" }, { age: "ASC NULLS LAST" }] });
+  em.query({ from: a, select: a, orderBy: [{ firstName: "DESC" }, { age: "ASC NULLS LAST" }] });
   const orderedStats = em.query({ from: bookStats, select: bookStats, orderBy: [{ bookCount: "DESC" }] });
   expectTypeOf(orderedStats).resolves.toEqualTypeOf<
     { authorId: AuthorId; bookCount: number; lastTitle: string | null }[]
@@ -371,7 +371,7 @@ async function typeAssertions() {
   // query() shares the same orderBy array support and keeps its derived-table row type
   const orderedNames = query({
     from: a,
-    select: { name: a.first_name },
+    select: { name: a.firstName },
     orderBy: [{ sort: a.age, order: "ASC" }, { name: "ASC" }],
   });
   expectTypeOf(orderedNames).toEqualTypeOf<Subquery<{ name: string }, "?">>();
@@ -385,11 +385,11 @@ async function typeAssertions() {
   // === Polymorphic references accept an id subquery in `in`; the select column picks the component
   const [c] = tables(Comment);
   c.parent.in(query({ from: a, select: a.id }));
-  c.parent.in(query({ from: b, select: b.author_id }));
+  c.parent.in(query({ from: b, select: b.authorId }));
 
   // Given a Comment table whose parent can reference an Author or another entity
   // When selecting the physical Author component rather than the parent relationship
-  const parentIds = em.query({ from: c, select: { authorId: c.parent_author_id } });
+  const parentIds = em.query({ from: c, select: { authorId: c.parentAuthorId } });
   // Then the component keeps its Author id domain and physical column nullability
   expectTypeOf(parentIds).resolves.toEqualTypeOf<{ authorId: AuthorId | null }[]>();
 
@@ -398,7 +398,7 @@ async function typeAssertions() {
   // And a Book table with separate relationship and physical FK members
   // Then the alias is not a SQL query source or mutation target
   // @ts-expect-error: find aliases are not table sources
-  em.query({ from: findAuthor, select: { name: a.first_name } });
+  em.query({ from: findAuthor, select: { name: a.firstName } });
   // @ts-expect-error: find aliases are not INSERT targets
   em.execute({ insert: findAuthor, values: [] });
   // @ts-expect-error: find aliases are not UPDATE targets
@@ -416,11 +416,11 @@ async function typeAssertions() {
   const sugar = em.query({
     from: a,
     join: [a.books.as(b), a.publisher.as(p)],
-    select: { name: a.first_name, title: b.title, publisher: p.name },
+    select: { name: a.firstName, title: b.title, publisher: p.name },
   });
   expectTypeOf(sugar).resolves.toEqualTypeOf<{ name: string; title: string | null; publisher: string | null }[]>();
   // A required reference (`book.author`) defaults to INNER: `author` stays non-null
-  const requiredInner = em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.first_name } });
+  const requiredInner = em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
   expectTypeOf(requiredInner).resolves.toEqualTypeOf<{ title: string; author: string }[]>();
   // `.inner(...)` overrides a collection's LEFT default, so `title` stays non-null
   const withBooks = em.query({ from: a, join: [a.books.inner(b)], select: { title: b.title } });
@@ -465,7 +465,7 @@ async function typeAssertions() {
   expectTypeOf(explicitLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
   expectTypeOf<SourceOf<typeof sp.city>>().toEqualTypeOf<"SmallPublisher">();
   expectTypeOf<SourceOf<typeof namedSmall.city>>().toEqualTypeOf<"small">();
-  expectTypeOf<ResultOf<typeof p.group_id>>().toEqualTypeOf<PublisherGroupId | null>();
+  expectTypeOf<ResultOf<typeof p.groupId>>().toEqualTypeOf<PublisherGroupId | null>();
   // @ts-expect-error: callable subtype joins reject the wrong subtype
   p.smallPublisher(lp);
   // @ts-expect-error: INNER subtype joins also reject the wrong subtype
@@ -473,7 +473,7 @@ async function typeAssertions() {
   // @ts-expect-error: SmallPublisher's physical table has no inherited name column
   sp.name;
   // @ts-expect-error: specialized group storage still belongs to Publisher
-  sp.group_id;
+  sp.groupId;
   // @ts-expect-error: Publisher's physical table has no subtype city column
   p.city;
   // When selecting CTI root and subtype tables as entities
@@ -491,11 +491,11 @@ async function typeAssertions() {
   const shared = em.query({
     from: oldTask,
     select: {
-      old: oldTask.special_old_field,
-      newer: oldTask.special_new_field,
-      copied: oldTask.copied_from_id,
-      parent: oldTask.parent_old_task_id,
-      author: oldTask.special_new_author_id,
+      old: oldTask.specialOldField,
+      newer: oldTask.specialNewField,
+      copied: oldTask.copiedFromId,
+      parent: oldTask.parentOldTaskId,
+      author: oldTask.specialNewAuthorId,
     },
   });
   // Then SQL nullability and FK domains come from storage, not TaskOld's narrower entity fields
@@ -508,8 +508,8 @@ async function typeAssertions() {
       author: AuthorId | null;
     }[]
   >();
-  expectTypeOf<ResultOf<typeof task.special_old_field>>().toEqualTypeOf<number | null>();
-  expectTypeOf<ResultOf<typeof newTask.special_old_field>>().toEqualTypeOf<number | null>();
+  expectTypeOf<ResultOf<typeof task.specialOldField>>().toEqualTypeOf<number | null>();
+  expectTypeOf<ResultOf<typeof newTask.specialOldField>>().toEqualTypeOf<number | null>();
   // When selecting STI root and subtype tables as entities
   const tasks = em.query({ from: task, select: task });
   const oldTasks = query({ from: oldTask, select: oldTask });
@@ -523,7 +523,7 @@ async function typeAssertions() {
 
   // === Mistakes that must not compile
   // Given a nonliteral Author read carrying the reserved `ctes` spelling, which `with` does not replace
-  const withCte = { from: a, select: { name: a.first_name }, ctes: [] };
+  const withCte = { from: a, select: { name: a.firstName }, ctes: [] };
   // And an otherwise valid compound with that invalid later operand
   const nestedCte = { unionAll: [q, withCte] } as const;
   // And a compound mixed with a mutation operation
@@ -539,7 +539,7 @@ async function typeAssertions() {
   // @ts-expect-error: a nonliteral compound cannot also be an INSERT
   query(compoundMutation);
   // And query-clause words remain legal as projected data keys
-  const keywords = query({ from: a, select: { with: a.first_name, select: a.first_name, delete: a.first_name } });
+  const keywords = query({ from: a, select: { with: a.firstName, select: a.firstName, delete: a.firstName } });
   expectTypeOf(em.query(keywords)).resolves.toEqualTypeOf<{ with: string; select: string; delete: string }[]>();
 
   // @ts-expect-error: an AuthorId column cannot be compared to a BookId column
@@ -549,48 +549,48 @@ async function typeAssertions() {
   // @ts-expect-error: alias 'book_stats' is not in from/join (the scope check names the missing alias)
   em.query({ from: a, select: { bookCount: bookStats.bookCount } });
   // @ts-expect-error: a source-shaped select must be the from; 'Book' is a joined source
-  em.query({ from: a, join: [{ left: b, on: b.author_id.eq(a.id) }], select: b });
+  em.query({ from: a, join: [{ left: b, on: b.authorId.eq(a.id) }], select: b });
   // @ts-expect-error: a joined subquery cannot be selected either; select its columns individually
   em.query({ from: a, join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }], select: bookStats });
   // @ts-expect-error: select was typed too generically; use `satisfies Query` instead of `: Query`
-  em.query({ from: a, select: { name: a.first_name } } as Query);
+  em.query({ from: a, select: { name: a.firstName } } as Query);
   // @ts-expect-error: `inner` and `left` are mutually exclusive within one join entry
-  em.query({ from: a, join: [{ inner: b, left: p, on: b.author_id.eq(a.id) }], select: { name: a.first_name } });
+  em.query({ from: a, join: [{ inner: b, left: p, on: b.authorId.eq(a.id) }], select: { name: a.firstName } });
   // @ts-expect-error: the removed expression ordering syntax is not accepted
-  ({ from: a, select: { name: a.first_name }, orderBy: [{ asc: a.first_name }] }) satisfies Query<{
-    name: typeof a.first_name;
+  ({ from: a, select: { name: a.firstName }, orderBy: [{ asc: a.firstName }] }) satisfies Query<{
+    name: typeof a.firstName;
   }>;
   // @ts-expect-error: expression ordering requires sort even when order is present
-  em.query({ from: a, select: { name: a.first_name }, orderBy: [{ order: "ASC" }] });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ order: "ASC" }] });
   // @ts-expect-error: expression orders are uppercase SQL literals
-  em.query({ from: a, select: { name: a.first_name }, orderBy: [{ sort: a.age, order: "asc" }] });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ sort: a.age, order: "asc" }] });
   // @ts-expect-error: keyed orderBy only accepts keys of select, and 'age' was not selected
-  em.query({ from: a, select: { name: a.first_name }, orderBy: { age: "ASC" } });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: { age: "ASC" } });
   // @ts-expect-error: keyed orderBy directions are uppercase SQL literals, i.e. "ASC" not "asc"
-  em.query({ from: a, select: { name: a.first_name }, orderBy: { name: "asc" } });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: { name: "asc" } });
   // @ts-expect-error: keyed array entries only accept selected keys, even alongside expression entries
-  em.query({ from: a, select: { name: a.first_name }, orderBy: [{ sort: a.age, order: "ASC" }, { age: "ASC" }] });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ sort: a.age, order: "ASC" }, { age: "ASC" }] });
   // @ts-expect-error: keyed array directions must also be uppercase SQL literals
-  em.query({ from: a, select: { name: a.first_name }, orderBy: [{ name: "asc" }] });
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ name: "asc" }] });
   // @ts-expect-error: entity collections are not sortable fields
   em.query({ from: a, select: a, orderBy: [{ books: "ASC" }] });
   // @ts-expect-error: scalar selects have no keys to address in orderBy
-  em.query({ from: a, select: a.first_name, orderBy: [{ name: "ASC" }] });
+  em.query({ from: a, select: a.firstName, orderBy: [{ name: "ASC" }] });
   // @ts-expect-error: query() also rejects keys that are absent from select
-  query({ from: a, select: { name: a.first_name }, orderBy: [{ age: "ASC" }] });
+  query({ from: a, select: { name: a.firstName }, orderBy: [{ age: "ASC" }] });
   // @ts-expect-error: keyed and expression sorts must be separate array entries
-  em.query({ from: a, select: { name: a.first_name }, orderBy: [{ sort: a.age, name: "ASC", order: "ASC" }] });
-  const unionSelect: Query<{ name: typeof a.first_name } | { age: typeof a.age }> = {
+  em.query({ from: a, select: { name: a.firstName }, orderBy: [{ sort: a.age, name: "ASC", order: "ASC" }] });
+  const unionSelect: Query<{ name: typeof a.firstName } | { age: typeof a.age }> = {
     from: a,
-    select: { name: a.first_name },
+    select: { name: a.firstName },
     // @ts-expect-error: a union of select shapes must still reject a combined keyed/expression entry
     orderBy: [{ sort: a.age, name: "ASC", order: "ASC" }],
   };
   em.query(unionSelect);
   // @ts-expect-error: `sum` only exists on numeric columns
-  a.first_name.sum();
+  a.firstName.sum();
   // @ts-expect-error: a top-level query has no `as`; only subqueries built with `query(...)` are named
-  em.query({ from: a, select: { name: a.first_name }, as: "x" });
+  em.query({ from: a, select: { name: a.firstName }, as: "x" });
   // @ts-expect-error: `books` joins a Table<Book>, not a Table<Publisher>
   a.books.as(p);
   // @ts-expect-error: a collection has no expression methods, so it cannot be selected

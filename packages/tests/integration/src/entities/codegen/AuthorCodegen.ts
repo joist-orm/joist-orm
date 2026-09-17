@@ -156,63 +156,57 @@ export interface AuthorFields {
 }
 
 export interface AuthorColumns {
-  "id": { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
-  "first_name": { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
-  "last_name": { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
-  "ssn": { type: string; fieldName: "ssn"; nullable: true; insert: "optional"; update: true };
-  "initials": { type: string; fieldName: "initials"; nullable: false; insert: "optional"; update: true };
-  "number_of_books": { type: number; fieldName: "numberOfBooks"; nullable: false; insert: "required"; update: true };
-  "book_comments": { type: string; fieldName: "bookComments"; nullable: true; insert: "optional"; update: true };
-  "is_popular": { type: boolean; fieldName: "isPopular"; nullable: true; insert: "optional"; update: true };
-  "age": { type: number; fieldName: "age"; nullable: true; insert: "optional"; update: true };
-  "graduated": { type: Date; fieldName: "graduated"; nullable: true; insert: "optional"; update: true };
-  "nick_names": { type: string[]; fieldName: "nickNames"; nullable: true; insert: "optional"; update: true };
-  "nick_names_upper": { type: string[]; fieldName: "nickNamesUpper"; nullable: true; insert: "optional"; update: true };
-  "was_ever_popular": { type: boolean; fieldName: "wasEverPopular"; nullable: true; insert: "optional"; update: true };
-  "is_funny": { type: boolean; fieldName: "isFunny"; nullable: false; insert: "optional"; update: true };
-  "mentor_names": { type: string; fieldName: "mentorNames"; nullable: true; insert: "optional"; update: true };
-  "mentee_names": { type: string; fieldName: "menteeNames"; nullable: true; insert: "optional"; update: true };
-  "address": { type: Address; fieldName: "address"; nullable: true; insert: "optional"; update: true };
-  "business_address": {
+  id: { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  lastName: { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  ssn: { type: string; fieldName: "ssn"; nullable: true; insert: "optional"; update: true };
+  initials: { type: string; fieldName: "initials"; nullable: false; insert: "optional"; update: true };
+  numberOfBooks: { type: number; fieldName: "numberOfBooks"; nullable: false; insert: "required"; update: true };
+  bookComments: { type: string; fieldName: "bookComments"; nullable: true; insert: "optional"; update: true };
+  isPopular: { type: boolean; fieldName: "isPopular"; nullable: true; insert: "optional"; update: true };
+  age: { type: number; fieldName: "age"; nullable: true; insert: "optional"; update: true };
+  graduated: { type: Date; fieldName: "graduated"; nullable: true; insert: "optional"; update: true };
+  nickNames: { type: string[]; fieldName: "nickNames"; nullable: true; insert: "optional"; update: true };
+  nickNamesUpper: { type: string[]; fieldName: "nickNamesUpper"; nullable: true; insert: "optional"; update: true };
+  wasEverPopular: { type: boolean; fieldName: "wasEverPopular"; nullable: true; insert: "optional"; update: true };
+  isFunny: { type: boolean; fieldName: "isFunny"; nullable: false; insert: "optional"; update: true };
+  mentorNames: { type: string; fieldName: "mentorNames"; nullable: true; insert: "optional"; update: true };
+  menteeNames: { type: string; fieldName: "menteeNames"; nullable: true; insert: "optional"; update: true };
+  address: { type: Address; fieldName: "address"; nullable: true; insert: "optional"; update: true };
+  businessAddress: {
     type: z.input<typeof AddressSchema>;
     fieldName: "businessAddress";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "quotes": { type: Quotes; fieldName: "quotes"; nullable: true; insert: "optional"; update: true };
-  "number_of_atoms": { type: bigint; fieldName: "numberOfAtoms"; nullable: true; insert: "optional"; update: true };
-  "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
-  "number_of_public_reviews": {
+  quotes: { type: Quotes; fieldName: "quotes"; nullable: true; insert: "optional"; update: true };
+  numberOfAtoms: { type: bigint; fieldName: "numberOfAtoms"; nullable: true; insert: "optional"; update: true };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  numberOfPublicReviews: {
     type: number;
     fieldName: "numberOfPublicReviews";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "numberOfPublicReviews2": {
+  numberOfPublicReviews2: {
     type: number;
     fieldName: "numberOfPublicReviews2";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "tags_of_all_books": { type: string; fieldName: "tagsOfAllBooks"; nullable: true; insert: "optional"; update: true };
-  "search": { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
-  "image_file_name": { type: string; fieldName: "imageFileName"; nullable: true; insert: "optional"; update: true };
-  "certificate": { type: Uint8Array; fieldName: "certificate"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "range_of_books": { type: BookRange; fieldName: "rangeOfBooks"; nullable: true; insert: "optional"; update: true };
-  "favorite_colors": { type: Color[]; fieldName: "favoriteColors"; nullable: true; insert: "optional"; update: true };
-  "favorite_shape": {
-    type: FavoriteShape;
-    fieldName: "favoriteShape";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "mentor_id": {
+  tagsOfAllBooks: { type: string; fieldName: "tagsOfAllBooks"; nullable: true; insert: "optional"; update: true };
+  search: { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
+  imageFileName: { type: string; fieldName: "imageFileName"; nullable: true; insert: "optional"; update: true };
+  certificate: { type: Uint8Array; fieldName: "certificate"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  rangeOfBooks: { type: BookRange; fieldName: "rangeOfBooks"; nullable: true; insert: "optional"; update: true };
+  favoriteColors: { type: Color[]; fieldName: "favoriteColors"; nullable: true; insert: "optional"; update: true };
+  favoriteShape: { type: FavoriteShape; fieldName: "favoriteShape"; nullable: true; insert: "optional"; update: true };
+  mentorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "mentor";
@@ -220,7 +214,7 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
-  "root_mentor_id": {
+  rootMentorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "rootMentor";
@@ -228,7 +222,7 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
-  "current_draft_book_id": {
+  currentDraftBookId: {
     type: IdOf<Book>;
     entity: Book;
     fieldName: "currentDraftBook";
@@ -236,7 +230,7 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
-  "favorite_book_id": {
+  favoriteBookId: {
     type: IdOf<Book>;
     entity: Book;
     fieldName: "favoriteBook";
@@ -244,7 +238,7 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
-  "publisher_id": {
+  publisherId: {
     type: IdOf<Publisher>;
     entity: Publisher;
     fieldName: "publisher";

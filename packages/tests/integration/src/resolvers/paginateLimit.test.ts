@@ -77,7 +77,7 @@ describe("paginateLimit", () => {
     await insertAuthor({ first_name: "Bob" });
     // And a name-ordered query with pagination that must not constrain the requested pages or count
     const [a] = tables(Author);
-    const query = { from: a, select: a, orderBy: { first_name: "ASC" }, limit: 1, offset: 20 } satisfies Query;
+    const query = { from: a, select: a, orderBy: { firstName: "ASC" }, limit: 1, offset: 20 } satisfies Query;
 
     // When requesting the first two Authors by name
     const first = await paginateLimit(ctx, query, { limit: 2 });
@@ -115,7 +115,7 @@ describe("paginateLimit", () => {
     await expect(empty.pageInfo.totalCount).resolves.toEqual(3);
     expect(query.limit).toEqual(1);
     expect(query.offset).toEqual(20);
-    expect(query.orderBy).toEqual({ first_name: "ASC" });
+    expect(query.orderBy).toEqual({ firstName: "ASC" });
   });
 
   it.withCtx("counts distinct joined Authors rather than their Books", async (ctx) => {
@@ -132,7 +132,7 @@ describe("paginateLimit", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id), keep: true }],
+      join: [{ inner: b, on: b.authorId.eq(a.id), keep: true }],
       distinct: true,
       orderBy: { id: "ASC" },
       limit: 1,
@@ -160,7 +160,7 @@ describe("paginateLimit", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id) }],
+      join: [{ inner: b, on: b.authorId.eq(a.id) }],
       orderBy: [{ sort: b.title, order: "ASC" }],
     } satisfies Query;
 
@@ -190,7 +190,7 @@ describe("paginateLimit", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id) }],
+      join: [{ inner: b, on: b.authorId.eq(a.id) }],
       groupBy: [a.id],
       having: b.id.count().gt(1),
       orderBy: { id: "ASC" },

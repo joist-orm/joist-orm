@@ -15,18 +15,18 @@ export interface Entity extends Entity2 {
 
 const authorMetaColumns = {
   "id": new Column("id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
-  "first_name": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
-  "last_name": new Column("last_name", true, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
-  "created_at": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
-  "updated_at": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "firstName": new Column("first_name", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "lastName": new Column("last_name", true, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "createdAt": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
 } satisfies ColumnDescriptors;
 const bookMetaColumns = {
   "id": new Column("id", false, false, false, false, true, () => bookMeta, new KeySerde("b", "int")),
   "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
-  "deleted_at": new Column("deleted_at", true, false, false, false, true, undefined, new DateSerde("timestamp with time zone")),
-  "created_at": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
-  "updated_at": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
-  "author_id": new Column("author_id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+  "deletedAt": new Column("deleted_at", true, false, false, false, true, undefined, new DateSerde("timestamp with time zone")),
+  "createdAt": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "authorId": new Column("author_id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
 } satisfies ColumnDescriptors;
 
 export const authorMeta: EntityMetadata<Author> = {
@@ -40,10 +40,10 @@ export const authorMeta: EntityMetadata<Author> = {
   supportsEmExecute: true,
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", authorMetaColumns["id"]), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", authorMetaColumns["first_name"]), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", authorMetaColumns["last_name"]), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["created_at"]), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updated_at"]), immutable: false },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", authorMetaColumns["firstName"]), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", authorMetaColumns["lastName"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["createdAt"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updatedAt"]), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
   columns: authorMetaColumns,
@@ -70,10 +70,10 @@ export const bookMeta: EntityMetadata<Book> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", bookMetaColumns["id"]), immutable: true },
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
-    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Date, serde: new SimpleFieldSerde("deletedAt", bookMetaColumns["deleted_at"]), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", bookMetaColumns["created_at"]), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", bookMetaColumns["updated_at"]), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["author_id"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["author_id"]), immutable: false },
+    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Date, serde: new SimpleFieldSerde("deletedAt", bookMetaColumns["deletedAt"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", bookMetaColumns["createdAt"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", bookMetaColumns["updatedAt"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["authorId"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["authorId"]), immutable: false },
   },
   columns: bookMetaColumns,
   allFields: {},

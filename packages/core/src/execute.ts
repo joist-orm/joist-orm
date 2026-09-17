@@ -210,8 +210,8 @@ export function parseStatement(arg: unknown): Plan | undefined {
   }
   if (meta.supportsEmExecute !== true)
     fail(`SQL mutations require supported physical metadata for ${meta.type}; run codegen`);
-  const fields = Object.values(meta.columns);
-  for (const field of fields) {
+  const fields = Object.entries(meta.columns);
+  for (const [, field] of fields) {
     requireColumnMetadata(meta, field);
   }
   const assigner = new AliasAssigner();
@@ -231,7 +231,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   const bindings: unknown[] = [];
   if (operation === "insert") {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");
-    const required = fields.filter((column) => column.insert === "required");
+    const required = fields.filter(([, column]) => column.insert === "required");
     if ("values" in statement) {
       const rows = Array.isArray(statement.values) ? statement.values : [statement.values];
       // A VALUES cell *is* the new row, so there is no existing row for it to read: this scope skips
@@ -242,18 +242,17 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const valuesCtx = new Ctx(assigner, withCtx);
       const entries = rows.map((row) => assignments(meta, row, "insert"));
       for (const row of entries) {
-        for (const field of required) {
-          if (!row.some((entry) => entry[0] === field.columnName))
-            fail(`INSERT requires ${meta.type}.${field.columnName}`);
+        for (const [key] of required) {
+          if (!row.some((entry) => entry[0] === key)) fail(`INSERT requires ${meta.type}.${key}`);
         }
       }
       if (rows.length === 0) return undefined;
-      const keys = fields.filter((field) => entries.some((row) => row.some((entry) => entry[0] === field.columnName)));
-      sql += ` (${keys.map((field) => kq(field.columnName)).join(", ")}) VALUES `;
+      const keys = fields.filter(([key]) => entries.some((row) => row.some((entry) => entry[0] === key)));
+      sql += ` (${keys.map(([, field]) => kq(field.columnName)).join(", ")}) VALUES `;
       sql += entries
         .map((row) => {
-          const cells = keys.map((field) => {
-            const entry = row.find((entry) => entry[0] === field.columnName);
+          const cells = keys.map(([key, field]) => {
+            const entry = row.find((entry) => entry[0] === key);
             if (!entry) return "DEFAULT";
             const cell = assignmentToSql(meta, field, entry[1], valuesCtx);
             bindings.push(...cell.bindings);
@@ -267,9 +266,8 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const source = parseNestedQuery(statement.from, withCtx, assigner);
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
       const columns = source.output.columns;
-      for (const field of required) {
-        if (!columns.some((column) => column[0] === field.columnName))
-          fail(`INSERT requires ${meta.type}.${field.columnName}`);
+      for (const [key] of required) {
+        if (!columns.some((column) => column[0] === key)) fail(`INSERT requires ${meta.type}.${key}`);
       }
       for (const [key, expr] of columns) {
         const field = writableField(meta, key, "insert");
@@ -287,9 +285,9 @@ export function parseStatement(arg: unknown): Plan | undefined {
         if (!field.sqlNullable && expr.sqlNullable === true)
           fail(`INSERT SELECT ${meta.type}.${key} cannot accept a nullable output`);
       }
-      const keys = fields.filter((field) => columns.some((column) => column[0] === field.columnName));
+      const keys = fields.filter(([key]) => columns.some((column) => column[0] === key));
       const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
-      sql += ` (${keys.map((field) => kq(field.columnName)).join(", ")}) SELECT ${keys.map((field) => `${sourceAlias}.${safeKq(field.columnName)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
+      sql += ` (${keys.map(([, field]) => kq(field.columnName)).join(", ")}) SELECT ${keys.map(([key]) => `${sourceAlias}.${safeKq(key)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
       bindings.push(...source.bindings);
       refs.push(...source.outerRefs);
     }
@@ -393,19 +391,19 @@ type NoMutationReadClauses = Partial<
     never
   >
 >;
-/** Column keys allowed in INSERT, i.e. Book's optional `id` and required `author_id`. */
+/** Column keys allowed in INSERT, i.e. Book's optional `id` and required `authorId`. */
 type InsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" | "optional" } ? K : never;
 }[keyof ColumnsOf<T>];
-/** Column keys that each INSERT row must supply, i.e. Book's `author_id` despite its ORM default. */
+/** Column keys that each INSERT row must supply, i.e. Book's `authorId` despite its ORM default. */
 type RequiredInsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" } ? K : never;
 }[keyof ColumnsOf<T>];
-/** Column keys allowed in UPDATE SET, i.e. Book's `title` and `author_id`, but not `id`. */
+/** Column keys allowed in UPDATE SET, i.e. Book's `title` and `authorId`, but not `id`. */
 type UpdateKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { update: true } ? K : never;
 }[keyof ColumnsOf<T>];
-/** A column's domain value before SQL nullability is added, i.e. Book's `id` is BookId and `author_id` is AuthorId. */
+/** A column's domain value before SQL nullability is added, i.e. Book's `id` is BookId and `authorId` is AuthorId. */
 type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
   ? IdOf<T>
   : ColumnsOf<T>[K] extends { entity: infer U }

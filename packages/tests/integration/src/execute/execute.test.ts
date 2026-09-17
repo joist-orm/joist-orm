@@ -38,7 +38,7 @@ describe("em.execute", () => {
     // Given an AuthorStat import with fractional samples and bigint samples beyond Number's exact range
     const em = newEntityManager();
     const s = table(AuthorStat);
-    const returning = { decimal: s.decimal_samples, bigint: s.bigint_samples };
+    const returning = { decimal: s.decimalSamples, bigint: s.bigintSamples };
     // When inserting domain arrays through the generated codecs
     const inserted = await em.execute({
       insert: s,
@@ -48,9 +48,9 @@ describe("em.execute", () => {
         bigint: 1n,
         decimal: 1.5,
         real: 1.5,
-        double_precision: 1.5,
-        decimal_samples: [0, 1.25, 2.5],
-        bigint_samples: [0n, 9007199254740993n],
+        doublePrecision: 1.5,
+        decimalSamples: [0, 1.25, 2.5],
+        bigintSamples: [0n, 9007199254740993n],
       },
       returning,
     });
@@ -70,9 +70,9 @@ describe("em.execute", () => {
           bigint: s.bigint,
           decimal: s.decimal,
           real: s.real,
-          double_precision: s.double_precision,
-          decimal_samples: s.decimal_samples,
-          bigint_samples: s.bigint_samples,
+          doublePrecision: s.doublePrecision,
+          decimalSamples: s.decimalSamples,
+          bigintSamples: s.bigintSamples,
         },
       },
       returning,
@@ -82,7 +82,7 @@ describe("em.execute", () => {
     // When replacing both arrays with empty arrays
     const empty = await em.execute({
       update: s,
-      set: { decimal_samples: [], bigint_samples: [] },
+      set: { decimalSamples: [], bigintSamples: [] },
       allowAll: true,
       returning,
     });
@@ -94,7 +94,7 @@ describe("em.execute", () => {
     // When clearing the nullable physical columns
     const cleared = await em.execute({
       update: s,
-      set: { decimal_samples: null, bigint_samples: null },
+      set: { decimalSamples: null, bigintSamples: null },
       allowAll: true,
       returning,
     });
@@ -117,20 +117,20 @@ describe("em.execute", () => {
         bigint: 1n,
         decimal: 1.5,
         real: 1.5,
-        double_precision: 1.5,
-        decimal_samples: [],
-        bigint_samples: [],
+        doublePrecision: 1.5,
+        decimalSamples: [],
+        bigintSamples: [],
       },
     });
     // When storing NULL elements alongside zero, a fraction, and a bigint beyond Number's exact range
     const result = await em.execute({
       update: s,
       set: {
-        decimal_samples: sql<number[]>`ARRAY[NULL, 0, 1.25]::numeric[]`,
-        bigint_samples: sql<bigint[]>`ARRAY[NULL, 0, 9007199254740993]::bigint[]`,
+        decimalSamples: sql<number[]>`ARRAY[NULL, 0, 1.25]::numeric[]`,
+        bigintSamples: sql<bigint[]>`ARRAY[NULL, 0, 9007199254740993]::bigint[]`,
       },
       allowAll: true,
-      returning: { decimal: s.decimal_samples, bigint: s.bigint_samples },
+      returning: { decimal: s.decimalSamples, bigint: s.bigintSamples },
     });
     // Then RETURNING preserves NULL elements without coercion or numeric precision loss
     expect(result.rows).toEqual([{ decimal: [null, 0, 1.25], bigint: [null, 0n, 9007199254740993n] }]);
@@ -145,7 +145,7 @@ describe("em.execute", () => {
     // And User's inherited family supplies a scalar subquery, not a mutation target
     const u = table(User);
     const t = table(Tag);
-    const history = query({ from: u, where: u.id.eq(user.id), select: u.password_history });
+    const history = query({ from: u, where: u.id.eq(user.id), select: u.passwordHistory });
     // When a Tag mutation returns the stored password history
     const inserted = await em.execute({ insert: t, values: { name: "Password audit" }, returning: history });
     // Then each returned element is the domain object, not its encoded text
@@ -181,8 +181,8 @@ describe("em.execute", () => {
       // When writing search without running the ORM's derived-field reactions
       const inserted = await em.execute({
         insert: a,
-        values: { first_name: "Importer", number_of_books: 0, search: "catalog" },
-        returning: { isFunny: a.is_funny, bookComments: a.book_comments },
+        values: { firstName: "Importer", numberOfBooks: 0, search: "catalog" },
+        returning: { isFunny: a.isFunny, bookComments: a.bookComments },
       });
       // Then the SQL false default and physically nullable derived storage retain their values
       expect(inserted.rows).toEqual([{ isFunny: false, bookComments: null }]);
@@ -204,14 +204,14 @@ describe("em.execute", () => {
       // When inserting a Book without ORM defaults or timestamp assignments
       const result = await em.execute({
         insert: b,
-        values: { id: "b:10", title: "Imported", author_id: "a:1", notes: "Explicit notes" },
+        values: { id: "b:10", title: "Imported", authorId: "a:1", notes: "Explicit notes" },
         returning: {
           id: b.id,
           title: b.title,
-          author: b.author_id,
+          author: b.authorId,
           order: b.order,
-          createdAt: b.created_at,
-          updatedAt: b.updated_at,
+          createdAt: b.createdAt,
+          updatedAt: b.updatedAt,
         },
       });
       // Then PostgreSQL supplies the order and timestamps without hydrating a Book
@@ -247,10 +247,10 @@ describe("em.execute", () => {
       const result = await em.execute({
         insert: b,
         values: [
-          { title: "Explicit", author_id: "a:1", notes: "n1", order: 9, acknowledgements: "Thanks" },
-          { notes: "n2", author_id: "a:1", title: "Undefined", order: undefined, acknowledgements: undefined },
-          { author_id: "a:1", title: "Omitted", notes: "n3" },
-          { title: "Default", author_id: "a:1", notes: "n4", order: sql<number>`DEFAULT`, acknowledgements: null },
+          { title: "Explicit", authorId: "a:1", notes: "n1", order: 9, acknowledgements: "Thanks" },
+          { notes: "n2", authorId: "a:1", title: "Undefined", order: undefined, acknowledgements: undefined },
+          { authorId: "a:1", title: "Omitted", notes: "n3" },
+          { title: "Default", authorId: "a:1", notes: "n4", order: sql<number>`DEFAULT`, acknowledgements: null },
         ],
         returning: { title: b.title, order: b.order, acknowledgements: b.acknowledgements },
       });
@@ -324,10 +324,10 @@ describe("em.execute", () => {
       const result = await em.execute({
         insert: b,
         values: [
-          { title: "Entity owner", author_id: owner, reviewer_id: "a:2", notes: "Imported" },
-          { title: "Id owner", author_id: "a:2", reviewer_id: owner, notes: "Imported" },
+          { title: "Entity owner", authorId: owner, reviewerId: "a:2", notes: "Imported" },
+          { title: "Id owner", authorId: "a:2", reviewerId: owner, notes: "Imported" },
         ],
-        returning: { author: b.author_id, reviewer: b.reviewer_id },
+        returning: { author: b.authorId, reviewer: b.reviewerId },
       });
       // Then each reference is encoded as a foreign key and decoded as an Author id
       expect(result).toEqual({
@@ -349,7 +349,7 @@ describe("em.execute", () => {
       const em = newEntityManager();
       const b = table(Book);
       // When importing a Book that references the missing Author
-      const result = em.execute({ insert: b, values: { title: "Orphan", author_id: "a:999", notes: "Imported" } });
+      const result = em.execute({ insert: b, values: { title: "Orphan", authorId: "a:999", notes: "Imported" } });
       // Then the database foreign-key constraint rejects the write without ORM fixups
       await expect(result).rejects.toMatchObject({ code: "23503" });
       expect(await select("books")).toEqual([]);
@@ -451,14 +451,14 @@ describe("em.execute", () => {
       const result = await em.execute({
         update: a,
         set: {
-          first_name: "Same",
-          last_name: "Same",
+          firstName: "Same",
+          lastName: "Same",
           initials: "BACKFILL",
-          number_of_books: 42,
+          numberOfBooks: 42,
           numberOfPublicReviews2: 7,
         },
         where: a.id.eq("a:1"),
-        returning: { initials: a.initials, count: a.number_of_books, publicReviews: a.numberOfPublicReviews2 },
+        returning: { initials: a.initials, count: a.numberOfBooks, publicReviews: a.numberOfPublicReviews2 },
       });
       // Then physical derived fields are writable without recalculation or identity-map synchronization
       expect(result).toEqual({ rowCount: 1, rows: [{ initials: "BACKFILL", count: 42, publicReviews: 7 }] });
@@ -475,7 +475,7 @@ describe("em.execute", () => {
       expect(
         await newEntityManager().query({
           from: a,
-          select: { name: a.first_name, initials: a.initials, count: a.number_of_books },
+          select: { name: a.firstName, initials: a.initials, count: a.numberOfBooks },
         }),
       ).toEqual([{ name: "Same", initials: "BACKFILL", count: 42 }]);
     });
@@ -509,7 +509,7 @@ describe("em.execute", () => {
         const result = await em.execute({
           update: a,
           set: { age: 50 },
-          where: a.first_name.eq("Selected"),
+          where: a.firstName.eq("Selected"),
           allowAll: true,
           softDeletes,
         });
@@ -532,7 +532,7 @@ describe("em.execute", () => {
       const a = table(Author);
       resetQueryCount();
       // When explicitly deleting all visible Authors
-      const result = await em.execute({ delete: a, allowAll: true, returning: { id: a.id, name: a.first_name } });
+      const result = await em.execute({ delete: a, allowAll: true, returning: { id: a.id, name: a.firstName } });
       // Then DELETE removes the live row instead of setting its deleted_at
       expect(result).toEqual({ rowCount: 1, rows: [{ id: "a:1", name: "Live" }] });
       expect(queries).toMatchInlineSnapshot(`
@@ -630,13 +630,13 @@ describe("em.execute", () => {
           from: {
             from: a,
             select: {
-              first_name: a.first_name,
-              number_of_books: a.number_of_books,
-              favorite_colors: a.favorite_colors,
+              firstName: a.firstName,
+              numberOfBooks: a.numberOfBooks,
+              favoriteColors: a.favoriteColors,
             },
           },
         }),
-      ).rejects.toThrow("INSERT SELECT Author.favorite_colors has incompatible or unknown storage codecs");
+      ).rejects.toThrow("INSERT SELECT Author.favoriteColors has incompatible or unknown storage codecs");
       // Then no SQL runs for this unsupported codec
       expect(queries).toEqual([]);
     });
@@ -686,12 +686,12 @@ describe("em.execute", () => {
           {
             from: source,
             where: source.id.eq("b:1"),
-            select: { notes: source.notes, author_id: source.author_id, title: source.title },
+            select: { notes: source.notes, authorId: source.authorId, title: source.title },
           },
           {
             from: source,
             where: source.title.eq("Copied"),
-            select: { title: source.title, notes: source.notes, author_id: source.author_id },
+            select: { title: source.title, notes: source.notes, authorId: source.authorId },
           },
         ],
         orderBy: [{ title: "ASC" }],
@@ -702,7 +702,7 @@ describe("em.execute", () => {
       const result = await em.execute({
         insert: target,
         from: copies,
-        returning: { title: target.title, author: target.author_id, notes: target.notes },
+        returning: { title: target.title, author: target.authorId, notes: target.notes },
       });
       // Then both duplicate rows survive and each source key reaches its correct physical column
       expect(result).toEqual({
@@ -714,7 +714,7 @@ describe("em.execute", () => {
       });
       expect(queries).toMatchInlineSnapshot(`
        [
-         "INSERT INTO books AS b (title, notes, author_id) SELECT sq1.title, sq1.notes, sq1.author_id FROM ((SELECT b1.notes AS notes, b1.author_id AS author_id, b1.title AS title FROM books AS b1 WHERE b1.id = $1 AND b1.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq.author_id AS author_id, sq.title AS title FROM (SELECT b2.title AS title, b2.notes AS notes, b2.author_id AS author_id FROM books AS b2 WHERE b2.title = $2 AND b2.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq1 RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
+         "INSERT INTO books AS b (title, notes, author_id) SELECT sq1.title, sq1.notes, sq1."authorId" FROM ((SELECT b1.notes AS notes, b1.author_id AS "authorId", b1.title AS title FROM books AS b1 WHERE b1.id = $1 AND b1.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq."authorId" AS "authorId", sq.title AS title FROM (SELECT b2.title AS title, b2.notes AS notes, b2.author_id AS "authorId" FROM books AS b2 WHERE b2.title = $2 AND b2.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq1 RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
        ]
       `);
       expect(await select("books")).toMatchObject([
@@ -743,9 +743,9 @@ describe("em.execute", () => {
           from: query({
             from: source,
             select: {
-              business_address: source.business_address,
-              number_of_books: source.number_of_books,
-              first_name: source.first_name,
+              businessAddress: source.businessAddress,
+              numberOfBooks: source.numberOfBooks,
+              firstName: source.firstName,
             },
           }),
           returning: target.id,
@@ -757,7 +757,7 @@ describe("em.execute", () => {
         expect(encode).not.toHaveBeenCalled();
         expect(queries).toMatchInlineSnapshot(`
          [
-           "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq.first_name, sq.number_of_books, sq.business_address FROM (SELECT a1.business_address AS business_address, a1.number_of_books AS number_of_books, a1.first_name AS first_name FROM authors AS a1 WHERE a1.deleted_at IS NULL) AS sq RETURNING a.id AS value",
+           "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq."firstName", sq."numberOfBooks", sq."businessAddress" FROM (SELECT a1.business_address AS "businessAddress", a1.number_of_books AS "numberOfBooks", a1.first_name AS "firstName" FROM authors AS a1 WHERE a1.deleted_at IS NULL) AS sq RETURNING a.id AS value",
          ]
         `);
         expect(await select("authors")).toMatchObject([
@@ -783,9 +783,9 @@ describe("em.execute", () => {
         from: {
           from: source,
           select: {
-            business_address: source.business_address,
-            number_of_books: source.number_of_books,
-            first_name: source.first_name,
+            businessAddress: source.businessAddress,
+            numberOfBooks: source.numberOfBooks,
+            firstName: source.firstName,
           },
         },
       });
@@ -866,14 +866,14 @@ describe("em.execute", () => {
       const a = table(Author);
       await em.execute({
         insert: a,
-        values: { first_name: "Falsy", number_of_books: 0, last_name: "Original", age: 42, is_funny: true },
+        values: { firstName: "Falsy", numberOfBooks: 0, lastName: "Original", age: 42, isFunny: true },
       });
       // When replacing those values with empty text, zero, and false
       const result = await em.execute({
         update: a,
-        set: { last_name: "", age: 0, is_funny: false },
+        set: { lastName: "", age: 0, isFunny: false },
         where: a.id.eq("a:1"),
-        returning: { lastName: a.last_name, age: a.age, isFunny: a.is_funny },
+        returning: { lastName: a.lastName, age: a.age, isFunny: a.isFunny },
       });
       // Then RETURNING and physical storage retain all three explicit assignments
       expect(result.rows).toEqual([{ lastName: "", age: 0, isFunny: false }]);
@@ -888,8 +888,8 @@ describe("em.execute", () => {
       // When inserting the Date as a domain value
       const result = await em.execute({
         insert: a,
-        values: { first_name: "Deleted", number_of_books: 0, deleted_at: deletedAt },
-        returning: a.deleted_at,
+        values: { firstName: "Deleted", numberOfBooks: 0, deletedAt: deletedAt },
+        returning: a.deletedAt,
       });
       // Then the returned Date and stored timestamp retain millisecond precision
       expect(result.rows).toEqual([deletedAt]);
@@ -904,8 +904,8 @@ describe("em.execute", () => {
       // When writing the domain object and returning its schema-backed column
       const result = await em.execute({
         insert: a,
-        values: { first_name: "Importer", number_of_books: 0, business_address: businessAddress },
-        returning: a.business_address,
+        values: { firstName: "Importer", numberOfBooks: 0, businessAddress: businessAddress },
+        returning: a.businessAddress,
       });
       // Then read-time parsing strips the marker without changing the persisted JSON
       expect(result.rows).toEqual([{ street: "Main" }]);
@@ -921,7 +921,7 @@ describe("em.execute", () => {
       // When writing invalid domain JSON without requesting read-time decoding
       const result = await em.execute({
         insert: a,
-        values: { first_name: "Importer", number_of_books: 0, address },
+        values: { firstName: "Importer", numberOfBooks: 0, address },
       });
       // Then the write persists the JSON, while a public read applies Superstruct validation
       expect(result).toEqual({ rowCount: 1, rows: [] });
@@ -938,27 +938,27 @@ describe("em.execute", () => {
       const result = await em.execute({
         insert: a,
         values: {
-          first_name: "Codecs",
-          number_of_books: 0,
-          range_of_books: BookRange.Few,
-          favorite_colors: [Color.Red, Color.Green],
-          favorite_shape: FavoriteShape.Triangle,
-          nick_names: ["One", "Two"],
+          firstName: "Codecs",
+          numberOfBooks: 0,
+          rangeOfBooks: BookRange.Few,
+          favoriteColors: [Color.Red, Color.Green],
+          favoriteShape: FavoriteShape.Triangle,
+          nickNames: ["One", "Two"],
           address: { street: "Home" },
-          business_address: { street: "Work" },
+          businessAddress: { street: "Work" },
           quotes: ["First", "Second"],
-          number_of_atoms: 9007199254740993n,
+          numberOfAtoms: 9007199254740993n,
           graduated,
         },
         returning: {
-          range: a.range_of_books,
-          colors: a.favorite_colors,
-          shape: a.favorite_shape,
-          nickNames: a.nick_names,
+          range: a.rangeOfBooks,
+          colors: a.favoriteColors,
+          shape: a.favoriteShape,
+          nickNames: a.nickNames,
           address: a.address,
-          businessAddress: a.business_address,
+          businessAddress: a.businessAddress,
           quotes: a.quotes,
-          atoms: a.number_of_atoms,
+          atoms: a.numberOfAtoms,
           graduated: a.graduated,
         },
       });
@@ -1001,23 +1001,23 @@ describe("em.execute", () => {
         insert: a,
         values: [
           {
-            first_name: "SQL null",
-            number_of_books: 0,
+            firstName: "SQL null",
+            numberOfBooks: 0,
             address: null,
-            business_address: null,
-            favorite_colors: null,
+            businessAddress: null,
+            favoriteColors: null,
             quotes: null,
           },
-          { first_name: "JSON null", number_of_books: 0, address: sql<null>`'null'::jsonb`, favorite_colors: [] },
+          { firstName: "JSON null", numberOfBooks: 0, address: sql<null>`'null'::jsonb`, favoriteColors: [] },
           {
-            first_name: "Values",
-            number_of_books: 0,
+            firstName: "Values",
+            numberOfBooks: 0,
             address: { street: "Main" },
-            favorite_colors: [Color.Blue],
+            favoriteColors: [Color.Blue],
             quotes: [],
           },
         ],
-        returning: { address: a.address, colors: a.favorite_colors, quotes: a.quotes },
+        returning: { address: a.address, colors: a.favoriteColors, quotes: a.quotes },
       });
       // Then null bypasses schema and enum codecs, while SQL still distinguishes the two kinds of null
       expect(result).toEqual({
@@ -1053,16 +1053,16 @@ describe("em.execute", () => {
       // When replacing the enum array with an empty domain array
       const empty = await em.execute({
         update: a,
-        set: { favorite_colors: [] },
+        set: { favoriteColors: [] },
         where: a.id.eq("a:1"),
-        returning: a.favorite_colors,
+        returning: a.favoriteColors,
       });
       // And a subsequent UPDATE explicitly stores SQL NULL rather than the enum-array default
       const absent = await em.execute({
         update: a,
-        set: { favorite_colors: null },
+        set: { favoriteColors: null },
         where: a.id.eq("a:1"),
-        returning: a.favorite_colors,
+        returning: a.favoriteColors,
       });
       // Then scalar results retain their array/null identity
       expect(empty).toEqual({ rowCount: 1, rows: [[]] });
@@ -1124,9 +1124,9 @@ describe("em.execute", () => {
       // When SQL writes a numeric street that is valid JSON but invalid for AddressSchema
       const result = em.execute({
         update: a,
-        set: { business_address: sql<{ street: string }>`'{"street":123}'::jsonb` },
+        set: { businessAddress: sql<{ street: string }>`'{"street":123}'::jsonb` },
         where: a.id.eq("a:1"),
-        returning: a.business_address,
+        returning: a.businessAddress,
       });
       // Then the decoder rejects after PostgreSQL has committed, without a hidden transaction
       await expect(result).rejects.toThrow(ZodError);
@@ -1153,7 +1153,7 @@ describe("em.execute", () => {
       const scalar = await em.execute({
         from: a,
         select: a.age,
-        orderBy: [{ sort: a.first_name, order: "ASC" }],
+        orderBy: [{ sort: a.firstName, order: "ASC" }],
         offset: 1,
         limit: 1,
       });
@@ -1162,7 +1162,7 @@ describe("em.execute", () => {
         query({
           from: a,
           select: { id: a.id, age: a.age },
-          orderBy: [{ sort: a.first_name, order: "ASC" }],
+          orderBy: [{ sort: a.firstName, order: "ASC" }],
           offset: 1,
           limit: 1,
         }),
@@ -1232,8 +1232,8 @@ describe("em.execute", () => {
         const guards = [
           {},
           { where: undefined },
-          { where: a.first_name.eq(undefined) },
-          { where: { and: [a.first_name.eq(undefined), { or: [a.age.eq(undefined)] }] } },
+          { where: a.firstName.eq(undefined) },
+          { where: { and: [a.firstName.eq(undefined), { or: [a.age.eq(undefined)] }] } },
         ];
         // When executing without allowAll, even though a deleted_at predicate could be injected
         for (const guard of guards) {
@@ -1268,10 +1268,10 @@ describe("em.execute", () => {
     });
 
     it.each([
-      [{ title: "Missing author", notes: "Explicit" }, "Book.author_id"],
-      [{ title: "Missing notes", author_id: "a:1" }, "Book.notes"],
-      [{ author_id: "a:1", notes: "Explicit" }, "Book.title"],
-      [{ title: "Undefined notes", author_id: "a:1", notes: undefined }, "Book.notes"],
+      [{ title: "Missing author", notes: "Explicit" }, "Book.authorId"],
+      [{ title: "Missing notes", authorId: "a:1" }, "Book.notes"],
+      [{ authorId: "a:1", notes: "Explicit" }, "Book.title"],
+      [{ title: "Undefined notes", authorId: "a:1", notes: undefined }, "Book.notes"],
     ])("requires physical Book inputs rather than config defaults: %j", async (values, field) => {
       // Given a Book import that omits a physically required field despite ORM optionality
       const em = newEntityManager();
@@ -1290,8 +1290,8 @@ describe("em.execute", () => {
       const a = table(Author);
       // When an incomplete row follows a complete one in the bulk input
       await expect(
-        execute({ insert: a, values: [{ first_name: "Valid", number_of_books: 0 }, { first_name: "Missing count" }] }),
-      ).rejects.toThrow("INSERT requires Author.number_of_books");
+        execute({ insert: a, values: [{ firstName: "Valid", numberOfBooks: 0 }, { firstName: "Missing count" }] }),
+      ).rejects.toThrow("INSERT requires Author.numberOfBooks");
       // Then validation covers every row before any INSERT executes
       expect(queries).toEqual([]);
     });
@@ -1303,10 +1303,10 @@ describe("em.execute", () => {
       const b = table(Book);
       // When a SQL INSERT tries to reference the unpersisted Author
       await expect(
-        em.execute({ insert: b, values: { title: "Premature", author_id: author, notes: "Imported" } }),
+        em.execute({ insert: b, values: { title: "Premature", authorId: author, notes: "Imported" } }),
       ).rejects.toThrow("Cannot reference an unflushed Author, even with an assigned ID");
       // And UPDATE must reject the same unflushed reference before issuing SQL
-      await expect(em.execute({ update: b, set: { author_id: author }, allowAll: true })).rejects.toThrow(
+      await expect(em.execute({ update: b, set: { authorId: author }, allowAll: true })).rejects.toThrow(
         "Cannot reference an unflushed Author, even with an assigned ID",
       );
       // Then execute neither flushes the Author nor performs foreign-key fixups
@@ -1323,7 +1323,7 @@ describe("em.execute", () => {
         const b = table(Book);
         // When the unknown, collection, inverse, or non-domain key is supplied with undefined
         await expect(
-          execute({ insert: b, values: { title: "Import", author_id: "a:1", notes: "Explicit", [field]: undefined } }),
+          execute({ insert: b, values: { title: "Import", authorId: "a:1", notes: "Explicit", [field]: undefined } }),
         ).rejects.toThrow(`Unsupported SQL mutation field Book.${field}`);
         // And UPDATE must validate keys before pruning their undefined values
         await expect(
@@ -1359,11 +1359,11 @@ describe("em.execute", () => {
       const b = table(Book);
       const tag = em.create(Tag, { name: "Not an Author" });
       // When nested creation options are assigned to the owning Author reference
-      await expect(execute({ update: b, set: { author_id: { firstName: "Nested" } }, allowAll: true })).rejects.toThrow(
+      await expect(execute({ update: b, set: { authorId: { firstName: "Nested" } }, allowAll: true })).rejects.toThrow(
         "nested creation is not supported",
       );
       // And an entity of another type cannot use the Author foreign-key codec
-      await expect(execute({ update: b, set: { author_id: tag }, allowAll: true })).rejects.toThrow(
+      await expect(execute({ update: b, set: { authorId: tag }, allowAll: true })).rejects.toThrow(
         "Expected a Author reference",
       );
       // And even an unchanged primary key is not an allowed UPDATE assignment
@@ -1403,7 +1403,7 @@ describe("em.execute", () => {
         const a = table(Author);
         const statement =
           operation === "insert"
-            ? { insert: a, values: { first_name: "Null initials", number_of_books: 0, initials: null } }
+            ? { insert: a, values: { firstName: "Null initials", numberOfBooks: 0, initials: null } }
             : { update: a, set: { initials: null }, allowAll: true };
         // When explicitly assigning SQL NULL rather than omission or DEFAULT
         await expect(execute(statement)).rejects.toThrow("Author.initials is physically NOT NULL");
@@ -1599,7 +1599,7 @@ describe("em.execute", () => {
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: source.title, author_id: source.author_id } },
+          from: { from: source, select: { title: source.title, authorId: source.authorId } },
         }),
       ).rejects.toThrow("INSERT requires Book.notes");
       // And extra keys cannot be silently dropped when matching output columns
@@ -1608,7 +1608,7 @@ describe("em.execute", () => {
           insert: target,
           from: {
             from: source,
-            select: { title: source.title, author_id: source.author_id, notes: source.notes, extra: source.title },
+            select: { title: source.title, authorId: source.authorId, notes: source.notes, extra: source.title },
           },
         }),
       ).rejects.toThrow("Unsupported SQL mutation field Book.extra");
@@ -1616,23 +1616,23 @@ describe("em.execute", () => {
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: source.title, author_id: source.id, notes: source.notes } },
+          from: { from: source, select: { title: source.title, authorId: source.id, notes: source.notes } },
         }),
-      ).rejects.toThrow("INSERT SELECT Book.author_id has incompatible or unknown storage codecs");
+      ).rejects.toThrow("INSERT SELECT Book.authorId has incompatible or unknown storage codecs");
       // And nullable reviewer ids cannot satisfy the physically required author column
       await expect(
         execute({
           insert: target,
-          from: { from: source, select: { title: source.title, author_id: source.reviewer_id, notes: source.notes } },
+          from: { from: source, select: { title: source.title, authorId: source.reviewerId, notes: source.notes } },
         }),
-      ).rejects.toThrow("INSERT SELECT Book.author_id cannot accept a nullable output");
+      ).rejects.toThrow("INSERT SELECT Book.authorId cannot accept a nullable output");
       // And unannotated SQL storage cannot be assumed compatible solely from a TypeScript generic
       await expect(
         execute({
           insert: target,
           from: {
             from: source,
-            select: { title: sql<string>`'Title'`, author_id: source.author_id, notes: source.notes },
+            select: { title: sql<string>`'Title'`, authorId: source.authorId, notes: source.notes },
           },
         }),
       ).rejects.toThrow("INSERT SELECT Book.title has incompatible or unknown storage codecs");
@@ -1861,7 +1861,7 @@ describe("em.execute", () => {
       const target = table(Author);
       const named = {
         from: source,
-        select: { first_name: source.first_name, number_of_books: source.number_of_books },
+        select: { first_name: source.firstName, number_of_books: source.numberOfBooks },
       };
       const scalar = { from: source, select: source.id };
       const reusable = query(named);
@@ -2108,7 +2108,7 @@ describe("em.execute", () => {
             ? await em.execute({ from: a, select: fields })
             : await em.execute({
                 update: a,
-                set: { first_name: "Backfilled" },
+                set: { firstName: "Backfilled" },
                 where: a.id.eq("a:1"),
                 returning: fields,
               });

@@ -69,7 +69,7 @@ export interface ChildGroupFields {
 }
 
 export interface ChildGroupColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<ChildGroup>;
     entity: ChildGroup;
@@ -77,10 +77,10 @@ export interface ChildGroupColumns {
     insert: "optional";
     update: false;
   };
-  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "child_group_id": {
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  childGroupId: {
     type: IdOf<Child>;
     entity: Child;
     fieldName: "childGroup";
@@ -88,7 +88,7 @@ export interface ChildGroupColumns {
     insert: "required";
     update: true;
   };
-  "parent_group_id": {
+  parentGroupId: {
     type: IdOf<ParentGroup>;
     entity: ParentGroup;
     fieldName: "parentGroup";

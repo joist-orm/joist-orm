@@ -58,7 +58,7 @@ export interface BookReviewFields {
 }
 
 export interface BookReviewColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<BookReview>;
     entity: BookReview;
@@ -66,15 +66,8 @@ export interface BookReviewColumns {
     insert: "required";
     update: false;
   };
-  "rating": { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
-  "book_id": {
-    type: IdOf<Author>;
-    entity: Author;
-    fieldName: "book";
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
+  rating: { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
+  bookId: { type: IdOf<Author>; entity: Author; fieldName: "book"; nullable: false; insert: "required"; update: true };
 }
 
 export interface BookReviewOpts {

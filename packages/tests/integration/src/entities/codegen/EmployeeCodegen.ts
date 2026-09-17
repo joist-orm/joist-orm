@@ -62,11 +62,11 @@ export interface EmployeeFields {
 }
 
 export interface EmployeeColumns {
-  "id": { fieldName: "id"; type: IdOf<Employee>; entity: Employee; nullable: false; insert: "optional"; update: false };
-  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "manager_id": {
+  id: { fieldName: "id"; type: IdOf<Employee>; entity: Employee; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  managerId: {
     type: IdOf<Employee>;
     entity: Employee;
     fieldName: "manager";

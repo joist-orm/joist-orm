@@ -71,7 +71,7 @@ export interface BookAdvanceFields {
 }
 
 export interface BookAdvanceColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<BookAdvance>;
     entity: BookAdvance;
@@ -79,11 +79,11 @@ export interface BookAdvanceColumns {
     insert: "optional";
     update: false;
   };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "status_id": { type: AdvanceStatus; fieldName: "status"; nullable: false; insert: "required"; update: true };
-  "book_id": { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
-  "publisher_id": {
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  statusId: { type: AdvanceStatus; fieldName: "status"; nullable: false; insert: "required"; update: true };
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
+  publisherId: {
     type: IdOf<Publisher>;
     entity: Publisher;
     fieldName: "publisher";

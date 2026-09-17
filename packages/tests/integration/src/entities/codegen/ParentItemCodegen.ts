@@ -65,7 +65,7 @@ export interface ParentItemFields {
 }
 
 export interface ParentItemColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<ParentItem>;
     entity: ParentItem;
@@ -73,10 +73,10 @@ export interface ParentItemColumns {
     insert: "optional";
     update: false;
   };
-  "name": { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "parent_group_id": {
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  parentGroupId: {
     type: IdOf<ParentGroup>;
     entity: ParentGroup;
     fieldName: "parentGroup";

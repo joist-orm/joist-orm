@@ -43,7 +43,7 @@ describe("em.query / where", () => {
     const authors = await em.query({
       from: a,
       where: a.where({ firstName: { ilike: "ali%" }, graduated: { lte: jan1 }, favoriteShape: FavoriteShape.Circle }),
-      select: a.first_name,
+      select: a.firstName,
     });
     const publishers = await em.query({ from: p, where: p.where({ size: PublisherSize.Small }), select: p.name });
     const users = await em.query({ from: u, where: u.where({ password: { in: [password] } }), select: u.password });
@@ -98,7 +98,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
+    const base = { from: a, select: a.firstName, orderBy: [{ sort: a.firstName, order: "ASC" }] } as const;
 
     // When only the upper range bound is defined
     // Then Authors above that bound are excluded
@@ -124,7 +124,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
+    const base = { from: a, select: a.firstName, orderBy: [{ sort: a.firstName, order: "ASC" }] } as const;
 
     // When comparing a JSON address with an explicit equality operator
     // Then the object is a scalar value rather than a filter operator map
@@ -149,7 +149,7 @@ describe("em.query / where", () => {
     // And an Author table ordered by name
     const em = newEntityManager();
     const a = table(Author);
-    const base = { from: a, select: a.first_name, orderBy: [{ sort: a.first_name, order: "ASC" }] } as const;
+    const base = { from: a, select: a.firstName, orderBy: [{ sort: a.firstName, order: "ASC" }] } as const;
 
     // When selecting Authors by missing last name
     // Then null means SQL NULL rather than an omitted condition
@@ -241,8 +241,8 @@ describe("em.query / where", () => {
       from: a,
       join: [a.books.inner(b)],
       where: { and: [b.where(omitted), { or: [condition, a.age.eq(40)] }] },
-      select: { name: a.first_name },
-      orderBy: [{ sort: a.first_name, order: "ASC" }],
+      select: { name: a.firstName },
+      orderBy: [{ sort: a.firstName, order: "ASC" }],
     });
 
     // When executing the same composed condition twice
@@ -257,7 +257,7 @@ describe("em.query / where", () => {
     expect(filter).toEqual({ firstName: { in: ["Alice"] } });
     // When reusing the filter on a different Author handle
     const other = table(Author, "other");
-    const names = await em.query({ from: other, where: other.where(filter), select: other.first_name });
+    const names = await em.query({ from: other, where: other.where(filter), select: other.firstName });
     // Then no previous query alias or bindings leak into the new scope
     expect(names).toEqual(["Alice"]);
   });

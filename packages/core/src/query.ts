@@ -31,6 +31,7 @@ import {
   orderByToSql,
   resolveDeferredConditions,
 } from "./Expr.ts";
+import type { ExpressionValue } from "./expression.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
 import { deepFindConditions } from "./QueryParser.pruning.ts";
 import {
@@ -113,8 +114,8 @@ export type QueryCondition =
   | SqlPredicate
   | UnbrandedPredicate
   | ((
-      | { and: Array<QueryCondition | undefined>; or?: never; exists?: never; notExists?: never }
-      | { or: Array<QueryCondition | undefined>; and?: never; exists?: never; notExists?: never }
+      | { and: readonly (QueryCondition | undefined)[]; or?: never; exists?: never; notExists?: never }
+      | { or: readonly (QueryCondition | undefined)[]; and?: never; exists?: never; notExists?: never }
     ) & { pruneIfUndefined?: "any" | "all" })
   | { exists: ExistsQuery | undefined; notExists?: never; and?: never; or?: never }
   | { notExists: ExistsQuery | undefined; exists?: never; and?: never; or?: never };
@@ -559,11 +560,11 @@ export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [table
   ? T
   : S extends { readonly [subqueryBrand]: { readonly __row: infer R } }
     ? R
-    : S extends { readonly [exprBrand]: ExprBrand<infer R, infer Src> }
-      ? MaybeNull<R, Src, J>
+    : S extends { readonly [exprBrand]: ExprBrand<unknown, string> }
+      ? ExpressionValue<S, J>
       : {
-          [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<infer R, infer Src> }
-            ? MaybeNull<R, Src, J>
+          [K in keyof S]: S[K] extends { readonly [exprBrand]: ExprBrand<unknown, string> }
+            ? ExpressionValue<S[K], J>
             : never;
         };
 

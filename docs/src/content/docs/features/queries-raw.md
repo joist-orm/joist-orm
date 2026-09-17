@@ -148,6 +148,57 @@ the same conditions as `where`, including `sql.condition` and `and`/`or` groups.
 and order entries are pruned. No matching values produces `null`; use `.coalesce([])` for an empty array.
 With `distinct: true`, PostgreSQL requires ordering expressions to match the aggregate argument.
 
+### CASE and COALESCE
+
+Use `expr` to choose among values with object descriptions. Values can be columns, other expressions,
+bound literals, or nested descriptions:
+
+```ts
+import { expr } from "joist-orm";
+
+const marketName = expr({
+  coalesce: [
+    { case: { when: selfMarket.id.isNotNull(), then: p.custom_name } },
+    standaloneMarket.custom_name,
+    ...markets.map((market, i) => ({
+      case: { when: market.id.isNotNull(), then: parents[i].custom_name },
+    })),
+  ],
+});
+```
+
+`coalesce` returns the first non-null value, in list order. A CASE without `else` returns null when its
+condition is false or SQL NULL. Even if the condition is true, a null `then` value lets COALESCE try the
+next candidate. An empty `markets` array leaves the first two candidates in place.
+
+For several CASE arms, use an array. The first true condition wins, even if its value is null:
+
+```ts
+const ageGroup = expr({
+  case: [
+    { when: a.age.gte(18), then: "Adult" },
+    { when: a.age.gte(0), then: "Child" },
+  ],
+  else: "Unknown",
+});
+```
+
+`when` accepts the same conditions as `where`, including `and`, `or`, `exists`, and `sql.condition`.
+An undefined or fully pruned condition removes its arm. If all arms disappear, the result is `else`,
+or null when `else` is omitted. Use an explicit `null` for a null value; `undefined` is not a value.
+CASE needs at least one arm, and COALESCE needs at least one candidate.
+
+The result is a reusable expression for `select`, predicates, ordering, or other expressions. Its type
+accounts for nullable columns and LEFT joins. A non-null fallback, such as the last candidate in
+`expr({ coalesce: [b.title, "No book"] })`, makes the result non-null even when Book is LEFT-joined.
+
+Expression branches must have matching SQL types and codecs. Literal branches use the expression's
+encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknown or different codecs
+cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
+literals need a column or other expression that supplies their codec.
+
+### Query conditions
+
 The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:
 
 ```ts

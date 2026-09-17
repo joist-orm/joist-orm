@@ -1,6 +1,7 @@
 import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "./conditions.ts";
 import type { EntityMetadata } from "./EntityMetadata.ts";
 import { safeKq } from "./keywords.ts";
+import type { QueryCondition, QueryOrderBy } from "./query.ts";
 import type { RawCondition } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { type TypeInfo, arrayOutputType } from "./TypeInfo.ts";
@@ -54,6 +55,15 @@ export interface ExprBrand<R, Src extends string> {
  */
 export type ExprLike<R> = { readonly [exprBrand]: ExprBrand<R, any> };
 
+/** Controls which values enter an array aggregate and their order within the array. */
+export interface ArrayAggOptions {
+  distinct?: boolean;
+  /** With DISTINCT, PostgreSQL requires ordering expressions to match the aggregate argument. */
+  orderBy?: readonly (QueryOrderBy | undefined)[];
+  /** Undefined conditions are pruned, as in a query's where clause. */
+  filter?: QueryCondition;
+}
+
 /**
  * A typed SQL expression: a table column, an aggregate, a `sql` template, or a scalar subquery.
  *
@@ -85,7 +95,7 @@ export interface Expr<R, Src extends string = string> {
   min(): Expr<R | null, Src>;
   max(): Expr<R | null, Src>;
   /** PG keeps element NULLs (a left-joined empty group aggregates as `[null]`), and zero rows aggregate as NULL. */
-  arrayAgg(): Expr<R[] | null, Src>;
+  arrayAgg(options?: ArrayAggOptions): Expr<R[] | null, Src>;
   stringAgg(this: Expr<string | null, Src>, delimiter: string): Expr<string | null, Src>;
   coalesce(fallback: NonNullable<R>): Expr<NonNullable<R>, never>;
 }
@@ -130,7 +140,7 @@ export interface ExprContext {
   /** Returns the SQL alias for a table's `TableMgmt` or a subquery handle, searching enclosing queries. */
   aliasFor(handle: object): string;
   /** Turns a user-facing condition into SQL; `undefined` if it pruned away entirely. */
-  conditionToSql(cond: SqlCondition): SqlFragment | undefined;
+  conditionToSql(cond: QueryCondition): SqlFragment | undefined;
 }
 
 export function isExpr(value: unknown): value is ExprLike<any> {
@@ -341,10 +351,12 @@ export abstract class BaseExpr {
     }) as any;
   }
 
-  arrayAgg(): Expr<any, any> {
+  arrayAgg(options?: ArrayAggOptions): Expr<any, any> {
     // Values are arrays while the argument encodes/decodes *elements*, i.e. a `.coalesce(["b:1"])`
     // fallback must encode each tagged id, not hand the whole array to the id column's encoder
     return new FnExpr("array_agg", [this], {
+      prefix: options?.distinct ? "DISTINCT " : undefined,
+      aggregate: options,
       decode: (v) => (Array.isArray(v) ? v.map((e) => this.decode(e)) : v),
       encode: (v) => (Array.isArray(v) ? v.map((e) => this.encode(e)) : v),
       outputType: arrayOutputType(this.outputType),
@@ -424,6 +436,7 @@ export class FnExpr extends BaseExpr {
       decode?: (value: unknown) => unknown;
       encode?: (value: unknown) => unknown;
       outputType?: TypeInfo;
+      aggregate?: ArrayAggOptions;
     },
   ) {
     super();
@@ -452,12 +465,28 @@ export class FnExpr extends BaseExpr {
     }
   }
 
+  /**
+   * Renders function arguments, aggregate ordering, and the filter in SQL binding order.
+   * Keep references from all three so aggregate-only joins are retained.
+   */
   toSql(ctx: ExprContext): SqlFragment {
     const args = joinFragments(
       this.args.map((a) => a.toSql(ctx)),
       ", ",
     );
-    return { ...args, sql: `${this.name}(${this.opts.prefix ?? ""}${args.sql})${this.opts.suffix ?? ""}` };
+    const ordering = joinFragments(
+      (this.opts.aggregate?.orderBy ?? [])
+        .filter((entry) => entry !== undefined)
+        .map((entry) => orderByToSql(entry, ctx)),
+      ", ",
+    );
+    const filter = this.opts.aggregate?.filter;
+    const condition = filter === undefined ? undefined : ctx.conditionToSql(filter);
+    return {
+      sql: `${this.name}(${this.opts.prefix ?? ""}${args.sql}${ordering.sql ? ` ORDER BY ${ordering.sql}` : ""})${condition ? ` FILTER (WHERE ${condition.sql})` : ""}${this.opts.suffix ?? ""}`,
+      bindings: [...args.bindings, ...ordering.bindings, ...(condition?.bindings ?? [])],
+      refs: [...args.refs, ...ordering.refs, ...(condition?.refs ?? [])],
+    };
   }
 
   decode(value: unknown): unknown {
@@ -606,6 +635,21 @@ function minMaxOutputType(outputType: TypeInfo | undefined): TypeInfo | undefine
 /** Decodes `count`/`sum`/`avg` results, which Postgres returns as strings for bigint/numeric. */
 function decodeNumber(value: unknown): unknown {
   return typeof value === "string" ? Number(value) : value;
+}
+
+/** Renders an expression order for either a query or an aggregate. */
+export function orderByToSql(o: QueryOrderBy, ctx: ExprContext): SqlFragment {
+  const [expr, direction] = "asc" in o && o.asc ? [o.asc, "ASC"] : [o.desc, "DESC"];
+  if (!(expr instanceof BaseExpr)) {
+    return fail("orderBy must be an expression, i.e. a table column, aggregate, sql`...`, or scalar query(...)");
+  }
+  const fragment = expr.toSql(ctx);
+  // `nulls` is interpolated into the SQL, so never trust it, i.e. it might cross an `any` boundary
+  if (o.nulls !== undefined && o.nulls !== "first" && o.nulls !== "last") {
+    return fail(`Invalid orderBy nulls '${o.nulls}'`);
+  }
+  const nulls = o.nulls ? ` NULLS ${o.nulls.toUpperCase()}` : "";
+  return { ...fragment, sql: `${fragment.sql} ${direction}${nulls}` };
 }
 
 function identity(value: unknown): unknown {

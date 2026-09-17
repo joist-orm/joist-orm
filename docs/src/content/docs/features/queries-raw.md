@@ -133,6 +133,21 @@ They also have common SQL functions as methods, such as aggregates:
 - `arrayAgg()`, `stringAgg(delimiter)` — like `min`/`max`, nullable (zero rows aggregate as `NULL`), and `arrayAgg` keeps element `NULL`s, i.e. a left-joined empty group is `[null]`
 - `coalesce(fallback)`
 
+`arrayAgg` also accepts `distinct`, expression `orderBy` entries, and a `filter` condition:
+
+```ts
+const titles = b.title.arrayAgg({
+  distinct: true,
+  orderBy: [{ desc: b.title, nulls: "first" }],
+  filter: b.title.ne("Untitled"),
+});
+```
+
+The filter selects values for this aggregate without removing rows from other aggregates. It accepts
+the same conditions as `where`, including `sql.condition` and `and`/`or` groups. Undefined conditions
+and order entries are pruned. No matching values produces `null`; use `.coalesce([])` for an empty array.
+With `distinct: true`, PostgreSQL requires ordering expressions to match the aggregate argument.
+
 The `where` and `having` keys take the same `{ and: [...] }` / `{ or: [...] }` expressions as `em.find`'s complex conditions — or a single bare condition, i.e. `where: a.age.gte(minAge)` — and `having` sees aggregates:
 
 ```ts

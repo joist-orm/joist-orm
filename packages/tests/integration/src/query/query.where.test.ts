@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { type FilterOf, type SqlCondition, type TableFilter, alias, query, table, tables } from "joist-orm";
+import { type FilterOf, type SqlCondition, type TableFilter, alias, query, queryMaybe, table, tables } from "joist-orm";
 import {
   Author,
   Book,
@@ -295,6 +295,83 @@ describe("em.query / where", () => {
     // When checking the Table.where public contract
     // Then invalid filters are rejected without executing them
     expect(typeof tableFilterTypeAssertions).toBe("function");
+  });
+
+  describe("pruning", () => {
+    it.each([false, true])("prunes an optional correlated NOT EXISTS when disabled (%s)", async (enabled) => {
+      // Given Alice with a Book
+      await insertAuthor({ id: 1, first_name: "Alice" });
+      await insertBook({ title: "Alice's Book", author_id: 1 });
+      // And Bob without a Book
+      await insertAuthor({ id: 2, first_name: "Bob" });
+      // And Author and Book tables for an optional exclusion
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+      const requiredBooks = query({ from: b, select: b.id });
+
+      // When excluding Authors with Books only while the correlation is enabled
+      const books = queryMaybe({ from: b, where: b.authorId.eq(enabled ? a.id : undefined), select: b.id });
+      const names = await em.query({
+        from: a,
+        where: { notExists: books },
+        select: a.firstName,
+        orderBy: [{ sort: a.firstName, order: "ASC" }],
+      });
+
+      // Then disabling the correlation removes the whole exclusion
+      expect(books === undefined).toEqual(!enabled);
+      expect(names).toEqual(enabled ? ["Bob"] : ["Alice", "Bob"]);
+      expectTypeOf(books).toEqualTypeOf<typeof requiredBooks | undefined>();
+    });
+
+    it("prunes empty conditions and nested existence groups using the group policy", async () => {
+      // Given an Author named Alice
+      await insertAuthor({ first_name: "Alice" });
+      // And Author predicates that are absent or nested in optional groups
+      const em = newEntityManager();
+      const a = table(Author);
+      const absent = a.firstName.eq(undefined);
+      const conditions = [
+        undefined,
+        absent,
+        { and: [] },
+        { or: [{ and: [absent] }, { exists: undefined }] },
+        { and: [a.firstName.eq("Alice"), { notExists: undefined }], pruneIfUndefined: "any" as const },
+      ];
+
+      for (const where of conditions) {
+        // When an optional Author query has no surviving restriction
+        const optional = queryMaybe({ from: a, where, select: a });
+        const names = await em.query({ from: a, where: { exists: optional }, select: a.firstName });
+
+        // Then the query value and its enclosing existence restriction disappear
+        expect(optional).toBeUndefined();
+        expect(names).toEqual(["Alice"]);
+      }
+    });
+
+    it("keeps a query when one restriction survives an all-policy group", async () => {
+      // Given an Author named Alice
+      await insertAuthor({ first_name: "Alice" });
+      // And an omitted Author name condition
+      const em = newEntityManager();
+      const a = table(Author);
+      const absent = a.firstName.eq(undefined);
+
+      // When one restriction survives an all-policy group
+      const kept = queryMaybe({
+        from: a,
+        where: { or: [absent, a.firstName.eq("Alice")], pruneIfUndefined: "all" },
+        select: { name: a.firstName },
+        as: "matching_authors",
+      });
+
+      // Then the derived table remains executable with its inferred projection
+      expect(kept).toBeDefined();
+      const rows = await em.query(kept!);
+      expect(rows).toEqual([{ name: "Alice" }]);
+      expectTypeOf(rows).toEqualTypeOf<{ name: string }[]>();
+    });
   });
 });
 

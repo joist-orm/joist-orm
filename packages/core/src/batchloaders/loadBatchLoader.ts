@@ -4,7 +4,8 @@ import { type EntityMetadata } from "../EntityMetadata.ts";
 import { buildHintTree } from "../HintTree.ts";
 import { keyToNumber, tagId } from "../keys.ts";
 import { type LoadHint } from "../loadHints.ts";
-import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag, lazyExcludedSelects } from "../QueryParser.ts";
+import { lazyExcludedSelects } from "../queries/entityQueryUtils.ts";
+import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../queries/find/QueryParser.ts";
 import { abbreviation } from "../utils.ts";
 import { type BatchLoader } from "./BatchLoader.ts";
 

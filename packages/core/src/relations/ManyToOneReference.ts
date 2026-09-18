@@ -19,7 +19,8 @@ import {
 } from "../index.ts";
 import { lazyField } from "../newEntity.ts";
 import { maybeAdd, maybeRemove } from "../utils.ts";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { isCascadeDelete } from "./isCascadeDelete.ts";
 import { OneToManyCollection } from "./OneToManyCollection.ts";
 import { ReferenceN } from "./ReferenceSymbols.ts";
 import { RelationT, RelationU } from "./RelationSymbols.ts";

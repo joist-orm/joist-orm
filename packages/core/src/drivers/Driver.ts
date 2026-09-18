@@ -1,6 +1,6 @@
 import { type EntityManager } from "../EntityManager.ts";
 import { type PreloadPlugin } from "../plugins/PreloadPlugin.ts";
-import { type ParsedFindQuery } from "../QueryParser.ts";
+import type { ParsedFindQuery } from "../queries/find/QueryParser.ts";
 import { type RowData } from "../RowData.ts";
 import { type JoinRowTodo, type Todo } from "../Todo.ts";
 

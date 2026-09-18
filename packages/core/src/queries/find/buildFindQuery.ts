@@ -1,0 +1,161 @@
+import { assertNever, cleanSql } from "../../utils.ts";
+import { buildWhereClause } from "../renderConditions.ts";
+import { kq, kqDot } from "../sql/keywords.ts";
+import type { ParsedCteClause, ParsedFindQuery, ParsedTable } from "./QueryParser.ts";
+
+type QuerySettings = { limit?: number; offset?: number };
+
+/**
+ * Transforms `ParsedFindQuery` into a raw SQL string.
+ *
+ * In theory this should be implemented within each Driver, but the logic will be largely
+ * the same for different dbs.
+ */
+export function buildRawQuery(
+  parsed: ParsedFindQuery,
+  settings: QuerySettings,
+): { sql: string; bindings: readonly any[] } {
+  const { limit, offset } = settings;
+
+  const primary = parsed.tables.find((t) => t.join === "primary")!;
+
+  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
+  const needsDistinct =
+    parsed.tables.some((t) => t.join === "outer" && t.distinct !== false) &&
+    // If this is a `findCount`, it will rewrite the `select` to have its own distinct
+    !parsed.selects.find((s) => typeof s === "string" && s.startsWith("count("));
+
+  let sql = "";
+  const bindings: any[] = [];
+
+  if (parsed.ctes && parsed.ctes.length > 0) {
+    const hasRecursive = parsed.ctes.some((cte) => cte.recursive);
+    const maybeRecursive = hasRecursive ? " RECURSIVE" : "";
+    sql += `WITH${maybeRecursive}`;
+    for (let i = 0; i < parsed.ctes.length; i++) {
+      const cte = parsed.ctes[i];
+      sql += i > 0 ? ", " : "";
+      sql += ` ${cte.alias}`;
+      if (cte.columns) {
+        sql += " (";
+        for (let j = 0; j < cte.columns.length; j++) {
+          sql += j > 0 ? ", " : "";
+          sql += kq(cte.columns[j].columnName);
+        }
+        sql += ")";
+      }
+      if (cte.query.kind === "raw") {
+        sql += ` AS (${cleanSql(cte.query.sql)})`;
+        bindings.push(...cte.query.bindings);
+      } else if (cte.query.kind === "ast") {
+        const nested = buildRawQuery(cte.query.query, {});
+        sql += ` AS (${nested.sql})`;
+        bindings.push(...nested.bindings);
+      } else {
+        assertNever(cte.query);
+      }
+    }
+    sql += " ";
+  }
+
+  sql += "SELECT ";
+  const subqueryRenderer = (q: ParsedFindQuery) => buildRawQuery(q, {});
+
+  parsed.selects.forEach((s, i) => {
+    const maybeDistinct = i === 0 && needsDistinct ? buildDistinctOn(parsed, primary) : "";
+    const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
+    if (typeof s === "string") {
+      sql += maybeDistinct + s + maybeComma;
+    } else if ("sql" in s) {
+      sql += maybeDistinct + s.sql + maybeComma;
+      bindings.push(...s.bindings);
+    }
+  });
+
+  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+  if (needsDistinct && parsed.orderBys.length > 0) {
+    for (const { alias, column } of parsed.orderBys) {
+      sql += `, ${kqDot(alias, column)}`;
+    }
+  }
+
+  // Make sure the primary is first
+  sql += ` FROM ${as(primary)}`;
+
+  // Then the joins
+  for (const t of parsed.tables) {
+    if (t.join === "inner") {
+      sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "outer") {
+      sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "primary") {
+      // handled above
+    } else if (t.join === "lateral") {
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, t.settings ?? {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
+      bindings.push(...subB);
+    } else if (t.join === "cross") {
+      sql += ` CROSS JOIN ${as(t)}`;
+    } else {
+      assertNever(t.join);
+    }
+  }
+
+  if (parsed.condition) {
+    const where = buildWhereClause(parsed.condition, true, subqueryRenderer);
+    if (where) {
+      sql += " WHERE " + where[0];
+      bindings.push(...where[1]);
+    }
+  }
+
+  if (parsed.groupBys && parsed.groupBys.length > 0) {
+    sql +=
+      " GROUP BY " +
+      parsed.groupBys.map((gb) => ("expression" in gb ? gb.expression : kqDot(gb.alias, gb.column))).join(", ");
+  }
+
+  if (parsed.orderBys.length > 0) {
+    sql += " ORDER BY " + parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column) + " " + ob.order).join(", ");
+  }
+
+  if (limit !== undefined) {
+    sql += ` LIMIT ?`;
+    bindings.push(limit);
+  }
+  if (offset !== undefined) {
+    sql += ` OFFSET ?`;
+    bindings.push(offset);
+  }
+
+  return { sql, bindings };
+}
+
+function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string {
+  const columns = [
+    // If we have an order by, it needs to be included in the DISTINCT ON
+    ...parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column)),
+    kqDot(primary.alias, "id"),
+  ];
+  return `DISTINCT ON (${columns.join(", ")}) `;
+}
+
+/** Creates the `WITH alias (...)` SQL for the given `cte`. */
+export function buildCteSql(cte: ParsedCteClause): { sql: string; bindings: readonly any[] } {
+  const maybeRecursive = cte.recursive ? "RECURSIVE " : "";
+  const maybeColumns = cte.columns ? ` (${cte.columns.map((c) => kq(c.columnName)).join(", ")})` : "";
+  const prefix = `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS`;
+  if (cte.query.kind === "raw") {
+    return {
+      sql: `${prefix} (${cleanSql(cte.query.sql)} )`,
+      bindings: cte.query.bindings,
+    };
+  } else if (cte.query.kind === "ast") {
+    const { sql, bindings } = buildRawQuery(cte.query.query, {});
+    return { sql: `${prefix} (${sql})`, bindings };
+  } else {
+    assertNever(cte.query);
+  }
+}
+
+const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

@@ -1,6 +1,5 @@
 import { getInstanceData } from "./BaseEntity.ts";
 import { getDefaultDependencies } from "./defaults.ts";
-import { buildWhereClause } from "./drivers/buildUtils.ts";
 import { type Entity } from "./Entity.ts";
 import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "./EntityManager.ts";
 import { type EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
@@ -10,6 +9,7 @@ import { type New } from "./loadHints.ts";
 import { isAllSqlPaths } from "./loadLens.ts";
 import { FactoryInitialValue } from "./newTestInstance.ts";
 import { partitionHint } from "./preloading/partitionHint.ts";
+import { buildWhereClause } from "./queries/renderConditions.ts";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
 import {
@@ -27,7 +27,7 @@ import { fail } from "./utils.ts";
 export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
-export { AliasAssigner } from "./AliasAssigner.ts";
+export { AliasAssigner } from "./queries/sql/AliasAssigner.ts";
 export {
   type AndCondition,
   type ConditionGroup,
@@ -36,7 +36,7 @@ export {
   type PredicateBrand,
   type SqlCondition,
   type SqlPredicate,
-} from "./conditions.ts";
+} from "./queries/conditions.ts";
 // Domain aliases belong to em.find; physical table expressions belong to em.query/em.execute.
 export {
   alias,
@@ -53,7 +53,7 @@ export {
   type EntityAlias,
   type PolyAlias,
   type PrimitiveAlias,
-} from "./Aliases.ts";
+} from "./queries/find/Aliases.ts";
 export {
   table,
   tables,
@@ -73,13 +73,13 @@ export {
   type ReferenceColumn,
   type CollectionJoin,
   type PolyReference,
-} from "./Tables.ts";
+} from "./queries/sql/Tables.ts";
 export { BaseEntity, getInstanceData } from "./BaseEntity.ts";
-export { ConditionBuilder } from "./ConditionBuilder.ts";
+export { ConditionBuilder } from "./queries/ConditionBuilder.ts";
 export { type Entity, type IdType, isEntity } from "./Entity.ts";
 export type * from "./EntityFields.ts";
-export * from "./EntityFilter.ts";
-export * from "./EntityGraphQLFilter.ts";
+export * from "./queries/find/EntityFilter.ts";
+export * from "./queries/find/EntityGraphQLFilter.ts";
 export * from "./EntityManager.ts";
 export * from "./EntityMetadata.ts";
 export type {
@@ -91,7 +91,7 @@ export type {
   MutationStatement,
   UpdateStatement,
   UpdateValues,
-} from "./execute.ts";
+} from "./queries/sql/execute.ts";
 export type { EnumMetadata } from "./EnumMetadata.ts";
 // `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
 // (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
@@ -104,17 +104,46 @@ export {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
-} from "./Expr.ts";
-export { expr, type CaseElse, type CaseWhen, type ExprFromInput, type ExprInput } from "./expressions/expression.ts";
-export { skipCondition } from "./skipCondition.ts";
+} from "./queries/sql/Expr.ts";
+export {
+  expr,
+  type CaseElse,
+  type CaseWhen,
+  type ExprFromInput,
+  type ExprInput,
+} from "./queries/sql/expressions/expression.ts";
+export { skipCondition } from "./queries/skipCondition.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
 export type * from "./PendingChanges.ts";
 export { Plugin } from "./PluginManager.ts";
-export * from "./QueryParser.ts";
-export * from "./QueryParser.collectionJoins.ts";
-export { visitConditions } from "./QueryVisitor.ts";
+export * from "./queries/find/QueryParser.ts";
+export * from "./queries/find/buildFindQuery.ts";
+export * from "./queries/renderConditions.ts";
+export type {
+  ColumnCondition,
+  ExistsCondition,
+  ParsedExpressionCondition,
+  ParsedExpressionFilter,
+  ParsedValueFilter,
+  RawCondition,
+} from "./queries/parsedConditions.ts";
+export {
+  type ParsedEntityFilter,
+  makeLike,
+  mapToDb,
+  parseEntityFilter,
+  parseValueFilter,
+} from "./queries/valueFilters.ts";
+export {
+  filterSoftDeletes,
+  lazyExcludedSelects,
+  maybeAddNotSoftDeleted,
+  stiSubtypeFilter,
+} from "./queries/entityQueryUtils.ts";
+export * from "./queries/find/QueryParser.collectionJoins.ts";
+export { visitConditions } from "./queries/find/QueryVisitor.ts";
 export * from "./RowData.ts";
 export { type JoinRowTodo, Todo } from "./Todo.ts";
 export * from "./changes.ts";
@@ -132,7 +161,7 @@ export { getField, isChangeableField, isFieldSet, setField } from "./fields.ts";
 export * from "./getProperties.ts";
 export * from "./json.ts";
 export * from "./keys.ts";
-export { kq, kqDot, kqStar } from "./keywords.ts";
+export { kq, kqDot, kqStar } from "./queries/sql/keywords.ts";
 export {
   assertLoaded,
   type DeepNew,
@@ -207,7 +236,7 @@ export {
   subqueryBrand,
   type WithInput,
   type WithSource,
-} from "./query.ts";
+} from "./queries/sql/query.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,
@@ -240,7 +269,7 @@ export { nowUTC } from "./nowUTC.ts";
 export * from "./serde.ts";
 export * from "./columns.ts";
 export * from "./fieldSerde.ts";
-export * from "./scopes.ts";
+export * from "./queries/find/scopes.ts";
 export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal.ts";
 export * from "./temporalMappers.ts";
 export { isInTrustedContext, runInTrustedContext } from "./trusted.ts";

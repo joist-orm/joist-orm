@@ -1,9 +1,9 @@
-import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader.ts";
 import { type Entity } from "../Entity.ts";
 import { type IdOf, appendStack, sameEntity } from "../EntityManager.ts";
 import { type EntityMetadata, type LargeOneToManyField, getMetadataForField } from "../EntityMetadata.ts";
 import { type ManyToOneReferenceImpl, ensureNotDeleted, getMetadata } from "../index.ts";
 import { lazyField } from "../newEntity.ts";
+import { oneToManyFindDataLoader } from "../queries/find/dataloaders/oneToManyFindDataLoader.ts";
 import { remove } from "../utils.ts";
 import { type LargeCollection } from "./LargeCollection.ts";
 import { RelationT, RelationU } from "./RelationSymbols.ts";

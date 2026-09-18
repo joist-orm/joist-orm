@@ -20,7 +20,8 @@ import {
 import { type IsLoadedCachable } from "../IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
 import { type MaybeReactedEntity, type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { isCascadeDelete } from "./isCascadeDelete.ts";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference.ts";
 import { type Reference } from "./Reference.ts";
 import { ReferenceN } from "./ReferenceSymbols.ts";

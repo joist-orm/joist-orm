@@ -1728,6 +1728,37 @@ describe("em.query", () => {
   });
 
   describe("pruning", () => {
+    it("applies inNonEmpty for ids and prunes empty lists", async () => {
+      // Given two Authors that can be selected by id
+      await insertAuthor({ first_name: "Selected" });
+      // And another Author is outside the populated id list
+      await insertAuthor({ first_name: "Other" });
+      const em = newEntityManager();
+      const a = table(Author);
+      resetQueryCount();
+
+      // When querying with a populated id list
+      const filtered = await em.query({ from: a, where: a.id.inNonEmpty(["a:1"]), select: a.firstName });
+      // Then the id condition filters the Authors
+      expect(filtered).toEqual(["Selected"]);
+
+      // When querying with an empty id list
+      const unfiltered = await em.query({
+        from: a,
+        where: a.id.inNonEmpty([]),
+        select: a.firstName,
+        orderBy: [{ sort: a.id, order: "ASC" }],
+      });
+      // Then the empty condition is pruned instead of filtering every Author
+      expect(unfiltered).toEqual(["Selected", "Other"]);
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.id = ANY($1) AND a.deleted_at IS NULL",
+         "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
+       ]
+      `);
+    });
+
     it("encodes both between bounds and expands search words", async () => {
       // Given an Author at the lower BookRange bound with separated search words
       await insertAuthor({ first_name: "Alice Mary Smith", range_of_books: 1 });

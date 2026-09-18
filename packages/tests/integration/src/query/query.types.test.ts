@@ -330,6 +330,11 @@ async function typeAssertions() {
   expectTypeOf(scalar).toEqualTypeOf<ScalarQuery<number>>();
   // A single-column subquery is an IN-list target, checked against the column's id type
   a.id.in(query({ from: b, select: b.authorId }));
+  // Non-empty IN accepts readonly id and scalar lists but not subqueries
+  a.id.inNonEmpty(["a:1"] as const);
+  a.firstName.inNonEmpty(["a1"] as const);
+  // @ts-expect-error: inNonEmpty only accepts lists
+  a.id.inNonEmpty(query({ from: b, select: b.authorId }));
 
   // === A whole query is a value
   // `satisfies Query` checks the shape but keeps the literal `select` type...
@@ -386,6 +391,7 @@ async function typeAssertions() {
   const [c] = tables(Comment);
   c.parent.in(query({ from: a, select: a.id }));
   c.parent.in(query({ from: b, select: b.authorId }));
+  c.parent.inNonEmpty(["a:1"] as const);
 
   // Given a Comment table whose parent can reference an Author or another entity
   // When selecting the physical Author component rather than the parent relationship

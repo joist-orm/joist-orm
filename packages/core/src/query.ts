@@ -564,7 +564,8 @@ type NullableSources<X, Left = LeftJoined<X>> =
   // `const joins = [j1, j2]` normally infers an array, not a tuple, so this recursive conditional type
   // works over that union instead of walking tuple positions. LeftJoined<X> seeds Left with the aliases
   // from `left: ...` entries. InheritedLeft<X, Left> discovers reference targets whose sources are in Left.
-  // Exclude removes names already in Left; if any remain, add them and repeat to discover further hops.
+  // Exclude removes names already in Left. If all were already known, stop recursing and use Left as the value;
+  // otherwise, add the newly discovered LEFT-joined aliases to our set and recurse.
   [Exclude<InheritedLeft<X, Left>, Left>] extends [never] ? Left : NullableSources<X, Left | InheritedLeft<X, Left>>;
 
 /**

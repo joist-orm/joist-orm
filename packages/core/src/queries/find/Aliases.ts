@@ -1,9 +1,8 @@
 import { groupBy } from "joist-utils";
-
 // Load configure first: relations must not evaluate before their base classes exist.
-import { getConstructorFromTaggedId } from "../../configure.ts";
-import type { Entity } from "../../Entity.ts";
-import type { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "../../EntityManager.ts";
+import { getConstructorFromTaggedId } from "src/configure.ts";
+import type { Entity } from "src/Entity.ts";
+import type { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -11,17 +10,17 @@ import {
   type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
   getMetadata,
-} from "../../EntityMetadata.ts";
-import { maybeResolveReferenceToId } from "../../keys.ts";
-import type { Column } from "../../serde/columns.ts";
-import type { FieldsOf } from "../../typeMap.ts";
-import { fail } from "../../utils.ts";
-import type { PredicateBrand } from "../conditions.ts";
-import type { ColumnCondition, ParsedValueFilter, RawCondition } from "../parsedConditions.ts";
-import { skipCondition } from "../skipCondition.ts";
-import { makeLike, mapToDb } from "../valueFilters.ts";
-import { withDeferredAlias } from "./DeferredAlias.ts";
-import type { ExpressionCondition } from "./EntityFilter.ts";
+} from "src/EntityMetadata.ts";
+import { maybeResolveReferenceToId } from "src/keys.ts";
+import type { PredicateBrand } from "src/queries/conditions.ts";
+import { withDeferredAlias } from "src/queries/find/DeferredAlias.ts";
+import type { ExpressionCondition } from "src/queries/find/EntityFilter.ts";
+import type { ColumnCondition, ParsedValueFilter, RawCondition } from "src/queries/parsedConditions.ts";
+import { skipCondition } from "src/queries/skipCondition.ts";
+import { makeLike, mapToDb } from "src/queries/valueFilters.ts";
+import type { Column } from "src/serde/columns.ts";
+import type { FieldsOf } from "src/typeMap.ts";
+import { fail } from "src/utils.ts";
 
 /** Creates an alias for complex domain filtering in `em.find`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {

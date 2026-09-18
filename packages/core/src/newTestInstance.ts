@@ -1,15 +1,14 @@
 import { isPlainObject } from "joist-utils";
-
-import { getInstanceData } from "./BaseEntity.ts";
-import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults.ts";
-import { type Entity, isEntity } from "./Entity.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { hasDefaultValue, setAsyncDefaultsSynchronously } from "src/defaults.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
 import {
   type EntityConstructor,
   type EntityManager,
   type IdOf,
   type MaybeAbstractEntityConstructor,
   isId,
-} from "./EntityManager.ts";
+} from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type ManyToManyField,
@@ -23,12 +22,12 @@ import {
   getMetadata,
   isManyToOneField,
   isOneToOneField,
-} from "./EntityMetadata.ts";
-import { type DeepNew, type FactoryExtrasOf, type New } from "./index.ts";
-import { FactoryLogger } from "./logging/FactoryLogger.ts";
-import { maybeRequireTemporal } from "./serde/temporal.ts";
-import { type ActualFactoryOpts, type OptsOf } from "./typeMap.ts";
-import { assertNever } from "./utils.ts";
+} from "src/EntityMetadata.ts";
+import { type DeepNew, type FactoryExtrasOf, type New } from "src/index.ts";
+import { FactoryLogger } from "src/logging/FactoryLogger.ts";
+import { maybeRequireTemporal } from "src/serde/temporal.ts";
+import { type ActualFactoryOpts, type OptsOf } from "src/typeMap.ts";
+import { assertNever } from "src/utils.ts";
 
 let logger: FactoryLogger | undefined = undefined;
 

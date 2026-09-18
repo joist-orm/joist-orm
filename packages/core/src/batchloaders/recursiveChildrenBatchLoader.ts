@@ -1,6 +1,7 @@
-import { getMetadataForType } from "../configure.ts";
-import { type Entity } from "../Entity.ts";
-import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { getMetadataForType } from "src/configure.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
 import {
   type ManyToOneField,
   type OneToManyField,
@@ -13,10 +14,9 @@ import {
   isLoadedOneToOneReference,
   kq,
   maybeResolveReferenceToId,
-} from "../index.ts";
-import { type RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection.ts";
-import { abbreviation, groupBy } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
+} from "src/index.ts";
+import { type RecursiveChildrenCollectionImpl } from "src/relations/RecursiveCollection.ts";
+import { abbreviation, groupBy } from "src/utils.ts";
 
 export const recursiveChildrenOperation = "o2m-recursive";
 

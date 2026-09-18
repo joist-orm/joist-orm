@@ -1,10 +1,9 @@
 import { groupBy } from "joist-utils";
-
 // Load configure first: otherwise the built cjs/esm module graph evaluates relations/* before their
 // base classes exist ("Class extends value undefined").
-import { getConstructorFromTaggedId } from "../../configure.ts";
-import { type Entity, isEntity } from "../../Entity.ts";
-import type { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "../../EntityManager.ts";
+import { getConstructorFromTaggedId } from "src/configure.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import type { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -18,17 +17,12 @@ import {
   getBaseMeta,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "../../EntityMetadata.ts";
-import { maybeResolveReferenceToId, toIdOf } from "../../keys.ts";
-import type { Column } from "../../serde/columns.ts";
-import type { TypeInfo } from "../../serde/TypeInfo.ts";
-import type { ColumnsOf, FieldsOf, FilterOf, TypeMap, TypeNameOf } from "../../typeMap.ts";
-import { fail } from "../../utils.ts";
-import type { SqlCondition } from "../conditions.ts";
-import type { ParsedValueFilter } from "../parsedConditions.ts";
-import { buildValueCondition } from "../renderConditions.ts";
-import { skipCondition } from "../skipCondition.ts";
-import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "../valueFilters.ts";
+} from "src/EntityMetadata.ts";
+import { maybeResolveReferenceToId, toIdOf } from "src/keys.ts";
+import type { SqlCondition } from "src/queries/conditions.ts";
+import type { ParsedValueFilter } from "src/queries/parsedConditions.ts";
+import { buildValueCondition } from "src/queries/renderConditions.ts";
+import { skipCondition } from "src/queries/skipCondition.ts";
 import {
   BaseExpr,
   type Expr,
@@ -40,8 +34,13 @@ import {
   asNode,
   deferredCondition,
   isExpr,
-} from "./Expr.ts";
-import { kqDot } from "./keywords.ts";
+} from "src/queries/sql/Expr.ts";
+import { kqDot } from "src/queries/sql/keywords.ts";
+import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
+import type { Column } from "src/serde/columns.ts";
+import type { TypeInfo } from "src/serde/TypeInfo.ts";
+import type { ColumnsOf, FieldsOf, FilterOf, TypeMap, TypeNameOf } from "src/typeMap.ts";
+import { fail } from "src/utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
 export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Table<T>;

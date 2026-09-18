@@ -1,5 +1,5 @@
-import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader.ts";
-import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader.ts";
+import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
+import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
 import {
   type Collection,
   type Entity,
@@ -14,14 +14,14 @@ import {
   getMetadataForField,
   maybeResolveReferenceToId,
   sameEntity,
-} from "../index.ts";
-import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
-import { lazyField } from "../newEntity.ts";
-import { compareValues } from "../utils.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { isCascadeDelete } from "./isCascadeDelete.ts";
-import { type ManyToOneReferenceImpl } from "./ManyToOneReference.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { type ManyToOneReferenceImpl } from "src/relations/ManyToOneReference.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { compareValues } from "src/utils.ts";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> {

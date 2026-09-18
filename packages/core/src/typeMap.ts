@@ -1,5 +1,5 @@
-import { type Entity } from "./Entity.ts";
-import { type EntityManager } from "./EntityManager.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager } from "src/EntityManager.ts";
 
 /**
  * Provides a container for entities to attach their application-specific types.

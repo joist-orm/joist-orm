@@ -1,8 +1,8 @@
-import { getInstanceData } from "./BaseEntity.ts";
-import { type Entity } from "./Entity.ts";
-import { type IdOf } from "./EntityManager.ts";
-import { getField, isChangeableField } from "./fields.ts";
-import type { JoinColumnValue, JoinRows } from "./flush/JoinRows.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf } from "src/EntityManager.ts";
+import { getField, isChangeableField } from "src/fields.ts";
+import type { JoinColumnValue, JoinRows } from "src/flush/JoinRows.ts";
 import {
   type Field,
   type ManyToManyCollection,
@@ -13,10 +13,10 @@ import {
   getMetadata,
   isEntity,
   isId,
-} from "./index.ts";
-import { type EnumCollectionImpl } from "./relations/EnumCollection.ts";
-import { notLoadedValue } from "./relations/LazyField.ts";
-import { type FieldsOf, type OptsOf } from "./typeMap.ts";
+} from "src/index.ts";
+import { type EnumCollectionImpl } from "src/relations/EnumCollection.ts";
+import { notLoadedValue } from "src/relations/LazyField.ts";
+import { type FieldsOf, type OptsOf } from "src/typeMap.ts";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {

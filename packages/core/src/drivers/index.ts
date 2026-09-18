@@ -1,3 +1,3 @@
-export type * from "./Driver.ts";
-export * from "./EntityWriter.ts";
-export * from "./IdAssigner.ts";
+export type * from "src/drivers/Driver.ts";
+export * from "src/drivers/EntityWriter.ts";
+export * from "src/drivers/IdAssigner.ts";

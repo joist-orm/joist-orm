@@ -1,9 +1,9 @@
-import { baseEntityCstr } from "./BaseEntity.ts";
-import { type Entity } from "./Entity.ts";
-import { type EntityConstructor, type EntityManager } from "./EntityManager.ts";
-import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
-import { getLazyFields } from "./getProperties.ts";
-import { fail, hasAnyKey } from "./utils.ts";
+import { baseEntityCstr } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityConstructor, type EntityManager } from "src/EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { getLazyFields } from "src/getProperties.ts";
+import { fail, hasAnyKey } from "src/utils.ts";
 
 // Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");

@@ -1,8 +1,8 @@
-import { type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
-import type { QueryCondition } from "../query.ts";
-import { expressionNullable, expressionToSql } from "./expression.ts";
-import { checkKeys, isObject, parseExpression } from "./parseExpression.ts";
-import type { CheckExpression, ParsedExpression, ResultCodec } from "./types.ts";
+import { type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import { expressionNullable, expressionToSql } from "src/queries/sql/expressions/expression.ts";
+import { checkKeys, isObject, parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
+import type { CheckExpression, ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import type { QueryCondition } from "src/queries/sql/query.ts";
 
 /** One condition and the value to return when it is true. */
 export interface CaseWhen {

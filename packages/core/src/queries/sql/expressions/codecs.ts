@@ -1,9 +1,9 @@
 import { inspect } from "node:util";
 
-import { type TypeInfo, arrayOutputType } from "../../../serde/TypeInfo.ts";
-import { assertNever } from "../../../utils.ts";
-import { BaseExpr } from "../Expr.ts";
-import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "./types.ts";
+import { BaseExpr } from "src/queries/sql/Expr.ts";
+import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import { type TypeInfo, arrayOutputType } from "src/serde/TypeInfo.ts";
+import { assertNever } from "src/utils.ts";
 
 /**
  * Chooses one decoder for all possible result values. Columns must agree on a compatible SQL type and domain;

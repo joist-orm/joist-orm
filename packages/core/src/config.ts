@@ -1,6 +1,6 @@
-import { resetConstructorMap } from "./configure.ts";
-import { AsyncDefault } from "./defaults.ts";
-import { type Entity } from "./Entity.ts";
+import { resetConstructorMap } from "src/configure.ts";
+import { AsyncDefault } from "src/defaults.ts";
+import { type Entity } from "src/Entity.ts";
 import {
   type EntityConstructor,
   type EntityField,
@@ -15,10 +15,10 @@ import {
   type SettableFields,
   fail,
   getMetadata,
-} from "./index.ts";
-import { convertToLoadHint } from "./reactivity/reactiveHints.ts";
-import { type ValidationRule, type ValidationRuleInternal } from "./rules.ts";
-import { type MaybePromise } from "./utils.ts";
+} from "src/index.ts";
+import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
+import { type ValidationRule, type ValidationRuleInternal } from "src/rules.ts";
+import { type MaybePromise } from "src/utils.ts";
 
 export type EntityHook =
   | "beforeFlush"

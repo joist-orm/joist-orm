@@ -6,10 +6,10 @@ import {
   type SqlFragment,
   joinFragments,
   orderByToSql,
-} from "../Expr.ts";
-import { expressionToSql } from "./expression.ts";
-import { checkKeys, isObject, parseExpression } from "./parseExpression.ts";
-import type { ParsedExpression, ResultCodec } from "./types.ts";
+} from "src/queries/sql/Expr.ts";
+import { expressionToSql } from "src/queries/sql/expressions/expression.ts";
+import { checkKeys, isObject, parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
+import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
 
 /** The aggregate value alone, or the value together with PostgreSQL aggregate options. */
 export interface ArrayAggInput {

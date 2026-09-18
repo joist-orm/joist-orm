@@ -1,4 +1,4 @@
-import { type IdType } from "./Entity.ts";
+import { type IdType } from "src/Entity.ts";
 import {
   type Entity,
   type EntityManager,
@@ -8,7 +8,7 @@ import {
   deTagId,
   getMetadata,
   keyToNumber,
-} from "./index.ts";
+} from "src/index.ts";
 
 /**
  * Returns the internal `__data` tracking field for `entity`.

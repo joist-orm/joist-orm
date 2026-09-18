@@ -1,7 +1,7 @@
-import type { ExprContext, SqlFragment } from "../Expr.ts";
-import { expressionNullable, functionToSql } from "./expression.ts";
-import { parseNonEmptyOperands } from "./parseExpression.ts";
-import type { ParsedExpression, ResultCodec } from "./types.ts";
+import type { ExprContext, SqlFragment } from "src/queries/sql/Expr.ts";
+import { expressionNullable, functionToSql } from "src/queries/sql/expressions/expression.ts";
+import { parseNonEmptyOperands } from "src/queries/sql/expressions/parseExpression.ts";
+import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
 
 /** Candidates in order of preference; COALESCE returns the first non-null value. */
 export interface CoalesceInput {

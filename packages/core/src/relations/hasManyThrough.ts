@@ -8,8 +8,8 @@ import {
   isLensLoaded,
   lensToLoadHint,
   loadLens,
-} from "../index.ts";
-import { lazyField } from "../newEntity.ts";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
 
 /**
  * Creates a CustomCollection that will walk across references in the object graph.

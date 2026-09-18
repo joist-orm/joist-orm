@@ -1,4 +1,4 @@
-import type { ColumnCondition } from "./parsedConditions.ts";
+import type { ColumnCondition } from "src/queries/parsedConditions.ts";
 
 /** An undefined predicate is pruned by either query parser. */
 export const skipCondition: ColumnCondition = {

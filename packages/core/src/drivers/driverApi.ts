@@ -1,8 +1,8 @@
-import { buildValuesCte } from "../dataloaders/findDataLoader.ts";
-import { buildCteSql } from "../queries/find/buildFindQuery.ts";
-import { getRuntimeConfig } from "../runtimeConfig.ts";
-import { batched, cleanSql } from "../utils.ts";
-import { type DeleteOp, type InsertOp, type UpdateOp, generateOps } from "./EntityWriter.ts";
+import { buildValuesCte } from "src/dataloaders/findDataLoader.ts";
+import { type DeleteOp, type InsertOp, type UpdateOp, generateOps } from "src/drivers/EntityWriter.ts";
+import { buildCteSql } from "src/queries/find/buildFindQuery.ts";
+import { getRuntimeConfig } from "src/runtimeConfig.ts";
+import { batched, cleanSql } from "src/utils.ts";
 
 export const driverApi = {
   buildValuesCte,

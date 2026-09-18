@@ -1,5 +1,5 @@
-import { getInstanceData } from "../BaseEntity.ts";
-import { type Entity } from "../Entity.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -7,12 +7,12 @@ import {
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "../EntityMetadata.ts";
-import { getField, isChangeableField } from "../fields.ts";
-import type { Todo } from "../flush/Todo.ts";
-import { keyToNumber } from "../keys.ts";
-import { type FieldColumn, type TimestampSerde, hasSerde } from "../serde/fieldSerde.ts";
-import { groupBy } from "../utils.ts";
+} from "src/EntityMetadata.ts";
+import { getField, isChangeableField } from "src/fields.ts";
+import type { Todo } from "src/flush/Todo.ts";
+import { keyToNumber } from "src/keys.ts";
+import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
+import { groupBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };

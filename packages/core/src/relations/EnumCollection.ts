@@ -1,3 +1,5 @@
+import { enumCollectionBatchLoader } from "src/batchloaders/enumCollectionBatchLoader.ts";
+import { type EnumMetadata } from "src/EnumMetadata.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -9,13 +11,11 @@ import {
   getInstanceData,
   getMetadata,
   getMetadataForField,
-} from "..//index.ts";
-import { enumCollectionBatchLoader } from "../batchloaders/enumCollectionBatchLoader.ts";
-import { type EnumMetadata } from "../EnumMetadata.ts";
-import { lazyField } from "../newEntity.ts";
-import { remove } from "../utils.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { remove } from "src/utils.ts";
 
 /** A nominal brand so `EnumCollection` is not structurally confused with a regular `Collection`. */
 declare const enumCollectionTag: unique symbol;

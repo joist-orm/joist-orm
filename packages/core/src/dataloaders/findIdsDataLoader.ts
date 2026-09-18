@@ -1,19 +1,19 @@
-import type { Entity } from "../Entity.ts";
-import type { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager.ts";
-import { getMetadata } from "../EntityMetadata.ts";
-import { keyToTaggedId } from "../keys.ts";
-import type { FilterAndSettings } from "../queries/find/EntityFilter.ts";
-import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
-import { kq } from "../queries/sql/keywords.ts";
-import { buildUnnestCte } from "../queries/unnest.ts";
-import { fail } from "../utils.ts";
 import {
   collectAndReplaceArgs,
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader.ts";
+} from "src/dataloaders/findDataLoader.ts";
+import type { Entity } from "src/Entity.ts";
+import type { EntityManager, MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import { keyToTaggedId } from "src/keys.ts";
+import type { FilterAndSettings } from "src/queries/find/EntityFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { kq } from "src/queries/sql/keywords.ts";
+import { buildUnnestCte } from "src/queries/unnest.ts";
+import { fail } from "src/utils.ts";
 
 export const findIdsOperation = "find-ids";
 

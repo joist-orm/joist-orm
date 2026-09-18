@@ -23,7 +23,8 @@ export default defineConfig({
   platform: "node",
   unbundle: true,
   dts: { sourcemap: true },
-  deps: { neverBundle: true },
+  // Resolve source aliases before treating bare imports as external dependencies.
+  deps: { neverBundle: true, alwaysBundle: [/^src\//] },
   sourcemap: true,
   outExtensions(options) {
     return options.format === "cjs" ? { js: ".cjs", dts: ".d.cts" } : { js: ".js", dts: ".d.mts" };

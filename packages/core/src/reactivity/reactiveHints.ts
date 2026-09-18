@@ -1,7 +1,7 @@
-import { getInstanceData } from "../BaseEntity.ts";
-import type { Changes } from "../changes.ts";
-import { type Entity, isEntity } from "../Entity.ts";
-import { type MaybeAbstractEntityConstructor, getEmInternalApi, isId } from "../EntityManager.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import type { Changes } from "src/changes.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type MaybeAbstractEntityConstructor, getEmInternalApi, isId } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type ManyToManyField,
@@ -12,10 +12,10 @@ import {
   getBaseAndSelfMetas,
   getBaseMeta,
   getMetadata,
-} from "../EntityMetadata.ts";
-import { getProperties } from "../getProperties.ts";
-import type { LoadHint, Loadable, Loaded } from "../loading/loadHints.ts";
-import { type NormalizeHint, type SuffixSeperator, normalizeHint, suffixRe } from "../normalizeHints.ts";
+} from "src/EntityMetadata.ts";
+import { getProperties } from "src/getProperties.ts";
+import type { LoadHint, Loadable, Loaded } from "src/loading/loadHints.ts";
+import { type NormalizeHint, type SuffixSeperator, normalizeHint, suffixRe } from "src/normalizeHints.ts";
 import {
   type Collection,
   type EnumCollection,
@@ -32,16 +32,16 @@ import {
   type ReactiveGetter,
   type ReadOnlyCollection,
   type Reference,
-} from "../relations/index.ts";
-import type { LoadedOneToOneReference } from "../relations/OneToOneReference.ts";
-import { ReactiveGetterImpl } from "../relations/ReactiveGetter.ts";
+} from "src/relations/index.ts";
+import type { LoadedOneToOneReference } from "src/relations/OneToOneReference.ts";
+import { ReactiveGetterImpl } from "src/relations/ReactiveGetter.ts";
 import {
   RecursiveChildrenCollectionImpl,
   RecursiveM2mCollectionImpl,
   RecursiveParentsCollectionImpl,
-} from "../relations/RecursiveCollection.ts";
-import type { FieldsOf, RelationsOf } from "../typeMap.ts";
-import { fail, flatAndUnique, mergeNormalizedHints } from "../utils.ts";
+} from "src/relations/RecursiveCollection.ts";
+import type { FieldsOf, RelationsOf } from "src/typeMap.ts";
+import { fail, flatAndUnique, mergeNormalizedHints } from "src/utils.ts";
 
 /** The keys in `T` that rules & hooks can react to. */
 export type Reactable<T extends Entity> =

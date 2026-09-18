@@ -1,6 +1,6 @@
-import { type EntityMetadata, getBaseMeta } from "../EntityMetadata.ts";
-import type { ColumnCondition } from "./parsedConditions.ts";
-import { kqDot } from "./sql/keywords.ts";
+import { type EntityMetadata, getBaseMeta } from "src/EntityMetadata.ts";
+import type { ColumnCondition } from "src/queries/parsedConditions.ts";
+import { kqDot } from "src/queries/sql/keywords.ts";
 
 /**
  * Builds the primary table's SELECT columns explicitly, i.e. excluding any `lazy` columns.

@@ -1,11 +1,16 @@
 import { createRequire } from "node:module";
 
-import { isDefined } from "../EntityManager.ts";
-import { keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "../keys.ts";
-import { getRuntimeConfig } from "../runtimeConfig.ts";
-import { type Temporal, requireTemporal } from "./temporal.ts";
-import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers.ts";
-import { type TypeInfo, arrayOutputType, canonicalDbType } from "./TypeInfo.ts";
+import { isDefined } from "src/EntityManager.ts";
+import { keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "src/keys.ts";
+import { getRuntimeConfig } from "src/runtimeConfig.ts";
+import { type Temporal, requireTemporal } from "src/serde/temporal.ts";
+import {
+  plainDateMapper,
+  plainDateTimeMapper,
+  plainTimeMapper,
+  zonedDateTimeMapper,
+} from "src/serde/temporalMappers.ts";
+import { type TypeInfo, arrayOutputType, canonicalDbType } from "src/serde/TypeInfo.ts";
 
 const runtimeRequire = createRequire(import.meta.url);
 

@@ -1,14 +1,13 @@
 import { isPlainObject } from "joist-utils";
-
-import { type Entity, isEntity } from "../Entity.ts";
-import { isDefined } from "../EntityManager.ts";
-import type { EntityMetadata } from "../EntityMetadata.ts";
-import type { Column } from "../serde/columns.ts";
-import { assertNever } from "../utils.ts";
-import { isAlias } from "./find/Aliases.ts";
-import type { ValueFilter } from "./find/EntityFilter.ts";
-import { isScope } from "./find/scopes.ts";
-import type { ParsedValueFilter } from "./parsedConditions.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { isDefined } from "src/EntityManager.ts";
+import type { EntityMetadata } from "src/EntityMetadata.ts";
+import { isAlias } from "src/queries/find/Aliases.ts";
+import type { ValueFilter } from "src/queries/find/EntityFilter.ts";
+import { isScope } from "src/queries/find/scopes.ts";
+import type { ParsedValueFilter } from "src/queries/parsedConditions.ts";
+import type { Column } from "src/serde/columns.ts";
+import { assertNever } from "src/utils.ts";
 
 /** An ADT version of `EntityFilter`. */
 export type ParsedEntityFilter =

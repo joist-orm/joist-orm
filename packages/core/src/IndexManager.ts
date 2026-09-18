@@ -1,7 +1,7 @@
-import { type Entity, isEntity } from "./Entity.ts";
-import { type EntityMetadata, type Field, getMetadata } from "./EntityMetadata.ts";
-import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "./relations/index.ts";
-import { groupBy } from "./utils.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type EntityMetadata, type Field, getMetadata } from "src/EntityMetadata.ts";
+import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "src/relations/index.ts";
+import { groupBy } from "src/utils.ts";
 
 type FieldValue = any;
 type FieldName = string;

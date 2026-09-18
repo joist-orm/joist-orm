@@ -1,7 +1,7 @@
-import type { ExprContext, SqlFragment } from "../Expr.ts";
-import { expressionNullable, functionToSql } from "./expression.ts";
-import { parseNonEmptyOperands } from "./parseExpression.ts";
-import type { ParsedExpression, ResultCodec } from "./types.ts";
+import type { ExprContext, SqlFragment } from "src/queries/sql/Expr.ts";
+import { expressionNullable, functionToSql } from "src/queries/sql/expressions/expression.ts";
+import { parseNonEmptyOperands } from "src/queries/sql/expressions/parseExpression.ts";
+import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
 
 /** Values whose largest non-null member is selected by PostgreSQL. */
 export interface GreatestInput {

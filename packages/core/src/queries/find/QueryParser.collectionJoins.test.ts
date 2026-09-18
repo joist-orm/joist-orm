@@ -1,5 +1,5 @@
-import { optimizeCollectionJoins } from "./QueryParser.collectionJoins.ts";
-import type { ParsedFindQuery } from "./QueryParser.ts";
+import { optimizeCollectionJoins } from "src/queries/find/QueryParser.collectionJoins.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
 
 describe("QueryParser.collectionJoins", () => {
   it("allows unblocked multiple collection left joins before pruning", () => {

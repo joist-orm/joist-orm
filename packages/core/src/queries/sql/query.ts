@@ -1,8 +1,6 @@
-import type { Entity } from "../../Entity.ts";
-import { type EntityMetadata, getBaseMeta } from "../../EntityMetadata.ts";
-import type { TypeInfo } from "../../serde/TypeInfo.ts";
-import { fail } from "../../utils.ts";
-import { ConditionBuilder } from "../ConditionBuilder.ts";
+import type { Entity } from "src/Entity.ts";
+import { type EntityMetadata, getBaseMeta } from "src/EntityMetadata.ts";
+import { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
 import {
   type ConditionGroup,
   type ConditionInput,
@@ -10,13 +8,13 @@ import {
   type SqlPredicate,
   type UnbrandedPredicate,
   predicateBrand,
-} from "../conditions.ts";
-import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "../entityQueryUtils.ts";
-import { isDeferredAliasCondition } from "../find/DeferredAlias.ts";
-import { type ColumnCondition, type ParsedExpressionFilter, deepFindConditions } from "../parsedConditions.ts";
-import { buildWhereClause } from "../renderConditions.ts";
-import { skipCondition } from "../skipCondition.ts";
-import { AliasAssigner } from "./AliasAssigner.ts";
+} from "src/queries/conditions.ts";
+import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "src/queries/entityQueryUtils.ts";
+import { isDeferredAliasCondition } from "src/queries/find/DeferredAlias.ts";
+import { type ColumnCondition, type ParsedExpressionFilter, deepFindConditions } from "src/queries/parsedConditions.ts";
+import { buildWhereClause } from "src/queries/renderConditions.ts";
+import { skipCondition } from "src/queries/skipCondition.ts";
+import { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
 import {
   BaseExpr,
   type Expr,
@@ -34,7 +32,7 @@ import {
   isExpr,
   orderByToSql,
   resolveDeferredConditions,
-} from "./Expr.ts";
+} from "src/queries/sql/Expr.ts";
 import {
   type CheckInput,
   type ExprFromInput,
@@ -42,8 +40,8 @@ import {
   type ExpressionSources,
   type ExpressionValue,
   buildExpr,
-} from "./expressions/expression.ts";
-import { kq, kqStar, safeKq } from "./keywords.ts";
+} from "src/queries/sql/expressions/expression.ts";
+import { kq, kqStar, safeKq } from "src/queries/sql/keywords.ts";
 import {
   JoinTableHandle,
   type M2mJoinTable,
@@ -57,7 +55,9 @@ import {
   m2mJoinTable,
   referenceJoinSource,
   tableMgmt,
-} from "./Tables.ts";
+} from "src/queries/sql/Tables.ts";
+import type { TypeInfo } from "src/serde/TypeInfo.ts";
+import { fail } from "src/utils.ts";
 
 /**
  * `em.query`: SQL-shaped queries as plain object literals.

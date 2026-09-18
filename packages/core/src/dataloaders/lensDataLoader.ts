@@ -1,7 +1,6 @@
 import type DataLoader from "dataloader";
-
-import { type Entity } from "../Entity.ts";
-import { type EntityManager, type MaybeAbstractEntityConstructor, type TaggedId } from "../EntityManager.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type ManyToOneField,
@@ -9,18 +8,18 @@ import {
   type OneToOneField,
   getBaseMeta,
   getMetadata,
-} from "../EntityMetadata.ts";
-import { deTagIds, tagId } from "../keys.ts";
-import { mapPathsToTarget } from "../loading/loadLens.ts";
+} from "src/EntityMetadata.ts";
+import { deTagIds, tagId } from "src/keys.ts";
+import { mapPathsToTarget } from "src/loading/loadLens.ts";
 import {
   type ParsedFindQuery,
   type ParsedOrderBy,
   type ParsedTable,
   addTablePerClassJoinsAndClassTag,
   maybeAddOrderBy,
-} from "../queries/find/QueryParser.ts";
-import type { ColumnCondition } from "../queries/parsedConditions.ts";
-import { abbreviation, groupBy } from "../utils.ts";
+} from "src/queries/find/QueryParser.ts";
+import type { ColumnCondition } from "src/queries/parsedConditions.ts";
+import { abbreviation, groupBy } from "src/utils.ts";
 
 export const lensOperation = "lens";
 

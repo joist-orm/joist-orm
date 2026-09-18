@@ -1,5 +1,5 @@
-import { getBaseAndSelfMetas, getMetadata } from "../EntityMetadata.ts";
-import type { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
+import type { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 
 // Keep metadata imports out of AbstractRelationImpl so query imports cannot evaluate a relation
 // subclass before its base class has initialized.

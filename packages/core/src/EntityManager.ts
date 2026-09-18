@@ -1,36 +1,39 @@
 import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
-
-import { getInstanceData } from "./BaseEntity.ts";
-import { BatchLoader } from "./batchloaders/BatchLoader.ts";
-import { type enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader.ts";
-import { loadBatchLoader, type loadOperation } from "./batchloaders/loadBatchLoader.ts";
-import { type manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader.ts";
-import { type oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader.ts";
-import { type oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader.ts";
-import { populateBatchLoader, type populateOperation } from "./batchloaders/populateBatchLoader.ts";
-import { type recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader.ts";
-import { type recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader.ts";
-import { type recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader.ts";
-import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "./config.ts";
-import { getConstructorFromTag, getMetadataForType } from "./configure.ts";
-import { findByUniqueDataLoader, type findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader.ts";
-import { findCountDataLoader, type findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader.ts";
-import { findDataLoader, type findOperation } from "./dataloaders/findDataLoader.ts";
-import { findIdsDataLoader, type findIdsOperation } from "./dataloaders/findIdsDataLoader.ts";
-import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader.ts";
-import { findPaginatedDataLoader } from "./dataloaders/findPaginatedDataLoader.ts";
-import { type lensOperation } from "./dataloaders/lensDataLoader.ts";
-import type { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader.ts";
-import type { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader.ts";
-import { setAsyncDefaults, setSyncDefaults } from "./defaults.ts";
-import { type Driver } from "./drivers/index.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
+import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
+import { type manyToManyLoadOperation } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { type oneToManyLoadOperation } from "src/batchloaders/oneToManyBatchLoader.ts";
+import { type oneToOneLoadOperation } from "src/batchloaders/oneToOneBatchLoader.ts";
+import { populateBatchLoader, type populateOperation } from "src/batchloaders/populateBatchLoader.ts";
+import { type recursiveChildrenOperation } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
+import { type recursiveM2mOperation } from "src/batchloaders/recursiveM2mBatchLoader.ts";
+import { type recursiveParentsOperation } from "src/batchloaders/recursiveParentsBatchLoader.ts";
+import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
+import { getConstructorFromTag, getMetadataForType } from "src/configure.ts";
+import { findByUniqueDataLoader, type findByUniqueOperation } from "src/dataloaders/findByUniqueDataLoader.ts";
+import {
+  findCountDataLoader,
+  type findCountOperation,
+  mergeCountOptions,
+} from "src/dataloaders/findCountDataLoader.ts";
+import { findDataLoader, type findOperation } from "src/dataloaders/findDataLoader.ts";
+import { findIdsDataLoader, type findIdsOperation } from "src/dataloaders/findIdsDataLoader.ts";
+import { entityMatches, findOrCreateDataLoader } from "src/dataloaders/findOrCreateDataLoader.ts";
+import { findPaginatedDataLoader } from "src/dataloaders/findPaginatedDataLoader.ts";
+import { type lensOperation } from "src/dataloaders/lensDataLoader.ts";
+import type { manyToManyFindOperation } from "src/dataloaders/manyToManyFindDataLoader.ts";
+import type { oneToManyFindOperation } from "src/dataloaders/oneToManyFindDataLoader.ts";
+import { setAsyncDefaults, setSyncDefaults } from "src/defaults.ts";
+import { type Driver } from "src/drivers/index.ts";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { type Entity, type Entity as EntityW, type IdType, isEntity } from "./Entity.ts";
-import { getField, setField } from "./fields.ts";
-import { FlushLock } from "./flush/FlushLock.ts";
-import { JoinRows, type ManyToManyLike } from "./flush/JoinRows.ts";
-import type { PendingChange } from "./flush/PendingChanges.ts";
-import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "./flush/Todo.ts";
+import { type Entity, type Entity as EntityW, type IdType, isEntity } from "src/Entity.ts";
+import { getField, setField } from "src/fields.ts";
+import { FlushLock } from "src/flush/FlushLock.ts";
+import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
+import type { PendingChange } from "src/flush/PendingChanges.ts";
+import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "src/flush/Todo.ts";
 import {
   CustomCollection,
   CustomReference,
@@ -83,9 +86,9 @@ import {
   setOpts,
   tagId,
   toTaggedId,
-} from "./index.ts";
-import { IndexManager } from "./IndexManager.ts";
-import { IsLoadedCache } from "./loading/IsLoadedCache.ts";
+} from "src/index.ts";
+import { IndexManager } from "src/IndexManager.ts";
+import { IsLoadedCache } from "src/loading/IsLoadedCache.ts";
 import {
   type LoadHint,
   type Loaded,
@@ -93,15 +96,15 @@ import {
   type New,
   type RelationsIn,
   isLoadedForPopulate,
-} from "./loading/loadHints.ts";
-import { type WriteFn } from "./logging/FactoryLogger.ts";
-import { noopFieldLogger } from "./logging/FieldLogger.ts";
-import { type ReactionWalk } from "./logging/ReactionLogger.ts";
-import { newEntity } from "./newEntity.ts";
-import { resetFactoryCreated } from "./newTestInstance.ts";
-import { PluginManager } from "./PluginManager.ts";
-import { type PreloadPlugin } from "./plugins/PreloadPlugin.ts";
-import { isSelectAllFilter } from "./queries/find/scopes.ts";
+} from "src/loading/loadHints.ts";
+import { type WriteFn } from "src/logging/FactoryLogger.ts";
+import { noopFieldLogger } from "src/logging/FieldLogger.ts";
+import { type ReactionWalk } from "src/logging/ReactionLogger.ts";
+import { newEntity } from "src/newEntity.ts";
+import { resetFactoryCreated } from "src/newTestInstance.ts";
+import { PluginManager } from "src/PluginManager.ts";
+import { type PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
+import { isSelectAllFilter } from "src/queries/find/scopes.ts";
 import {
   type CheckMutation,
   type ExecuteResult,
@@ -110,7 +113,7 @@ import {
   decodeStatementResult,
   isMutation,
   parseStatement,
-} from "./queries/sql/execute.ts";
+} from "src/queries/sql/execute.ts";
 import {
   type CheckSetQuery,
   type EntityQuery,
@@ -124,20 +127,20 @@ import {
   type SetQueryRow,
   type Subquery,
   parseUserQuery,
-} from "./queries/sql/query.ts";
-import { ReactionsManager } from "./reactivity/ReactionsManager.ts";
-import { followReverseHint } from "./reactivity/reactiveHints.ts";
-import { type AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
-import { AsyncPropertyImpl } from "./relations/AsyncProperty.ts";
-import { type Collection } from "./relations/Collection.ts";
-import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod.ts";
-import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations/index.ts";
-import { LazyFieldImpl, type lazyColumnLoadOperation } from "./relations/LazyField.ts";
-import { RecursiveCycleError } from "./relations/RecursiveCollection.ts";
-import { PojoRowData, type RowData } from "./RowData.ts";
-import { runInTrustedContext } from "./trusted.ts";
-import { type OptsOf, type OrderOf } from "./typeMap.ts";
-import { upsert } from "./upsert.ts";
+} from "src/queries/sql/query.ts";
+import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
+import { followReverseHint } from "src/reactivity/reactiveHints.ts";
+import { type AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { AsyncPropertyImpl } from "src/relations/AsyncProperty.ts";
+import { type Collection } from "src/relations/Collection.ts";
+import { AsyncMethodPopulateSecret } from "src/relations/hasAsyncMethod.ts";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "src/relations/index.ts";
+import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
+import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
+import { PojoRowData, type RowData } from "src/RowData.ts";
+import { runInTrustedContext } from "src/trusted.ts";
+import { type OptsOf, type OrderOf } from "src/typeMap.ts";
+import { upsert } from "src/upsert.ts";
 import {
   type MaybePromise,
   assertNever,
@@ -148,7 +151,7 @@ import {
   hasAnyKey,
   partition,
   toArray,
-} from "./utils.ts";
+} from "src/utils.ts";
 
 // polyfill
 (Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");

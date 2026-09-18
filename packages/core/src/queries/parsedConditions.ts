@@ -1,5 +1,5 @@
-import { assertNever } from "../utils.ts";
-import type { ParsedFindQuery } from "./find/QueryParser.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { assertNever } from "src/utils.ts";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {

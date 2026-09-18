@@ -1,7 +1,7 @@
-import type { ExprContext, SqlFragment } from "../Expr.ts";
-import { functionToSql } from "./expression.ts";
-import { parseExpression } from "./parseExpression.ts";
-import type { ParsedExpression, ResultCodec } from "./types.ts";
+import type { ExprContext, SqlFragment } from "src/queries/sql/Expr.ts";
+import { functionToSql } from "src/queries/sql/expressions/expression.ts";
+import { parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
+import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
 
 /** A value and the value it must equal for NULLIF to return SQL NULL. */
 export interface NullIfInput {

@@ -6,7 +6,7 @@ import {
   type ManyToOneField,
   type OneToManyField,
   type OneToOneField,
-} from "../EntityMetadata.ts";
+} from "src/EntityMetadata.ts";
 
 export function canPreload(
   meta: EntityMetadata,

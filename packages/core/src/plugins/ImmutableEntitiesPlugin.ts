@@ -1,6 +1,6 @@
-import { type Entity } from "../Entity.ts";
-import { Plugin } from "../PluginManager.ts";
-import { fail } from "../utils.ts";
+import { type Entity } from "src/Entity.ts";
+import { Plugin } from "src/PluginManager.ts";
+import { fail } from "src/utils.ts";
 
 export class ImmutableEntitiesPlugin extends Plugin {
   readonly entities: Set<Entity> = new Set();

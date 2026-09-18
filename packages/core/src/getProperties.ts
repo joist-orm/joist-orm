@@ -1,7 +1,7 @@
-import { BaseEntity } from "./BaseEntity.ts";
-import { type EntityMetadata } from "./EntityMetadata.ts";
-import { LazyRelation } from "./newEntity.ts";
-import { fail, partition } from "./utils.ts";
+import { BaseEntity } from "src/BaseEntity.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { LazyRelation } from "src/newEntity.ts";
+import { fail, partition } from "src/utils.ts";
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.

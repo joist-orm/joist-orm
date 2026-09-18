@@ -1,5 +1,5 @@
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
-import type { ManyToManyLike } from "../flush/JoinRows.ts";
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import type { ManyToManyLike } from "src/flush/JoinRows.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -10,11 +10,11 @@ import {
   getInstanceData,
   getMetadata,
   getMetadataForField,
-} from "../index.ts";
-import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
-import { lazyField } from "../newEntity.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 /**
  * A read-only collection representing the "other side" of a ReactiveManyToMany.

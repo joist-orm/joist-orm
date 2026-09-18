@@ -221,13 +221,17 @@ export interface ReferenceColumn<U extends Entity, N extends null | never, Src e
 export interface PolyReference<U extends Entity, N extends null | never> extends ReferenceJoin<U, N> {
   eq(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
   ne(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
-  in(values: Array<U | TaggedId> | ExprLike<IdOf<U> | null> | undefined): SqlCondition;
+  in(values: readonly (U | TaggedId)[] | ExprLike<IdOf<U> | null> | undefined): SqlCondition;
+  /** Applies an IN condition unless the list is empty or undefined. */
+  inNonEmpty(values: readonly (U | TaggedId)[] | undefined): SqlCondition;
 }
 
 export interface PrimitiveColumn<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
   eq(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
   ne(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
   in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition;
+  /** Applies an IN condition unless the list is empty or undefined. */
+  inNonEmpty(values: readonly (V | null)[] | undefined): SqlCondition;
   nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition;
   gt(value: V | ExprLike<V | N> | undefined): SqlCondition;
   gte(value: V | ExprLike<V | N> | undefined): SqlCondition;
@@ -284,6 +288,8 @@ export interface EntityColumn<T, N extends null | never = never, Src extends str
   ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   // Adding `| null` for GraphQL support
   in(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  /** Applies an IN condition unless the list is empty, null, or undefined. */
+  inNonEmpty(value: readonly (T | IdOf<T> | null)[] | null | undefined): SqlCondition;
   nin(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   gt(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   gte(value: IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
@@ -510,6 +516,11 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn impleme
     }
   }
 
+  /** Applies an IN condition unless the list is empty or undefined. */
+  inNonEmpty(values: readonly (V | null)[] | undefined): SqlCondition {
+    return values === undefined || values.length === 0 ? skipCondition : this.in(values);
+  }
+
   nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inList("NOT IN", values);
@@ -575,6 +586,11 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     } else {
       return this.addCondition({ kind: "in", value: values as any });
     }
+  }
+
+  /** Applies an IN condition unless the list is empty, null, or undefined. */
+  inNonEmpty(values: readonly (T | IdOf<T> | null)[] | null | undefined): SqlCondition {
+    return values === null || values === undefined || values.length === 0 ? skipCondition : this.in(values);
   }
 
   nin(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
@@ -652,7 +668,7 @@ class PolyReferenceImpl<T extends Entity> {
   }
 
   // We required tagged ids for polys
-  in(values: Array<T | TaggedId> | ExprLike<IdOf<T> | null> | undefined): SqlCondition {
+  in(values: readonly (T | TaggedId)[] | ExprLike<IdOf<T> | null> | undefined): SqlCondition {
     if (values === undefined) return skipCondition;
     if (isExpr(values)) return this.inSubquery(values);
     // Split up the ids by constructor
@@ -666,6 +682,11 @@ class PolyReferenceImpl<T extends Entity> {
         return this.componentColumn(comp).addCondition({ kind: "in", value: ids });
       }),
     };
+  }
+
+  /** Applies an IN condition unless the list is empty or undefined. */
+  inNonEmpty(values: readonly (T | TaggedId)[] | undefined): SqlCondition {
+    return values === undefined || values.length === 0 ? skipCondition : this.in(values);
   }
 
   /** Joins `other` via this poly's component for its entity, INNER when the poly is required. */

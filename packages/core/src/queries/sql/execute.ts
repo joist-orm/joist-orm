@@ -1,12 +1,14 @@
+import type { Column } from "../../columns.ts";
+import type { DriverQueryResult } from "../../drivers/Driver.ts";
+import { type Entity, isEntity } from "../../Entity.ts";
+import type { IdOf } from "../../EntityManager.ts";
+import type { EntityMetadata } from "../../EntityMetadata.ts";
+import { keyToTaggedId, toTaggedId } from "../../keys.ts";
+import type { ColumnsOf, TypeMapEntry } from "../../typeMap.ts";
+import { fail } from "../../utils.ts";
+import type { SqlCondition } from "../conditions.ts";
 import { AliasAssigner } from "./AliasAssigner.ts";
-import { type Column } from "./columns.ts";
-import { type SqlCondition } from "./conditions.ts";
-import { type DriverQueryResult } from "./drivers/Driver.ts";
-import { type Entity, isEntity } from "./Entity.ts";
-import { type IdOf } from "./EntityManager.ts";
-import { type EntityMetadata } from "./EntityMetadata.ts";
 import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "./Expr.ts";
-import { keyToTaggedId, toTaggedId } from "./keys.ts";
 import { kq, safeKq } from "./keywords.ts";
 import {
   type CheckReadQuery,
@@ -38,8 +40,6 @@ import {
   withFragment,
 } from "./query.ts";
 import { type TableFor, getTableMgmt, isTable, tableMgmt } from "./Tables.ts";
-import { type ColumnsOf, type TypeMapEntry } from "./typeMap.ts";
-import { fail } from "./utils.ts";
 
 /** The native command count and decoded rows from one immediate SQL statement. */
 export interface ExecuteResult<R> {

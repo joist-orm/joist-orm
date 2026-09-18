@@ -1,7 +1,7 @@
 import { type Entity } from "./Entity.ts";
-import { type OrderBy } from "./EntityFilter.ts";
 import { isDefined } from "./EntityManager.ts";
 import { type New } from "./loadHints.ts";
+import type { OrderBy } from "./queries/find/EntityFilter.ts";
 import { isReactiveField, isReference } from "./relations/index.ts";
 
 export type MaybePromise<T> = T | Promise<T>;

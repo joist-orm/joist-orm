@@ -1,16 +1,18 @@
+import { assertNever } from "../../utils.ts";
+import type {
+  ExistsCondition,
+  ParsedExpressionCondition,
+  ParsedExpressionFilter,
+  RawCondition,
+} from "../parsedConditions.ts";
 import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning.ts";
 import {
-  type ExistsCondition,
   type JoinTable,
-  type ParsedExpressionCondition,
-  type ParsedExpressionFilter,
   type ParsedFindQuery,
   type PrimaryTable,
-  type RawCondition,
   maybeAddIdNotNulls,
   parseAlias,
 } from "./QueryParser.ts";
-import { assertNever } from "./utils.ts";
 
 /** A collection root plus every join nested under it, i.e. `books b` with `book_reviews br`. */
 interface CollectionRoot {

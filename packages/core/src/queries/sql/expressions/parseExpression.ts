@@ -1,5 +1,5 @@
+import { assertNever } from "../../../utils.ts";
 import { BaseExpr } from "../Expr.ts";
-import { assertNever } from "../utils.ts";
 import { parseArrayAggExpression } from "./arrayAgg.ts";
 import { parseCaseExpression } from "./case.ts";
 import { parseCoalesceExpression } from "./coalesce.ts";

@@ -1,8 +1,8 @@
+import type { EntityMetadata } from "../../EntityMetadata.ts";
+import { type PredicateBrand, brandPredicate } from "../conditions.ts";
+import type { ColumnCondition, RawCondition } from "../parsedConditions.ts";
 // Erased imports keep domain predicates independent of the query parser at module load time.
-import { type AliasMgmt } from "./Aliases.ts";
-import { type PredicateBrand, brandPredicate } from "./conditions.ts";
-import { type EntityMetadata } from "./EntityMetadata.ts";
-import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
+import type { AliasMgmt } from "./Aliases.ts";
 
 export const deferredAliasSym: unique symbol = Symbol("joist.deferredAliasCondition");
 

@@ -1,6 +1,6 @@
+import type { TypeInfo } from "../../../TypeInfo.ts";
+import { assertNever } from "../../../utils.ts";
 import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
-import type { TypeInfo } from "../TypeInfo.ts";
-import { assertNever } from "../utils.ts";
 import { arrayAggToSql } from "./arrayAgg.ts";
 import { caseNullable, caseToSql } from "./case.ts";
 import { coalesceNullable, coalesceToSql } from "./coalesce.ts";

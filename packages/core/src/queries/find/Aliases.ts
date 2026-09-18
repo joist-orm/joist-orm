@@ -1,13 +1,10 @@
 import { groupBy } from "joist-utils";
 
-import { type Column } from "./columns.ts";
-import { type PredicateBrand } from "./conditions.ts";
+import type { Column } from "../../columns.ts";
 // Load configure first: relations must not evaluate before their base classes exist.
-import { getConstructorFromTaggedId } from "./configure.ts";
-import { withDeferredAlias } from "./DeferredAlias.ts";
-import { type Entity } from "./Entity.ts";
-import { type ExpressionCondition } from "./EntityFilter.ts";
-import { type IdOf, type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
+import { getConstructorFromTaggedId } from "../../configure.ts";
+import type { Entity } from "../../Entity.ts";
+import type { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "../../EntityManager.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -15,12 +12,16 @@ import {
   type PolymorphicFieldComponent,
   getBaseAndSelfMetas,
   getMetadata,
-} from "./EntityMetadata.ts";
-import { maybeResolveReferenceToId } from "./keys.ts";
-import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
-import { skipCondition } from "./skipCondition.ts";
-import { type FieldsOf } from "./typeMap.ts";
-import { fail } from "./utils.ts";
+} from "../../EntityMetadata.ts";
+import { maybeResolveReferenceToId } from "../../keys.ts";
+import type { FieldsOf } from "../../typeMap.ts";
+import { fail } from "../../utils.ts";
+import type { PredicateBrand } from "../conditions.ts";
+import type { ColumnCondition, ParsedValueFilter, RawCondition } from "../parsedConditions.ts";
+import { skipCondition } from "../skipCondition.ts";
+import { makeLike, mapToDb } from "../valueFilters.ts";
+import { withDeferredAlias } from "./DeferredAlias.ts";
+import type { ExpressionCondition } from "./EntityFilter.ts";
 
 /** Creates an alias for complex domain filtering in `em.find`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {

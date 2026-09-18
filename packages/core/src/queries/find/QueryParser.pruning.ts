@@ -1,13 +1,6 @@
-import {
-  type ColumnCondition,
-  type ExistsCondition,
-  type JoinTable,
-  type ParsedExpressionFilter,
-  type ParsedFindQuery,
-  type RawCondition,
-  parseAlias,
-} from "./QueryParser.ts";
-import { assertNever } from "./utils.ts";
+import { assertNever } from "../../utils.ts";
+import { deepFindConditions } from "../parsedConditions.ts";
+import { type JoinTable, type ParsedFindQuery, parseAlias } from "./QueryParser.ts";
 
 // Remove any joins that are not used in the select or conditions
 export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
@@ -154,30 +147,6 @@ function selectReferencesCandidate(select: string, candidate: string): boolean {
 /** Returns true for characters that can be part of an unquoted SQL identifier. */
 function isSqlIdentifierChar(char: string | undefined): boolean {
   return char !== undefined && /[A-Za-z0-9_]/.test(char);
-}
-
-/** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
-export function deepFindConditions(
-  condition: ParsedExpressionFilter | undefined,
-  filterPruneable: boolean,
-): (ColumnCondition | RawCondition | ExistsCondition)[] {
-  const todo = condition ? [condition] : [];
-  const result: (ColumnCondition | RawCondition | ExistsCondition)[] = [];
-  while (todo.length !== 0) {
-    const cc = todo.pop()!;
-    for (const c of cc.conditions) {
-      if (c.kind === "exp") {
-        todo.push(c);
-      } else if (c.kind === "column" || c.kind === "raw") {
-        if (!filterPruneable || !c.pruneable) result.push(c);
-      } else if (c.kind === "exists") {
-        result.push(c);
-      } else {
-        assertNever(c);
-      }
-    }
-  }
-  return result;
 }
 
 /** Track join dependencies for `pruneUnusedJoins`. */

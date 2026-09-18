@@ -13,13 +13,13 @@ import {
 import { deTagIds, tagId } from "../keys.ts";
 import { mapPathsToTarget } from "../loadLens.ts";
 import {
-  type ColumnCondition,
   type ParsedFindQuery,
   type ParsedOrderBy,
   type ParsedTable,
   addTablePerClassJoinsAndClassTag,
   maybeAddOrderBy,
-} from "../QueryParser.ts";
+} from "../queries/find/QueryParser.ts";
+import type { ColumnCondition } from "../queries/parsedConditions.ts";
 import { abbreviation, groupBy } from "../utils.ts";
 
 export const lensOperation = "lens";

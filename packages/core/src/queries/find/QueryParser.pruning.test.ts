@@ -1,5 +1,5 @@
 import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning.ts";
-import { type ParsedFindQuery } from "./QueryParser.ts";
+import type { ParsedFindQuery } from "./QueryParser.ts";
 
 describe("QueryParser.pruning", () => {
   describe("pruneUnusedJoins", () => {

@@ -1,7 +1,7 @@
-import { kq, kqDot } from "../keywords.ts";
-import { type ParsedCteClause, type ParsedFindQuery, type ParsedTable } from "../QueryParser.ts";
-import { assertNever, cleanSql } from "../utils.ts";
-import { buildWhereClause } from "./buildUtils.ts";
+import { assertNever, cleanSql } from "../../utils.ts";
+import { buildWhereClause } from "../renderConditions.ts";
+import { kq, kqDot } from "../sql/keywords.ts";
+import type { ParsedCteClause, ParsedFindQuery, ParsedTable } from "./QueryParser.ts";
 
 type QuerySettings = { limit?: number; offset?: number };
 

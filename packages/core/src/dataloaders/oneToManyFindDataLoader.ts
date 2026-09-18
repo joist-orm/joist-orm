@@ -1,14 +1,11 @@
 import type DataLoader from "dataloader";
 
-import { type Entity } from "../Entity.ts";
-import { type EntityManager } from "../EntityManager.ts";
-import {
-  type OneToManyCollection,
-  type OneToManyLargeCollection,
-  type ParsedFindQuery,
-  addTablePerClassJoinsAndClassTag,
-  keyToNumber,
-} from "../index.ts";
+import type { Entity } from "../Entity.ts";
+import type { EntityManager } from "../EntityManager.ts";
+import { keyToNumber } from "../keys.ts";
+import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../queries/find/QueryParser.ts";
+import type { OneToManyCollection } from "../relations/OneToManyCollection.ts";
+import type { OneToManyLargeCollection } from "../relations/OneToManyLargeCollection.ts";
 import { abbreviation } from "../utils.ts";
 
 export const oneToManyFindOperation = "o2m-find";

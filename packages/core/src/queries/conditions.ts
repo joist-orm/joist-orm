@@ -1,4 +1,4 @@
-import { type ColumnCondition, type RawCondition } from "./QueryParser.ts";
+import type { ColumnCondition, RawCondition } from "./parsedConditions.ts";
 
 export const predicateBrand: unique symbol = Symbol("joist.predicate");
 

@@ -1,5 +1,8 @@
-import { AliasAssigner } from "./AliasAssigner.ts";
-import { ConditionBuilder } from "./ConditionBuilder.ts";
+import type { Entity } from "../../Entity.ts";
+import { type EntityMetadata, getBaseMeta } from "../../EntityMetadata.ts";
+import type { TypeInfo } from "../../TypeInfo.ts";
+import { fail } from "../../utils.ts";
+import { ConditionBuilder } from "../ConditionBuilder.ts";
 import {
   type ConditionGroup,
   type ConditionInput,
@@ -7,11 +10,13 @@ import {
   type SqlPredicate,
   type UnbrandedPredicate,
   predicateBrand,
-} from "./conditions.ts";
-import { isDeferredAliasCondition } from "./DeferredAlias.ts";
-import { buildWhereClause } from "./drivers/buildUtils.ts";
-import { type Entity } from "./Entity.ts";
-import { type EntityMetadata, getBaseMeta } from "./EntityMetadata.ts";
+} from "../conditions.ts";
+import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "../entityQueryUtils.ts";
+import { isDeferredAliasCondition } from "../find/DeferredAlias.ts";
+import { type ColumnCondition, type ParsedExpressionFilter, deepFindConditions } from "../parsedConditions.ts";
+import { buildWhereClause } from "../renderConditions.ts";
+import { skipCondition } from "../skipCondition.ts";
+import { AliasAssigner } from "./AliasAssigner.ts";
 import {
   BaseExpr,
   type Expr,
@@ -39,15 +44,6 @@ import {
   buildExpr,
 } from "./expressions/expression.ts";
 import { kq, kqStar, safeKq } from "./keywords.ts";
-import { deepFindConditions } from "./QueryParser.pruning.ts";
-import {
-  type ColumnCondition,
-  type ParsedExpressionFilter,
-  filterSoftDeletes,
-  lazyExcludedSelects,
-  stiSubtypeFilter,
-} from "./QueryParser.ts";
-import { skipCondition } from "./skipCondition.ts";
 import {
   JoinTableHandle,
   type M2mJoinTable,
@@ -62,8 +58,6 @@ import {
   referenceJoinSource,
   tableMgmt,
 } from "./Tables.ts";
-import { type TypeInfo } from "./TypeInfo.ts";
-import { fail } from "./utils.ts";
 
 /**
  * `em.query`: SQL-shaped queries as plain object literals.

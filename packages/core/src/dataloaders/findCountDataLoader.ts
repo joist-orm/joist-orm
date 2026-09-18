@@ -1,6 +1,4 @@
-import { type Entity, type IdType } from "../Entity.ts";
-import { type FilterAndSettings, type FindFilter } from "../EntityFilter.ts";
-import { type GraphQLFilterWithAlias } from "../EntityGraphQLFilter.ts";
+import type { Entity, IdType } from "../Entity.ts";
 import {
   type EntityManager,
   type FindCountFilterOptions,
@@ -8,9 +6,11 @@ import {
   getEmInternalApi,
 } from "../EntityManager.ts";
 import { getMetadata } from "../EntityMetadata.ts";
-import { kq } from "../keywords.ts";
-import { type ParsedFindQuery, parseFindQuery } from "../QueryParser.ts";
-import { isScope, isSelectAllFilter, resolveScope } from "../scopes.ts";
+import type { FilterAndSettings, FindFilter } from "../queries/find/EntityFilter.ts";
+import type { GraphQLFilterWithAlias } from "../queries/find/EntityGraphQLFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
+import { isScope, isSelectAllFilter, resolveScope } from "../queries/find/scopes.ts";
+import { kq } from "../queries/sql/keywords.ts";
 import { buildUnnestCte } from "../unnest.ts";
 import { fail } from "../utils.ts";
 import {

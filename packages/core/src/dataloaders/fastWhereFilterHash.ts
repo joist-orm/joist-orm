@@ -1,5 +1,5 @@
-import { isAlias } from "../Aliases.ts";
 import { isEntity } from "../Entity.ts";
+import { isAlias } from "../queries/find/Aliases.ts";
 import { isReference } from "../relations/index.ts";
 import { maybeRequireTemporal } from "../temporal.ts";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers.ts";

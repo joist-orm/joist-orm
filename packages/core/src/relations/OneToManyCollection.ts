@@ -18,7 +18,8 @@ import {
 import { type IsLoadedCachable } from "../IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
 import { compareValues } from "../utils.ts";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl.ts";
+import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
+import { isCascadeDelete } from "./isCascadeDelete.ts";
 import { type ManyToOneReferenceImpl } from "./ManyToOneReference.ts";
 import { RelationT, RelationU } from "./RelationSymbols.ts";
 

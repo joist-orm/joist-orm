@@ -1,17 +1,17 @@
-import { opToFn } from "../EntityGraphQLFilter.ts";
 import { isDefined } from "../EntityManager.ts";
-import { kqDot } from "../keywords.ts";
-import {
-  type ColumnCondition,
-  type ExistsCondition,
-  type ParsedExpressionFilter,
-  type ParsedFindQuery,
-  type ParsedValueFilter,
-  type RawCondition,
-} from "../QueryParser.ts";
 import { assertNever, fail } from "../utils.ts";
+import { opToFn } from "./find/EntityGraphQLFilter.ts";
+import type { ParsedFindQuery } from "./find/QueryParser.ts";
+import type {
+  ColumnCondition,
+  ExistsCondition,
+  ParsedExpressionFilter,
+  ParsedValueFilter,
+  RawCondition,
+} from "./parsedConditions.ts";
+import { kqDot } from "./sql/keywords.ts";
 
-/** Renders a ParsedFindQuery subquery to SQL — passed in to avoid circular imports with buildRawQuery. */
+/** Renders a ParsedFindQuery subquery to SQL — passed in to avoid circular imports with buildFindQuery. */
 export type SubqueryRenderer = (q: ParsedFindQuery) => { sql: string; bindings: readonly any[] };
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */

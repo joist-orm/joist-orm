@@ -1,10 +1,10 @@
-import { type Entity } from "../Entity.ts";
-import { type FilterAndSettings } from "../EntityFilter.ts";
-import { type EntityManager, type MaybeAbstractEntityConstructor } from "../EntityManager.ts";
+import type { Entity } from "../Entity.ts";
+import type { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager.ts";
 import { getMetadata } from "../EntityMetadata.ts";
 import { keyToTaggedId } from "../keys.ts";
-import { kq } from "../keywords.ts";
-import { type ParsedFindQuery, parseFindQuery } from "../QueryParser.ts";
+import type { FilterAndSettings } from "../queries/find/EntityFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
+import { kq } from "../queries/sql/keywords.ts";
 import { buildUnnestCte } from "../unnest.ts";
 import { fail } from "../utils.ts";
 import {

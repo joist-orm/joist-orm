@@ -505,6 +505,21 @@ Keyed and expression entries can also be mixed:
 orderBy: [{ bookCount: "DESC" }, { sort: a.first_name, order: "ASC", nulls: "last" }];
 ```
 
+For ordinary persisted entity fields, `Table.orderBy` maps domain names to expression entries from the same table. Nullish inputs and directions are omitted. Add an explicit expression for calculated ordering, joined fields, foreign keys, or a stable tiebreaker:
+
+```ts
+const b = table(Book);
+
+const rows = await em.query({
+  from: b,
+  select: b,
+  orderBy: [
+    ...b.orderBy(input ?? { updatedAt: "DESC" }),
+    { sort: b.id, order: "ASC" },
+  ],
+});
+```
+
 Both forms allow `undefined` entries. A keyed direction of `undefined` prunes that key; an expression order of `undefined` prunes the complete entry before its expression references are collected, so it does not retain an otherwise-unused join. Prefer the keyed form whenever what you're ordering by is already in `select`. [Set operations](#set-operations) only support the keyed form at their root.
 
 ## Composition: `query()`

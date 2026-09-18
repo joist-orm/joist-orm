@@ -64,6 +64,7 @@ export {
   newTableProxy,
   type Table,
   type TableFilter,
+  type TableOrderBy,
   type TableBrand,
   type TableFor,
   type TableMgmt,

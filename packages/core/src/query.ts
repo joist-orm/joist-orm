@@ -770,6 +770,25 @@ export function query(q: AnyReadQuery): unknown {
 }
 
 /**
+ * Builds a query value only when its user-supplied `where` survives pruning.
+ *
+ * Missing or empty conditions prune the value, including nested groups and `pruneIfUndefined`.
+ * Joins, HAVING, and implicit soft-delete/STI conditions do not keep the value alive.
+ *
+ * I.e. `queryMaybe({ from: b, where: b.authorId.eq(enabled ? a.id : undefined), select: b.id })`
+ * returns `undefined` when `enabled` is false, so an enclosing `notExists` also prunes.
+ */
+export function queryMaybe<
+  F extends QuerySource,
+  const S extends QuerySelect = never,
+  J extends QueryJoins = [],
+  Name extends string = "?",
+>(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name> | undefined {
+  checkCondition(q.where);
+  return isPrunedQueryCondition(q.where) ? undefined : query(q);
+}
+
+/**
  * Declares a `WITH RECURSIVE` CTE from its two terms, and returns the CTE as a readable value.
  *
  * `base` is the non-recursive term, which seeds the rows and, as in PostgreSQL, supplies the CTE's
@@ -2298,6 +2317,26 @@ function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): Cond
 
 function isFilter(cond: ConditionInput): cond is ConditionGroup<ConditionInput> {
   return ("and" in cond && cond.and !== undefined) || ("or" in cond && cond.or !== undefined);
+}
+
+/**
+ * Checks structural pruning without resolving SQL or correlated aliases.
+ *
+ * Keeps individual predicates and applies ConditionBuilder's pruning policy (i.e. pruneIfUndefined) to groups.
+ * I.e. an Author condition AND an omitted Book condition survives unless the group uses `any`.
+ */
+function isPrunedQueryCondition(cond: QueryCondition | undefined): boolean {
+  if (cond === undefined || cond === skipCondition) return true;
+  if ("and" in cond || "or" in cond) {
+    const children = (cond.and ?? cond.or ?? []).map(isPrunedQueryCondition);
+    return (
+      children.every((pruned) => pruned) ||
+      ("pruneIfUndefined" in cond && cond.pruneIfUndefined === "any" && children.some((pruned) => pruned))
+    );
+  }
+  if ("exists" in cond) return cond.exists === undefined;
+  if ("notExists" in cond) return cond.notExists === undefined;
+  return false;
 }
 
 /** The physical source aliases a parsed condition tree references. */

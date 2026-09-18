@@ -463,6 +463,34 @@ Two things to know:
 
 `pruneJoins: false` on the query turns join pruning off, and `undefined` entries in the `join` and `orderBy` arrays are allowed so conditional spreads still work.
 
+### Optional subqueries with `queryMaybe`
+
+Use `queryMaybe` when an optional filter should prune the entire subquery. It returns `undefined` when all of its supplied `where` conditions prune, so an enclosing `in`, `exists`, or `notExists` condition prunes too:
+
+```ts
+import { queryMaybe, tables } from "joist-orm";
+
+const [a, b] = tables(Author, Book);
+const { titleFilter } = req.filter; // string | undefined
+const authors = await em.query({
+  from: a,
+  where: a.id.in(
+    queryMaybe({
+      from: b,
+      where: b.title.eq(titleFilter),
+      select: b.authorId,
+    }),
+  ),
+  select: a,
+});
+```
+
+With a defined `titleFilter`, this returns Authors with a matching Book. With `undefined`, the Book condition, subquery, and outer `in` condition all disappear, so Authors without Books are included too.
+
+`queryMaybe` preserves `query`'s select-shape inference and adds `| undefined` to its return type; `query` itself always returns a query value. An omitted or empty `where` also prunes the value. Only the supplied `where` controls this decision: joins, `having`, and implicit soft-delete or STI conditions do not keep the query alive.
+
+Nested `and`/`or` groups follow the existing `pruneIfUndefined` policy: `"all"` (the default) prunes a group when all conditions prune, while `"any"` prunes it when any condition prunes. A fixed condition or correlation otherwise keeps the subquery alive even when an optional filter disappears. Use `pruneIfUndefined: "any"`, or make the whole `where` conditional, when those restrictions should depend on the optional filter.
+
 ## Soft Deletes
 
 `em.query` hides soft-deleted rows the same way `em.find` does: a soft-deletable entity in `from` gains a `deleted_at IS NULL` condition in the `WHERE`, and a _collection_ sugar join (o2m/m2m, unless the relation is configured `softDeletes: "include"`) gains it in its join's `ON` — so a `LEFT` join nulls out a soft-deleted match instead of dropping the row.

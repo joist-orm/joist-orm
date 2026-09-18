@@ -200,6 +200,7 @@ export {
   type ScalarQuery,
   type SetQuery,
   query,
+  queryMaybe,
   sql,
   type Subquery,
   type SubqueryBrand,

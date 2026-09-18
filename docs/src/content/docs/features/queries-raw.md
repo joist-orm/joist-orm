@@ -397,19 +397,25 @@ Each relation is available as a key on the entity's table, i.e. an `Author` tabl
 
 ```ts
 const [a, b, p, t] = tables(Author, Book, Publisher, Tag);
+const writer = table(Author, "writer");
 
 join: [
   a.books.as(b), // LEFT JOIN books b ON b.author_id = a.id (a collection may be empty)
   a.publisher.as(p), // LEFT JOIN publishers p ON a.publisher_id = p.id (nullable reference)
-  b.author.as(a), // JOIN authors a ON b.author_id = a.id (required reference: INNER)
+  b.author.as(writer), // LEFT JOIN authors: inherits the optional Book above
   a.tags.as(t), // m2m: joins authors_to_tags and tags; the pair prunes together
 ];
 ```
 
 Whether `as` returns an `INNER` join or `LEFT` join follows the relation's nullability:
 
-- a required reference (i.e. `book.author`, a required m2o) is `INNER`,
+- a required reference (i.e. `book.author`, a required m2o) is `INNER` unless its source was LEFT joined,
 - a nullable reference, every collection (i.e. `author.books`), and one-to-ones are `LEFT`.
+
+Default reference joins inherit LEFT joins through the complete relationship path. In the example above,
+`b.author.as(writer)` preserves Authors without Books, and selecting `writer.first_name` produces
+`string | null`. This also works when the source was joined with an explicit `{ left: b, on: ... }`.
+Use `.inner(writer)` or an explicit `{ inner: writer, on: ... }` to intentionally filter out missing rows.
 
 The argument to `as` is type-checked against the relation's known type, i.e. `a.books.as(p)` (which is passing an incorrect `Publisher` table to the `books` relation) is a compile error.
 

@@ -768,6 +768,146 @@ describe("em.query", () => {
   });
 
   describe("relationship join sugar", () => {
+    it("percolates through multiple required references after an explicit left join", async () => {
+      // Given an Author who wrote two Books
+      await insertAuthor({ first_name: "writer" });
+      // And two Books that can be selected independently of their reviews
+      await insertBook({ title: "reviewed", author_id: 1 });
+      await insertBook({ title: "unreviewed", author_id: 1 });
+      // And only the first Book has a BookReview
+      await insertBookReview({ book_id: 1, rating: 5 });
+      // And a named root Book distinct from the Book reached through its review
+      const em = newEntityManager();
+      const root = table(Book, "root");
+      const [br, b, a] = tables(BookReview, Book, Author);
+      // And a frozen Author join that must remain reusable as INNER when Book is the root
+      const authorJoin = Object.freeze(b.authorId.as(a));
+      resetQueryCount();
+
+      // When following an optional review through its required Book and Author
+      const rows = await em.query({
+        from: root,
+        // An omitted join between the review and its Book must not interrupt LEFT propagation.
+        join: [{ left: br, on: br.bookId.eq(root.id) }, undefined, br.book.as(b), authorJoin],
+        select: {
+          title: root.title,
+          reviewedTitle: b.title,
+          author: a.firstName,
+          fallback: a.firstName.coalesce("none"),
+        },
+        orderBy: { title: "ASC" },
+      });
+
+      // Then both required references inherit NULL while the root and fallback stay required
+      expect(rows).toEqual([
+        { title: "reviewed", reviewedTitle: "reviewed", author: "writer", fallback: "writer" },
+        { title: "unreviewed", reviewedTitle: null, author: null, fallback: "none" },
+      ]);
+      expectTypeOf(rows).toEqualTypeOf<
+        {
+          title: string;
+          reviewedTitle: string | null;
+          author: string | null;
+          fallback: string;
+        }[]
+      >();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT b.title AS title, b1.title AS "reviewedTitle", a.first_name AS author, coalesce(a.first_name, $1) AS fallback FROM books AS b LEFT OUTER JOIN book_reviews AS br ON br.book_id = b.id LEFT OUTER JOIN books AS b1 ON br.book_id = b1.id LEFT OUTER JOIN authors AS a ON b1.author_id = a.id WHERE b.deleted_at IS NULL ORDER BY title ASC",
+       ]
+      `);
+
+      // When reusing the same reference join with Book as the root
+      const required = await em.query({ from: b, join: [authorJoin], select: { author: a.firstName } });
+
+      // Then optionality from the previous query does not leak into the reused join
+      expect(required).toEqual([{ author: "writer" }, { author: "writer" }]);
+      expectTypeOf(required).toEqualTypeOf<{ author: string }[]>();
+    });
+
+    it("percolates from a collection through a required polymorphic reference", async () => {
+      // Given an Author with a Comment whose required parent is that Author
+      await insertAuthor({ first_name: "commented" });
+      // And a Comment pointing to that Author through its required parent
+      await insertComment({ text: "comment", parent_author_id: 1 });
+      // And an Author without Comments
+      await insertAuthor({ first_name: "uncommented" });
+      // And a distinct Author alias for each Comment's parent
+      const em = newEntityManager();
+      const [a, c] = tables(Author, Comment);
+      const parent = table(Author, "parent");
+
+      // When following the optional Comments to their required parent
+      const rows = await em.query({
+        from: a,
+        join: [a.comments.as(c), c.parent.as(parent)],
+        select: { author: a.firstName, parent: parent.firstName },
+        orderBy: { author: "ASC" },
+      });
+
+      // Then Authors without Comments survive and only the parent's name is nullable
+      expect(rows).toEqual([
+        { author: "commented", parent: "commented" },
+        { author: "uncommented", parent: null },
+      ]);
+      expectTypeOf(rows).toEqualTypeOf<{ author: string; parent: string | null }[]>();
+    });
+
+    it("percolates an optional Book through required Author references", async () => {
+      // Given an Author for the Book and Comment references
+      await insertAuthor({ first_name: "writer" });
+      // And a Book with that required Author
+      await insertBook({ title: "book", author_id: 1 });
+      // And a Comment on that Book
+      await insertComment({ text: "book comment", parent_book_id: 1 });
+      // And a Comment on the Author, leaving its Book component null
+      await insertComment({ text: "author comment", parent_author_id: 1 });
+      // And distinct aliases for the optional Book and its required Author
+      const em = newEntityManager();
+      const [c, b, a] = tables(Comment, Book, Author);
+      const joins = [c.parentBookId.as(b), b.author.as(a)];
+      resetQueryCount();
+
+      // When following the optional Book to its required Author
+      const rows = await em.query({
+        from: c,
+        join: joins,
+        select: { text: c.text, author: a.firstName },
+        orderBy: { text: "ASC" },
+      });
+
+      // Then Comments without Books survive with a nullable Author name
+      expect(rows).toEqual([
+        { text: "author comment", author: null },
+        { text: "book comment", author: "writer" },
+      ]);
+      expectTypeOf(rows).toEqualTypeOf<{ text: string | null; author: string | null }[]>();
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT c.text AS text, a.first_name AS author FROM comments AS c LEFT OUTER JOIN books AS b ON c.parent_book_id = b.id LEFT OUTER JOIN authors AS a ON b.author_id = a.id ORDER BY text ASC",
+       ]
+      `);
+
+      // When exposing the same path through a reusable subquery
+      const names = query({ from: c, join: joins, select: { text: c.text, author: a.firstName } });
+      const nested = await em.query({ from: names, select: names, orderBy: { text: "ASC" } });
+
+      // Then the subquery retains the nullable output
+      expect(nested).toEqual(rows);
+      expectTypeOf(nested).toEqualTypeOf<{ text: string | null; author: string | null }[]>();
+
+      // When explicitly requiring the Book's Author
+      const required = await em.query({
+        from: c,
+        join: [c.parentBookId.as(b), b.author.inner(a)],
+        select: { author: a.firstName },
+      });
+
+      // Then the explicit inner join excludes the Comment without a Book
+      expect(required).toEqual([{ author: "writer" }]);
+      expectTypeOf(required).toEqualTypeOf<{ author: string }[]>();
+    });
+
     it("retains Authors when a Publisher or its SmallPublisher row is missing", async () => {
       // Given a SmallPublisher with a subtype city
       await insertPublisher({ id: 1, name: "small", city: "sf" });

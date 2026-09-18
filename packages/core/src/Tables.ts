@@ -55,7 +55,7 @@ export function table<T extends Entity, Name extends string>(
   cstr: MaybeAbstractEntityConstructor<T>,
   name: Name,
 ): Table<T, Name>;
-export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>, _name?: string): Table<T, any> {
+export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>, _name?: string): unknown {
   // The name only exists at the type level; the SQL alias is still assigned by the query parser
   return newTableProxy(cstr);
 }
@@ -155,9 +155,9 @@ type TableShape<T extends Entity, Name extends string> = {
         ? P
         : never
   ]: FieldsOf<T>[P] extends { kind: "m2o"; type: infer U extends Entity; nullable: infer N }
-    ? ReferenceJoin<U, N extends undefined ? null : never>
+    ? ReferenceJoin<U, N extends undefined ? null : never, Name>
     : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity; nullable: infer N }
-      ? PolyReference<U, N extends undefined ? null : never>
+      ? PolyReference<U, N extends undefined ? null : never, Name>
       : FieldsOf<T>[P] extends { kind: "o2m" | "lo2m" | "m2m" | "o2o"; type: infer U extends Entity }
         ? CollectionJoin<U>
         : never;
@@ -174,12 +174,24 @@ type TableShape<T extends Entity, Name extends string> = {
 /** Keeps explicit base and subtype sources independent, with generic entities untracked. */
 type TableNameOf<T> = T extends { __type: { 0: string } } ? TypeNameOf<T> & string : string;
 
-/** A relationship join factory, without a selectable FK expression. */
-export interface ReferenceJoin<U extends Entity, N extends null | never> {
-  as<A extends TableFor<U>>(other: A): [N] extends [never] ? InnerJoin<A> : LeftJoin<A>;
+/** Provides fluent methods for creating joins through an owning reference relationship. */
+export interface ReferenceJoin<U extends Entity, N extends null | never, Src extends string = string> {
+  /**
+   * Required reference joins like `b.author.as(a)` are INNER unless `b` is already a LEFT-joined alias.
+   * Nullable references are always LEFT joined.
+   */
+  as<A extends TableFor<U>>(other: A): [N] extends [never] ? DefaultReferenceJoin<A, Src> : LeftJoin<A>;
   inner<A extends TableFor<U>>(other: A): InnerJoin<A>;
   left<A extends TableFor<U>>(other: A): LeftJoin<A>;
 }
+
+/** The source of a default reference join, used to inherit optional paths within each query. */
+export const referenceJoinSource: unique symbol = Symbol("joist.referenceJoinSource");
+
+/** A required reference defaults to INNER unless its source was LEFT joined. */
+export type DefaultReferenceJoin<A, Src extends string> = InnerJoin<A> & {
+  readonly [referenceJoinSource]: Src;
+};
 
 /** Any table whose entity is (a subtype of) `U`, i.e. what a relation join factory accepts. */
 export type TableFor<U> = { readonly [tableMgmt]: TableBrand<U, string> };
@@ -208,17 +220,21 @@ interface SubtypeJoin<U extends Entity> extends CollectionJoin<U> {
 /**
  * A physical FK column expression (`b.authorId` selects/compares the `author_id` FK) plus a join factory
  * (`b.authorId.as(a)` joins). The default join kind follows physical column nullability:
- * a NOT NULL FK is INNER, a nullable one is LEFT, and the row type reflects it.
+ * a NOT NULL FK is INNER unless its source was LEFT joined, a nullable one is LEFT, and the row type reflects it.
  */
 export interface ReferenceColumn<U extends Entity, N extends null | never, Src extends string>
-  extends EntityColumn<U, N, Src>, ReferenceJoin<U, N> {}
+  extends EntityColumn<U, N, Src>, ReferenceJoin<U, N, Src> {}
 
 /**
  * A polymorphic reference: condition methods (each resolving the component column from the value), plus
  * a join factory that picks the component from the argument's entity, i.e. `c.parent.as(a)` joins
  * through `parent_author_id`, like an explicit join with `on: c.parent.eq(a.id)`.
  */
-export interface PolyReference<U extends Entity, N extends null | never> extends ReferenceJoin<U, N> {
+export interface PolyReference<
+  U extends Entity,
+  N extends null | never,
+  Src extends string = string,
+> extends ReferenceJoin<U, N, Src> {
   eq(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
   ne(value: U | TaggedId | ExprLike<IdOf<U> | null> | null | undefined): SqlCondition;
   in(values: readonly (U | TaggedId)[] | ExprLike<IdOf<U> | null> | undefined): SqlCondition;
@@ -626,9 +642,12 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     return this.addRawCondition(exp, bindings);
   }
 
-  /** Joins `other` via this FK, INNER for a required reference and LEFT for a nullable one. */
+  /** Joins via this FK, inheriting the source's LEFT join for otherwise required references. */
   as(other: object): object {
-    return this.joinEntry(this.sqlNullable === false ? "inner" : "left", other);
+    return {
+      ...this.joinEntry(this.sqlNullable === false ? "inner" : "left", other),
+      [referenceJoinSource]: this.mgmt,
+    };
   }
 
   inner(other: object): object {
@@ -689,9 +708,9 @@ class PolyReferenceImpl<T extends Entity> {
     return values === undefined || values.length === 0 ? skipCondition : this.in(values);
   }
 
-  /** Joins `other` via this poly's component for its entity, INNER when the poly is required. */
+  /** Joins via this poly's component, inheriting the source's LEFT join when the poly is required. */
   as(other: object): object {
-    return this.joinEntry(this.field.required ? "inner" : "left", other);
+    return { ...this.joinEntry(this.field.required ? "inner" : "left", other), [referenceJoinSource]: this.mgmt };
   }
 
   inner(other: object): object {
@@ -935,7 +954,7 @@ class ReferenceJoinImpl {
   constructor(private column: EntityColumnImpl<unknown>) {}
 
   as(other: object): object {
-    return this.column.sqlNullable === false ? this.column.inner(other) : this.column.left(other);
+    return this.column.as(other);
   }
 
   inner(other: object): object {

@@ -560,8 +560,11 @@ type InheritedLeft<X, Left> = X extends { readonly [referenceJoinSource]: infer 
  * Alias-name collisions are conservative, as they are for explicit LEFT joins; runtime uses exact handles.
  */
 type NullableSources<X, Left = LeftJoined<X>> =
-  // X is J[number], a union of join entries. A variable like `const joins = [j1, j2]` normally infers
-  // an array, not a tuple, so we cannot walk its positions. Add nullable targets until no new names remain.
+  // X is J[number], the union of entries in em.query's `join: [...]` array. A variable like
+  // `const joins = [j1, j2]` normally infers an array, not a tuple, so this recursive conditional type
+  // works over that union instead of walking tuple positions. LeftJoined<X> seeds Left with the aliases
+  // from `left: ...` entries. InheritedLeft<X, Left> discovers reference targets whose sources are in Left.
+  // Exclude removes names already in Left; if any remain, add them and repeat to discover further hops.
   [Exclude<InheritedLeft<X, Left>, Left>] extends [never] ? Left : NullableSources<X, Left | InheritedLeft<X, Left>>;
 
 /**

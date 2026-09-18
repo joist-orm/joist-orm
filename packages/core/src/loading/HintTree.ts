@@ -1,7 +1,7 @@
-import type { Entity } from "../Entity.ts";
-import type { TaggedId } from "../EntityManager.ts";
-import { normalizeHint } from "../normalizeHints.ts";
-import type { LoadHint } from "./loadHints.ts";
+import type { Entity } from "src/Entity.ts";
+import type { TaggedId } from "src/EntityManager.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { normalizeHint } from "src/normalizeHints.ts";
 
 // We support preloading in `populate` with existing entities, or `load` with just ids.
 // (We could ask `populate` to convert its entities to ids, but it's convenient for it

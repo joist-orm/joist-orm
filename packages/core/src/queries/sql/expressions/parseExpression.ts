@@ -1,12 +1,12 @@
-import { assertNever } from "../../../utils.ts";
-import { BaseExpr } from "../Expr.ts";
-import { parseArrayAggExpression } from "./arrayAgg.ts";
-import { parseCaseExpression } from "./case.ts";
-import { parseCoalesceExpression } from "./coalesce.ts";
-import { parseGreatestExpression } from "./greatest.ts";
-import { parseLeastExpression } from "./least.ts";
-import { parseNullIfExpression } from "./nullIf.ts";
-import type { ExprName, ParsedExpression } from "./types.ts";
+import { BaseExpr } from "src/queries/sql/Expr.ts";
+import { parseArrayAggExpression } from "src/queries/sql/expressions/arrayAgg.ts";
+import { parseCaseExpression } from "src/queries/sql/expressions/case.ts";
+import { parseCoalesceExpression } from "src/queries/sql/expressions/coalesce.ts";
+import { parseGreatestExpression } from "src/queries/sql/expressions/greatest.ts";
+import { parseLeastExpression } from "src/queries/sql/expressions/least.ts";
+import { parseNullIfExpression } from "src/queries/sql/expressions/nullIf.ts";
+import type { ExprName, ParsedExpression } from "src/queries/sql/expressions/types.ts";
+import { assertNever } from "src/utils.ts";
 
 // These expressions take operand arrays; CASE uses WHEN/THEN entries instead.
 const exprNames = ["coalesce", "nullIf", "greatest", "least"] as const satisfies readonly ExprName[];

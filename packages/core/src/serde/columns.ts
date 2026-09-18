@@ -1,7 +1,7 @@
 // These must be erased imports: descriptors are loaded before entity metadata and relation classes.
-import type { EntityMetadata } from "../EntityMetadata.ts";
-import type { ScalarCodec } from "./serde.ts";
-import type { TypeInfo } from "./TypeInfo.ts";
+import type { EntityMetadata } from "src/EntityMetadata.ts";
+import type { ScalarCodec } from "src/serde/serde.ts";
+import type { TypeInfo } from "src/serde/TypeInfo.ts";
 
 /** A physical column owns one scalar codec, shared with every field binding for that column. */
 export class Column {

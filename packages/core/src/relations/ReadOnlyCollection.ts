@@ -1,10 +1,10 @@
-import { type Entity } from "../Entity.ts";
+import { type Entity } from "src/Entity.ts";
 import {
   RecursiveChildrenCollectionImpl,
   RecursiveM2mCollectionImpl,
   RecursiveParentsCollectionImpl,
-} from "./RecursiveCollection.ts";
-import { type Relation } from "./Relation.ts";
+} from "src/relations/RecursiveCollection.ts";
+import { type Relation } from "src/relations/Relation.ts";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface ReadOnlyCollection<T extends Entity, U extends Entity> extends Relation<T, U> {

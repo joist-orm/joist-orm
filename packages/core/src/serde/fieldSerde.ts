@@ -1,6 +1,6 @@
-import { getConstructorFromTaggedId } from "../configure.ts";
-import type { InsertFixup } from "../drivers/EntityWriter.ts";
-import { type Entity, isEntity } from "../Entity.ts";
+import { getConstructorFromTaggedId } from "src/configure.ts";
+import type { InsertFixup } from "src/drivers/EntityWriter.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -9,12 +9,12 @@ import {
   type SerdeField,
   getBaseMeta,
   getMetadata,
-} from "../EntityMetadata.ts";
-import { maybeResolveReferenceToId } from "../keys.ts";
-import type { RowData } from "../RowData.ts";
-import { groupBy } from "../utils.ts";
-import type { Column } from "./columns.ts";
-import type { TimestampCodec } from "./serde.ts";
+} from "src/EntityMetadata.ts";
+import { maybeResolveReferenceToId } from "src/keys.ts";
+import type { RowData } from "src/RowData.ts";
+import type { Column } from "src/serde/columns.ts";
+import type { TimestampCodec } from "src/serde/serde.ts";
+import { groupBy } from "src/utils.ts";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;

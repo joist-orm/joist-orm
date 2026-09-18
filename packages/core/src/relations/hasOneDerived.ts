@@ -1,9 +1,9 @@
-import { isLoaded } from "..//index.ts";
-import { type Entity } from "../Entity.ts";
-import type { LoadHint, Loaded } from "../loading/loadHints.ts";
-import { lazyField } from "../newEntity.ts";
-import { CustomReference } from "./CustomReference.ts";
-import { type Reference } from "./Reference.ts";
+import { type Entity } from "src/Entity.ts";
+import { isLoaded } from "src/index.ts";
+import type { LoadHint, Loaded } from "src/loading/loadHints.ts";
+import { lazyField } from "src/newEntity.ts";
+import { CustomReference } from "src/relations/CustomReference.ts";
+import { type Reference } from "src/relations/Reference.ts";
 
 /**
  * Creates a CustomReference that can conditionally walk across references in the object graph.

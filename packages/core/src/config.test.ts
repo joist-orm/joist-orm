@@ -1,4 +1,4 @@
-import { findUserCodeLine, getFilePath } from "./config.ts";
+import { findUserCodeLine, getFilePath } from "src/config.ts";
 
 describe("config", () => {
   describe("findUserCodeLine", () => {

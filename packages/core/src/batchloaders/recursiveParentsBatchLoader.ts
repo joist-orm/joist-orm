@@ -1,6 +1,7 @@
-import { getMetadataForType } from "../configure.ts";
-import { type Entity } from "../Entity.ts";
-import { type EntityManager } from "../EntityManager.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { getMetadataForType } from "src/configure.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager } from "src/EntityManager.ts";
 import {
   type ManyToOneField,
   type ParsedFindQuery,
@@ -8,10 +9,9 @@ import {
   deTagIds,
   getField,
   kq,
-} from "../index.ts";
-import { type RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection.ts";
-import { abbreviation } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
+} from "src/index.ts";
+import { type RecursiveParentsCollectionImpl } from "src/relations/RecursiveCollection.ts";
+import { abbreviation } from "src/utils.ts";
 
 export const recursiveParentsOperation = "m2o-recursive";
 

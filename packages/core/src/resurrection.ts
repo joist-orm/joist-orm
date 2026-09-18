@@ -1,7 +1,7 @@
-import { type Entity, isEntity } from "./Entity.ts";
-import { type EntityManager, type MaybeAbstractEntityConstructor, TooManyError } from "./EntityManager.ts";
-import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
-import { setField } from "./fields.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, TooManyError } from "src/EntityManager.ts";
+import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
+import { setField } from "src/fields.ts";
 
 /** Clears the soft-delete marker so a matched entity is updated instead of recreated. */
 export function resurrectIfSoftDeleted(entity: Entity): void {

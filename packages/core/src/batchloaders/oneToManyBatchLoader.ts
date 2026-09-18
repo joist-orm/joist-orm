@@ -1,6 +1,7 @@
-import { type Entity } from "../Entity.ts";
-import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
-import { getField } from "../fields.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { getField } from "src/fields.ts";
 import {
   type OneToManyCollection,
   type OneToManyField,
@@ -9,9 +10,8 @@ import {
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-} from "../index.ts";
-import { abbreviation, groupBy } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
+} from "src/index.ts";
+import { abbreviation, groupBy } from "src/utils.ts";
 
 export const oneToManyLoadOperation = "o2m-load";
 

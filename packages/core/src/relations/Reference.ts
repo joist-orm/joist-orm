@@ -1,5 +1,5 @@
-import { type Entity } from "../Entity.ts";
-import { type IdOf, type TaggedId } from "../EntityManager.ts";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf, type TaggedId } from "src/EntityManager.ts";
 import {
   CustomReference,
   ManyToOneReferenceImpl,
@@ -7,8 +7,8 @@ import {
   PolymorphicReferenceImpl,
   ReactiveReferenceImpl,
   type Relation,
-} from "./index.ts";
-import { ReferenceN } from "./ReferenceSymbols.ts";
+} from "src/relations/index.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 
 export { ReferenceN };
 

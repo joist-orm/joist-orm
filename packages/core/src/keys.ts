@@ -1,9 +1,9 @@
-import { BaseEntity } from "./BaseEntity.ts";
-import { type Entity, type IdType, isEntity } from "./Entity.ts";
-import { type EntityConstructor, type IdOf, type TaggedId } from "./EntityManager.ts";
-import { type EntityMetadata, getMetadata } from "./EntityMetadata.ts";
-import { type Reference } from "./relations/index.ts";
-import { assertNever, fail } from "./utils.ts";
+import { BaseEntity } from "src/BaseEntity.ts";
+import { type Entity, type IdType, isEntity } from "src/Entity.ts";
+import { type EntityConstructor, type IdOf, type TaggedId } from "src/EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { type Reference } from "src/relations/index.ts";
+import { assertNever, fail } from "src/utils.ts";
 
 let tagDelimiter: string | undefined = ":";
 

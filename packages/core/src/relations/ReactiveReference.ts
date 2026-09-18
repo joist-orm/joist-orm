@@ -1,6 +1,6 @@
-import { type Entity } from "../Entity.ts";
-import { type IdOf } from "../EntityManager.ts";
-import { getField, setField } from "../fields.ts";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf } from "src/EntityManager.ts";
+import { getField, setField } from "src/fields.ts";
 import {
   type EntityMetadata,
   type ManyToOneField,
@@ -16,21 +16,21 @@ import {
   maybeResolveReferenceToId,
   sameEntity,
   toIdOf,
-} from "../index.ts";
-import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
-import { lazyField } from "../newEntity.ts";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
 import {
   type MaybeReactedEntity,
   type Reacted,
   type ReactiveHint,
   convertToLoadHint,
-} from "../reactivity/reactiveHints.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { isCascadeDelete } from "./isCascadeDelete.ts";
-import { failIfNewEntity, failNoId } from "./ManyToOneReference.ts";
-import { type Reference } from "./Reference.ts";
-import { ReferenceN } from "./ReferenceSymbols.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/reactivity/reactiveHints.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
+import { type Reference } from "src/relations/Reference.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
   T,

@@ -1,8 +1,8 @@
-import { type Entity } from "../Entity.ts";
-import { lazyField } from "../newEntity.ts";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
-import { type LoadedProperty, type Property } from "./hasProperty.ts";
-import { PropertyT } from "./PropertySymbols.ts";
+import { type Entity } from "src/Entity.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
+import { type LoadedProperty, type Property } from "src/relations/hasProperty.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
 
 export interface AsyncProperty<T extends Entity, V> extends Property<T, V> {
   load(opts?: { forceReload?: boolean }): Promise<V>;

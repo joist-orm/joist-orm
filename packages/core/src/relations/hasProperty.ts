@@ -1,16 +1,16 @@
-import { type Entity } from "../Entity.ts";
-import { getMetadata } from "../EntityMetadata.ts";
-import { type LoadHint, type Loaded, isLoaded } from "../loading/loadHints.ts";
-import { lazyField } from "../newEntity.ts";
+import { type Entity } from "src/Entity.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import { type LoadHint, type Loaded, isLoaded } from "src/loading/loadHints.ts";
+import { lazyField } from "src/newEntity.ts";
 import {
   type MaybeReactedPropertyEntity,
   type Reacted,
   type ReactiveHint,
   convertToLoadHint,
-} from "../reactivity/reactiveHints.ts";
-import { tryResolve } from "../utils.ts";
-import { PropertyT } from "./PropertySymbols.ts";
-import { RecursiveCycleError } from "./RecursiveCycleError.ts";
+} from "src/reactivity/reactiveHints.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
+import { RecursiveCycleError } from "src/relations/RecursiveCycleError.ts";
+import { tryResolve } from "src/utils.ts";
 
 export { PropertyT };
 

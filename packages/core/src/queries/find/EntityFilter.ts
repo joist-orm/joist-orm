@@ -1,9 +1,9 @@
-import type { Entity } from "../../Entity.ts";
-import type { FindFilterOptions, IdOf } from "../../EntityManager.ts";
-import type { FieldsOf, FilterOf, OrderOf } from "../../typeMap.ts";
-import type { AndCondition, DomainPredicate, OrCondition, UnbrandedPredicate } from "../conditions.ts";
-import type { Alias } from "./Aliases.ts";
-import { type Scope, isScope, resolveScope } from "./scopes.ts";
+import type { Entity } from "src/Entity.ts";
+import type { FindFilterOptions, IdOf } from "src/EntityManager.ts";
+import type { AndCondition, DomainPredicate, OrCondition, UnbrandedPredicate } from "src/queries/conditions.ts";
+import type { Alias } from "src/queries/find/Aliases.ts";
+import { type Scope, isScope, resolveScope } from "src/queries/find/scopes.ts";
+import type { FieldsOf, FilterOf, OrderOf } from "src/typeMap.ts";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {

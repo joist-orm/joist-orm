@@ -1,11 +1,15 @@
-import type { BaseExpr, Expr, ExprBrand, ExprLike, exprBrand } from "../Expr.ts";
-import type { CompatibleValue, MaybeNull, QueryJoins } from "../query.ts";
-import type { ArrayAggExpressionOptions, ArrayAggInput, ParsedArrayAggExpression } from "./arrayAgg.ts";
-import type { CaseArmValue, CaseInput, CheckCase, ParsedCaseExpression } from "./case.ts";
-import type { CoalesceInput, ParsedCoalesceExpression } from "./coalesce.ts";
-import type { GreatestInput, ParsedGreatestExpression } from "./greatest.ts";
-import type { LeastInput, ParsedLeastExpression } from "./least.ts";
-import type { NullIfInput, ParsedNullIfExpression } from "./nullIf.ts";
+import type { BaseExpr, Expr, ExprBrand, ExprLike, exprBrand } from "src/queries/sql/Expr.ts";
+import type {
+  ArrayAggExpressionOptions,
+  ArrayAggInput,
+  ParsedArrayAggExpression,
+} from "src/queries/sql/expressions/arrayAgg.ts";
+import type { CaseArmValue, CaseInput, CheckCase, ParsedCaseExpression } from "src/queries/sql/expressions/case.ts";
+import type { CoalesceInput, ParsedCoalesceExpression } from "src/queries/sql/expressions/coalesce.ts";
+import type { GreatestInput, ParsedGreatestExpression } from "src/queries/sql/expressions/greatest.ts";
+import type { LeastInput, ParsedLeastExpression } from "src/queries/sql/expressions/least.ts";
+import type { NullIfInput, ParsedNullIfExpression } from "src/queries/sql/expressions/nullIf.ts";
+import type { CompatibleValue, MaybeNull, QueryJoins } from "src/queries/sql/query.ts";
 
 /** Each operation owns its input fields; the combined input permits exactly one operation. */
 interface ExprInputs {

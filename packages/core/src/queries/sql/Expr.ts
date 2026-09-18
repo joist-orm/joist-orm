@@ -1,10 +1,10 @@
-import type { EntityMetadata } from "../../EntityMetadata.ts";
-import { type TypeInfo, arrayOutputType } from "../../serde/TypeInfo.ts";
-import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "../conditions.ts";
-import type { RawCondition } from "../parsedConditions.ts";
-import { skipCondition } from "../skipCondition.ts";
-import { safeKq } from "./keywords.ts";
-import type { ExpressionOrderBy, QueryCondition } from "./query.ts";
+import type { EntityMetadata } from "src/EntityMetadata.ts";
+import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "src/queries/conditions.ts";
+import type { RawCondition } from "src/queries/parsedConditions.ts";
+import { skipCondition } from "src/queries/skipCondition.ts";
+import { safeKq } from "src/queries/sql/keywords.ts";
+import type { ExpressionOrderBy, QueryCondition } from "src/queries/sql/query.ts";
+import { type TypeInfo, arrayOutputType } from "src/serde/TypeInfo.ts";
 
 /**
  * The shared expression protocol for `em.query`.

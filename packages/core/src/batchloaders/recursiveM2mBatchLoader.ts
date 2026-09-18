@@ -1,5 +1,6 @@
-import { type Entity } from "../Entity.ts";
-import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
 import {
   type ManyToManyField,
   type ParsedFindQuery,
@@ -10,10 +11,9 @@ import {
   kq,
   kqDot,
   kqStar,
-} from "../index.ts";
-import { type RecursiveM2mCollectionImpl } from "../relations/RecursiveCollection.ts";
-import { abbreviation } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
+} from "src/index.ts";
+import { type RecursiveM2mCollectionImpl } from "src/relations/RecursiveCollection.ts";
+import { abbreviation } from "src/utils.ts";
 
 export const recursiveM2mOperation = "m2m-recursive";
 

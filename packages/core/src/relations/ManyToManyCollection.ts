@@ -1,3 +1,5 @@
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
 import {
   type Collection,
   type Entity,
@@ -11,14 +13,12 @@ import {
   getMetadata,
   getMetadataForField,
   toTaggedId,
-} from "..//index.ts";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
-import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader.ts";
-import { lazyField } from "../newEntity.ts";
-import { maybeAdd, maybeRemove, remove } from "../utils.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { isCascadeDelete } from "./isCascadeDelete.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { maybeAdd, maybeRemove, remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {

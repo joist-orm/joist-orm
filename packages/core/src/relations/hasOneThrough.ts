@@ -9,8 +9,8 @@ import {
   lensPathToLoadHint,
   lensToPath,
   loadLensPath,
-} from "../index.ts";
-import { lazyField } from "../newEntity.ts";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.

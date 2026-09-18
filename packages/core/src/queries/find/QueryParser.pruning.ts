@@ -1,6 +1,6 @@
-import { assertNever } from "../../utils.ts";
-import { deepFindConditions } from "../parsedConditions.ts";
-import { type JoinTable, type ParsedFindQuery, parseAlias } from "./QueryParser.ts";
+import { type JoinTable, type ParsedFindQuery, parseAlias } from "src/queries/find/QueryParser.ts";
+import { deepFindConditions } from "src/queries/parsedConditions.ts";
+import { assertNever } from "src/utils.ts";
 
 // Remove any joins that are not used in the select or conditions
 export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {

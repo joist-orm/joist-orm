@@ -1,5 +1,10 @@
-import { type Entity } from "../Entity.ts";
-import { type EntityMetadata } from "../EntityMetadata.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { loadBatchLoader } from "src/batchloaders/loadBatchLoader.ts";
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
+import { oneToOneBatchLoader } from "src/batchloaders/oneToOneBatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
 import {
   AliasAssigner,
   type EntityManager,
@@ -9,18 +14,13 @@ import {
   indexBy,
   keyToNumber,
   kqDot,
-} from "../index.ts";
-import { type HintNode, buildHintTree } from "../loading/HintTree.ts";
-import type { LoadHint } from "../loading/loadHints.ts";
-import { hintKey } from "../normalizeHints.ts";
-import { getRelationFromMaybePolyKey, isPolyHint } from "../reactivity/reactiveHints.ts";
-import { ReactiveFieldImpl } from "../relations/ReactiveField.ts";
-import { toArray } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
-import { loadBatchLoader } from "./loadBatchLoader.ts";
-import { manyToManyBatchLoader } from "./manyToManyBatchLoader.ts";
-import { oneToManyBatchLoader } from "./oneToManyBatchLoader.ts";
-import { oneToOneBatchLoader } from "./oneToOneBatchLoader.ts";
+} from "src/index.ts";
+import { type HintNode, buildHintTree } from "src/loading/HintTree.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { hintKey } from "src/normalizeHints.ts";
+import { getRelationFromMaybePolyKey, isPolyHint } from "src/reactivity/reactiveHints.ts";
+import { ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
+import { toArray } from "src/utils.ts";
 
 export const populateOperation = "populate";
 

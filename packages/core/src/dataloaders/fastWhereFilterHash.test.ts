@@ -1,4 +1,4 @@
-import { fastWhereFilterHash } from "./fastWhereFilterHash.ts";
+import { fastWhereFilterHash } from "src/dataloaders/fastWhereFilterHash.ts";
 
 describe("fastWhereFilterHash", () => {
   it("returns stable hashes for object keys regardless of insertion order", () => {

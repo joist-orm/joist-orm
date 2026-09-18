@@ -1,13 +1,13 @@
-import { getInstanceData } from "../BaseEntity.ts";
-import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
-import { type EntityMetadata } from "../EntityMetadata.ts";
-import { keyToNumber, tagId } from "../keys.ts";
-import { buildHintTree } from "../loading/HintTree.ts";
-import type { LoadHint } from "../loading/loadHints.ts";
-import { lazyExcludedSelects } from "../queries/entityQueryUtils.ts";
-import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../queries/find/QueryParser.ts";
-import { abbreviation } from "../utils.ts";
-import { type BatchLoader } from "./BatchLoader.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { keyToNumber, tagId } from "src/keys.ts";
+import { buildHintTree } from "src/loading/HintTree.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { lazyExcludedSelects } from "src/queries/entityQueryUtils.ts";
+import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/queries/find/QueryParser.ts";
+import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
 

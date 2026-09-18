@@ -1,18 +1,30 @@
-import type { TypeInfo } from "../../../serde/TypeInfo.ts";
-import { assertNever } from "../../../utils.ts";
-import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
-import { arrayAggToSql } from "./arrayAgg.ts";
-import { caseNullable, caseToSql } from "./case.ts";
-import { coalesceNullable, coalesceToSql } from "./coalesce.ts";
-import { chooseExpressionCodec } from "./codecs.ts";
-import { greatestNullable, greatestToSql } from "./greatest.ts";
-import { leastNullable, leastToSql } from "./least.ts";
-import { nullIfNullable, nullIfToSql } from "./nullIf.ts";
-import { parseExpressionInput } from "./parseExpression.ts";
-import type { CheckInput, ExprFromInput, ExprInput, ParsedExpression, ResultCodec } from "./types.ts";
+import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import { arrayAggToSql } from "src/queries/sql/expressions/arrayAgg.ts";
+import { caseNullable, caseToSql } from "src/queries/sql/expressions/case.ts";
+import { coalesceNullable, coalesceToSql } from "src/queries/sql/expressions/coalesce.ts";
+import { chooseExpressionCodec } from "src/queries/sql/expressions/codecs.ts";
+import { greatestNullable, greatestToSql } from "src/queries/sql/expressions/greatest.ts";
+import { leastNullable, leastToSql } from "src/queries/sql/expressions/least.ts";
+import { nullIfNullable, nullIfToSql } from "src/queries/sql/expressions/nullIf.ts";
+import { parseExpressionInput } from "src/queries/sql/expressions/parseExpression.ts";
+import type {
+  CheckInput,
+  ExprFromInput,
+  ExprInput,
+  ParsedExpression,
+  ResultCodec,
+} from "src/queries/sql/expressions/types.ts";
+import type { TypeInfo } from "src/serde/TypeInfo.ts";
+import { assertNever } from "src/utils.ts";
 
-export type { CaseElse, CaseWhen } from "./case.ts";
-export type { CheckInput, ExprFromInput, ExprInput, ExpressionSources, ExpressionValue } from "./types.ts";
+export type { CaseElse, CaseWhen } from "src/queries/sql/expressions/case.ts";
+export type {
+  CheckInput,
+  ExprFromInput,
+  ExprInput,
+  ExpressionSources,
+  ExpressionValue,
+} from "src/queries/sql/expressions/types.ts";
 
 /** Builds a reusable SQL value expression, binding literal values as parameters. */
 export function expr<const I extends ExprInput>(input: I & CheckInput<NoInfer<I>>): ExprFromInput<I> {

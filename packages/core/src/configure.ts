@@ -1,7 +1,7 @@
-import { type Reactable, setAfterMetadataLocked, setBooted } from "./config.ts";
-import { AsyncDefault } from "./defaults.ts";
-import { type Entity } from "./Entity.ts";
-import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager.ts";
+import { type Reactable, setAfterMetadataLocked, setBooted } from "src/config.ts";
+import { AsyncDefault } from "src/defaults.ts";
+import { type Entity } from "src/Entity.ts";
+import { type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type EnumField,
@@ -10,17 +10,17 @@ import {
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "./EntityMetadata.ts";
-import { getProperties } from "./getProperties.ts";
-import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys.ts";
-import { reverseReactiveHint } from "./reactivity/reactiveHints.ts";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
-import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "./relations/index.ts";
-import { type ReactiveFieldImpl } from "./relations/ReactiveField.ts";
-import { isCannotBeUpdatedRule } from "./rules.ts";
-import { maybeGetRuntimeConfig } from "./runtimeConfig.ts";
-import { SimpleFieldSerde } from "./serde/fieldSerde.ts";
-import { defineLazyGetter, fail } from "./utils.ts";
+} from "src/EntityMetadata.ts";
+import { getProperties } from "src/getProperties.ts";
+import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "src/keys.ts";
+import { reverseReactiveHint } from "src/reactivity/reactiveHints.ts";
+import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
+import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "src/relations/index.ts";
+import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
+import { isCannotBeUpdatedRule } from "src/rules.ts";
+import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
+import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
+import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();

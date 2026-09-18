@@ -1,7 +1,6 @@
 import { Deferred } from "joist-utils";
-
-import { getInstanceData } from "./BaseEntity.ts";
-import { type Entity } from "./Entity.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
 import {
   type EntityMetadata,
   type EnumField,
@@ -9,13 +8,13 @@ import {
   type PrimitiveField,
   getBaseAndSelfMetas,
   getMetadata,
-} from "./EntityMetadata.ts";
-import { setField } from "./fields.ts";
-import { normalizeHint } from "./normalizeHints.ts";
-import { type ReactiveHint, convertToLoadHint } from "./reactivity/reactiveHints.ts";
-import { isLoadedReference } from "./relations/index.ts";
-import { runInTrustedContext } from "./trusted.ts";
-import { fail, failIfAnyRejected } from "./utils.ts";
+} from "src/EntityMetadata.ts";
+import { setField } from "src/fields.ts";
+import { normalizeHint } from "src/normalizeHints.ts";
+import { type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
+import { isLoadedReference } from "src/relations/index.ts";
+import { runInTrustedContext } from "src/trusted.ts";
+import { fail, failIfAnyRejected } from "src/utils.ts";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
   return getBaseAndSelfMetas(meta).some(

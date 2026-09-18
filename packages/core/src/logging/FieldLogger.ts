@@ -1,7 +1,6 @@
 import ansis from "ansis";
-
-import { getFuzzyCallerName } from "../config.ts";
-import { type Entity, isEntity } from "../Entity.ts";
+import { getFuzzyCallerName } from "src/config.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
 
 const { gray, green, yellow, blue, red } = ansis;
 export type WriteFn = (line: string) => void;

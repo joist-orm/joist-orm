@@ -1,6 +1,6 @@
-import type { Entity } from "../Entity.ts";
-import type { NormalizeHint } from "../normalizeHints.ts";
-import { getRelationFromMaybePolyKey } from "../reactivity/reactiveHints.ts";
+import type { Entity } from "src/Entity.ts";
+import type { NormalizeHint } from "src/normalizeHints.ts";
+import { getRelationFromMaybePolyKey } from "src/reactivity/reactiveHints.ts";
 import type {
   AsyncMethod,
   Collection,
@@ -16,10 +16,10 @@ import type {
   ReadOnlyCollection,
   Reference,
   Relation,
-} from "../relations/index.ts";
-import type { LoadedOneToOneReference } from "../relations/OneToOneReference.ts";
-import type { OptsOf } from "../typeMap.ts";
-import { type MaybePromise, type NullOrDefinedOr, fail } from "../utils.ts";
+} from "src/relations/index.ts";
+import type { LoadedOneToOneReference } from "src/relations/OneToOneReference.ts";
+import type { OptsOf } from "src/typeMap.ts";
+import { type MaybePromise, type NullOrDefinedOr, fail } from "src/utils.ts";
 
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };

@@ -1,7 +1,7 @@
-import { type Entity, isEntity } from "../Entity.ts";
-import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "../EntityManager.ts";
-import { type EntityMetadata, type ManyToOneField, getMetadata } from "../EntityMetadata.ts";
-import { getField, setField } from "../fields.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
+import { type EntityMetadata, type ManyToOneField, getMetadata } from "src/EntityMetadata.ts";
+import { getField, setField } from "src/fields.ts";
 import {
   BaseEntity,
   NoIdError,
@@ -16,14 +16,14 @@ import {
   maybeResolveReferenceToId,
   toIdOf,
   toTaggedId,
-} from "../index.ts";
-import { lazyField } from "../newEntity.ts";
-import { maybeAdd, maybeRemove } from "../utils.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { isCascadeDelete } from "./isCascadeDelete.ts";
-import { OneToManyCollection } from "./OneToManyCollection.ts";
-import { ReferenceN } from "./ReferenceSymbols.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { maybeAdd, maybeRemove } from "src/utils.ts";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {

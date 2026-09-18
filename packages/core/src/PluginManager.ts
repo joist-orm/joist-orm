@@ -1,9 +1,9 @@
-import { type Entity } from "./Entity.ts";
-import { type EntityManager, type FindOperation, isDefined } from "./EntityManager.ts";
-import { type EntityMetadata } from "./EntityMetadata.ts";
-import type { JoinRowTodo, Todo } from "./flush/Todo.ts";
-import type { ParsedFindQuery } from "./queries/find/QueryParser.ts";
-import { type RowData } from "./RowData.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, type FindOperation, isDefined } from "src/EntityManager.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import type { JoinRowTodo, Todo } from "src/flush/Todo.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
   /**

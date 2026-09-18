@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.package.json",
   "compilerOptions": {
     "outDir": "./build",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": false,
+    "paths": {
+      "src/*": ["./src/*"]
+    }
   },
   "include": ["./src"],
   "references": [{ "path": "../utils" }]

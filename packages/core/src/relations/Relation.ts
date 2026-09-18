@@ -1,6 +1,6 @@
-import { type Entity } from "../Entity.ts";
-import { isCollection, isReference } from "./index.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+import { type Entity } from "src/Entity.ts";
+import { isCollection, isReference } from "src/relations/index.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 export { RelationT, RelationU };
 

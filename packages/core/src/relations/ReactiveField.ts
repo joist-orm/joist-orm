@@ -1,13 +1,13 @@
-import { type Entity } from "../Entity.ts";
-import { getEmInternalApi } from "../EntityManager.ts";
-import { type PrimitiveField, getMetadata } from "../EntityMetadata.ts";
-import { getField, isFieldSet, setField } from "../fields.ts";
-import { isLoaded } from "../index.ts";
-import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
-import { lazyField } from "../newEntity.ts";
-import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactivity/reactiveHints.ts";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
-import { PropertyT } from "./PropertySymbols.ts";
+import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { type PrimitiveField, getMetadata } from "src/EntityMetadata.ts";
+import { getField, isFieldSet, setField } from "src/fields.ts";
+import { isLoaded } from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
 
 /**
  * A `ReactiveField` is a value that is derived from other entities/values,

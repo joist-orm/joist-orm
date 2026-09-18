@@ -1,29 +1,34 @@
 import { groupBy } from "joist-utils";
-
-import { getConstructorFromTaggedId, getMetadataForTable } from "../../configure.ts";
-import type { Entity } from "../../Entity.ts";
-import { type EntityMetadata, type Field, getBaseMeta } from "../../EntityMetadata.ts";
-import { keyToNumber, maybeResolveReferenceToId } from "../../keys.ts";
-import { abbreviation, fail } from "../../utils.ts";
-import { ConditionBuilder } from "../ConditionBuilder.ts";
-import { type ConditionInput, predicateBrand } from "../conditions.ts";
-import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "../entityQueryUtils.ts";
-import type { ColumnCondition, ParsedExpressionFilter, RawCondition } from "../parsedConditions.ts";
-import { isDeferredCondition } from "../sql/Expr.ts";
-import { kq, kqDot } from "../sql/keywords.ts";
+import { getConstructorFromTaggedId, getMetadataForTable } from "src/configure.ts";
+import type { Entity } from "src/Entity.ts";
+import { type EntityMetadata, type Field, getBaseMeta } from "src/EntityMetadata.ts";
+import { keyToNumber, maybeResolveReferenceToId } from "src/keys.ts";
+import { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
+import { type ConditionInput, predicateBrand } from "src/queries/conditions.ts";
+import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "src/queries/entityQueryUtils.ts";
+import {
+  type AliasMgmt,
+  getAliasMgmt,
+  getMaybeCtiAlias,
+  isAlias,
+  alias as newAlias,
+} from "src/queries/find/Aliases.ts";
+import { deferredAliasSym, isDeferredAliasCondition } from "src/queries/find/DeferredAlias.ts";
+import type { ExpressionFilter, OrderBy } from "src/queries/find/EntityFilter.ts";
+import { pruneUnusedJoins } from "src/queries/find/QueryParser.pruning.ts";
+import { visitConditions } from "src/queries/find/QueryVisitor.ts";
+import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "src/queries/find/scopes.ts";
+import type { ColumnCondition, ParsedExpressionFilter, RawCondition } from "src/queries/parsedConditions.ts";
+import { isDeferredCondition } from "src/queries/sql/Expr.ts";
+import { kq, kqDot } from "src/queries/sql/keywords.ts";
 import {
   type ParsedEntityFilter,
   isNilIdValue,
   mapToDb,
   parseEntityFilter,
   parseValueFilter,
-} from "../valueFilters.ts";
-import { type AliasMgmt, getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases.ts";
-import { deferredAliasSym, isDeferredAliasCondition } from "./DeferredAlias.ts";
-import type { ExpressionFilter, OrderBy } from "./EntityFilter.ts";
-import { pruneUnusedJoins } from "./QueryParser.pruning.ts";
-import { visitConditions } from "./QueryVisitor.ts";
-import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "./scopes.ts";
+} from "src/queries/valueFilters.ts";
+import { abbreviation, fail } from "src/utils.ts";
 
 // `skipCondition` lives in its own leaf module, shared by domain aliases and SQL expressions
 // without a load-order cycle; `index.ts` re-exports it directly.

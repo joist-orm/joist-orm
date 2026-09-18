@@ -1,6 +1,6 @@
-import { recursiveChildrenBatchLoader } from "../batchloaders/recursiveChildrenBatchLoader.ts";
-import { recursiveM2mBatchLoader } from "../batchloaders/recursiveM2mBatchLoader.ts";
-import { recursiveParentsBatchLoader } from "../batchloaders/recursiveParentsBatchLoader.ts";
+import { recursiveChildrenBatchLoader } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
+import { recursiveM2mBatchLoader } from "src/batchloaders/recursiveM2mBatchLoader.ts";
+import { recursiveParentsBatchLoader } from "src/batchloaders/recursiveParentsBatchLoader.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -18,13 +18,13 @@ import {
   isLoadedReference,
   isOneToOneReference,
   isReference,
-} from "../index.ts";
-import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
-import { lazyField } from "../newEntity.ts";
-import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
-import { type ReadOnlyCollection } from "./ReadOnlyCollection.ts";
-import { RecursiveCycleError } from "./RecursiveCycleError.ts";
-import { RelationT, RelationU } from "./RelationSymbols.ts";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { type ReadOnlyCollection } from "src/relations/ReadOnlyCollection.ts";
+import { RecursiveCycleError } from "src/relations/RecursiveCycleError.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 export { RecursiveCycleError };
 

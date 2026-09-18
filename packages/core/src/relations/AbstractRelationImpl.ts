@@ -1,4 +1,4 @@
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
 
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.

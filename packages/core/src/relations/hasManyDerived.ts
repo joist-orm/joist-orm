@@ -1,6 +1,6 @@
 import { type Collection, isLoaded } from "..//index.ts";
 import { type Entity } from "../Entity.ts";
-import { type LoadHint, type Loaded } from "../loadHints.ts";
+import type { LoadHint, Loaded } from "../loading/loadHints.ts";
 import { lazyField } from "../newEntity.ts";
 import { CustomCollection } from "./CustomCollection.ts";
 

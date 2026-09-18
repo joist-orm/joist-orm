@@ -26,7 +26,7 @@ import {
 } from "./EntityMetadata.ts";
 import { type DeepNew, type FactoryExtrasOf, type New } from "./index.ts";
 import { FactoryLogger } from "./logging/FactoryLogger.ts";
-import { maybeRequireTemporal } from "./temporal.ts";
+import { maybeRequireTemporal } from "./serde/temporal.ts";
 import { type ActualFactoryOpts, type OptsOf } from "./typeMap.ts";
 import { assertNever } from "./utils.ts";
 

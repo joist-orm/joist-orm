@@ -1,4 +1,4 @@
-import type { TypeInfo } from "../../../TypeInfo.ts";
+import type { TypeInfo } from "../../../serde/TypeInfo.ts";
 import { assertNever } from "../../../utils.ts";
 import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
 import { arrayAggToSql } from "./arrayAgg.ts";

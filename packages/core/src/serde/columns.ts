@@ -1,5 +1,5 @@
 // These must be erased imports: descriptors are loaded before entity metadata and relation classes.
-import type { EntityMetadata } from "./EntityMetadata.ts";
+import type { EntityMetadata } from "../EntityMetadata.ts";
 import type { ScalarCodec } from "./serde.ts";
 import type { TypeInfo } from "./TypeInfo.ts";
 

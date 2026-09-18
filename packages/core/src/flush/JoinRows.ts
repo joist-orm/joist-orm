@@ -1,11 +1,11 @@
-import { type Entity } from "./Entity.ts";
-import { getEmInternalApi } from "./EntityManager.ts";
-import { type EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata.ts";
-import { type EnumMetadata } from "./EnumMetadata.ts";
-import { keyToNumber, keyToTaggedId } from "./keys.ts";
-import { type ReactionsManager } from "./ReactionsManager.ts";
-import { type JoinRowTodo } from "./Todo.ts";
-import { remove } from "./utils.ts";
+import type { Entity } from "../Entity.ts";
+import { getEmInternalApi } from "../EntityManager.ts";
+import { type EntityMetadata, getBaseAndSelfMetas } from "../EntityMetadata.ts";
+import type { EnumMetadata } from "../EnumMetadata.ts";
+import { keyToNumber, keyToTaggedId } from "../keys.ts";
+import type { ReactionsManager } from "../reactivity/ReactionsManager.ts";
+import { remove } from "../utils.ts";
+import type { JoinRowTodo } from "./Todo.ts";
 
 /**
  * A simplified interface for ManyToManyCollection-like relations.

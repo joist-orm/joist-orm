@@ -9,9 +9,9 @@ import {
   getMetadata,
 } from "../EntityMetadata.ts";
 import { getField, isChangeableField } from "../fields.ts";
-import { type FieldColumn, type TimestampSerde, hasSerde } from "../fieldSerde.ts";
+import type { Todo } from "../flush/Todo.ts";
 import { keyToNumber } from "../keys.ts";
-import { type Todo } from "../Todo.ts";
+import { type FieldColumn, type TimestampSerde, hasSerde } from "../serde/fieldSerde.ts";
 import { groupBy } from "../utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */

@@ -1,8 +1,13 @@
 import { isEntity } from "../Entity.ts";
 import { isAlias } from "../queries/find/Aliases.ts";
 import { isReference } from "../relations/index.ts";
-import { maybeRequireTemporal } from "../temporal.ts";
-import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers.ts";
+import { maybeRequireTemporal } from "../serde/temporal.ts";
+import {
+  plainDateMapper,
+  plainDateTimeMapper,
+  plainTimeMapper,
+  zonedDateTimeMapper,
+} from "../serde/temporalMappers.ts";
 
 const Temporal = maybeRequireTemporal()?.Temporal;
 

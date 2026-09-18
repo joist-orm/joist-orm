@@ -1,9 +1,9 @@
-import type { Column } from "../../columns.ts";
 import type { DriverQueryResult } from "../../drivers/Driver.ts";
 import { type Entity, isEntity } from "../../Entity.ts";
 import type { IdOf } from "../../EntityManager.ts";
 import type { EntityMetadata } from "../../EntityMetadata.ts";
 import { keyToTaggedId, toTaggedId } from "../../keys.ts";
+import type { Column } from "../../serde/columns.ts";
 import type { ColumnsOf, TypeMapEntry } from "../../typeMap.ts";
 import { fail } from "../../utils.ts";
 import type { SqlCondition } from "../conditions.ts";

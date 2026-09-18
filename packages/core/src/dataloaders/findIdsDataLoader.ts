@@ -5,7 +5,7 @@ import { keyToTaggedId } from "../keys.ts";
 import type { FilterAndSettings } from "../queries/find/EntityFilter.ts";
 import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
 import { kq } from "../queries/sql/keywords.ts";
-import { buildUnnestCte } from "../unnest.ts";
+import { buildUnnestCte } from "../queries/unnest.ts";
 import { fail } from "../utils.ts";
 import {
   collectAndReplaceArgs,

@@ -1,6 +1,6 @@
 import { type EntityMetadata } from "../EntityMetadata.ts";
 import { getProperties } from "../getProperties.ts";
-import { type LoadHint, type NestedLoadHint } from "../loadHints.ts";
+import type { LoadHint, NestedLoadHint } from "../loading/loadHints.ts";
 import { deepNormalizeHint, normalizeHint } from "../normalizeHints.ts";
 import { ReactiveReferenceImpl } from "../relations/index.ts";
 import { canPreload } from "./canPreload.ts";

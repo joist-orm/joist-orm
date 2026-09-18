@@ -1,12 +1,12 @@
 import type { Entity } from "../Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager.ts";
 import { getMetadata } from "../EntityMetadata.ts";
-import { buildHintTree } from "../HintTree.ts";
-import type { LoadHint } from "../loadHints.ts";
+import { buildHintTree } from "../loading/HintTree.ts";
+import type { LoadHint } from "../loading/loadHints.ts";
 import { hintKey } from "../normalizeHints.ts";
 import type { FilterAndSettings } from "../queries/find/EntityFilter.ts";
 import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
-import { buildUnnestCte } from "../unnest.ts";
+import { buildUnnestCte } from "../queries/unnest.ts";
 import {
   collectAndReplaceArgs,
   collectValues,

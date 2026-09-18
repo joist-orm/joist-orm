@@ -1,6 +1,6 @@
 import { inspect } from "node:util";
 
-import { type TypeInfo, arrayOutputType } from "../../../TypeInfo.ts";
+import { type TypeInfo, arrayOutputType } from "../../../serde/TypeInfo.ts";
 import { assertNever } from "../../../utils.ts";
 import { BaseExpr } from "../Expr.ts";
 import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "./types.ts";

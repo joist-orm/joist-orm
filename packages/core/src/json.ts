@@ -2,7 +2,7 @@ import { type Entity, isEntity } from "./Entity.ts";
 import { type IdOf } from "./EntityManager.ts";
 import { getMetadata } from "./EntityMetadata.ts";
 import { normalizeHint } from "./normalizeHints.ts";
-import { convertToLoadHint } from "./reactiveHints.ts";
+import { convertToLoadHint } from "./reactivity/reactiveHints.ts";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
 import { PropertyImpl } from "./relations/hasProperty.ts";

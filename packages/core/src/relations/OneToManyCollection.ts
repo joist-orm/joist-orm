@@ -15,7 +15,7 @@ import {
   maybeResolveReferenceToId,
   sameEntity,
 } from "../index.ts";
-import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
 import { compareValues } from "../utils.ts";
 import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";

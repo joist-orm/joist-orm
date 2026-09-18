@@ -3,9 +3,9 @@ import { getEmInternalApi } from "../EntityManager.ts";
 import { type PrimitiveField, getMetadata } from "../EntityMetadata.ts";
 import { getField, isFieldSet, setField } from "../fields.ts";
 import { isLoaded } from "../index.ts";
-import { type IsLoadedCachable } from "../IsLoadedCache.ts";
+import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
-import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
+import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactivity/reactiveHints.ts";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
 import { PropertyT } from "./PropertySymbols.ts";
 

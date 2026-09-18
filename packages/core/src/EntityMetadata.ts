@@ -1,12 +1,12 @@
 import { getInstanceData } from "./BaseEntity.ts";
-import { type Column, type ColumnDescriptors } from "./columns.ts";
 import { type ConfigApi, type Reactable, type ReactiveRule } from "./config.ts";
 import { getMetadataForType } from "./configure.ts";
 import { type Entity, isEntity } from "./Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "./EntityManager.ts";
 import { type EnumMetadata } from "./EnumMetadata.ts";
-import { type FieldSerde, type PolymorphicKeySerde } from "./fieldSerde.ts";
-import { type DeepNew } from "./loadHints.ts";
+import type { DeepNew } from "./loading/loadHints.ts";
+import type { Column, ColumnDescriptors } from "./serde/columns.ts";
+import type { FieldSerde, PolymorphicKeySerde } from "./serde/fieldSerde.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;

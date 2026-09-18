@@ -1,6 +1,6 @@
 import { type Entity } from "../Entity.ts";
 import { lazyField } from "../newEntity.ts";
-import { type Reacted, type ShallowReactiveHint } from "../reactiveHints.ts";
+import type { Reacted, ShallowReactiveHint } from "../reactivity/reactiveHints.ts";
 import { PropertyT } from "./PropertySymbols.ts";
 
 /**

@@ -1,4 +1,5 @@
 import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
+import type { ManyToManyLike } from "../flush/JoinRows.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -10,8 +11,7 @@ import {
   getMetadata,
   getMetadataForField,
 } from "../index.ts";
-import { type IsLoadedCachable } from "../IsLoadedCache.ts";
-import { type ManyToManyLike } from "../JoinRows.ts";
+import type { IsLoadedCachable } from "../loading/IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
 import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
 import { RelationT, RelationU } from "./RelationSymbols.ts";

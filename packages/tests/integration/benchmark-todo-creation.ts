@@ -2,7 +2,7 @@ import { performance } from "node:perf_hooks";
 
 import { type Entity, setDefaultEntityLimit } from "joist-orm";
 
-import { Todo, createTodos } from "../../core/src/Todo";
+import { Todo, createTodos } from "../../core/src/flush/Todo";
 import { Author, EntityManager, newAuthor, newTaskNew, newTaskOld } from "./src/entities";
 
 type Row = Record<string, unknown>;

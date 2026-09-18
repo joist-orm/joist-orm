@@ -1,10 +1,10 @@
 import { type Entity } from "../Entity.ts";
 import { getEmInternalApi } from "../EntityManager.ts";
 import { type EntityMetadata, type ManyToManyEnumField, getMetadata, getMetadataForField } from "../EntityMetadata.ts";
-import { type EntityOrId, type HintNode } from "../HintTree.ts";
-import { type ManyToManyLike } from "../JoinRows.ts";
+import type { ManyToManyLike } from "../flush/JoinRows.ts";
 import { keyToNumber, keyToTaggedId } from "../keys.ts";
-import { type LoadHint, type NestedLoadHint } from "../loadHints.ts";
+import type { EntityOrId, HintNode } from "../loading/HintTree.ts";
+import type { LoadHint, NestedLoadHint } from "../loading/loadHints.ts";
 import { type JoinResult, type PreloadHydrator, type PreloadPlugin } from "../plugins/PreloadPlugin.ts";
 import { ConditionBuilder } from "../queries/ConditionBuilder.ts";
 import { type JoinTable, type LateralJoinTable, type ParsedFindQuery, getTables } from "../queries/find/QueryParser.ts";

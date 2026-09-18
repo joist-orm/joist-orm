@@ -3,8 +3,8 @@ import ansis from "ansis";
 import { type Reactable, type ReactiveRule } from "../config.ts";
 import { type Entity } from "../Entity.ts";
 import { type EntityManager } from "../EntityManager.ts";
-import { type ReactiveAction } from "../ReactionsManager.ts";
-import { type Todo } from "../Todo.ts";
+import type { Todo } from "../flush/Todo.ts";
+import type { ReactiveAction } from "../reactivity/ReactionsManager.ts";
 import { groupBy } from "../utils.ts";
 
 const { gray, green, yellow, white } = ansis;

@@ -1,12 +1,12 @@
 import type DataLoader from "dataloader";
 
-import type { Column } from "../columns.ts";
 import type { Entity } from "../Entity.ts";
 import type { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager.ts";
 import { type Field, getMetadata } from "../EntityMetadata.ts";
 import { maybeAddNotSoftDeleted } from "../queries/entityQueryUtils.ts";
 import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../queries/find/QueryParser.ts";
 import type { ColumnCondition } from "../queries/parsedConditions.ts";
+import type { Column } from "../serde/columns.ts";
 import { abbreviation, groupBy } from "../utils.ts";
 
 export const findByUniqueOperation = "find-by-unique";

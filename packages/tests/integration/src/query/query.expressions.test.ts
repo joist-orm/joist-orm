@@ -110,6 +110,54 @@ describe("em.query / expressions", () => {
       `);
     });
 
+    it("collects inline expression values with ARRAY_AGG", async () => {
+      // Given one Author with two Books whose titles differ
+      await insertAuthor({ first_name: "Alice" });
+      await insertBook({ title: "Zebra", author_id: 1 });
+      await insertBook({ title: "Apple", author_id: 1 });
+      // And Book expressions for compact, expanded, and nested aggregates
+      const em = newEntityManager();
+      const b = table(Book);
+      const select = {
+        authorIds: {
+          arrayAgg: {
+            value: sql.numberOrNull`${b.authorId}`,
+            distinct: true,
+            orderBy: [{ sort: b.authorId, order: "ASC" as const }],
+          },
+        },
+        titles: { arrayAgg: b.title },
+        labels: {
+          arrayAgg: {
+            value: { case: [{ when: b.title.eq("Apple"), then: "First" }, { else: b.title }] },
+            orderBy: [{ sort: b.title, order: "ASC" as const }],
+          },
+        },
+        fallback: {
+          coalesce: [{ arrayAgg: { value: b.id, filter: b.title.eq("Missing") } }, ["b:9"] as const] as const,
+        },
+      };
+
+      // When collecting SQL values and nested expression values with aggregate options
+      const rows = await em.query({
+        from: b,
+        select,
+      });
+
+      // Then each form returns an array and the empty tagged-ID aggregate uses its encoded fallback
+      expect(rows).toEqual([
+        { authorIds: [1], titles: ["Zebra", "Apple"], labels: ["First", "Zebra"], fallback: ["b:9"] },
+      ]);
+      expectTypeOf(rows).toEqualTypeOf<
+        {
+          authorIds: (number | null)[] | null;
+          titles: string[] | null;
+          labels: string[] | null;
+          fallback: Book["id"][];
+        }[]
+      >();
+    });
+
     it("coalesces text before varchar", async () => {
       // Given an Author for the Book's required relationship
       await insertAuthor({ first_name: "Alice" });
@@ -1295,7 +1343,16 @@ describe("em.query / expressions", () => {
       // When passing a literal instead of an expression object
       // Then the entry point requires a supported expression object
       // @ts-expect-error The root must be an expression object
-      expect(() => expr(42)).toThrow("expr expects an object with case, coalesce, nullIf, greatest, or least");
+      expect(() => expr(42)).toThrow(
+        "expr expects an object with arrayAgg, case, coalesce, nullIf, greatest, or least",
+      );
+
+      // When describing ARRAY_AGG options without a value
+      // Then both TypeScript and runtime validation reject them
+      await expect(
+        // @ts-expect-error ARRAY_AGG options need a value
+        em.query({ from: a, select: { value: { arrayAgg: { distinct: true } } } }),
+      ).rejects.toThrow("ARRAY_AGG options need a value");
 
       // When describing an empty COALESCE
       // Then both TypeScript and runtime validation reject it

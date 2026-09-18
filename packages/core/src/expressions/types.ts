@@ -1,5 +1,6 @@
 import type { BaseExpr, Expr, ExprBrand, ExprLike, exprBrand } from "../Expr.ts";
 import type { CompatibleValue, MaybeNull, QueryJoins } from "../query.ts";
+import type { ArrayAggExpressionOptions, ArrayAggInput, ParsedArrayAggExpression } from "./arrayAgg.ts";
 import type { CaseArmValue, CaseInput, CheckCase, ParsedCaseExpression } from "./case.ts";
 import type { CoalesceInput, ParsedCoalesceExpression } from "./coalesce.ts";
 import type { GreatestInput, ParsedGreatestExpression } from "./greatest.ts";
@@ -9,6 +10,7 @@ import type { NullIfInput, ParsedNullIfExpression } from "./nullIf.ts";
 /** Each operation owns its input fields; the combined input permits exactly one operation. */
 interface ExprInputs {
   case: CaseInput;
+  arrayAgg: ArrayAggInput;
   coalesce: CoalesceInput;
   nullIf: NullIfInput;
   greatest: GreatestInput;
@@ -16,7 +18,7 @@ interface ExprInputs {
 }
 
 // These expressions take operand arrays; CASE uses WHEN/THEN entries instead.
-export type ExprName = Exclude<keyof ExprInputs, "case">;
+export type ExprName = Exclude<keyof ExprInputs, "case" | "arrayAgg">;
 type ExprArgsInput = { [K in ExprName]: { readonly [P in K]: readonly unknown[] } }[ExprName];
 type ExprArgs<V> = Extract<V[keyof V & ExprName], readonly unknown[]>;
 
@@ -42,19 +44,21 @@ export type ExpressionValue<V, J extends QueryJoins> = unknown extends V
     ? InputResult<I, J>
     : V extends { readonly [exprBrand]: ExprBrand<infer R, infer S> }
       ? MaybeNull<R, S, J>
-      : V extends ExprArgsInput
-        ? V extends { readonly nullIf: readonly unknown[] }
-          ? ExpressionValue<ExprArgs<V>[0], J> | null
-          : V extends { readonly coalesce: readonly unknown[] }
-            ? CoalesceValue<ExprArgs<V>, J>
-            :
-                | Exclude<ExpressionValue<ExprArgs<V>[number], J>, null>
-                | (null extends CoalesceValue<ExprArgs<V>, J> ? null : never)
-        : V extends { readonly case: infer A }
-          ?
-              | ExpressionValue<CaseArmValue<A>, J>
-              | (A extends readonly [...unknown[], { readonly else: unknown }] ? never : null)
-          : WidenLiteral<V>;
+      : V extends { readonly arrayAgg: infer A }
+        ? ExpressionValue<ArrayAggValue<A>, J>[] | null
+        : V extends ExprArgsInput
+          ? V extends { readonly nullIf: readonly unknown[] }
+            ? ExpressionValue<ExprArgs<V>[0], J> | null
+            : V extends { readonly coalesce: readonly unknown[] }
+              ? CoalesceValue<ExprArgs<V>, J>
+              :
+                  | Exclude<ExpressionValue<ExprArgs<V>[number], J>, null>
+                  | (null extends CoalesceValue<ExprArgs<V>, J> ? null : never)
+          : V extends { readonly case: infer A }
+            ?
+                | ExpressionValue<CaseArmValue<A>, J>
+                | (A extends readonly [...unknown[], { readonly else: unknown }] ? never : null)
+            : WidenLiteral<V>;
 
 /** Turns literal types such as "Alice" and 18 into string and number, including array elements. */
 type WidenLiteral<V> = V extends string
@@ -82,11 +86,13 @@ type BranchResult<V> = unknown extends V
   ? never
   : V extends ExprLike<infer R>
     ? R
-    : V extends ExprArgsInput
-      ? BranchResult<V extends { readonly nullIf: readonly unknown[] } ? ExprArgs<V>[0] : ExprArgs<V>[number]>
-      : V extends { readonly case: infer A }
-        ? BranchResult<CaseArmValue<A>>
-        : never;
+    : V extends { readonly arrayAgg: infer A }
+      ? BranchResult<ArrayAggValue<A>>[]
+      : V extends ExprArgsInput
+        ? BranchResult<V extends { readonly nullIf: readonly unknown[] } ? ExprArgs<V>[0] : ExprArgs<V>[number]>
+        : V extends { readonly case: infer A }
+          ? BranchResult<CaseArmValue<A>>
+          : never;
 
 /** A fixed non-null candidate guarantees a result; a possibly empty candidate array does not. */
 type CoalesceValue<A extends readonly unknown[], J extends QueryJoins> = A extends readonly [infer H, ...infer T]
@@ -102,11 +108,13 @@ export type ExpressionSources<V> = unknown extends V
   ? string
   : V extends ExprLike<unknown>
     ? V[typeof exprBrand]["__source"]
-    : V extends ExprArgsInput
-      ? ExpressionSources<ExprArgs<V>[number]>
-      : V extends { readonly case: infer A }
-        ? ExpressionSources<CaseArmValue<A>>
-        : never;
+    : V extends { readonly arrayAgg: infer A }
+      ? ExpressionSources<ArrayAggValue<A>>
+      : V extends ExprArgsInput
+        ? ExpressionSources<ExprArgs<V>[number]>
+        : V extends { readonly case: infer A }
+          ? ExpressionSources<CaseArmValue<A>>
+          : never;
 
 /**
  * Compares every operand with the others using the same type check as query set operations.
@@ -127,29 +135,33 @@ type CompatibleValues<V, All = V> = false extends (
 export type CheckExpression<V, R> =
   V extends ExprLike<unknown>
     ? unknown
-    : V extends ExprArgsInput
-      ? V extends ExprInput
-        ? {
-            readonly [K in keyof V]: K extends ExprName
-              ? V[K] extends readonly unknown[]
-                ? CheckOperands<V[K], K, R>
-                : never
-              : never;
-          }
-        : never
-      : V extends { readonly case: infer A }
-        ? { readonly case: CheckCase<A, R> } & CompatibleValues<CaseArmValue<A>> & {
-              readonly [K in Exclude<keyof V, "case">]: never;
+    : V extends { readonly arrayAgg: infer A }
+      ? { readonly arrayAgg: CheckArrayAgg<A, R extends readonly (infer E)[] ? E : never> } & {
+          readonly [K in Exclude<keyof V, "arrayAgg">]: never;
+        }
+      : V extends ExprArgsInput
+        ? V extends ExprInput
+          ? {
+              readonly [K in keyof V]: K extends ExprName
+                ? V[K] extends readonly unknown[]
+                  ? CheckOperands<V[K], K, R>
+                  : never
+                : never;
             }
-        : V extends undefined
-          ? "Use null for a SQL NULL value"
-          : [R] extends [never]
-            ? unknown
-            : V extends null
+          : never
+        : V extends { readonly case: infer A }
+          ? { readonly case: CheckCase<A, R> } & CompatibleValues<CaseArmValue<A>> & {
+                readonly [K in Exclude<keyof V, "case">]: never;
+              }
+          : V extends undefined
+            ? "Use null for a SQL NULL value"
+            : [R] extends [never]
               ? unknown
-              : V extends (R extends readonly unknown[] ? Readonly<R> : R)
+              : V extends null
                 ? unknown
-                : "Literal values must match the expression";
+                : V extends (R extends readonly unknown[] ? Readonly<R> : R)
+                  ? unknown
+                  : "Literal values must match the expression";
 
 /** Checks fixed argument counts and then each operand; dynamic array lengths are checked at runtime. */
 type CheckOperands<A extends readonly unknown[], Name extends ExprName, R> = (Name extends "nullIf"
@@ -175,6 +187,7 @@ export type CheckInput<I> = [I] extends [CheckExpression<I, Exclude<BranchResult
 export type ParsedExpression =
   | BaseExpr
   | ParsedLiteralExpression
+  | ParsedArrayAggExpression
   | ParsedCoalesceExpression
   | ParsedNullIfExpression
   | ParsedGreatestExpression
@@ -189,3 +202,19 @@ export interface ParsedLiteralExpression {
 
 /** The conversions shared by all result values, separate from their SQL rendering. */
 export type ResultCodec = Pick<BaseExpr, "outputType" | "encode" | "decode">;
+
+/** Extracts the aggregate value from compact or expanded ARRAY_AGG input. */
+type ArrayAggValue<A> = A extends { readonly value: infer V } ? V : A;
+
+/** Checks the aggregate value and rejects unknown expanded option keys. */
+type CheckArrayAgg<A, R> = A extends { readonly value: unknown }
+  ? A extends ArrayAggExpressionOptions
+    ? {
+        readonly [K in keyof A]: K extends "value"
+          ? CheckExpression<A[K], R>
+          : K extends keyof ArrayAggExpressionOptions
+            ? A[K]
+            : never;
+      }
+    : never
+  : CheckExpression<A, R>;

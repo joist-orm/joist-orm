@@ -1,5 +1,6 @@
 import { BaseExpr } from "../Expr.ts";
 import { assertNever } from "../utils.ts";
+import { parseArrayAggExpression } from "./arrayAgg.ts";
 import { parseCaseExpression } from "./case.ts";
 import { parseCoalesceExpression } from "./coalesce.ts";
 import { parseGreatestExpression } from "./greatest.ts";
@@ -12,8 +13,8 @@ const exprNames = ["coalesce", "nullIf", "greatest", "least"] as const satisfies
 
 /** Requires an expression object at the root before parsing its nested operands. */
 export function parseExpressionInput(input: unknown): ParsedExpression {
-  if (!isObject(input) || (!("case" in input) && !exprNames.some((name) => name in input))) {
-    throw new Error("expr expects an object with case, coalesce, nullIf, greatest, or least");
+  if (!isObject(input) || (!("case" in input) && !("arrayAgg" in input) && !exprNames.some((name) => name in input))) {
+    throw new Error("expr expects an object with arrayAgg, case, coalesce, nullIf, greatest, or least");
   }
   return parseExpression(input);
 }
@@ -41,6 +42,10 @@ export function parseExpression(input: unknown): ParsedExpression {
       default:
         return assertNever(name);
     }
+  }
+  if (isObject(input) && "arrayAgg" in input) {
+    checkKeys(input, ["arrayAgg"]);
+    return parseArrayAggExpression(input.arrayAgg);
   }
   if (isObject(input) && "case" in input) {
     checkKeys(input, ["case"]);

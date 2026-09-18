@@ -1,6 +1,7 @@
 import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "../Expr.ts";
 import type { TypeInfo } from "../TypeInfo.ts";
 import { assertNever } from "../utils.ts";
+import { arrayAggToSql } from "./arrayAgg.ts";
 import { caseNullable, caseToSql } from "./case.ts";
 import { coalesceNullable, coalesceToSql } from "./coalesce.ts";
 import { chooseExpressionCodec } from "./codecs.ts";
@@ -62,6 +63,8 @@ export function expressionNullable(parsed: ParsedExpression): boolean | undefine
   switch (parsed.kind) {
     case "literal":
       return parsed.value === null;
+    case "arrayAgg":
+      return true;
     case "nullIf":
       return nullIfNullable();
     case "coalesce":
@@ -92,6 +95,8 @@ export function expressionToSql(parsed: ParsedExpression, ctx: ExprContext, code
         refs: [],
       };
     }
+    case "arrayAgg":
+      return arrayAggToSql(parsed, ctx, chooseExpressionCodec(parsed.value));
     case "coalesce":
       return coalesceToSql(parsed, ctx, codec);
     case "nullIf":

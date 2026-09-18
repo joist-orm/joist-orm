@@ -174,8 +174,12 @@ type TableShape<T extends Entity, Name extends string> = {
 /** Keeps explicit base and subtype sources independent, with generic entities untracked. */
 type TableNameOf<T> = T extends { __type: { 0: string } } ? TypeNameOf<T> & string : string;
 
-/** A join-only relationship factory; default required references inherit their source's LEFT join. */
+/** Provides fluent methods for creating joins through an owning reference relationship. */
 export interface ReferenceJoin<U extends Entity, N extends null | never, Src extends string = string> {
+  /**
+   * Required reference joins like `b.author.as(a)` are INNER unless `b` is already a LEFT-joined alias.
+   * Nullable references are always LEFT joined.
+   */
   as<A extends TableFor<U>>(other: A): [N] extends [never] ? DefaultReferenceJoin<A, Src> : LeftJoin<A>;
   inner<A extends TableFor<U>>(other: A): InnerJoin<A>;
   left<A extends TableFor<U>>(other: A): LeftJoin<A>;

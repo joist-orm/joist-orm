@@ -547,19 +547,22 @@ type LeftJoined<X> = X extends LeftJoin<infer A> ? NameOf<A> : never;
 
 /** Adds default reference targets whose source is already nullable; explicit INNER joins do not inherit. */
 type InheritedLeft<X, Left> = X extends { readonly [referenceJoinSource]: infer Src; readonly inner: infer A }
-  ? [Extract<Src, Left>] extends [never]
+  ? // Extract finds this reference's source among nullable aliases. No overlap means its target stays INNER.
+    // I.e. Src = "Book" and Left = "Book" adds NameOf<A> = "Author"; Left = "Publisher" adds nothing.
+    [Extract<Src, Left>] extends [never]
     ? never
     : NameOf<A>
   : never;
 
 /**
- * Computes nullable aliases to a fixed point, including join lists inferred as arrays rather than tuples.
+ * Finds all aliases that can be NULL through LEFT joins and subsequent reference joins.
  * I.e. LEFT Book adds Author via Book.author.as(a), then further required references inherit Author's NULL.
  * Alias-name collisions are conservative, as they are for explicit LEFT joins; runtime uses exact handles.
  */
-type NullableSources<X, Left = LeftJoined<X>> = [Exclude<InheritedLeft<X, Left>, Left>] extends [never]
-  ? Left
-  : NullableSources<X, Left | InheritedLeft<X, Left>>;
+type NullableSources<X, Left = LeftJoined<X>> =
+  // X is J[number], a union of join entries. A variable like `const joins = [j1, j2]` normally infers
+  // an array, not a tuple, so we cannot walk its positions. Add nullable targets until no new names remain.
+  [Exclude<InheritedLeft<X, Left>, Left>] extends [never] ? Left : NullableSources<X, Left | InheritedLeft<X, Left>>;
 
 /**
  * Asks: is this expression's source key among the LEFT-joined sources in this query's join list? If
@@ -1363,9 +1366,9 @@ function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): Query
 }
 
 /**
- * Resolves default reference joins in declaration order without changing reusable join entries.
+ * Resolves reference joins in declaration order without changing reusable join entries.
  * Only .as() carries a source handle; explicit INNER joins retain their filtering semantics.
- * I.e. LEFT Book followed by Book.author.as(a) adds Author to the exact set of nullable handles.
+ * I.e. LEFT Book followed by Book.author.as(a) adds Author to the set of nullable handles.
  */
 function resolveReferenceJoins(joins: QueryJoins | undefined): QueryJoin[] {
   const left = new Set<object>();

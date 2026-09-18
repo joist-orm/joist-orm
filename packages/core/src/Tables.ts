@@ -37,6 +37,7 @@ import {
 import { getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index.ts";
 import { toIdOf } from "./keys.ts";
 import { kqDot } from "./keywords.ts";
+import type { ExpressionOrderBy, OrderByDirection } from "./query.ts";
 import { type ParsedValueFilter, makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "./QueryParser.ts";
 import { skipCondition } from "./skipCondition.ts";
 import { type TypeInfo } from "./TypeInfo.ts";
@@ -109,6 +110,12 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = Tabl
     : {
         /** Builds an AND condition from local domain fields, without implicit joins. */
         where(filter: TableFilter<T>): SqlCondition;
+      }) &
+  ("orderBy" extends keyof TableShape<T, Name>
+    ? {}
+    : {
+        /** Maps local persisted domain fields to expression order entries. */
+        orderBy(orderBy: TableOrderBy<T> | null | undefined): ExpressionOrderBy[];
       });
 
 /** Domain filters for fields stored on this physical table, without relationship traversal. */
@@ -122,10 +129,32 @@ export type TableFilter<T extends Entity> = {
     : FilterOf<T>[K];
 };
 
+/** Directions for local persisted domain fields on a table. */
+export type TableOrderBy<T extends Entity> = {
+  readonly [K in OrderableFieldNames<T>]?: Extract<OrderByDirection, "ASC" | "DESC"> | null | undefined;
+};
+
 /** Generated column ownership excludes CTI base fields and polymorphic components. */
 type LocalFieldNames<T> = ColumnsOf<T>[keyof ColumnsOf<T>] extends { fieldName: infer F }
   ? Extract<F, keyof FilterOf<T>>
   : never;
+
+/** Plain scalar fields only; references keep their existing nested-order meaning in generated order types. */
+type OrderableFieldNames<T extends Entity> = {
+  [K in LocalFieldNames<T> & keyof FieldsOf<T> & keyof T]: K extends "id"
+    ? K
+    : FieldsOf<T>[K] extends { kind: "primitive"; derived: false }
+      ? K
+      : FieldsOf<T>[K] extends { kind: "primitive"; derived: true }
+        ? K extends "createdAt" | "updatedAt"
+          ? K
+          : never
+        : FieldsOf<T>[K] extends { kind: "enum"; type: infer V }
+          ? T[K] extends V | null | undefined
+            ? K
+            : never
+          : never;
+}[LocalFieldNames<T> & keyof FieldsOf<T> & keyof T];
 
 /** The owning-reference subset of find filters that only compares a foreign key. */
 type TableReferenceFilter<T extends Entity, N> =
@@ -348,6 +377,9 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       if (key === "where" && !isRelation(meta.allFields[key])) {
         return (filter: TableFilter<T>) => tableWhere(mgmt, filter);
       }
+      if (key === "orderBy" && !isRelation(meta.allFields[key])) {
+        return (orderBy: TableOrderBy<T> | null | undefined) => tableOrderBy(mgmt, orderBy);
+      }
       const field = relation ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
       switch (field.kind) {
         case "m2o":
@@ -369,7 +401,11 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       return (
         key === tableMgmt ||
         (typeof key === "string" &&
-          (key === "where" || Object.hasOwn(meta.columns, key) || !!physicalRelation(meta, key) || subtypes.has(key)))
+          (key === "where" ||
+            key === "orderBy" ||
+            Object.hasOwn(meta.columns, key) ||
+            !!physicalRelation(meta, key) ||
+            subtypes.has(key)))
       );
     },
   });
@@ -1009,6 +1045,36 @@ function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
     }
   }
   return conditions.length === 0 ? skipCondition : { and: conditions };
+}
+
+/** Maps local persisted domain fields to columns bound to the current table handle. */
+function tableOrderBy(mgmt: TableMgmt, input: object | null | undefined): ExpressionOrderBy[] {
+  if (input === null || input === undefined) return [];
+  const { meta } = mgmt;
+  if (typeof input !== "object" || Array.isArray(input)) {
+    throw new Error(`Expected domain field ordering for ${meta.type}`);
+  }
+  return Object.entries(input).flatMap(([key, order]) => {
+    if (order === null || order === undefined) return [];
+    if (order !== "ASC" && order !== "DESC") {
+      throw new Error(`Invalid orderBy direction '${order}'`);
+    }
+    // CTI allFields.id points at the base key; the subtype has its own physical key.
+    const field = key === "id" ? meta.fields.id : Object.hasOwn(meta.allFields, key) ? meta.allFields[key] : undefined;
+    const isOrderable =
+      field?.kind === "primaryKey" ||
+      (field?.kind === "primitive" && (field.derived === false || field.derived === "orm")) ||
+      (field?.kind === "enum" && field.derived === false);
+    if (
+      !isOrderable ||
+      !field?.serde ||
+      field.serde.columns.length !== 1 ||
+      !Object.values(meta.columns).includes(field.serde.columns[0].column)
+    ) {
+      throw new Error(`Unsupported table order field ${meta.type}.${key}; use an explicit expression`);
+    }
+    return [{ sort: new TableColumn(meta, field.serde.columns[0].column, mgmt), order }];
+  });
 }
 
 /** Rejects nested relations, scopes, and aliases before parsing owning-reference values. */

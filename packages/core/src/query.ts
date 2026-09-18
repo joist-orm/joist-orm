@@ -59,6 +59,7 @@ import {
   getTableMgmt,
   isTable,
   m2mJoinTable,
+  referenceJoinSource,
   tableMgmt,
 } from "./Tables.ts";
 import { type TypeInfo } from "./TypeInfo.ts";
@@ -544,12 +545,29 @@ export type NameOf<A> = A extends { readonly [tableMgmt]: { readonly __name: inf
 /** The names of every alias that was LEFT JOINed; `X` is a naked type parameter so this distributes. */
 type LeftJoined<X> = X extends LeftJoin<infer A> ? NameOf<A> : never;
 
+/** Adds default reference targets whose source is already nullable; explicit INNER joins do not inherit. */
+type InheritedLeft<X, Left> = X extends { readonly [referenceJoinSource]: infer Src; readonly inner: infer A }
+  ? [Extract<Src, Left>] extends [never]
+    ? never
+    : NameOf<A>
+  : never;
+
+/**
+ * Computes nullable aliases to a fixed point, including join lists inferred as arrays rather than tuples.
+ * I.e. LEFT Book adds Author via Book.author.as(a), then further required references inherit Author's NULL.
+ * Alias-name collisions are conservative, as they are for explicit LEFT joins; runtime uses exact handles.
+ */
+type NullableSources<X, Left = LeftJoined<X>> = [Exclude<InheritedLeft<X, Left>, Left>] extends [never]
+  ? Left
+  : NullableSources<X, Left | InheritedLeft<X, Left>>;
+
 /**
  * Asks: is this expression's source key among the LEFT-joined sources in this query's join list? If
  * yes, the value can be `null`, so `R` becomes `R | null`; if no, `R` is unchanged.
  *
  * I.e. `MaybeNull<number, "book_stats", [LeftJoin<typeof bookStats>]>` is `number | null`,
- * because `book_stats` is in `LeftJoined<J[number]>`; with an inner join it stays `number`.
+ * because `book_stats` is in `NullableSources<J[number]>`; with an inner join it stays `number`.
+ * Default references from nullable sources are included transitively.
  *
  * Source-less expressions (`Src` is `never`, i.e. `b.id.count()`) are never nullified. Untracked ones
  * (`Src` is `string`, i.e. a `sql.ref` on an unknown table) might come from any left-joined table,
@@ -560,10 +578,10 @@ type LeftJoined<X> = X extends LeftJoin<infer A> ? NameOf<A> : never;
  * share the literal sentinel `"?"` instead.
  */
 export type MaybeNull<R, Src extends string, J extends QueryJoins> = string extends Src
-  ? [LeftJoined<J[number]>] extends [never]
+  ? [NullableSources<J[number]>] extends [never]
     ? R
     : R | null
-  : [Extract<Src, LeftJoined<J[number]>>] extends [never]
+  : [Extract<Src, NullableSources<J[number]>>] extends [never]
     ? R
     : R | null;
 
@@ -1332,7 +1350,7 @@ function projectionOutput(select: unknown): QueryOutput {
 function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): QueryOutput {
   if (!joins?.some((join) => join?.left)) return output;
   const left = new Set<object>();
-  for (const join of joins) if (join?.left) left.add(handleOf(join.left));
+  for (const join of resolveReferenceJoins(joins)) if (join.left) left.add(handleOf(join.left));
   return {
     kind: output.kind,
     columns: output.columns.map((column) => {
@@ -1342,6 +1360,26 @@ function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): Query
         : column;
     }),
   };
+}
+
+/**
+ * Resolves default reference joins in declaration order without changing reusable join entries.
+ * Only .as() carries a source handle; explicit INNER joins retain their filtering semantics.
+ * I.e. LEFT Book followed by Book.author.as(a) adds Author to the exact set of nullable handles.
+ */
+function resolveReferenceJoins(joins: QueryJoins | undefined): QueryJoin[] {
+  const left = new Set<object>();
+  return (joins ?? []).filter(isDefined).map((join) => {
+    const source = (join as QueryJoin & { [referenceJoinSource]?: object })[referenceJoinSource];
+    if (join.inner && source && left.has(source)) {
+      const { inner, ...rest } = join;
+      const resolved = { ...rest, left: inner };
+      left.add(handleOf(inner));
+      return resolved;
+    }
+    if (join.left) left.add(handleOf(join.left));
+    return join;
+  });
 }
 
 /** An output-only nullability adjustment that preserves the selected expression's SQL and conversions. */
@@ -1630,7 +1668,7 @@ function parseQuery(
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner, recursiveSelf);
   const ctx = new Ctx(assigner, parent);
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
-  const joinEntries = [...(q.join ?? [])].filter(isDefined);
+  const joinEntries = resolveReferenceJoins(q.join);
 
   // 0. Compile CTEs first: they are in scope for every source below, and cannot read those sources.
   const ctes = registerCtes(q, ctx, assigner);

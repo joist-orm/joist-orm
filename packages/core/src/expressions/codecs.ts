@@ -1,7 +1,7 @@
 import { inspect } from "node:util";
 
 import { BaseExpr } from "../Expr.ts";
-import type { TypeInfo } from "../TypeInfo.ts";
+import { type TypeInfo, arrayOutputType } from "../TypeInfo.ts";
 import { assertNever } from "../utils.ts";
 import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "./types.ts";
 
@@ -12,7 +12,7 @@ import type { ParsedExpression, ParsedLiteralExpression, ResultCodec } from "./t
  */
 export function chooseExpressionCodec(parsed: ParsedExpression): ResultCodec {
   const leaves = expressionLeaves(parsed);
-  const expressions = leaves.filter((v): v is BaseExpr => v instanceof BaseExpr);
+  const expressions = leaves.flatMap((leaf) => ("codec" in leaf ? [leaf.codec] : []));
   const first = expressions[0];
   if (first) {
     for (const other of expressions.slice(1)) {
@@ -33,12 +33,10 @@ export function chooseExpressionCodec(parsed: ParsedExpression): ResultCodec {
         );
       }
     }
-    for (const leaf of leaves) {
-      if (!(leaf instanceof BaseExpr)) checkLiteral(leaf.value, first.outputType);
-    }
+    for (const leaf of leaves) if ("literal" in leaf) checkLiteral(leaf.literal.value, first.outputType);
     return first;
   }
-  const literals = leaves.filter((v): v is ParsedLiteralExpression => !(v instanceof BaseExpr));
+  const literals = leaves.flatMap((leaf) => ("literal" in leaf ? [leaf.literal] : []));
   const types = literals.map((v) => literalType(v.value)).filter((v) => v !== undefined);
   for (const literal of literals) checkLiteral(literal.value, types[0]);
   return new LiteralCodec(types[0] ?? { dbType: "text", domain: String });
@@ -61,11 +59,23 @@ class LiteralCodec {
  * Finds parsed operands that share a codec, including NULLIF's comparison operand but not CASE conditions.
  * Each kind selects its own value fields; only CASE's THEN and ELSE expressions contribute a result codec.
  */
-function expressionLeaves(parsed: ParsedExpression): (BaseExpr | ParsedLiteralExpression)[] {
-  if (parsed instanceof BaseExpr) return [parsed];
+function expressionLeaves(parsed: ParsedExpression): CodecLeaf[] {
+  if (parsed instanceof BaseExpr) return [{ codec: parsed }];
   switch (parsed.kind) {
     case "literal":
-      return [parsed];
+      return [{ literal: parsed }];
+    case "arrayAgg": {
+      const valueCodec = chooseExpressionCodec(parsed.value);
+      return [
+        {
+          codec: {
+            outputType: arrayOutputType(valueCodec.outputType),
+            encode: (value) => (Array.isArray(value) ? value.map((element) => valueCodec.encode(element)) : value),
+            decode: (value) => (Array.isArray(value) ? value.map((element) => valueCodec.decode(element)) : value),
+          },
+        },
+      ];
+    }
     case "coalesce":
       return parsed.candidates.flatMap((candidate) => expressionLeaves(candidate));
     case "nullIf":
@@ -82,6 +92,9 @@ function expressionLeaves(parsed: ParsedExpression): (BaseExpr | ParsedLiteralEx
       return assertNever(parsed);
   }
 }
+
+/** One result codec or one literal that will adopt a sibling codec. */
+type CodecLeaf = { codec: ResultCodec } | { literal: ParsedLiteralExpression };
 
 /** Supplies predictable PostgreSQL types for standalone primitive literals. */
 function literalType(value: unknown): TypeInfo | undefined {

@@ -150,7 +150,7 @@ With `distinct: true`, PostgreSQL requires ordering expressions to match the agg
 
 ### Expression Literals
 
-Use expression literals for `case`, `coalesce`, `nullIf`, `greatest`, and `least` as named values in `select`.
+Use expression literals for `arrayAgg`, `case`, `coalesce`, `nullIf`, `greatest`, and `least` as named values in `select`.
 A plain `select` object always names result columns. Operands can be columns, bound values, or nested expressions:
 
 ```ts
@@ -203,6 +203,7 @@ These expressions match their SQL behavior:
 - A false or SQL NULL condition does not match.
 - A matching CASE arm can return null; an enclosing COALESCE then tries its next candidate.
 - An empty `bookTitles` array leaves just the Author's last and first names as candidates.
+- `arrayAgg` collects its value for every input row. Zero rows return null, and null values remain array elements.
 - `nullIf` returns null when its two operands are equal, otherwise it returns the first operand.
 - `greatest` and `least` return the largest and smallest non-null operands; all-null inputs return null.
 
@@ -230,6 +231,43 @@ Expression branches must have matching SQL types and codecs. Literal branches us
 encoder, so `expr({ coalesce: [b.id, "b:9"] })` returns a tagged Book id. Unknown or different codecs
 cannot be combined: a `sql<R>` annotation alone does not establish codec compatibility. Object and array
 literals need a column or other expression that supplies their codec.
+
+#### ARRAY_AGG
+
+Use the compact form to aggregate an existing expression:
+
+```ts
+const rows = await em.query({
+  from: b,
+  select: { titles: { arrayAgg: b.title } },
+});
+// rows: { titles: string[] | null }[]
+```
+
+The expanded form accepts the same `distinct`, `orderBy`, and `filter` options as `.arrayAgg()`:
+
+```ts
+const rows = await em.query({
+  from: b,
+  select: {
+    authorIds: {
+      arrayAgg: {
+        value: sql.numberOrNull`${b.author_id}`,
+        distinct: true,
+        orderBy: [{ sort: b.author_id, order: "ASC" }],
+        filter: b.title.ne("Untitled"),
+      },
+    },
+  },
+});
+// rows: { authorIds: (number | null)[] | null }[]
+```
+
+`value` can itself be an expression literal, and the complete aggregate can be nested in CASE or
+COALESCE. Array elements use the value expression's codec, so tagged ids and custom values decode in the
+same way as `.arrayAgg()`. The aggregate remains nullable because zero input rows produce SQL `NULL`;
+wrap it in COALESCE when an empty array is preferable. With `distinct: true`, PostgreSQL requires each
+ordering expression to match the aggregate value.
 
 #### NULLIF
 

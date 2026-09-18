@@ -58,22 +58,25 @@ describe("FieldLogging", () => {
   });
 
   it("sees all fields by default", async () => {
+    // Given an EntityManager that logs all entity fields
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger());
+    // When a Book and its Author are created with default values
     newBook(em);
+    // Then both entities log their fields and the locations that set them
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults.ts:56",
-       "a#1.nickNames = a1 at defaults.ts:204",
+       "a#1.isFunny = false at defaults.ts:55",
+       "a#1.nickNames = a1 at defaults.ts:203",
        "b#1 created at newBook.ts:10",
        "b#1.title = title at newBook.ts:10",
        "b#1.order = 1 at newBook.ts:10",
        "b#1.author = Author#1 at newBook.ts:10",
-       "b#1.notes = Notes for title at defaults.ts:56",
-       "b#1.authorsNickNames = a1 at defaults.ts:204",
+       "b#1.notes = Notes for title at defaults.ts:55",
+       "b#1.authorsNickNames = a1 at defaults.ts:203",
      ]
     `);
   });
@@ -86,16 +89,19 @@ describe("FieldLogging", () => {
   });
 
   it("can filter fields by entity", async () => {
+    // Given an EntityManager that logs only Author fields
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger([{ entity: "Author" }]));
+    // When a Book and its Author are created with default values
     newBook(em);
+    // Then only the Author fields and their source locations are logged
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults.ts:56",
-       "a#1.nickNames = a1 at defaults.ts:204",
+       "a#1.isFunny = false at defaults.ts:55",
+       "a#1.nickNames = a1 at defaults.ts:203",
      ]
     `);
   });
@@ -123,19 +129,22 @@ describe("FieldLogging", () => {
   });
 
   it("can filter fields by subtype", async () => {
+    // Given an EntityManager that logs only LargePublisher fields
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger([{ entity: "LargePublisher" }]));
+    // When a LargePublisher and a SmallPublisher are created with default values
     newLargePublisher(em, { name: "lp1" });
     newSmallPublisher(em, { name: "pp1" });
+    // Then only the LargePublisher fields and their source locations are logged
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "p#1 created at newLargePublisher.ts:6",
        "p#1.rating = 0 at newLargePublisher.ts:6",
        "p#1.name = lp1 at newLargePublisher.ts:6",
-       "p#1.numberOfBookReviews = 0 at defaults.ts:47",
-       "p#1.type = BIG at defaults.ts:56",
-       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:56",
-       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:204",
+       "p#1.numberOfBookReviews = 0 at defaults.ts:46",
+       "p#1.type = BIG at defaults.ts:55",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:55",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:203",
      ]
     `);
   });

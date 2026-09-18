@@ -1,7 +1,7 @@
 import { type Entity } from "../Entity.ts";
 import { type EntityMetadata } from "../EntityMetadata.ts";
-import { type EntityOrId, type HintNode } from "../HintTree.ts";
-import { type LoadHint, type NestedLoadHint } from "../loadHints.ts";
+import type { EntityOrId, HintNode } from "../loading/HintTree.ts";
+import type { LoadHint, NestedLoadHint } from "../loading/loadHints.ts";
 import type { LateralJoinTable, ParsedFindQuery } from "../queries/find/QueryParser.ts";
 import { type RowData } from "../RowData.ts";
 

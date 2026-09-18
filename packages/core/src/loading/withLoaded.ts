@@ -1,6 +1,5 @@
-import { type Entity } from "./Entity.ts";
-import { type LoadHint, type Loaded, assertLoaded } from "./loadHints.ts";
-import { isLoadedAsyncReactiveField } from "./relations/AsyncReactiveField.ts";
+import type { Entity } from "../Entity.ts";
+import { isLoadedAsyncReactiveField } from "../relations/AsyncReactiveField.ts";
 import {
   type LoadedCollection,
   type LoadedProperty,
@@ -17,8 +16,9 @@ import {
   isReactiveField,
   isReactiveGetter,
   isRelation,
-} from "./relations/index.ts";
-import { type MaybePromise, fail, maybePromiseThen } from "./utils.ts";
+} from "../relations/index.ts";
+import { type MaybePromise, fail, maybePromiseThen } from "../utils.ts";
+import { type LoadHint, type Loaded, assertLoaded } from "./loadHints.ts";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.

@@ -1,5 +1,5 @@
 import { type Entity } from "../Entity.ts";
-import { type LoadHint, type Loaded, isLoaded } from "../loadHints.ts";
+import { type LoadHint, type Loaded, isLoaded } from "../loading/loadHints.ts";
 import { lazyField } from "../newEntity.ts";
 
 const AsyncMethodM = Symbol();

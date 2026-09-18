@@ -1,9 +1,9 @@
 import { isPlainObject } from "joist-utils";
 
-import type { Column } from "../columns.ts";
 import { type Entity, isEntity } from "../Entity.ts";
 import { isDefined } from "../EntityManager.ts";
 import type { EntityMetadata } from "../EntityMetadata.ts";
+import type { Column } from "../serde/columns.ts";
 import { assertNever } from "../utils.ts";
 import { isAlias } from "./find/Aliases.ts";
 import type { ValueFilter } from "./find/EntityFilter.ts";

@@ -3,7 +3,7 @@ import { getInstanceData } from "../../core/src/BaseEntity";
 import { type Entity } from "../../core/src/Entity";
 import { type EntityMetadata, type Field } from "../../core/src/EntityMetadata";
 import { InstanceData } from "../../core/src/InstanceData";
-import { Todo } from "../../core/src/Todo";
+import { Todo } from "../../core/src/flush/Todo";
 import { type OpColumn, generateOps } from "../../core/src/drivers/EntityWriter";
 
 interface ScenarioContext {

@@ -1,6 +1,6 @@
 import type { Entity } from "../../Entity.ts";
 import { type EntityMetadata, getBaseMeta } from "../../EntityMetadata.ts";
-import type { TypeInfo } from "../../TypeInfo.ts";
+import type { TypeInfo } from "../../serde/TypeInfo.ts";
 import { fail } from "../../utils.ts";
 import { ConditionBuilder } from "../ConditionBuilder.ts";
 import {

@@ -11,15 +11,15 @@ import {
   getBaseSelfAndSubMetas,
   getMetadata,
 } from "./EntityMetadata.ts";
-import { SimpleFieldSerde } from "./fieldSerde.ts";
 import { getProperties } from "./getProperties.ts";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "./keys.ts";
-import { reverseReactiveHint } from "./reactiveHints.ts";
+import { reverseReactiveHint } from "./reactivity/reactiveHints.ts";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField.ts";
 import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "./relations/index.ts";
 import { type ReactiveFieldImpl } from "./relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "./rules.ts";
 import { maybeGetRuntimeConfig } from "./runtimeConfig.ts";
+import { SimpleFieldSerde } from "./serde/fieldSerde.ts";
 import { defineLazyGetter, fail } from "./utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();

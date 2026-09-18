@@ -1,5 +1,5 @@
 // Keep compatibility metadata a runtime leaf in both CJS and ESM builds.
-import type { EntityMetadata } from "./EntityMetadata.ts";
+import type { EntityMetadata } from "../EntityMetadata.ts";
 
 /**
  * Runtime proof that values can share scalar conversions.

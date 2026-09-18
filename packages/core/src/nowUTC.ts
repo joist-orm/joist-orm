@@ -1,4 +1,4 @@
-import { type Temporal, requireTemporal } from "./temporal.ts";
+import { type Temporal, requireTemporal } from "./serde/temporal.ts";
 
 /** Returns the current UTC value in the requested Date or Temporal shape. */
 export function nowUTC(): Date;

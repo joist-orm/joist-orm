@@ -39,7 +39,7 @@ jobs at scale — Shape #2 especially, because it looks cheap from the reverse-r
 
 ## Why: reverse reactivity *and* load hints
 
-A hinted-field change triggers two steps, both in `joist-core/build/reactiveHints.js`:
+A hinted-field change triggers two steps, both in `joist-core/build/reactivity/reactiveHints.js`:
 
 **Step 1 — find the roots (reverse walk).** `followReverseHint` starts at the changed entity and walks
 the hint in reverse, reversing each *traversed relation* (via `reverseSubHint`):

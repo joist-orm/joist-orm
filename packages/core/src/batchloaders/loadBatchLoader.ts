@@ -1,9 +1,9 @@
 import { getInstanceData } from "../BaseEntity.ts";
 import { type EntityManager, getEmInternalApi } from "../EntityManager.ts";
 import { type EntityMetadata } from "../EntityMetadata.ts";
-import { buildHintTree } from "../HintTree.ts";
 import { keyToNumber, tagId } from "../keys.ts";
-import { type LoadHint } from "../loadHints.ts";
+import { buildHintTree } from "../loading/HintTree.ts";
+import type { LoadHint } from "../loading/loadHints.ts";
 import { lazyExcludedSelects } from "../queries/entityQueryUtils.ts";
 import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../queries/find/QueryParser.ts";
 import { abbreviation } from "../utils.ts";

@@ -27,7 +27,10 @@ import { type Driver } from "./drivers/index.ts";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { type Entity, type Entity as EntityW, type IdType, isEntity } from "./Entity.ts";
 import { getField, setField } from "./fields.ts";
-import { FlushLock } from "./FlushLock.ts";
+import { FlushLock } from "./flush/FlushLock.ts";
+import { JoinRows, type ManyToManyLike } from "./flush/JoinRows.ts";
+import type { PendingChange } from "./flush/PendingChanges.ts";
+import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "./flush/Todo.ts";
 import {
   CustomCollection,
   CustomReference,
@@ -82,8 +85,7 @@ import {
   toTaggedId,
 } from "./index.ts";
 import { IndexManager } from "./IndexManager.ts";
-import { IsLoadedCache } from "./IsLoadedCache.ts";
-import { JoinRows, type ManyToManyLike } from "./JoinRows.ts";
+import { IsLoadedCache } from "./loading/IsLoadedCache.ts";
 import {
   type LoadHint,
   type Loaded,
@@ -91,13 +93,12 @@ import {
   type New,
   type RelationsIn,
   isLoadedForPopulate,
-} from "./loadHints.ts";
+} from "./loading/loadHints.ts";
 import { type WriteFn } from "./logging/FactoryLogger.ts";
 import { noopFieldLogger } from "./logging/FieldLogger.ts";
 import { type ReactionWalk } from "./logging/ReactionLogger.ts";
 import { newEntity } from "./newEntity.ts";
 import { resetFactoryCreated } from "./newTestInstance.ts";
-import { type PendingChange } from "./PendingChanges.ts";
 import { PluginManager } from "./PluginManager.ts";
 import { type PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 import { isSelectAllFilter } from "./queries/find/scopes.ts";
@@ -124,8 +125,8 @@ import {
   type Subquery,
   parseUserQuery,
 } from "./queries/sql/query.ts";
-import { ReactionsManager } from "./ReactionsManager.ts";
-import { followReverseHint } from "./reactiveHints.ts";
+import { ReactionsManager } from "./reactivity/ReactionsManager.ts";
+import { followReverseHint } from "./reactivity/reactiveHints.ts";
 import { type AbstractRelationImpl } from "./relations/AbstractRelationImpl.ts";
 import { AsyncPropertyImpl } from "./relations/AsyncProperty.ts";
 import { type Collection } from "./relations/Collection.ts";
@@ -134,7 +135,6 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "./relations/LazyField.ts";
 import { RecursiveCycleError } from "./relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "./RowData.ts";
-import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "./Todo.ts";
 import { runInTrustedContext } from "./trusted.ts";
 import { type OptsOf, type OrderOf } from "./typeMap.ts";
 import { upsert } from "./upsert.ts";

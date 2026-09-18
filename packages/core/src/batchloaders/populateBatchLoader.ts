@@ -1,6 +1,5 @@
 import { type Entity } from "../Entity.ts";
 import { type EntityMetadata } from "../EntityMetadata.ts";
-import { type HintNode, buildHintTree } from "../HintTree.ts";
 import {
   AliasAssigner,
   type EntityManager,
@@ -11,9 +10,10 @@ import {
   keyToNumber,
   kqDot,
 } from "../index.ts";
-import { type LoadHint } from "../loadHints.ts";
+import { type HintNode, buildHintTree } from "../loading/HintTree.ts";
+import type { LoadHint } from "../loading/loadHints.ts";
 import { hintKey } from "../normalizeHints.ts";
-import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints.ts";
+import { getRelationFromMaybePolyKey, isPolyHint } from "../reactivity/reactiveHints.ts";
 import { ReactiveFieldImpl } from "../relations/ReactiveField.ts";
 import { toArray } from "../utils.ts";
 import { type BatchLoader } from "./BatchLoader.ts";

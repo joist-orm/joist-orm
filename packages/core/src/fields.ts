@@ -3,7 +3,7 @@ import { type Entity, isEntity } from "./Entity.ts";
 import { getEmInternalApi } from "./EntityManager.ts";
 import { type Field, getMetadata } from "./EntityMetadata.ts";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index.ts";
-import { maybeRequireTemporal } from "./temporal.ts";
+import { maybeRequireTemporal } from "./serde/temporal.ts";
 import { fail } from "./utils.ts";
 
 /**

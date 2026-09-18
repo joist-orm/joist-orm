@@ -11,7 +11,7 @@ import {
   getMetadata,
 } from "../EntityMetadata.ts";
 import { deTagIds, tagId } from "../keys.ts";
-import { mapPathsToTarget } from "../loadLens.ts";
+import { mapPathsToTarget } from "../loading/loadLens.ts";
 import {
   type ParsedFindQuery,
   type ParsedOrderBy,

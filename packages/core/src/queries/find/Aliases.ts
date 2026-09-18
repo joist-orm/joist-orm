@@ -1,6 +1,5 @@
 import { groupBy } from "joist-utils";
 
-import type { Column } from "../../columns.ts";
 // Load configure first: relations must not evaluate before their base classes exist.
 import { getConstructorFromTaggedId } from "../../configure.ts";
 import type { Entity } from "../../Entity.ts";
@@ -14,6 +13,7 @@ import {
   getMetadata,
 } from "../../EntityMetadata.ts";
 import { maybeResolveReferenceToId } from "../../keys.ts";
+import type { Column } from "../../serde/columns.ts";
 import type { FieldsOf } from "../../typeMap.ts";
 import { fail } from "../../utils.ts";
 import type { PredicateBrand } from "../conditions.ts";

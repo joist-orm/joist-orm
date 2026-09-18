@@ -5,8 +5,8 @@ import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "./E
 import { type EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata.ts";
 import { getField, setField } from "./fields.ts";
 import { getProperties } from "./getProperties.ts";
-import { type New } from "./loadHints.ts";
-import { isAllSqlPaths } from "./loadLens.ts";
+import type { New } from "./loading/loadHints.ts";
+import { isAllSqlPaths } from "./loading/loadLens.ts";
 import { FactoryInitialValue } from "./newTestInstance.ts";
 import { partitionHint } from "./preloading/partitionHint.ts";
 import { buildWhereClause } from "./queries/renderConditions.ts";
@@ -113,10 +113,10 @@ export {
   type ExprInput,
 } from "./queries/sql/expressions/expression.ts";
 export { skipCondition } from "./queries/skipCondition.ts";
-export type { EntityOrId, HintNode } from "./HintTree.ts";
+export type { EntityOrId, HintNode } from "./loading/HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";
-export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
-export type * from "./PendingChanges.ts";
+export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./flush/JoinRows.ts";
+export type * from "./flush/PendingChanges.ts";
 export { Plugin } from "./PluginManager.ts";
 export * from "./queries/find/QueryParser.ts";
 export * from "./queries/find/buildFindQuery.ts";
@@ -145,7 +145,7 @@ export {
 export * from "./queries/find/QueryParser.collectionJoins.ts";
 export { visitConditions } from "./queries/find/QueryVisitor.ts";
 export * from "./RowData.ts";
-export { type JoinRowTodo, Todo } from "./Todo.ts";
+export { type JoinRowTodo, Todo } from "./flush/Todo.ts";
 export * from "./changes.ts";
 export { ConfigApi, type EntityHook, resetBootFlag } from "./config.ts";
 export {
@@ -155,7 +155,7 @@ export {
   getMetadataForType,
   maybeGetConstructorFromReference,
 } from "./configure.ts";
-export { driverApi } from "./driverApi.ts";
+export { driverApi } from "./drivers/driverApi.ts";
 export * from "./drivers/index.ts";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields.ts";
 export * from "./getProperties.ts";
@@ -177,8 +177,8 @@ export {
   type New,
   type RelationsIn,
   unsafeLoaded,
-} from "./loadHints.ts";
-export * from "./loadLens.ts";
+} from "./loading/loadHints.ts";
+export * from "./loading/loadLens.ts";
 export { setFactoryWriter } from "./logging/FactoryLogger.ts";
 export * from "./logging/FieldLogger.ts";
 export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger.ts";
@@ -245,7 +245,7 @@ export {
   type ReactiveHint,
   type ReactiveTarget,
   reverseReactiveHint,
-} from "./reactiveHints.ts";
+} from "./reactivity/reactiveHints.ts";
 export * from "./relations/index.ts";
 export {
   cannotBeChanged,
@@ -266,15 +266,15 @@ export {
 } from "./rules.ts";
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig.ts";
 export { nowUTC } from "./nowUTC.ts";
-export * from "./serde.ts";
-export * from "./columns.ts";
-export * from "./fieldSerde.ts";
+export * from "./serde/serde.ts";
+export * from "./serde/columns.ts";
+export * from "./serde/fieldSerde.ts";
 export * from "./queries/find/scopes.ts";
-export { maybeRequireTemporal, requireTemporal, Temporal } from "./temporal.ts";
-export * from "./temporalMappers.ts";
+export { maybeRequireTemporal, requireTemporal, Temporal } from "./serde/temporal.ts";
+export * from "./serde/temporalMappers.ts";
 export { isInTrustedContext, runInTrustedContext } from "./trusted.ts";
 export type * from "./typeMap.ts";
-export { buildUnnestCte, ensureRectangularArraySizes } from "./unnest.ts";
+export { buildUnnestCte, ensureRectangularArraySizes } from "./queries/unnest.ts";
 export { type DeepPartialOrNull, updatePartial, upsert } from "./upsert.ts";
 export {
   abbreviation,
@@ -288,7 +288,7 @@ export {
   partition,
   zeroTo,
 } from "./utils.ts";
-export { ensureWithLoaded, StubbedRelation, type WithLoaded, withLoaded } from "./withLoaded.ts";
+export { ensureWithLoaded, StubbedRelation, type WithLoaded, withLoaded } from "./loading/withLoaded.ts";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

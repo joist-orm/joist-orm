@@ -2,6 +2,7 @@ import { getInstanceData } from "./BaseEntity.ts";
 import { type Entity } from "./Entity.ts";
 import { type IdOf } from "./EntityManager.ts";
 import { getField, isChangeableField } from "./fields.ts";
+import type { JoinColumnValue, JoinRows } from "./flush/JoinRows.ts";
 import {
   type Field,
   type ManyToManyCollection,
@@ -13,7 +14,6 @@ import {
   isEntity,
   isId,
 } from "./index.ts";
-import { type JoinColumnValue, type JoinRows } from "./JoinRows.ts";
 import { type EnumCollectionImpl } from "./relations/EnumCollection.ts";
 import { notLoadedValue } from "./relations/LazyField.ts";
 import { type FieldsOf, type OptsOf } from "./typeMap.ts";

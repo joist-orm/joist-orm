@@ -3,7 +3,7 @@ import { getMetadata } from "../EntityMetadata.ts";
 import { getField, isFieldSet, setField } from "../fields.ts";
 import { type ReactiveField, deepNormalizeHint, isLoaded } from "../index.ts";
 import { lazyField } from "../newEntity.ts";
-import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactiveHints.ts";
+import { type Reacted, type ReactiveHint, convertToLoadHint } from "../reactivity/reactiveHints.ts";
 import { mergeNormalizedHints } from "../utils.ts";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl.ts";
 import { PropertyT } from "./PropertySymbols.ts";

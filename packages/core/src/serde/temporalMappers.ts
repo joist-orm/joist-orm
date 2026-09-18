@@ -1,6 +1,6 @@
-import { type CustomSerde } from "./serde.ts";
+import { fail } from "../utils.ts";
+import type { CustomSerde } from "./serde.ts";
 import { type Temporal, maybeRequireTemporal } from "./temporal.ts";
-import { fail } from "./utils.ts";
 
 const { Temporal: t } = maybeRequireTemporal() ?? {};
 const temporalNotAvailable = {

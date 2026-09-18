@@ -3,8 +3,8 @@ import type { Entity } from "../Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
 import { equal, equalArrays } from "../fields.ts";
-import { buildHintTree } from "../HintTree.ts";
-import type { LoadHint } from "../loadHints.ts";
+import { buildHintTree } from "../loading/HintTree.ts";
+import type { LoadHint } from "../loading/loadHints.ts";
 import { hintKey } from "../normalizeHints.ts";
 import type { FilterAndSettings } from "../queries/find/EntityFilter.ts";
 import { opToFn } from "../queries/find/EntityGraphQLFilter.ts";
@@ -20,7 +20,7 @@ import {
 import { visitConditions } from "../queries/find/QueryVisitor.ts";
 import type { ColumnCondition, ParsedValueFilter, RawCondition } from "../queries/parsedConditions.ts";
 import { kqDot } from "../queries/sql/keywords.ts";
-import { buildUnnestCte } from "../unnest.ts";
+import { buildUnnestCte } from "../queries/unnest.ts";
 import { assertNever, fail } from "../utils.ts";
 import { fastWhereFilterHash } from "./fastWhereFilterHash.ts";
 

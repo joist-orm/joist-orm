@@ -1,25 +1,25 @@
-import { type Entity } from "./Entity.ts";
-import { type NormalizeHint } from "./normalizeHints.ts";
-import { getRelationFromMaybePolyKey } from "./reactiveHints.ts";
-import {
-  type AsyncMethod,
-  type Collection,
-  type EnumCollection,
-  type LoadedCollection,
-  type LoadedEnumCollection,
-  type LoadedMethod,
-  type LoadedProperty,
-  type LoadedReadOnlyCollection,
-  type LoadedReference,
-  type OneToOneReference,
-  type Property,
-  type ReadOnlyCollection,
-  type Reference,
-  type Relation,
-} from "./relations/index.ts";
-import { type LoadedOneToOneReference } from "./relations/OneToOneReference.ts";
-import { type OptsOf } from "./typeMap.ts";
-import { type MaybePromise, type NullOrDefinedOr, fail } from "./utils.ts";
+import type { Entity } from "../Entity.ts";
+import type { NormalizeHint } from "../normalizeHints.ts";
+import { getRelationFromMaybePolyKey } from "../reactivity/reactiveHints.ts";
+import type {
+  AsyncMethod,
+  Collection,
+  EnumCollection,
+  LoadedCollection,
+  LoadedEnumCollection,
+  LoadedMethod,
+  LoadedProperty,
+  LoadedReadOnlyCollection,
+  LoadedReference,
+  OneToOneReference,
+  Property,
+  ReadOnlyCollection,
+  Reference,
+  Relation,
+} from "../relations/index.ts";
+import type { LoadedOneToOneReference } from "../relations/OneToOneReference.ts";
+import type { OptsOf } from "../typeMap.ts";
+import { type MaybePromise, type NullOrDefinedOr, fail } from "../utils.ts";
 
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };

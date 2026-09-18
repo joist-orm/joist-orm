@@ -12,7 +12,7 @@ import {
 } from "./EntityMetadata.ts";
 import { setField } from "./fields.ts";
 import { normalizeHint } from "./normalizeHints.ts";
-import { type ReactiveHint, convertToLoadHint } from "./reactiveHints.ts";
+import { type ReactiveHint, convertToLoadHint } from "./reactivity/reactiveHints.ts";
 import { isLoadedReference } from "./relations/index.ts";
 import { runInTrustedContext } from "./trusted.ts";
 import { fail, failIfAnyRejected } from "./utils.ts";

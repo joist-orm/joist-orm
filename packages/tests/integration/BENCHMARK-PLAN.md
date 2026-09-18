@@ -113,7 +113,7 @@ Possible optimizations:
 
 ### 4. Todo Creation And Grouping
 
-Files: `packages/core/src/Todo.ts`, `EntityManager.flush`, `EntityManager.assignNewIds`, `flushDeletes`.
+Files: `packages/core/src/flush/Todo.ts`, `EntityManager.flush`, `EntityManager.assignNewIds`, `flushDeletes`.
 
 Benchmark:
 
@@ -243,7 +243,7 @@ Possible optimizations:
 
 ### 10. Reactive Recalculation Queueing
 
-Files: `packages/core/src/ReactionsManager.ts`, `packages/core/src/reactiveHints.ts`.
+Files: `packages/core/src/reactivity/ReactionsManager.ts`, `packages/core/src/reactivity/reactiveHints.ts`.
 
 Benchmark:
 

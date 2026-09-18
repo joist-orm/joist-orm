@@ -11,7 +11,7 @@ import type { GraphQLFilterWithAlias } from "../queries/find/EntityGraphQLFilter
 import { type ParsedFindQuery, parseFindQuery } from "../queries/find/QueryParser.ts";
 import { isScope, isSelectAllFilter, resolveScope } from "../queries/find/scopes.ts";
 import { kq } from "../queries/sql/keywords.ts";
-import { buildUnnestCte } from "../unnest.ts";
+import { buildUnnestCte } from "../queries/unnest.ts";
 import { fail } from "../utils.ts";
 import {
   collectAndReplaceArgs,

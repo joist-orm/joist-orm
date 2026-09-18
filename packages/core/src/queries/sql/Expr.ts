@@ -1,5 +1,5 @@
 import type { EntityMetadata } from "../../EntityMetadata.ts";
-import { type TypeInfo, arrayOutputType } from "../../TypeInfo.ts";
+import { type TypeInfo, arrayOutputType } from "../../serde/TypeInfo.ts";
 import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "../conditions.ts";
 import type { RawCondition } from "../parsedConditions.ts";
 import { skipCondition } from "../skipCondition.ts";

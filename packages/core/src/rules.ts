@@ -2,7 +2,7 @@ import { type Changes, type EntityChanges } from "./changes.ts";
 import { type Entity } from "./Entity.ts";
 import { getEmInternalApi } from "./EntityManager.ts";
 import { getField } from "./fields.ts";
-import { type ReactiveHint } from "./reactiveHints.ts";
+import type { ReactiveHint } from "./reactivity/reactiveHints.ts";
 import { type ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "./relations/index.ts";
 import { type FieldsOf } from "./typeMap.ts";
 import { type MaybePromise, groupBy, maybePromiseThen } from "./utils.ts";

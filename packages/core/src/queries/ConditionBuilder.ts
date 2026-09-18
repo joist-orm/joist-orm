@@ -1,5 +1,5 @@
-import type { Column } from "../columns.ts";
 import { isDefined } from "../EntityManager.ts";
+import type { Column } from "../serde/columns.ts";
 import { fail, partition } from "../utils.ts";
 import type { ConditionGroup, ConditionInput } from "./conditions.ts";
 import type {

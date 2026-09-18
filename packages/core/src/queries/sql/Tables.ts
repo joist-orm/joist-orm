@@ -1,6 +1,5 @@
 import { groupBy } from "joist-utils";
 
-import type { Column } from "../../columns.ts";
 // Load configure first: otherwise the built cjs/esm module graph evaluates relations/* before their
 // base classes exist ("Class extends value undefined").
 import { getConstructorFromTaggedId } from "../../configure.ts";
@@ -21,7 +20,8 @@ import {
   getMetadata,
 } from "../../EntityMetadata.ts";
 import { maybeResolveReferenceToId, toIdOf } from "../../keys.ts";
-import type { TypeInfo } from "../../TypeInfo.ts";
+import type { Column } from "../../serde/columns.ts";
+import type { TypeInfo } from "../../serde/TypeInfo.ts";
 import type { ColumnsOf, FieldsOf, FilterOf, TypeMap, TypeNameOf } from "../../typeMap.ts";
 import { fail } from "../../utils.ts";
 import type { SqlCondition } from "../conditions.ts";

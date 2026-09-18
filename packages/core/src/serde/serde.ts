@@ -1,7 +1,8 @@
 import { createRequire } from "node:module";
 
-import { isDefined, keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "./index.ts";
-import { getRuntimeConfig } from "./runtimeConfig.ts";
+import { isDefined } from "../EntityManager.ts";
+import { keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "../keys.ts";
+import { getRuntimeConfig } from "../runtimeConfig.ts";
 import { type Temporal, requireTemporal } from "./temporal.ts";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers.ts";
 import { type TypeInfo, arrayOutputType, canonicalDbType } from "./TypeInfo.ts";

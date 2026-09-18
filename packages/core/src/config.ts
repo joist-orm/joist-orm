@@ -16,7 +16,7 @@ import {
   fail,
   getMetadata,
 } from "./index.ts";
-import { convertToLoadHint } from "./reactiveHints.ts";
+import { convertToLoadHint } from "./reactivity/reactiveHints.ts";
 import { type ValidationRule, type ValidationRuleInternal } from "./rules.ts";
 import { type MaybePromise } from "./utils.ts";
 

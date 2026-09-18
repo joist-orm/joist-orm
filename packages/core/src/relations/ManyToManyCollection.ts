@@ -13,8 +13,8 @@ import {
   toTaggedId,
 } from "..//index.ts";
 import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader.ts";
+import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader.ts";
 import { lazyField } from "../newEntity.ts";
-import { manyToManyFindDataLoader } from "../queries/find/dataloaders/manyToManyFindDataLoader.ts";
 import { maybeAdd, maybeRemove, remove } from "../utils.ts";
 import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
 import { isCascadeDelete } from "./isCascadeDelete.ts";

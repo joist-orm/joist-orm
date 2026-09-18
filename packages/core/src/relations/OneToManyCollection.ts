@@ -1,4 +1,5 @@
 import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader.ts";
+import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader.ts";
 import {
   type Collection,
   type Entity,
@@ -16,7 +17,6 @@ import {
 } from "../index.ts";
 import { type IsLoadedCachable } from "../IsLoadedCache.ts";
 import { lazyField } from "../newEntity.ts";
-import { oneToManyFindDataLoader } from "../queries/find/dataloaders/oneToManyFindDataLoader.ts";
 import { compareValues } from "../utils.ts";
 import { AbstractRelationImpl } from "./AbstractRelationImpl.ts";
 import { isCascadeDelete } from "./isCascadeDelete.ts";

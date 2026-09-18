@@ -780,12 +780,14 @@ describe("em.query", () => {
       const em = newEntityManager();
       const root = table(Book, "root");
       const [br, b, a] = tables(BookReview, Book, Author);
+      // And a frozen Author join that must remain reusable as INNER when Book is the root
       const authorJoin = Object.freeze(b.authorId.as(a));
       resetQueryCount();
 
       // When following an optional review through its required Book and Author
       const rows = await em.query({
         from: root,
+        // An omitted join between the review and its Book must not interrupt LEFT propagation.
         join: [{ left: br, on: br.bookId.eq(root.id) }, undefined, br.book.as(b), authorJoin],
         select: {
           title: root.title,

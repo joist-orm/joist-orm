@@ -85,7 +85,7 @@ describe("paginateCursor", () => {
     await insertAuthor({ first_name: "Bob" });
     // And a query whose order and pagination differ from cursor pagination
     const [a] = tables(Author);
-    const query = { from: a, select: a, orderBy: { first_name: "ASC" }, limit: 1, offset: 20 } satisfies Query;
+    const query = { from: a, select: a, orderBy: { firstName: "ASC" }, limit: 1, offset: 20 } satisfies Query;
 
     // When requesting the first two Authors
     const first = await paginateCursor(ctx, query, { first: 2 });
@@ -122,7 +122,7 @@ describe("paginateCursor", () => {
     await expect(empty.pageInfo.hasPreviousPage).resolves.toEqual(false);
     await expect(empty.pageInfo.hasNextPage).resolves.toEqual(false);
     await expect(empty.pageInfo.totalCount).resolves.toEqual(3);
-    expect(query.orderBy).toEqual({ first_name: "ASC" });
+    expect(query.orderBy).toEqual({ firstName: "ASC" });
     expect(query.limit).toEqual(1);
     expect(query.offset).toEqual(20);
   });
@@ -135,7 +135,7 @@ describe("paginateCursor", () => {
     await insertAuthor({ first_name: "Diana" });
     // And an Author query ordered by name instead of ID
     const [a] = tables(Author);
-    const query = { from: a, select: a, orderBy: { first_name: "ASC" } } satisfies Query;
+    const query = { from: a, select: a, orderBy: { firstName: "ASC" } } satisfies Query;
 
     // When requesting the last two Authors
     const last = await paginateCursor(ctx, query, { last: 2 });
@@ -178,7 +178,7 @@ describe("paginateCursor", () => {
     }
     // And a base query that excludes an interior ID and an interior name
     const [a] = tables(Author);
-    const where = { and: [a.id.ne("a:3"), a.first_name.eq("included")] };
+    const where = { and: [a.id.ne("a:3"), a.firstName.eq("included")] };
     const query = { from: a, select: a, where } satisfies Query;
     // And cursor bounds that exclude the first and last Authors
     const after = Buffer.from("a:1").toString("base64");
@@ -212,7 +212,7 @@ describe("paginateCursor", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id), keep: true }],
+      join: [{ inner: b, on: b.authorId.eq(a.id), keep: true }],
       distinct: true,
       orderBy: { id: "ASC" },
       limit: 1,
@@ -242,7 +242,7 @@ describe("paginateCursor", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id) }],
+      join: [{ inner: b, on: b.authorId.eq(a.id) }],
       orderBy: [{ sort: b.title, order: "ASC" }],
     } satisfies Query;
 
@@ -272,7 +272,7 @@ describe("paginateCursor", () => {
     const query = {
       from: a,
       select: a,
-      join: [{ inner: b, on: b.author_id.eq(a.id) }],
+      join: [{ inner: b, on: b.authorId.eq(a.id) }],
       groupBy: [a.id],
       having: b.id.count().gt(1),
       orderBy: { id: "ASC" },

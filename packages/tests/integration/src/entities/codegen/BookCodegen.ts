@@ -98,31 +98,18 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "order": { type: number; fieldName: "order"; nullable: false; insert: "optional"; update: true };
-  "notes": { type: string; fieldName: "notes"; nullable: false; insert: "required"; update: true };
-  "acknowledgements": { type: string; fieldName: "acknowledgements"; nullable: true; insert: "optional"; update: true };
-  "authors_nick_names": {
-    type: string;
-    fieldName: "authorsNickNames";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "search": { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
-  "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "prequel_id": {
-    type: IdOf<Book>;
-    entity: Book;
-    fieldName: "prequel";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  "author_id": {
+  id: { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  order: { type: number; fieldName: "order"; nullable: false; insert: "optional"; update: true };
+  notes: { type: string; fieldName: "notes"; nullable: false; insert: "required"; update: true };
+  acknowledgements: { type: string; fieldName: "acknowledgements"; nullable: true; insert: "optional"; update: true };
+  authorsNickNames: { type: string; fieldName: "authorsNickNames"; nullable: true; insert: "optional"; update: true };
+  search: { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  prequelId: { type: IdOf<Book>; entity: Book; fieldName: "prequel"; nullable: true; insert: "optional"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";
@@ -130,7 +117,7 @@ export interface BookColumns {
     insert: "required";
     update: true;
   };
-  "reviewer_id": {
+  reviewerId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "reviewer";
@@ -138,7 +125,7 @@ export interface BookColumns {
     insert: "optional";
     update: true;
   };
-  "random_comment_id": {
+  randomCommentId: {
     type: IdOf<Comment>;
     entity: Comment;
     fieldName: "randomComment";

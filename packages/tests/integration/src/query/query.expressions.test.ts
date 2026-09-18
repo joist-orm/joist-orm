@@ -19,8 +19,8 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: {
-          coalesce: { coalesce: [a.last_name, a.first_name] },
-          case: { case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Child" }] },
+          coalesce: { coalesce: [a.lastName, a.firstName] },
+          case: { case: [{ when: a.age.gte(18), then: a.firstName }, { else: "Child" }] },
         },
         orderBy: [{ coalesce: "ASC" }, { case: "ASC" }],
       });
@@ -44,14 +44,14 @@ describe("em.query / expressions", () => {
       // Then the object is rejected as an invalid projection rather than interpreted as scalar SQL
       await expect(
         // @ts-expect-error Named projection values must be expressions, not operand arrays
-        em.query({ from: a, select: { coalesce: [a.last_name, a.first_name] } }),
+        em.query({ from: a, select: { coalesce: [a.lastName, a.firstName] } }),
       ).rejects.toThrow("select.coalesce must be a column, an expression, or an expression literal");
 
       // When a case column is given WHEN entries instead of an expression
       // Then CASE also requires an explicit expr wrapper for a scalar select
       await expect(
         // @ts-expect-error CASE entries alone are not a named projection value
-        em.query({ from: a, select: { case: [{ when: a.age.gte(18), then: a.first_name }] } }),
+        em.query({ from: a, select: { case: [{ when: a.age.gte(18), then: a.firstName }] } }),
       ).rejects.toThrow("select.case must be a column, an expression, or an expression literal");
       expect(queries).toMatchInlineSnapshot(`[]`);
     });
@@ -69,7 +69,7 @@ describe("em.query / expressions", () => {
       // When an explicit CASE expression is the entire select
       const rows = await em.query({
         from: a,
-        select: expr({ case: [{ when: a.age.gte(18), then: a.first_name }, { else: "Unknown" }] }),
+        select: expr({ case: [{ when: a.age.gte(18), then: a.firstName }, { else: "Unknown" }] }),
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
@@ -96,7 +96,7 @@ describe("em.query / expressions", () => {
       // When selecting the first available Author name with an explicit expression
       const rows = await em.query({
         from: a,
-        select: expr({ coalesce: [a.last_name, a.first_name] }),
+        select: expr({ coalesce: [a.lastName, a.firstName] }),
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
@@ -194,9 +194,9 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: {
-          coalesce: a.first_name,
-          case: { coalesce: [a.last_name, a.first_name] },
-          nullIf: { nullIf: [a.last_name, ""] },
+          coalesce: a.firstName,
+          case: { coalesce: [a.lastName, a.firstName] },
+          nullIf: { nullIf: [a.lastName, ""] },
           greatest: { greatest: [a.age, 18] },
           least: { least: [a.age, 65] },
         },
@@ -228,15 +228,15 @@ describe("em.query / expressions", () => {
       const [a, b] = tables(Author, Book);
       const firstBook = query({
         from: b,
-        where: b.author_id.eq(a.id),
+        where: b.authorId.eq(a.id),
         select: expr({ nullIf: [b.id, "b:9"] }),
         limit: 1,
       });
       // And a scalar query selecting an outer Author column, which must keep correlation working
       const outerName = query({
         from: b,
-        where: b.author_id.eq(a.id),
-        select: expr({ coalesce: [a.last_name, a.first_name] }),
+        where: b.authorId.eq(a.id),
+        select: expr({ coalesce: [a.lastName, a.firstName] }),
         limit: 1,
       });
       resetQueryCount();
@@ -271,7 +271,7 @@ describe("em.query / expressions", () => {
       // And a reusable query with a computed name
       const em = newEntityManager();
       const a = table(Author);
-      const names = query({ from: a, select: { id: a.id, name: { coalesce: [a.last_name, a.first_name] } } });
+      const names = query({ from: a, select: { id: a.id, name: { coalesce: [a.lastName, a.firstName] } } });
       resetQueryCount();
 
       // When using the computed column in a CTE predicate and selecting its row
@@ -299,7 +299,7 @@ describe("em.query / expressions", () => {
       // When combining a computed Author name and a computed Book title
       const rows = await em.query({
         unionAll: [
-          { from: a, select: { name: { coalesce: [a.last_name, a.first_name] } } },
+          { from: a, select: { name: { coalesce: [a.lastName, a.firstName] } } },
           { from: b, select: { name: { nullIf: [b.title, ""] } } },
         ],
         orderBy: { name: "ASC" },
@@ -321,7 +321,7 @@ describe("em.query / expressions", () => {
       // And a reusable scalar select checked with satisfies Query
       const em = newEntityManager();
       const a = table(Author);
-      const input = { from: a, select: expr({ coalesce: [a.last_name, a.first_name] }) } satisfies Query;
+      const input = { from: a, select: expr({ coalesce: [a.lastName, a.firstName] }) } satisfies Query;
       resetQueryCount();
 
       // When executing the read through the execute API
@@ -358,8 +358,8 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         select: {
-          lastName: { nullIf: [a.last_name, ""] },
-          name: { coalesce: [{ nullIf: [a.last_name, ""] }, a.first_name] },
+          lastName: { nullIf: [a.lastName, ""] },
+          name: { coalesce: [{ nullIf: [a.lastName, ""] }, a.firstName] },
         },
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
@@ -395,7 +395,7 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         join: [a.books.as(b)],
-        select: { name: { nullIf: [a.first_name, b.title] } },
+        select: { name: { nullIf: [a.firstName, b.title] } },
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
@@ -478,11 +478,11 @@ describe("em.query / expressions", () => {
         from: a,
         join: [a.books.as(b)],
         select: {
-          greatest: { greatest: [b.title, a.first_name] },
-          least: { least: [a.first_name, b.title] },
+          greatest: { greatest: [b.title, a.firstName] },
+          least: { least: [a.firstName, b.title] },
           missingGreatest: { greatest: [b.title] },
           missingLeast: { least: [b.title, null] },
-          missingFirst: { nullIf: [b.title, a.first_name] },
+          missingFirst: { nullIf: [b.title, a.firstName] },
         },
       });
 
@@ -518,7 +518,7 @@ describe("em.query / expressions", () => {
       // And a dynamic list of Author names to normalize
       const em = newEntityManager();
       const a = table(Author);
-      const names = [a.last_name, a.first_name];
+      const names = [a.lastName, a.firstName];
       // And a possibly empty list of extra age bounds
       const bounds: number[] = [];
 
@@ -713,11 +713,11 @@ describe("em.query / expressions", () => {
       // And a dynamic list of candidate Author names
       const em = newEntityManager();
       const a = table(Author);
-      const candidates = [a.first_name];
+      const candidates = [a.firstName];
       // And a reusable conditional name expression for both filtering and selecting
       const name = expr({
         coalesce: [
-          { case: { when: a.id.ne(null), then: a.last_name } },
+          { case: { when: a.id.ne(null), then: a.lastName } },
           ...candidates.map((candidate) => ({ case: { when: a.id.ne(null), then: candidate } })),
         ],
       });
@@ -744,7 +744,7 @@ describe("em.query / expressions", () => {
       // And an empty dynamic list of additional names
       const em = newEntityManager();
       const a = table(Author);
-      const names: (typeof a.first_name)[] = [];
+      const names: (typeof a.firstName)[] = [];
 
       // And the Author setup is excluded from the SQL snapshot
       resetQueryCount();
@@ -754,9 +754,9 @@ describe("em.query / expressions", () => {
         from: a,
         select: {
           nullable: {
-            coalesce: [a.last_name, ...names.map((name) => ({ case: { when: a.id.ne(null), then: name } }))],
+            coalesce: [a.lastName, ...names.map((name) => ({ case: { when: a.id.ne(null), then: name } }))],
           },
-          fallback: { coalesce: [a.last_name, ...names, "Unknown"] },
+          fallback: { coalesce: [a.lastName, ...names, "Unknown"] },
           onlyDynamic: { coalesce: [null, ...names] },
         },
       });
@@ -787,10 +787,10 @@ describe("em.query / expressions", () => {
         join: [a.books.as(b)],
         select: {
           title: { coalesce: [b.title] },
-          name: { coalesce: [b.title, a.first_name] },
+          name: { coalesce: [b.title, a.firstName] },
           literal: { coalesce: [b.title, "Unknown"] },
           conditional: { case: [{ when: a.id.ne(null), then: b.title }, { else: "Unknown" }] },
-          nested: { coalesce: [{ case: { when: a.id.ne(null), then: b.title } }, a.first_name] },
+          nested: { coalesce: [{ case: { when: a.id.ne(null), then: b.title } }, a.firstName] },
           bookId: { coalesce: [b.id, "b:9"] },
           missingId: { case: { when: b.id.ne(null), then: b.id } },
         },
@@ -834,7 +834,7 @@ describe("em.query / expressions", () => {
       // And an optional list of age conditions
       const em = newEntityManager();
       const a = table(Author);
-      const arms = [{ when: a.age.gte(18), then: a.first_name }];
+      const arms = [{ when: a.age.gte(18), then: a.firstName }];
       // And a dynamic array whose type does not guarantee that an ELSE is present
       const dynamic = [...arms, { else: "Unknown" }] satisfies (CaseWhen | CaseElse)[];
       // And the Author setup is excluded from the SQL snapshot
@@ -847,7 +847,7 @@ describe("em.query / expressions", () => {
           fixed: { case: [...arms, { else: "Unknown" }] },
           dynamic: { case: dynamic },
           nullable: { case: [...arms, { else: null }] },
-          nested: { case: [...arms, { else: { coalesce: [a.last_name, a.first_name] } }] },
+          nested: { case: [...arms, { else: { coalesce: [a.lastName, a.firstName] } }] },
         },
       });
 
@@ -867,7 +867,7 @@ describe("em.query / expressions", () => {
       // Given an Author name that can be selected by a WHEN arm
       const em = newEntityManager();
       const a = table(Author);
-      const arm = { when: a.id.ne(null), then: a.first_name };
+      const arm = { when: a.id.ne(null), then: a.firstName };
       // And a dynamic array with a WHEN entry after ELSE
       const entries: (CaseWhen | CaseElse)[] = [arm, { else: "Unknown" }, arm];
 
@@ -932,13 +932,9 @@ describe("em.query / expressions", () => {
           category: {
             case: [{ when: a.age.gte(18), then: "Adult" }, { when: a.age.gte(0), then: "Child" }, { else: "Unknown" }],
           },
-          adultName: { case: { when: a.age.gte(18), then: a.first_name } },
+          adultName: { case: { when: a.age.gte(18), then: a.firstName } },
           stopsAtNull: {
-            case: [
-              { when: a.age.gte(18), then: null },
-              { when: a.age.gte(0), then: a.first_name },
-              { else: "Unknown" },
-            ],
+            case: [{ when: a.age.gte(18), then: null }, { when: a.age.gte(0), then: a.firstName }, { else: "Unknown" }],
           },
         },
         orderBy: [{ sort: a.id, order: "ASC" }],
@@ -974,7 +970,7 @@ describe("em.query / expressions", () => {
       const rows = await em.query({
         from: a,
         join: [a.books.as(b)],
-        select: { name: { case: { when: b.id.ne(null), then: a.first_name } } },
+        select: { name: { case: { when: b.id.ne(null), then: a.firstName } } },
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
@@ -1004,7 +1000,7 @@ describe("em.query / expressions", () => {
         from: a,
         join: [a.books.as(b)],
         select: {
-          name: { case: [{ when: { and: [b.title.eq(undefined)] }, then: b.title }, { else: a.first_name }] },
+          name: { case: [{ when: { and: [b.title.eq(undefined)] }, then: b.title }, { else: a.firstName }] },
           missing: { case: { when: undefined, then: b.title } },
         },
       });
@@ -1027,7 +1023,7 @@ describe("em.query / expressions", () => {
       // And a Book query correlated to the Author being selected
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
-      const books = query({ from: b, where: b.author_id.eq(a.id), select: b.id });
+      const books = query({ from: b, where: b.authorId.eq(a.id), select: b.id });
 
       // And the Author and Book setup is excluded from the SQL snapshot
       resetQueryCount();
@@ -1035,7 +1031,7 @@ describe("em.query / expressions", () => {
       // When selecting the Author's name only if a Book exists
       const rows = await em.query({
         from: a,
-        select: { name: { case: [{ when: { exists: books }, then: a.first_name }, { else: "No books" }] } },
+        select: { name: { case: [{ when: { exists: books }, then: a.firstName }, { else: "No books" }] } },
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
@@ -1135,7 +1131,7 @@ describe("em.query / expressions", () => {
                 case: [
                   { when: a.age.lt(18), then: "Child" },
                   {
-                    when: { and: [a.age.gte(30), sql.condition`${a.first_name} = ${"Alice"}`] },
+                    when: { and: [a.age.gte(30), sql.condition`${a.firstName} = ${"Alice"}`] },
                     then: { coalesce: [null, "Adult"] },
                   },
                 ],
@@ -1169,7 +1165,7 @@ describe("em.query / expressions", () => {
       // Then scalar ordering requires an expression rather than a projection key
       await expect(
         // @ts-expect-error A scalar select has no named output columns
-        em.query({ from: a, select: expr({ coalesce: [a.last_name, a.first_name] }), orderBy: { coalesce: "ASC" } }),
+        em.query({ from: a, select: expr({ coalesce: [a.lastName, a.firstName] }), orderBy: { coalesce: "ASC" } }),
       ).rejects.toThrow("the keyed orderBy form needs a POJO or entity select");
       expect(queries).toMatchInlineSnapshot(`[]`);
     });
@@ -1186,7 +1182,7 @@ describe("em.query / expressions", () => {
           // @ts-expect-error COALESCE needs at least one value
           unionAll: [
             { from: a, select: { name: { coalesce: [] } } },
-            { from: a, select: { name: a.first_name } },
+            { from: a, select: { name: a.firstName } },
           ],
         }),
       ).rejects.toThrow("COALESCE needs at least one value");
@@ -1249,7 +1245,7 @@ describe("em.query / expressions", () => {
       // When combining them without runtime evidence of a shared result codec
       // Then the raw annotation cannot select the Author column's decoder
       await expect(
-        em.query({ from: a, select: { value: { coalesce: [a.first_name, rawName] } } }),
+        em.query({ from: a, select: { value: { coalesce: [a.firstName, rawName] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression operands need matching SQL types and codecs: varchar (domain String) vs unknown codec; mismatched unknown codec"`,
       );
@@ -1273,9 +1269,9 @@ describe("em.query / expressions", () => {
       // Given an Author table and a dynamic list with no name candidates
       const em = newEntityManager();
       const a = table(Author);
-      const names: (typeof a.first_name)[] = [];
+      const names: (typeof a.firstName)[] = [];
       // And a dynamic list with no conditional name candidates
-      const arms: { when: ReturnType<typeof a.id.ne>; then: typeof a.first_name }[] = [];
+      const arms: { when: ReturnType<typeof a.id.ne>; then: typeof a.firstName }[] = [];
 
       // When building COALESCE from the empty name list
       // Then runtime validation rejects the missing values
@@ -1341,7 +1337,7 @@ describe("em.query / expressions", () => {
       // Then column-backed expressions also reject incompatible literal types
       await expect(
         // @ts-expect-error An Author name is not a number
-        em.query({ from: a, select: { value: { coalesce: [a.first_name, 42] } } }),
+        em.query({ from: a, select: { value: { coalesce: [a.firstName, 42] } } }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `"Expression values must have compatible types: expected varchar (domain String), got 42 (number)"`,
       );
@@ -1350,7 +1346,7 @@ describe("em.query / expressions", () => {
       // Then column expressions must also have compatible result types
       await expect(
         // @ts-expect-error Names and ages are incompatible
-        em.query({ from: a, select: { value: { coalesce: [a.first_name, a.age] } } }),
+        em.query({ from: a, select: { value: { coalesce: [a.firstName, a.age] } } }),
       ).rejects.toThrow("Expression operands need matching SQL types and codecs");
 
       // When mixing CASE and COALESCE keys in one expression object
@@ -1359,7 +1355,7 @@ describe("em.query / expressions", () => {
         em.query({
           from: a,
           // @ts-expect-error An expression object has exactly one operation
-          select: { value: { coalesce: [a.first_name], case: { when: a.id.ne(null), then: a.first_name } } },
+          select: { value: { coalesce: [a.firstName], case: { when: a.id.ne(null), then: a.firstName } } },
         }),
       ).rejects.toThrow("Unknown expression key 'case'");
 
@@ -1367,7 +1363,7 @@ describe("em.query / expressions", () => {
       // Then the missing THEN value is rejected
       await expect(
         // @ts-expect-error Each arm needs then
-        em.query({ from: a, select: { value: { case: { when: a.id.ne(null), value: a.first_name } } } }),
+        em.query({ from: a, select: { value: { case: { when: a.id.ne(null), value: a.firstName } } } }),
       ).rejects.toThrow("A CASE arm needs when and then");
       expect(queries).toMatchInlineSnapshot(`[]`);
     });

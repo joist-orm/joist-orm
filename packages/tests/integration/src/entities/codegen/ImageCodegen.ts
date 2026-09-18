@@ -76,12 +76,12 @@ export interface ImageFields {
 }
 
 export interface ImageColumns {
-  "id": { fieldName: "id"; type: IdOf<Image>; entity: Image; nullable: false; insert: "optional"; update: false };
-  "file_name": { type: string; fieldName: "fileName"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "type_id": { type: ImageType; fieldName: "type"; nullable: false; insert: "required"; update: true };
-  "author_id": {
+  id: { fieldName: "id"; type: IdOf<Image>; entity: Image; nullable: false; insert: "optional"; update: false };
+  fileName: { type: string; fieldName: "fileName"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  typeId: { type: ImageType; fieldName: "type"; nullable: false; insert: "required"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";
@@ -89,8 +89,8 @@ export interface ImageColumns {
     insert: "optional";
     update: true;
   };
-  "book_id": { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
-  "publisher_id": {
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
+  publisherId: {
     type: IdOf<Publisher>;
     entity: Publisher;
     fieldName: "publisher";

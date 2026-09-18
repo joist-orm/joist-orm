@@ -61,7 +61,7 @@ export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "i
 }
 
 export interface SmallPublisherGroupColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<SmallPublisherGroup>;
     entity: SmallPublisherGroup;
@@ -69,7 +69,7 @@ export interface SmallPublisherGroupColumns {
     insert: "optional";
     update: false;
   };
-  "small_name": { type: string; fieldName: "smallName"; nullable: true; insert: "optional"; update: true };
+  smallName: { type: string; fieldName: "smallName"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {

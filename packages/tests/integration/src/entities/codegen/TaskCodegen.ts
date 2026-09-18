@@ -92,34 +92,34 @@ export interface TaskFields {
 }
 
 export interface TaskColumns {
-  "id": { fieldName: "id"; type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
-  "duration_in_days": { type: number; fieldName: "durationInDays"; nullable: false; insert: "required"; update: true };
-  "special_new_field": { type: number; fieldName: "specialNewField"; nullable: true; insert: "optional"; update: true };
-  "special_old_field": { type: number; fieldName: "specialOldField"; nullable: true; insert: "optional"; update: true };
-  "special_old_field_with_default": {
+  id: { fieldName: "id"; type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
+  durationInDays: { type: number; fieldName: "durationInDays"; nullable: false; insert: "required"; update: true };
+  specialNewField: { type: number; fieldName: "specialNewField"; nullable: true; insert: "optional"; update: true };
+  specialOldField: { type: number; fieldName: "specialOldField"; nullable: true; insert: "optional"; update: true };
+  specialOldFieldWithDefault: {
     type: number;
     fieldName: "specialOldFieldWithDefault";
     nullable: false;
     insert: "optional";
     update: true;
   };
-  "shared_subtype_field": {
+  sharedSubtypeField: {
     type: number;
     fieldName: "sharedSubtypeField";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
-  "sync_default": { type: string; fieldName: "syncDefault"; nullable: true; insert: "optional"; update: true };
-  "async_default_1": { type: string; fieldName: "asyncDefault_1"; nullable: true; insert: "optional"; update: true };
-  "async_default_2": { type: string; fieldName: "asyncDefault_2"; nullable: true; insert: "optional"; update: true };
-  "sync_derived": { type: string; fieldName: "syncDerived"; nullable: true; insert: "optional"; update: true };
-  "async_derived": { type: string; fieldName: "asyncDerived"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "type_id": { type: TaskType; fieldName: "type"; nullable: true; insert: "optional"; update: true };
-  "copied_from_id": {
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  syncDefault: { type: string; fieldName: "syncDefault"; nullable: true; insert: "optional"; update: true };
+  asyncDefault_1: { type: string; fieldName: "asyncDefault_1"; nullable: true; insert: "optional"; update: true };
+  asyncDefault_2: { type: string; fieldName: "asyncDefault_2"; nullable: true; insert: "optional"; update: true };
+  syncDerived: { type: string; fieldName: "syncDerived"; nullable: true; insert: "optional"; update: true };
+  asyncDerived: { type: string; fieldName: "asyncDerived"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  typeId: { type: TaskType; fieldName: "type"; nullable: true; insert: "optional"; update: true };
+  copiedFromId: {
     type: IdOf<Task>;
     entity: Task;
     fieldName: "copiedFrom";
@@ -127,7 +127,7 @@ export interface TaskColumns {
     insert: "optional";
     update: true;
   };
-  "parent_old_task_id": {
+  parentOldTaskId: {
     type: IdOf<Task>;
     entity: Task;
     fieldName: "parentOldTask";
@@ -135,7 +135,7 @@ export interface TaskColumns {
     insert: "optional";
     update: true;
   };
-  "self_referential_id": {
+  selfReferentialId: {
     type: IdOf<Task>;
     entity: Task;
     fieldName: "selfReferential";
@@ -143,7 +143,7 @@ export interface TaskColumns {
     insert: "optional";
     update: true;
   };
-  "special_new_author_id": {
+  specialNewAuthorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "specialNewAuthor";

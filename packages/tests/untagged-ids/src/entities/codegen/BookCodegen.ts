@@ -65,11 +65,11 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "required"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "author_id": {
+  id: { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "required"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";

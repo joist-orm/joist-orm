@@ -57,7 +57,7 @@ export interface DatabaseOwnerFields {
 }
 
 export interface DatabaseOwnerColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<DatabaseOwner>;
     entity: DatabaseOwner;
@@ -65,7 +65,7 @@ export interface DatabaseOwnerColumns {
     insert: "optional";
     update: false;
   };
-  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
 }
 
 export interface DatabaseOwnerOpts {

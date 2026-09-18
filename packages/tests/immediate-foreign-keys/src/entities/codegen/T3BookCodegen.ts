@@ -61,9 +61,9 @@ export interface T3BookFields {
 }
 
 export interface T3BookColumns {
-  "id": { fieldName: "id"; type: IdOf<T3Book>; entity: T3Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "author_id": {
+  id: { fieldName: "id"; type: IdOf<T3Book>; entity: T3Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  authorId: {
     type: IdOf<T3Author>;
     entity: T3Author;
     fieldName: "author";

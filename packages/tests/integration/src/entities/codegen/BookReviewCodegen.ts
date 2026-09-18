@@ -85,7 +85,7 @@ export interface BookReviewFields {
 }
 
 export interface BookReviewColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<BookReview>;
     entity: BookReview;
@@ -93,14 +93,14 @@ export interface BookReviewColumns {
     insert: "optional";
     update: false;
   };
-  "rating": { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
-  "is_public": { type: boolean; fieldName: "isPublic"; nullable: false; insert: "required"; update: true };
-  "is_test": { type: boolean; fieldName: "isTest"; nullable: false; insert: "required"; update: true };
-  "is_test_chain": { type: boolean; fieldName: "isTestChain"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "book_id": { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
-  "critic_id": {
+  rating: { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
+  isPublic: { type: boolean; fieldName: "isPublic"; nullable: false; insert: "required"; update: true };
+  isTest: { type: boolean; fieldName: "isTest"; nullable: false; insert: "required"; update: true };
+  isTestChain: { type: boolean; fieldName: "isTestChain"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
+  criticId: {
     type: IdOf<Critic>;
     entity: Critic;
     fieldName: "critic";

@@ -78,9 +78,9 @@ describe("EntityMetadata", () => {
     // And an expression holding the original physical descriptor
     const em = newEntityManager();
     const originalTable = table(Author);
-    const originalRead = { from: originalTable, select: { name: originalTable.first_name } };
+    const originalRead = { from: originalTable, select: { name: originalTable.firstName } };
     const meta = getMetadata(Author);
-    const original = meta.columns.first_name;
+    const original = meta.columns.firstName;
     // And only the SQL descriptor is deliberately replaced; the domain field still binds the original column
     const replacement = new Column(
       original.columnName,
@@ -92,9 +92,9 @@ describe("EntityMetadata", () => {
       original.idMetadata,
       new LowercaseSerde(original.dbType),
     );
-    meta.columns.first_name = replacement;
+    meta.columns.firstName = replacement;
     const changedTable = table(Author);
-    const changedRead = { from: changedTable, select: { name: changedTable.first_name } };
+    const changedRead = { from: changedTable, select: { name: changedTable.firstName } };
     try {
       // When inspecting the replaced SQL descriptor and the Author field binding
       // Then the field retains its original column and the replacement has no compatibility proof
@@ -109,7 +109,7 @@ describe("EntityMetadata", () => {
         "unknown or unsupported output codec",
       );
     } finally {
-      meta.columns.first_name = original;
+      meta.columns.firstName = original;
     }
   });
 
@@ -117,7 +117,7 @@ describe("EntityMetadata", () => {
     // Given a persisted Author created without invoking the ORM codec
     await insertAuthor({ first_name: "Original" });
     // And the actual introspected column's scalar converters are observed
-    const codec = getMetadata(Author).columns.first_name.codec;
+    const codec = getMetadata(Author).columns.firstName.codec;
     const decode = jest.spyOn(codec, "mapFromDb");
     const encode = jest.spyOn(codec, "mapToDbValue");
     // And an EntityManager with no hydrated entities
@@ -126,7 +126,7 @@ describe("EntityMetadata", () => {
     try {
       // When reading the Author name through SQL
       // Then the scalar decoder runs without hydrating an Author
-      expect(await em.query({ from: a, select: a.first_name })).toEqual(["Original"]);
+      expect(await em.query({ from: a, select: a.firstName })).toEqual(["Original"]);
       expect(em.entities).toEqual([]);
       expect(decode).toHaveBeenCalledTimes(1);
       // When loading the Author and accessing its name
@@ -135,7 +135,7 @@ describe("EntityMetadata", () => {
       expect(author.firstName).toBe("Original");
       expect(decode).toHaveBeenCalledTimes(2);
       // When updating the Author name through SQL
-      await em.execute({ update: a, set: { first_name: "SQL" }, where: a.id.eq(author.id) });
+      await em.execute({ update: a, set: { firstName: "SQL" }, where: a.id.eq(author.id) });
       // Then the SQL assignment uses the scalar encoder
       expect(encode).toHaveBeenCalledTimes(1);
       // And the Author is refreshed because direct SQL changed its oplock timestamp without updating the entity
@@ -158,32 +158,32 @@ describe("EntityMetadata", () => {
     // Then domain fields bind to shared physical columns without adding domain behavior to those columns
     expect(meta.fields.author).toMatchObject({ kind: "m2o", fieldName: "author", required: true });
     expect(meta.fields.author).toMatchObject({ default: "config" });
-    expect(meta.columns.author_id).toMatchObject({
+    expect(meta.columns.authorId).toMatchObject({
       columnName: "author_id",
       sqlNullable: false,
       hasDefault: false,
     });
-    expect(meta.fields.author.serde!.columns[0].column).toBe(meta.columns.author_id);
-    expect(meta.fields.author.serde!.columns[0].codec).toBe(meta.columns.author_id.codec);
-    expect(meta.fields.createdAt.serde!.columns[0].column).toBe(meta.columns.created_at);
-    expect(meta.columns.author_id.idMetadata!()).toBe(getMetadata(Author));
-    expect(meta.columns.author_id.outputType).toEqual(getMetadata(Author).columns.id.outputType);
-    expect("field" in meta.columns.author_id).toBe(false);
-    expect("fieldName" in meta.columns.author_id.codec).toBe(false);
-    expect("fromRow" in meta.columns.author_id.codec).toBe(false);
-    expect("dbValue" in meta.columns.author_id.codec).toBe(false);
+    expect(meta.fields.author.serde!.columns[0].column).toBe(meta.columns.authorId);
+    expect(meta.fields.author.serde!.columns[0].codec).toBe(meta.columns.authorId.codec);
+    expect(meta.fields.createdAt.serde!.columns[0].column).toBe(meta.columns.createdAt);
+    expect(meta.columns.authorId.idMetadata!()).toBe(getMetadata(Author));
+    expect(meta.columns.authorId.outputType).toEqual(getMetadata(Author).columns.id.outputType);
+    expect("field" in meta.columns.authorId).toBe(false);
+    expect("fieldName" in meta.columns.authorId.codec).toBe(false);
+    expect("fromRow" in meta.columns.authorId.codec).toBe(false);
+    expect("dbValue" in meta.columns.authorId.codec).toBe(false);
     expect(getMetadata(Book).columns.author).toBeUndefined();
     expect(getMetadata(Book).columns.reviews).toBeUndefined();
     // When inspecting the generated Book and Author types
     // Then storage types use scalar IDs and keep write capabilities separate from domain fields
     expectTypeOf<ColumnsOf<Book>>().toEqualTypeOf<BookColumns>();
     expectTypeOf<ColumnsOf<Book>["id"]["type"]>().toEqualTypeOf<IdOf<Book>>();
-    expectTypeOf<ColumnsOf<Book>["author_id"]["type"]>().toEqualTypeOf<IdOf<Author>>();
-    expectTypeOf<ColumnsOf<Book>["author_id"]["entity"]>().toEqualTypeOf<Author>();
-    expectTypeOf<ColumnsOf<Book>["author_id"]["nullable"]>().toEqualTypeOf<false>();
-    expectTypeOf<ColumnsOf<Book>["author_id"]["insert"]>().toEqualTypeOf<"required">();
-    expectTypeOf<ColumnsOf<Book>["author_id"]["update"]>().toEqualTypeOf<true>();
-    expectTypeOf<Extract<keyof ColumnsOf<Book>["author_id"], "columns">>().toEqualTypeOf<never>();
+    expectTypeOf<ColumnsOf<Book>["authorId"]["type"]>().toEqualTypeOf<IdOf<Author>>();
+    expectTypeOf<ColumnsOf<Book>["authorId"]["entity"]>().toEqualTypeOf<Author>();
+    expectTypeOf<ColumnsOf<Book>["authorId"]["nullable"]>().toEqualTypeOf<false>();
+    expectTypeOf<ColumnsOf<Book>["authorId"]["insert"]>().toEqualTypeOf<"required">();
+    expectTypeOf<ColumnsOf<Book>["authorId"]["update"]>().toEqualTypeOf<true>();
+    expectTypeOf<Extract<keyof ColumnsOf<Book>["authorId"], "columns">>().toEqualTypeOf<never>();
     expectTypeOf<Extract<keyof FieldsOf<Book>["author"], "columns" | "insert" | "update">>().toEqualTypeOf<never>();
     expectTypeOf<FieldsOf<Book>["author"]["nullable"]>().toEqualTypeOf<never>();
     expectTypeOf<
@@ -206,25 +206,25 @@ describe("EntityMetadata", () => {
     // When inspecting Comment's polymorphic parent metadata
     const meta = getMetadata(Comment);
     // Then each component binds to a nullable physical column with its target's ID domain
-    expect(meta.columns.parent_book_id).toMatchObject({
+    expect(meta.columns.parentBookId).toMatchObject({
       columnName: "parent_book_id",
       sqlNullable: true,
     });
     const field = meta.fields.parent;
     expect(field.serde?.columns.find((binding) => binding.columnName === "parent_book_id")?.column).toBe(
-      meta.columns.parent_book_id,
+      meta.columns.parentBookId,
     );
-    expect(meta.columns.parent_author_id.idMetadata!()).toBe(getMetadata(Author));
-    expect(meta.columns.parent_book_id.idMetadata!()).toBe(getMetadata(Book));
-    expect(meta.columns.parent_author_id.outputType).toEqual(getMetadata(Author).columns.id.outputType);
+    expect(meta.columns.parentAuthorId.idMetadata!()).toBe(getMetadata(Author));
+    expect(meta.columns.parentBookId.idMetadata!()).toBe(getMetadata(Book));
+    expect(meta.columns.parentAuthorId.outputType).toEqual(getMetadata(Author).columns.id.outputType);
     // When converting the Book component between domain and database IDs
     // Then its codec converts between tagged Book IDs and scalar integers
-    expect(meta.columns.parent_book_id.mapToDbValue("b:1")).toBe(1);
-    expect(meta.columns.parent_book_id.mapFromDb(1)).toBe("b:1");
+    expect(meta.columns.parentBookId.mapToDbValue("b:1")).toBe(1);
+    expect(meta.columns.parentBookId.mapFromDb(1)).toBe("b:1");
     // When inspecting the generated Book component type
     // Then it exposes a nullable Book ID without direct SQL write capabilities
-    expectTypeOf<ColumnsOf<Comment>["parent_book_id"]["type"]>().toEqualTypeOf<IdOf<Book>>();
-    expectTypeOf<ColumnsOf<Comment>["parent_book_id"]>().toEqualTypeOf<{
+    expectTypeOf<ColumnsOf<Comment>["parentBookId"]["type"]>().toEqualTypeOf<IdOf<Book>>();
+    expectTypeOf<ColumnsOf<Comment>["parentBookId"]>().toEqualTypeOf<{
       type: IdOf<Book>;
       fieldName: never;
       entity: Book;
@@ -243,39 +243,39 @@ describe("EntityMetadata", () => {
     expect(getMetadata(SmallPublisher).fields.city.serde!.columns[0].column).toBe(
       getMetadata(SmallPublisher).columns.city,
     );
-    expect(getMetadata(SmallPublisher).columns.group_id).toBeUndefined();
-    expect(getMetadata(Publisher).fields.group.serde!.columns[0].column).toBe(getMetadata(Publisher).columns.group_id);
+    expect(getMetadata(SmallPublisher).columns.groupId).toBeUndefined();
+    expect(getMetadata(Publisher).fields.group.serde!.columns[0].column).toBe(getMetadata(Publisher).columns.groupId);
     expect(getMetadata(SmallPublisher).allFields.group.serde!.columns[0].column).toBe(
-      getMetadata(Publisher).columns.group_id,
+      getMetadata(Publisher).columns.groupId,
     );
     expect(getMetadata(TaskOld).columns).toBe(getMetadata(Task).columns);
     expect(getMetadata(TaskNew).columns).toBe(getMetadata(Task).columns);
     expect(getMetadata(TaskOld).fields.id.serde!.columns[0].column).toBe(getMetadata(Task).columns.id);
     expect(getMetadata(TaskOld).fields.specialOldField.serde!.columns[0].column).toBe(
-      getMetadata(Task).columns.special_old_field,
+      getMetadata(Task).columns.specialOldField,
     );
-    expect(getMetadata(TaskOld).columns.copied_from_id.idMetadata!()).toBe(getMetadata(Task));
+    expect(getMetadata(TaskOld).columns.copiedFromId.idMetadata!()).toBe(getMetadata(Task));
     expect(getMetadata(TaskOld).allFields.copiedFrom.serde!.columns[0].column).toBe(
-      getMetadata(Task).columns.copied_from_id,
+      getMetadata(Task).columns.copiedFromId,
     );
     // When inspecting the generated inheritance types
     // Then storage retains table-level IDs and nullability independently of subtype field constraints
-    expectTypeOf<Extract<keyof ColumnsOf<SmallPublisher>, "name" | "group_id">>().toEqualTypeOf<never>();
-    expectTypeOf<ColumnsOf<Publisher>["group_id"]["type"]>().toEqualTypeOf<IdOf<PublisherGroup>>();
+    expectTypeOf<Extract<keyof ColumnsOf<SmallPublisher>, "name" | "groupId">>().toEqualTypeOf<never>();
+    expectTypeOf<ColumnsOf<Publisher>["groupId"]["type"]>().toEqualTypeOf<IdOf<PublisherGroup>>();
     expectTypeOf<ColumnsOf<TaskOld>>().toEqualTypeOf<ColumnsOf<Task>>();
     expectTypeOf<ColumnsOf<TaskNew>>().toEqualTypeOf<ColumnsOf<Task>>();
-    expectTypeOf<ColumnsOf<TaskOld>["copied_from_id"]["type"]>().toEqualTypeOf<IdOf<Task>>();
+    expectTypeOf<ColumnsOf<TaskOld>["copiedFromId"]["type"]>().toEqualTypeOf<IdOf<Task>>();
     expectTypeOf<FieldsOf<TaskOld>["copiedFrom"]["type"]>().toEqualTypeOf<TaskOld>();
     expectTypeOf<FieldsOf<TaskOld>["specialOldField"]["nullable"]>().toEqualTypeOf<never>();
-    expectTypeOf<ColumnsOf<TaskOld>["special_old_field"]["nullable"]>().toEqualTypeOf<true>();
-    expectTypeOf<ColumnsOf<TaskOld>["special_old_field"]["insert"]>().toEqualTypeOf<"optional">();
-    expectTypeOf<ColumnsOf<TaskOld>["special_old_field"]["update"]>().toEqualTypeOf<true>();
+    expectTypeOf<ColumnsOf<TaskOld>["specialOldField"]["nullable"]>().toEqualTypeOf<true>();
+    expectTypeOf<ColumnsOf<TaskOld>["specialOldField"]["insert"]>().toEqualTypeOf<"optional">();
+    expectTypeOf<ColumnsOf<TaskOld>["specialOldField"]["update"]>().toEqualTypeOf<true>();
   });
 
   it("keeps nullable enum arrays physical while preserving domain array types", () => {
     expectTypeOf<FieldsOf<Author>["favoriteColors"]["nullable"]>().toEqualTypeOf<never>();
-    expectTypeOf<ColumnsOf<Author>["favorite_colors"]["nullable"]>().toEqualTypeOf<true>();
-    expectTypeOf<ColumnsOf<Author>["favorite_colors"]["type"]>().toEqualTypeOf<Color[]>();
+    expectTypeOf<ColumnsOf<Author>["favoriteColors"]["nullable"]>().toEqualTypeOf<true>();
+    expectTypeOf<ColumnsOf<Author>["favoriteColors"]["type"]>().toEqualTypeOf<Color[]>();
   });
 
   describe("getMetadata", () => {

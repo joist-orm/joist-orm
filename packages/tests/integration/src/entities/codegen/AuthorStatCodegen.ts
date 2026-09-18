@@ -57,7 +57,7 @@ export interface AuthorStatFields {
 }
 
 export interface AuthorStatColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<AuthorStat>;
     entity: AuthorStat;
@@ -65,22 +65,22 @@ export interface AuthorStatColumns {
     insert: "optional";
     update: false;
   };
-  "smallint": { type: number; fieldName: "smallint"; nullable: false; insert: "required"; update: true };
-  "integer": { type: number; fieldName: "integer"; nullable: false; insert: "required"; update: true };
-  "nullable_integer": { type: number; fieldName: "nullableInteger"; nullable: true; insert: "optional"; update: true };
-  "bigint": { type: bigint; fieldName: "bigint"; nullable: false; insert: "required"; update: true };
-  "decimal": { type: number; fieldName: "decimal"; nullable: false; insert: "required"; update: true };
-  "real": { type: number; fieldName: "real"; nullable: false; insert: "required"; update: true };
-  "smallserial": { type: number; fieldName: "smallserial"; nullable: false; insert: "optional"; update: true };
-  "serial": { type: number; fieldName: "serial"; nullable: false; insert: "optional"; update: true };
-  "bigserial": { type: bigint; fieldName: "bigserial"; nullable: false; insert: "optional"; update: true };
-  "double_precision": { type: number; fieldName: "doublePrecision"; nullable: false; insert: "required"; update: true };
-  "nullable_text": { type: string; fieldName: "nullableText"; nullable: true; insert: "optional"; update: true };
-  "json": { type: Object; fieldName: "json"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "decimal_samples": { type: number[]; fieldName: "decimalSamples"; nullable: true; insert: "optional"; update: true };
-  "bigint_samples": { type: bigint[]; fieldName: "bigintSamples"; nullable: true; insert: "optional"; update: true };
+  smallint: { type: number; fieldName: "smallint"; nullable: false; insert: "required"; update: true };
+  integer: { type: number; fieldName: "integer"; nullable: false; insert: "required"; update: true };
+  nullableInteger: { type: number; fieldName: "nullableInteger"; nullable: true; insert: "optional"; update: true };
+  bigint: { type: bigint; fieldName: "bigint"; nullable: false; insert: "required"; update: true };
+  decimal: { type: number; fieldName: "decimal"; nullable: false; insert: "required"; update: true };
+  real: { type: number; fieldName: "real"; nullable: false; insert: "required"; update: true };
+  smallserial: { type: number; fieldName: "smallserial"; nullable: false; insert: "optional"; update: true };
+  serial: { type: number; fieldName: "serial"; nullable: false; insert: "optional"; update: true };
+  bigserial: { type: bigint; fieldName: "bigserial"; nullable: false; insert: "optional"; update: true };
+  doublePrecision: { type: number; fieldName: "doublePrecision"; nullable: false; insert: "required"; update: true };
+  nullableText: { type: string; fieldName: "nullableText"; nullable: true; insert: "optional"; update: true };
+  json: { type: Object; fieldName: "json"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  decimalSamples: { type: number[]; fieldName: "decimalSamples"; nullable: true; insert: "optional"; update: true };
+  bigintSamples: { type: bigint[]; fieldName: "bigintSamples"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorStatOpts {

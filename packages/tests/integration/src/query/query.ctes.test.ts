@@ -18,8 +18,8 @@ describe("em.query / ctes", () => {
     // And a CTE counting each Author's Books
     const stats = query({
       from: b,
-      groupBy: [b.author_id],
-      select: { authorId: b.author_id, count: b.id.count() },
+      groupBy: [b.authorId],
+      select: { authorId: b.authorId, count: b.id.count() },
       as: "book_stats",
     });
     resetQueryCount();
@@ -28,7 +28,7 @@ describe("em.query / ctes", () => {
       with: stats,
       from: a,
       join: [{ inner: stats, on: stats.authorId.eq(a.id) }],
-      select: { name: a.first_name, count: stats.count },
+      select: { name: a.firstName, count: stats.count },
       orderBy: [{ sort: a.id, order: "ASC" }],
     });
     // Then each Author has their own count
@@ -53,8 +53,8 @@ describe("em.query / ctes", () => {
     // And a CTE counting each Author's Books
     const stats = query({
       from: b,
-      groupBy: [b.author_id],
-      select: { authorId: b.author_id, count: b.id.count() },
+      groupBy: [b.authorId],
+      select: { authorId: b.authorId, count: b.id.count() },
       as: "book_stats",
     });
     resetQueryCount();
@@ -64,7 +64,7 @@ describe("em.query / ctes", () => {
       from: a,
       join: [{ inner: stats, on: stats.authorId.eq(a.id) }],
       where: stats.count.gte(1),
-      select: { name: a.first_name },
+      select: { name: a.firstName },
     });
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
@@ -84,7 +84,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a] = tables(Author);
     // And a CTE of only the adult Authors
-    const adults = query({ from: a, where: a.age.gte(18), select: { id: a.id, name: a.first_name }, as: "adults" });
+    const adults = query({ from: a, where: a.age.gte(18), select: { id: a.id, name: a.firstName }, as: "adults" });
     resetQueryCount();
     // When selecting the CTE's own rows
     const rows = await em.query({ with: adults, from: adults, select: adults });
@@ -108,8 +108,8 @@ describe("em.query / ctes", () => {
     // And a CTE counting each Author's Books
     const stats = query({
       from: b,
-      groupBy: [b.author_id],
-      select: { authorId: b.author_id, count: b.id.count() },
+      groupBy: [b.authorId],
+      select: { authorId: b.authorId, count: b.id.count() },
       as: "book_stats",
     });
     // And a second CTE whose own from is the first CTE
@@ -125,7 +125,7 @@ describe("em.query / ctes", () => {
       with: [stats, undefined, prolific],
       from: a,
       join: [{ inner: prolific, on: prolific.authorId.eq(a.id) }],
-      select: { name: a.first_name, authorId: prolific.authorId },
+      select: { name: a.firstName, authorId: prolific.authorId },
     });
     // Then the Author with two Books is returned
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
@@ -144,7 +144,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // And a first CTE that only the second CTE reads, so pruning must follow that dependency
-    const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+    const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
     // And a second CTE that rolls the first one up to distinct Author ids
     const distinctAuthors = query({
       from: bookAuthors,
@@ -158,7 +158,7 @@ describe("em.query / ctes", () => {
       with: [bookAuthors, distinctAuthors],
       from: a,
       join: [{ inner: distinctAuthors, on: distinctAuthors.authorId.eq(a.id) }],
-      select: { name: a.first_name, authorId: distinctAuthors.authorId },
+      select: { name: a.firstName, authorId: distinctAuthors.authorId },
     });
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
@@ -178,8 +178,8 @@ describe("em.query / ctes", () => {
     // And a CTE counting each Author's Books
     const stats = query({
       from: b,
-      groupBy: [b.author_id],
-      select: { authorId: b.author_id, count: b.id.count() },
+      groupBy: [b.authorId],
+      select: { authorId: b.authorId, count: b.id.count() },
       as: "book_stats",
     });
     resetQueryCount();
@@ -188,7 +188,7 @@ describe("em.query / ctes", () => {
       with: stats,
       from: a,
       join: [{ inner: stats, on: { and: [undefined] } }],
-      select: { name: a.first_name },
+      select: { name: a.firstName },
     });
     // Then the Author is still returned
     expect(rows).toEqual([{ name: "a1" }]);
@@ -208,8 +208,8 @@ describe("em.query / ctes", () => {
     // And a CTE counting each Author's Books
     const stats = query({
       from: b,
-      groupBy: [b.author_id],
-      select: { authorId: b.author_id, count: b.id.count() },
+      groupBy: [b.authorId],
+      select: { authorId: b.authorId, count: b.id.count() },
       as: "book_stats",
     });
     resetQueryCount();
@@ -218,7 +218,7 @@ describe("em.query / ctes", () => {
       with: stats,
       from: a,
       join: [{ inner: stats, on: stats.authorId.eq(a.id) }],
-      select: { name: a.first_name },
+      select: { name: a.firstName },
       pruneJoins: false,
     });
     // Then the kept join filters the bookless Author out
@@ -240,7 +240,7 @@ describe("em.query / ctes", () => {
     // And a conditionally-built CTE that was omitted this call
     const maybe = undefined;
     // When reading with that omitted entry
-    const rows = await em.query({ with: [maybe], from: a, select: { name: a.first_name } });
+    const rows = await em.query({ with: [maybe], from: a, select: { name: a.firstName } });
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And no WITH clause is emitted at all
@@ -260,15 +260,15 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // And a CTE binding 3 while the outer WHERE binds "a1", so a swapped order would mis-filter
-    const early = query({ from: b, where: b.order.lte(3), select: { authorId: b.author_id }, as: "early" });
+    const early = query({ from: b, where: b.order.lte(3), select: { authorId: b.authorId }, as: "early" });
     resetQueryCount();
     // When reading with both bindings in play
     const rows = await em.query({
       with: early,
       from: a,
       join: [{ inner: early, on: early.authorId.eq(a.id) }],
-      where: a.first_name.eq("a1"),
-      select: { name: a.first_name, authorId: early.authorId },
+      where: a.firstName.eq("a1"),
+      select: { name: a.firstName, authorId: early.authorId },
     });
     // Then the Author matched on the outer binding
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
@@ -307,7 +307,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // And a CTE of the Authors that have Books
-    const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+    const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
     // And an inner query that both declares and reads the CTE, so the WITH renders inside the subquery
     const inner = query({ with: bookAuthors, from: bookAuthors, select: { authorId: bookAuthors.authorId } });
     resetQueryCount();
@@ -315,7 +315,7 @@ describe("em.query / ctes", () => {
     const rows = await em.query({
       from: a,
       where: a.id.in(query({ from: inner, select: inner.authorId })),
-      select: { name: a.first_name },
+      select: { name: a.firstName },
     });
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
@@ -334,14 +334,14 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // And a CTE of the Authors that have Books
-    const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+    const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
     resetQueryCount();
     // When an IN subquery reads the CTE its enclosing query declared
     const rows = await em.query({
       with: bookAuthors,
       from: a,
       where: a.id.in(query({ from: bookAuthors, select: bookAuthors.authorId })),
-      select: { name: a.first_name },
+      select: { name: a.firstName },
     });
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
@@ -361,7 +361,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // And a CTE of the Author names, one half of the union
-    const authorNames = query({ from: a, select: { name: a.first_name }, as: "author_names" });
+    const authorNames = query({ from: a, select: { name: a.firstName }, as: "author_names" });
     resetQueryCount();
     // When unioning the CTE's rows with the Book titles
     const rows = await em.query({
@@ -388,7 +388,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a] = tables(Author);
     // And a CTE with no `as`, so the WITH clause has to generate its name
-    const names = query({ from: a, select: { name: a.first_name } });
+    const names = query({ from: a, select: { name: a.firstName } });
     resetQueryCount();
     // When reading it
     const rows = await em.query({ with: names, from: names, select: { name: names.name } });
@@ -406,7 +406,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // Given a CTE correlated to the outer from, which SQL does not allow
-    const correlated = query({ from: b, where: b.author_id.eq(a.id), select: { id: b.id }, as: "correlated" });
+    const correlated = query({ from: b, where: b.authorId.eq(a.id), select: { id: b.id }, as: "correlated" });
     // When running it
     // Then the correlation is rejected, because a CTE compiles before the query's own sources
     await expect(
@@ -418,7 +418,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // Given a CTE that the `with` array declares second
-    const later = query({ from: b, select: { authorId: b.author_id }, as: "later" });
+    const later = query({ from: b, select: { authorId: b.authorId }, as: "later" });
     // And an earlier CTE that reads it
     const earlier = query({ from: later, select: { authorId: later.authorId }, as: "earlier" });
     // When running the query
@@ -437,7 +437,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
     // Given one CTE value
-    const stats = query({ from: b, select: { authorId: b.author_id }, as: "book_stats" });
+    const stats = query({ from: b, select: { authorId: b.authorId }, as: "book_stats" });
     // When two joins both read it, which one value cannot give two SQL aliases
     // Then the second read is rejected
     await expect(
@@ -460,7 +460,7 @@ describe("em.query / ctes", () => {
     const authors = query({ from: a, select: a });
     // When it is declared as a CTE
     // Then it is rejected, because a CTE must be a table shape
-    await expect(em.query({ with: authors as any, from: a, select: { name: a.first_name } })).rejects.toThrow(
+    await expect(em.query({ with: authors as any, from: a, select: { name: a.firstName } })).rejects.toThrow(
       "A `with` entry needs named columns; entity and scalar query(...) values have none",
     );
   });
@@ -472,7 +472,7 @@ describe("em.query / ctes", () => {
     const count = query({ from: b, select: b.id.count() });
     // When it is declared as a CTE
     // Then it is rejected, because a CTE must be a table shape
-    await expect(em.query({ with: count as any, from: a, select: { name: a.first_name } })).rejects.toThrow(
+    await expect(em.query({ with: count as any, from: a, select: { name: a.firstName } })).rejects.toThrow(
       "A `with` entry needs named columns; entity and scalar query(...) values have none",
     );
   });
@@ -483,7 +483,7 @@ describe("em.query / ctes", () => {
     // Given a bare table rather than a query(...) value
     // When it is declared as a CTE
     // Then it is rejected
-    await expect(em.query({ with: table(Author) as any, from: a, select: { name: a.first_name } })).rejects.toThrow(
+    await expect(em.query({ with: table(Author) as any, from: a, select: { name: a.firstName } })).rejects.toThrow(
       "A `with` entry must be a query(...) value",
     );
   });
@@ -494,7 +494,7 @@ describe("em.query / ctes", () => {
     const em = newEntityManager();
     const [a] = tables(Author);
     // And a CTE of the Author names
-    const names = query({ from: a, select: { name: a.first_name }, as: "names" });
+    const names = query({ from: a, select: { name: a.firstName }, as: "names" });
     resetQueryCount();
     // When reading it through em.execute, which shares em.query's read parsing
     const result = await em.execute({ with: names, from: names, select: { name: names.name } });
@@ -517,7 +517,7 @@ describe("em.query / ctes", () => {
     // And a CTE of the existing Book rows
     const titles = query({
       from: b,
-      select: { title: b.title, authorId: b.author_id, notes: b.notes },
+      select: { title: b.title, authorId: b.authorId, notes: b.notes },
       as: "titles",
     });
     resetQueryCount();
@@ -527,7 +527,7 @@ describe("em.query / ctes", () => {
       from: {
         with: titles,
         from: titles,
-        select: { title: titles.title, author_id: titles.authorId, notes: titles.notes },
+        select: { title: titles.title, authorId: titles.authorId, notes: titles.notes },
       },
     });
     // Then the row is copied
@@ -537,7 +537,7 @@ describe("em.query / ctes", () => {
     // And the WITH renders inside the INSERT's source, not before the INSERT
     expect(queries).toMatchInlineSnapshot(`
      [
-       "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM (WITH titles AS (SELECT b1.title AS title, b1.author_id AS "authorId", b1.notes AS notes FROM books AS b1 WHERE b1.deleted_at IS NULL) SELECT titles.title AS title, titles."authorId" AS author_id, titles.notes AS notes FROM titles) AS sq",
+       "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq."authorId" FROM (WITH titles AS (SELECT b1.title AS title, b1.author_id AS "authorId", b1.notes AS notes FROM books AS b1 WHERE b1.deleted_at IS NULL) SELECT titles.title AS title, titles."authorId" AS "authorId", titles.notes AS notes FROM titles) AS sq",
        "select * from "books" order by "id" asc",
      ]
     `);
@@ -553,13 +553,13 @@ describe("em.query / ctes", () => {
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
       // And a CTE of the Authors that have Books
-      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
       resetQueryCount();
       // When the UPDATE declares it and reads it from the where
       await em.execute({
         update: a,
         with: bookAuthors,
-        set: { first_name: "writer" },
+        set: { firstName: "writer" },
         where: a.id.in(query({ from: bookAuthors, select: bookAuthors.authorId })),
       });
       // Then only the Author with a Book is renamed
@@ -582,7 +582,7 @@ describe("em.query / ctes", () => {
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
       // And a CTE of the Authors that have no Books, which is the set to delete
-      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
       resetQueryCount();
       // When the DELETE declares it and reads it from the where
       await em.execute({
@@ -610,7 +610,7 @@ describe("em.query / ctes", () => {
       // And a CTE of the existing Book rows, declared on the INSERT itself rather than on its source
       const titles = query({
         from: b,
-        select: { title: b.title, authorId: b.author_id, notes: b.notes },
+        select: { title: b.title, authorId: b.authorId, notes: b.notes },
         as: "titles",
       });
       resetQueryCount();
@@ -618,7 +618,7 @@ describe("em.query / ctes", () => {
       const result = await em.execute({
         insert: b,
         with: titles,
-        from: { from: titles, select: { title: titles.title, author_id: titles.authorId, notes: titles.notes } },
+        from: { from: titles, select: { title: titles.title, authorId: titles.authorId, notes: titles.notes } },
       });
       // Then the row is copied
       expect(result).toMatchObject({ rowCount: 1 });
@@ -626,7 +626,7 @@ describe("em.query / ctes", () => {
       // And the WITH is before the INSERT, with the source reading the CTE by name
       expect(queries).toMatchInlineSnapshot(`
        [
-         "WITH titles AS (SELECT b.title AS title, b.author_id AS "authorId", b.notes AS notes FROM books AS b WHERE b.deleted_at IS NULL) INSERT INTO books AS b1 (title, notes, author_id) SELECT sq.title, sq.notes, sq.author_id FROM (SELECT titles.title AS title, titles."authorId" AS author_id, titles.notes AS notes FROM titles) AS sq",
+         "WITH titles AS (SELECT b.title AS title, b.author_id AS "authorId", b.notes AS notes FROM books AS b WHERE b.deleted_at IS NULL) INSERT INTO books AS b1 (title, notes, author_id) SELECT sq.title, sq.notes, sq."authorId" FROM (SELECT titles.title AS title, titles."authorId" AS "authorId", titles.notes AS notes FROM titles) AS sq",
          "select * from "books" order by "id" asc",
        ]
       `);
@@ -638,10 +638,10 @@ describe("em.query / ctes", () => {
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
       // And a CTE nothing in the statement goes on to read
-      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
       resetQueryCount();
       // When the UPDATE declares it but filters on its own column instead
-      await em.execute({ update: a, with: bookAuthors, set: { first_name: "x" }, where: a.id.eq("a:1") });
+      await em.execute({ update: a, with: bookAuthors, set: { firstName: "x" }, where: a.id.eq("a:1") });
       // Then the row still updates
       expect(await select("authors")).toMatchObject([{ first_name: "x" }]);
       // And no WITH is emitted, the same pruning a read query does
@@ -670,11 +670,11 @@ describe("em.query / ctes", () => {
       // And a recursive CTE seeded with the roots, whose step term joins back to the rows found so far
       const tree = recursiveQuery(
         "tree",
-        { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+        { from: a, where: a.mentorId.eq(null), select: { id: a.id, name: a.firstName } },
         (self) => ({
           from: a,
-          join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
-          select: { id: a.id, name: a.first_name },
+          join: [{ inner: self, on: a.mentorId.eq(self.id) }],
+          select: { id: a.id, name: a.firstName },
         }),
       );
       resetQueryCount();
@@ -713,11 +713,11 @@ describe("em.query / ctes", () => {
       // And a recursive CTE that drops duplicate rows instead of keeping every copy
       const chain = recursiveQuery(
         "chain",
-        { from: a, where: a.id.eq("a:1"), select: { id: a.id, mentorId: a.mentor_id } },
+        { from: a, where: a.id.eq("a:1"), select: { id: a.id, mentorId: a.mentorId } },
         (self) => ({
           from: a,
           join: [{ inner: self, on: self.mentorId.eq(a.id) }],
-          select: { id: a.id, mentorId: a.mentor_id },
+          select: { id: a.id, mentorId: a.mentorId },
         }),
         { union: "distinct" },
       );
@@ -750,11 +750,11 @@ describe("em.query / ctes", () => {
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
       // And a plain CTE of the Authors that have Books
-      const bookAuthors = query({ from: b, select: { authorId: b.author_id }, as: "book_authors" });
+      const bookAuthors = query({ from: b, select: { authorId: b.authorId }, as: "book_authors" });
       // And a recursive CTE of the mentor tree
-      const tree = recursiveQuery("tree", { from: a, where: a.mentor_id.eq(null), select: { id: a.id } }, (self) => ({
+      const tree = recursiveQuery("tree", { from: a, where: a.mentorId.eq(null), select: { id: a.id } }, (self) => ({
         from: a,
-        join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
+        join: [{ inner: self, on: a.mentorId.eq(self.id) }],
         select: { id: a.id },
       }));
       resetQueryCount();
@@ -816,8 +816,8 @@ describe("em.query / ctes", () => {
       // Given a CTE projecting an AuthorId and a count
       const stats = query({
         from: b,
-        groupBy: [b.author_id],
-        select: { authorId: b.author_id, count: b.id.count() },
+        groupBy: [b.authorId],
+        select: { authorId: b.authorId, count: b.id.count() },
         as: "book_stats",
       });
       // When it is inner joined and its column selected
@@ -825,7 +825,7 @@ describe("em.query / ctes", () => {
         with: stats,
         from: a,
         join: [{ inner: stats, on: stats.authorId.eq(a.id) }],
-        select: { name: a.first_name, count: stats.count },
+        select: { name: a.firstName, count: stats.count },
       });
       // Then the column keeps the type query(...) gave it
       expectTypeOf(rows).toEqualTypeOf<{ name: string; count: number }[]>();
@@ -836,8 +836,8 @@ describe("em.query / ctes", () => {
       // Given a CTE counting each Author's Books
       const stats = query({
         from: b,
-        groupBy: [b.author_id],
-        select: { authorId: b.author_id, count: b.id.count() },
+        groupBy: [b.authorId],
+        select: { authorId: b.authorId, count: b.id.count() },
         as: "book_stats",
       });
       // When it is LEFT joined, so its unmatched rows are null
@@ -845,7 +845,7 @@ describe("em.query / ctes", () => {
         with: stats,
         from: a,
         join: [{ left: stats, on: stats.authorId.eq(a.id) }],
-        select: { name: a.first_name, count: stats.count },
+        select: { name: a.firstName, count: stats.count },
       });
       // Then the CTE's column is nullable, but the from's is not
       expectTypeOf(rows).toEqualTypeOf<{ name: string; count: number | null }[]>();
@@ -854,7 +854,7 @@ describe("em.query / ctes", () => {
     it("selects a CTE's own rows", async () => {
       const em = newEntityManager();
       // Given a CTE of only the adult Authors
-      const adults = query({ from: a, where: a.age.gte(18), select: { id: a.id, name: a.first_name }, as: "adults" });
+      const adults = query({ from: a, where: a.age.gte(18), select: { id: a.id, name: a.firstName }, as: "adults" });
       // When the CTE is both the from and the select
       const rows = await em.query({ with: adults, from: adults, select: adults });
       // Then the row is the CTE's own projection
@@ -880,11 +880,11 @@ describe("em.query / ctes", () => {
       // Given a recursive CTE whose base term projects an AuthorId and a name
       const tree = recursiveQuery(
         "tree",
-        { from: a, where: a.mentor_id.eq(null), select: { id: a.id, name: a.first_name } },
+        { from: a, where: a.mentorId.eq(null), select: { id: a.id, name: a.firstName } },
         (self) => ({
           from: a,
-          join: [{ inner: self, on: a.mentor_id.eq(self.id) }],
-          select: { id: a.id, name: a.first_name },
+          join: [{ inner: self, on: a.mentorId.eq(self.id) }],
+          select: { id: a.id, name: a.firstName },
         }),
       );
       // When it is read
@@ -894,14 +894,14 @@ describe("em.query / ctes", () => {
     });
 
     it("still rejects the ctes spelling it does not use", () => {
-      const stats = query({ from: b, select: { authorId: b.author_id }, as: "book_stats" });
+      const stats = query({ from: b, select: { authorId: b.authorId }, as: "book_stats" });
       // Given `ctes` stays reserved, so the plural spelling is a type error rather than a silent no-op
       // When a query uses that spelling
       const q = {
         // @ts-expect-error: `ctes` stays reserved; the supported spelling is `with`
         ctes: [stats],
         from: a,
-        select: { name: a.first_name },
+        select: { name: a.firstName },
       } satisfies Query;
       // Then the clause is a type error rather than a silent no-op
       expectTypeOf(q).toBeObject();

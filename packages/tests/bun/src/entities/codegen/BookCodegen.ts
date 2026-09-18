@@ -58,9 +58,9 @@ export interface BookFields {
 }
 
 export interface BookColumns {
-  "id": { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "authorId": {
+  id: { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  authorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "author";

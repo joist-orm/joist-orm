@@ -60,7 +60,7 @@ export interface CriticColumnFields {
 }
 
 export interface CriticColumnColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<CriticColumn>;
     entity: CriticColumn;
@@ -68,10 +68,10 @@ export interface CriticColumnColumns {
     insert: "optional";
     update: false;
   };
-  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "critic_id": {
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  criticId: {
     type: IdOf<Critic>;
     entity: Critic;
     fieldName: "critic";

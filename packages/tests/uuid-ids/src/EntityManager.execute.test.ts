@@ -19,7 +19,7 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       // When inserting an Author with scalar PK RETURNING
       const author = await em.execute({
         insert: a,
-        values: { id: authorId, first_name: "Owner", created_at: timestamp, updated_at: timestamp },
+        values: { id: authorId, firstName: "Owner", createdAt: timestamp, updatedAt: timestamp },
         returning: a.id,
       });
       // Then the scalar Author id retains its public tag
@@ -31,17 +31,17 @@ describe("EntityManager.execute with tagged UUID ids", () => {
         values: {
           id: bookId,
           title: "Imported",
-          author_id: author.rows[0],
-          status_id: BookStatus.Draft,
-          created_at: timestamp,
-          updated_at: timestamp,
+          authorId: author.rows[0],
+          statusId: BookStatus.Draft,
+          createdAt: timestamp,
+          updatedAt: timestamp,
         },
         returning: {
           id: b.id,
-          author: b.author_id,
-          status: b.status_id,
-          createdAt: b.created_at,
-          updatedAt: b.updated_at,
+          author: b.authorId,
+          status: b.statusId,
+          createdAt: b.createdAt,
+          updatedAt: b.updatedAt,
         },
       });
       // Then POJO RETURNING uses the Book tag for its PK and the Author tag for its FK
@@ -63,9 +63,9 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       // When reassigning the returned FK and filtering by the returned PK
       const updated = await em.execute({
         update: b,
-        set: { author_id: book.rows[0].author },
+        set: { authorId: book.rows[0].author },
         where: b.id.eq(book.rows[0].id),
-        returning: b.author_id,
+        returning: b.authorId,
       });
       // Then scalar FK RETURNING retains the Author tag rather than the Book tag
       expect(updated).toEqual({ rowCount: 1, rows: [authorId] });
@@ -74,7 +74,7 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       const deleted = await em.execute({
         delete: b,
         where: b.id.eq(book.rows[0].id),
-        returning: { id: b.id, author: b.author_id },
+        returning: { id: b.id, author: b.authorId },
       });
       // Then DELETE uses the same public PK/FK representation
       expect(deleted).toEqual({ rowCount: 1, rows: [{ id: bookId, author: authorId }] });
@@ -85,11 +85,11 @@ describe("EntityManager.execute with tagged UUID ids", () => {
         insert: b,
         values: {
           id: deleted.rows[0].id,
-          author_id: deleted.rows[0].author,
+          authorId: deleted.rows[0].author,
           title: "Restored",
-          status_id: book.rows[0].status,
-          created_at: timestamp,
-          updated_at: timestamp,
+          statusId: book.rows[0].status,
+          createdAt: timestamp,
+          updatedAt: timestamp,
         },
         returning: b.id,
       });
@@ -115,15 +115,19 @@ describe("EntityManager.execute with tagged UUID ids", () => {
     }
   });
 
-  it.each(["id", "created_at", "updated_at"] as const)("enforces Author.%s at the appropriate layer", async (field) => {
+  it.each([
+    ["id", "id"],
+    ["createdAt", "created_at"],
+    ["updatedAt", "updated_at"],
+  ] as const)("enforces Author.%s at the appropriate layer", async (field, columnName) => {
     // Given an Author import with every required SQL value
     const em = newEntityManager();
     const a = table(Author);
     const values: Partial<InsertValues<Author>> = {
       id: "a:20000000-0000-0000-0000-000000000001",
-      first_name: "Missing value",
-      created_at: new Date("2026-01-02T03:04:05.000Z"),
-      updated_at: new Date("2026-01-02T03:04:05.000Z"),
+      firstName: "Missing value",
+      createdAt: new Date("2026-01-02T03:04:05.000Z"),
+      updatedAt: new Date("2026-01-02T03:04:05.000Z"),
     };
     // And one required column is omitted despite having no SQL default or trigger
     delete values[field];
@@ -132,7 +136,7 @@ describe("EntityManager.execute with tagged UUID ids", () => {
     const result = em.execute({ insert: a, values });
     // Then Joist requires the UUID, while PostgreSQL enforces omitted conventional timestamps
     await expect(result).rejects.toThrow(
-      field === "id" ? "INSERT requires Author.id" : `null value in column "${field}"`,
+      field === "id" ? "INSERT requires Author.id" : `null value in column "${columnName}"`,
     );
     expect(await select("authors")).toEqual([]);
   });

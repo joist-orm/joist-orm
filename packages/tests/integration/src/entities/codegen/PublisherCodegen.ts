@@ -117,74 +117,55 @@ export interface PublisherFields {
 }
 
 export interface PublisherColumns {
-  "id": {
-    fieldName: "id";
-    type: IdOf<Publisher>;
-    entity: Publisher;
-    nullable: false;
-    insert: "optional";
-    update: false;
-  };
-  "name": { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
-  "latitude": { type: number; fieldName: "latitude"; nullable: true; insert: "optional"; update: true };
-  "longitude": { type: number; fieldName: "longitude"; nullable: true; insert: "optional"; update: true };
-  "huge_number": { type: number; fieldName: "hugeNumber"; nullable: true; insert: "optional"; update: true };
-  "number_of_book_reviews": {
+  id: { fieldName: "id"; type: IdOf<Publisher>; entity: Publisher; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  latitude: { type: number; fieldName: "latitude"; nullable: true; insert: "optional"; update: true };
+  longitude: { type: number; fieldName: "longitude"; nullable: true; insert: "optional"; update: true };
+  hugeNumber: { type: number; fieldName: "hugeNumber"; nullable: true; insert: "optional"; update: true };
+  numberOfBookReviews: {
     type: number;
     fieldName: "numberOfBookReviews";
     nullable: false;
     insert: "optional";
     update: true;
   };
-  "deleted_at": { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
-  "titles_of_favorite_books": {
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  titlesOfFavoriteBooks: {
     type: string;
     fieldName: "titlesOfFavoriteBooks";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "book_advance_titles_snapshot": {
+  bookAdvanceTitlesSnapshot: {
     type: string;
     fieldName: "bookAdvanceTitlesSnapshot";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "number_of_book_advances_snapshot": {
+  numberOfBookAdvancesSnapshot: {
     type: string;
     fieldName: "numberOfBookAdvancesSnapshot";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "base_sync_default": {
-    type: string;
-    fieldName: "baseSyncDefault";
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "base_async_default": {
-    type: string;
-    fieldName: "baseAsyncDefault";
-    nullable: false;
-    insert: "required";
-    update: true;
-  };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "favorite_author_name": {
+  baseSyncDefault: { type: string; fieldName: "baseSyncDefault"; nullable: false; insert: "required"; update: true };
+  baseAsyncDefault: { type: string; fieldName: "baseAsyncDefault"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  favoriteAuthorName: {
     type: string;
     fieldName: "favoriteAuthorName";
     nullable: true;
     insert: "optional";
     update: true;
   };
-  "rating": { type: number; fieldName: "rating"; nullable: true; insert: "optional"; update: true };
-  "size_id": { type: PublisherSize; fieldName: "size"; nullable: true; insert: "optional"; update: true };
-  "type_id": { type: PublisherType; fieldName: "type"; nullable: false; insert: "optional"; update: true };
-  "favorite_author_id": {
+  rating: { type: number; fieldName: "rating"; nullable: true; insert: "optional"; update: true };
+  sizeId: { type: PublisherSize; fieldName: "size"; nullable: true; insert: "optional"; update: true };
+  typeId: { type: PublisherType; fieldName: "type"; nullable: false; insert: "optional"; update: true };
+  favoriteAuthorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "favoriteAuthor";
@@ -192,7 +173,7 @@ export interface PublisherColumns {
     insert: "optional";
     update: true;
   };
-  "group_id": {
+  groupId: {
     type: IdOf<PublisherGroup>;
     entity: PublisherGroup;
     fieldName: "group";
@@ -200,7 +181,7 @@ export interface PublisherColumns {
     insert: "optional";
     update: true;
   };
-  "spotlight_author_id": {
+  spotlightAuthorId: {
     type: IdOf<Author>;
     entity: Author;
     fieldName: "spotlightAuthor";

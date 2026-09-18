@@ -93,7 +93,7 @@ export interface TableBrand<T, Name extends string> extends TableMgmt {
  * references too. Join pruning follows these references and join dependencies, rather than guessing
  * which tables a SQL string mentions. It also accounts for select/order/group expressions and keep.
  *
- * I.e. if a joined Author is used only by `a.first_name.eq(name)`, supplying undefined removes that
+ * I.e. if a joined Author is used only by `a.firstName.eq(name)`, supplying undefined removes that
  * predicate and lets the unused join prune. Both APIs share this undefined-condition pruning rule;
  * they differ in how they get the references: Alias resolves domain conditions against a relationship
  * tree, while Table renders SQL expressions against explicit sources. Neither caches SQL names on
@@ -206,8 +206,8 @@ interface SubtypeJoin<U extends Entity> extends CollectionJoin<U> {
 }
 
 /**
- * A physical FK column expression (`b.author_id` selects/compares the FK) plus a join factory
- * (`b.author_id.as(a)` joins). The default join kind follows physical column nullability:
+ * A physical FK column expression (`b.authorId` selects/compares the `author_id` FK) plus a join factory
+ * (`b.authorId.as(a)` joins). The default join kind follows physical column nullability:
  * a NOT NULL FK is INNER, a nullable one is LEFT, and the row type reflects it.
  */
 export interface ReferenceColumn<U extends Entity, N extends null | never, Src extends string>
@@ -394,7 +394,7 @@ class TableColumn extends BaseExpr {
     super();
   }
 
-  /** Author.id, Book.author_id, and Comment.parent_author_id use the same Author ID domain. */
+  /** Author.id, Book.authorId, and Comment.parentAuthorId use the same Author ID domain. */
   get outputType(): TypeInfo | undefined {
     return this.column.outputType;
   }
@@ -748,8 +748,7 @@ class PolyReferenceImpl<T extends Entity> {
 
   /** Returns the physical FK expression for one polymorphic target. */
   private componentColumn(comp: PolymorphicFieldComponent): EntityColumnImpl<T> {
-    const descriptor =
-      this.meta.columns[comp.columnName] ?? fail(`No physical column ${comp.columnName} on ${this.meta.type}`);
+    const descriptor = comp.column;
     return new EntityColumnImpl<T>(this.meta, descriptor, this.mgmt);
   }
 }
@@ -842,7 +841,7 @@ class OneToManyJoinImpl extends CollectionJoinImpl {
   protected joinEntry(kind: JoinKind, other: TableFor<Entity>): object {
     const { field } = this;
     const otherMeta = getTableMetadata(other);
-    const descriptor = otherMeta.columns[field.otherColumnName];
+    const descriptor = Object.values(otherMeta.columns).find((column) => column.columnName === field.otherColumnName);
     if (!descriptor) {
       return fail(
         `Cannot join ${getTableMetadata(this.proxy).type}.${field.fieldName} to ${otherMeta.type}: ` +
@@ -940,7 +939,7 @@ function physicalRelation(meta: EntityMetadata, key: string): Field | undefined 
   if (!isRelation(field)) return undefined;
   // I.e. TaskNew.copiedFrom uses Task's original FK domain, not its specialized TaskNew target.
   if (field?.kind === "m2o" || field?.kind === "poly") {
-    if (!field.serde.columns.every((binding) => meta.columns[binding.columnName] === binding.column)) return undefined;
+    if (!field.serde.columns.every((binding) => Object.values(meta.columns).includes(binding.column))) return undefined;
     return field.kind === "poly"
       ? {
           ...field,
@@ -975,7 +974,7 @@ function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
       !["primaryKey", "primitive", "enum", "m2o"].includes(field.kind) ||
       !field.serde ||
       field.serde.columns.length !== 1 ||
-      !field.serde.columns.every((binding) => meta.columns[binding.columnName] === binding.column)
+      !field.serde.columns.every((binding) => Object.values(meta.columns).includes(binding.column))
     ) {
       throw new Error(`Unsupported table filter field ${meta.type}.${key}; use an explicit join`);
     }

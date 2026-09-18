@@ -63,9 +63,9 @@ export interface T5BookFields {
 }
 
 export interface T5BookColumns {
-  "id": { fieldName: "id"; type: IdOf<T5Book>; entity: T5Book; nullable: false; insert: "optional"; update: false };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "author_id": {
+  id: { fieldName: "id"; type: IdOf<T5Book>; entity: T5Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  authorId: {
     type: IdOf<T5Author>;
     entity: T5Author;
     fieldName: "author";

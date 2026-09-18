@@ -90,14 +90,14 @@ export interface CommentFields {
 }
 
 export interface CommentColumns {
-  "id": { fieldName: "id"; type: IdOf<Comment>; entity: Comment; nullable: false; insert: "optional"; update: false };
-  "parent_tagged_id": { type: string; fieldName: "parentTaggedId"; nullable: true; insert: "optional"; update: true };
-  "parent_tags": { type: string; fieldName: "parentTags"; nullable: false; insert: "required"; update: true };
-  "text": { type: string; fieldName: "text"; nullable: true; insert: "optional"; update: true };
-  "created_at": { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
-  "updated_at": { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  "user_id": { type: IdOf<User>; entity: User; fieldName: "user"; nullable: true; insert: "optional"; update: true };
-  "parent_author_id": {
+  id: { fieldName: "id"; type: IdOf<Comment>; entity: Comment; nullable: false; insert: "optional"; update: false };
+  parentTaggedId: { type: string; fieldName: "parentTaggedId"; nullable: true; insert: "optional"; update: true };
+  parentTags: { type: string; fieldName: "parentTags"; nullable: false; insert: "required"; update: true };
+  text: { type: string; fieldName: "text"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  userId: { type: IdOf<User>; entity: User; fieldName: "user"; nullable: true; insert: "optional"; update: true };
+  parentAuthorId: {
     fieldName: never;
     type: IdOf<Author>;
     entity: Author;
@@ -105,15 +105,8 @@ export interface CommentColumns {
     insert: "never";
     update: false;
   };
-  "parent_book_id": {
-    fieldName: never;
-    type: IdOf<Book>;
-    entity: Book;
-    nullable: true;
-    insert: "never";
-    update: false;
-  };
-  "parent_book_review_id": {
+  parentBookId: { fieldName: never; type: IdOf<Book>; entity: Book; nullable: true; insert: "never"; update: false };
+  parentBookReviewId: {
     fieldName: never;
     type: IdOf<BookReview>;
     entity: BookReview;
@@ -121,7 +114,7 @@ export interface CommentColumns {
     insert: "never";
     update: false;
   };
-  "parent_publisher_id": {
+  parentPublisherId: {
     fieldName: never;
     type: IdOf<Publisher>;
     entity: Publisher;
@@ -129,14 +122,7 @@ export interface CommentColumns {
     insert: "never";
     update: false;
   };
-  "parent_task_id": {
-    fieldName: never;
-    type: IdOf<Task>;
-    entity: Task;
-    nullable: true;
-    insert: "never";
-    update: false;
-  };
+  parentTaskId: { fieldName: never; type: IdOf<Task>; entity: Task; nullable: true; insert: "never"; update: false };
 }
 
 export interface CommentOpts {

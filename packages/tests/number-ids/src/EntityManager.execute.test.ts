@@ -17,7 +17,7 @@ describe("EntityManager.execute with number ids", () => {
       // When inserting an Author with scalar PK RETURNING
       const author = await em.execute({
         insert: a,
-        values: { first_name: "Owner", created_at: timestamp, updated_at: timestamp },
+        values: { firstName: "Owner", createdAt: timestamp, updatedAt: timestamp },
         returning: a.id,
       });
       // Then the Author id is a number rather than an internal tagged string
@@ -26,8 +26,8 @@ describe("EntityManager.execute with number ids", () => {
       // When assigning the returned Author id to a Book foreign key
       const book = await em.execute({
         insert: b,
-        values: { title: "Imported", author_id: author.rows[0], created_at: timestamp, updated_at: timestamp },
-        returning: { id: b.id, author: b.author_id, createdAt: b.created_at, updatedAt: b.updated_at },
+        values: { title: "Imported", authorId: author.rows[0], createdAt: timestamp, updatedAt: timestamp },
+        returning: { id: b.id, author: b.authorId, createdAt: b.createdAt, updatedAt: b.updatedAt },
       });
       // Then POJO RETURNING decodes both the bigint PK and integer FK as numbers
       expect(book).toEqual({ rowCount: 1, rows: [{ id: 1, author: 1, createdAt: timestamp, updatedAt: timestamp }] });
@@ -39,9 +39,9 @@ describe("EntityManager.execute with number ids", () => {
       // When reassigning the returned FK and filtering by the returned PK
       const updated = await em.execute({
         update: b,
-        set: { author_id: book.rows[0].author },
+        set: { authorId: book.rows[0].author },
         where: b.id.eq(book.rows[0].id),
-        returning: b.author_id,
+        returning: b.authorId,
       });
       // Then scalar FK RETURNING also exposes a public Author id
       expect(updated).toEqual({ rowCount: 1, rows: [1] });
@@ -50,7 +50,7 @@ describe("EntityManager.execute with number ids", () => {
       const deleted = await em.execute({
         delete: b,
         where: b.id.eq(book.rows[0].id),
-        returning: { id: b.id, author: b.author_id },
+        returning: { id: b.id, author: b.authorId },
       });
       // Then DELETE uses the same public PK/FK representation
       expect(deleted).toEqual({ rowCount: 1, rows: [{ id: 1, author: 1 }] });
@@ -61,10 +61,10 @@ describe("EntityManager.execute with number ids", () => {
         insert: b,
         values: {
           id: deleted.rows[0].id,
-          author_id: deleted.rows[0].author,
+          authorId: deleted.rows[0].author,
           title: "Restored",
-          created_at: timestamp,
-          updated_at: timestamp,
+          createdAt: timestamp,
+          updatedAt: timestamp,
         },
         returning: b.id,
       });
@@ -84,23 +84,23 @@ describe("EntityManager.execute with number ids", () => {
     }
   });
 
-  it.each(["created_at", "updated_at"] as const)(
-    "lets PostgreSQL enforce Author.%s without a trigger",
-    async (field) => {
-      // Given an Author import with every required SQL value
-      const em = newEntityManager();
-      const a = table(Author);
-      const values = {
-        first_name: "Missing timestamp",
-        created_at: new Date("2026-01-02T03:04:05.000Z"),
-        updated_at: new Date("2026-01-02T03:04:05.000Z"),
-      };
-      // And one timestamp is omitted even though its column has no default or trigger
-      // When omitting a conventional timestamp, the mutation compiler allows PostgreSQL to enforce the schema
-      const result = em.execute({ insert: a, values: { ...values, [field]: undefined } });
-      // Then PostgreSQL rejects the missing value without inserting an Author
-      await expect(result).rejects.toThrow(`null value in column "${field}"`);
-      expect(await select("authors")).toEqual([]);
-    },
-  );
+  it.each([
+    ["createdAt", "created_at"],
+    ["updatedAt", "updated_at"],
+  ] as const)("lets PostgreSQL enforce Author.%s without a trigger", async (field, columnName) => {
+    // Given an Author import with every required SQL value
+    const em = newEntityManager();
+    const a = table(Author);
+    const values = {
+      firstName: "Missing timestamp",
+      createdAt: new Date("2026-01-02T03:04:05.000Z"),
+      updatedAt: new Date("2026-01-02T03:04:05.000Z"),
+    };
+    // And one timestamp is omitted even though its column has no default or trigger
+    // When omitting a conventional timestamp, the mutation compiler allows PostgreSQL to enforce the schema
+    const result = em.execute({ insert: a, values: { ...values, [field]: undefined } });
+    // Then PostgreSQL rejects the missing value without inserting an Author
+    await expect(result).rejects.toThrow(`null value in column "${columnName}"`);
+    expect(await select("authors")).toEqual([]);
+  });
 });

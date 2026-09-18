@@ -58,7 +58,7 @@ export interface T5BookReviewFields {
 }
 
 export interface T5BookReviewColumns {
-  "id": {
+  id: {
     fieldName: "id";
     type: IdOf<T5BookReview>;
     entity: T5BookReview;
@@ -66,15 +66,8 @@ export interface T5BookReviewColumns {
     insert: "optional";
     update: false;
   };
-  "title": { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
-  "book_id": {
-    type: IdOf<T5Book>;
-    entity: T5Book;
-    fieldName: "book";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  bookId: { type: IdOf<T5Book>; entity: T5Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface T5BookReviewOpts {

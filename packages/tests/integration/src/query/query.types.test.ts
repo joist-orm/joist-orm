@@ -586,9 +586,12 @@ async function typeAssertions() {
   query({ from: a, select: { name: a.firstName }, orderBy: [{ age: "ASC" }] });
   // @ts-expect-error: keyed and expression sorts must be separate array entries
   em.query({ from: a, select: { name: a.firstName }, orderBy: [{ sort: a.age, name: "ASC", order: "ASC" }] });
-  const unionSelect: Query<{ name: typeof a.firstName } | { age: typeof a.age }> = {
+  // Given a query with alternative Author projections and no joins
+  const unionSelect: Query<{ name: typeof a.firstName } | { age: typeof a.age }, []> = {
     from: a,
     select: { name: a.firstName },
+    // When sorting by an expression and a projection key in the same entry
+    // Then alternative projections still reject the combined entry
     // @ts-expect-error: a union of select shapes must still reject a combined keyed/expression entry
     orderBy: [{ sort: a.age, name: "ASC", order: "ASC" }],
   };

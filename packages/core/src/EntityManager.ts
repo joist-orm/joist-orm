@@ -118,10 +118,11 @@ import {
   type CheckSetQuery,
   type EntityQuery,
   type QueryArg,
-  type QueryJoins,
+  type QueryJoinInput,
   type QueryRow,
   type QuerySelect,
   type QuerySource,
+  type ResolvedJoins,
   type SetOperand,
   type SetQuery,
   type SetQueryRow,
@@ -571,18 +572,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: { populate: H },
   ): Promise<Loaded<T, H>[]>;
   public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
-  public query<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoins = []>(
+  public query<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoinInput = []>(
     q: QueryArg<F, S, J, never>,
-  ): Promise<QueryRow<S, J>[]>;
+  ): Promise<QueryRow<S, ResolvedJoins<F, J>>[]>;
   public query<
     F extends QuerySource,
     const S extends QuerySelect,
-    const H extends LoadHint<Extract<QueryRow<S, J>, EntityW>>,
-    J extends QueryJoins = [],
+    const H extends LoadHint<Extract<QueryRow<S, ResolvedJoins<F, J>>, EntityW>>,
+    J extends QueryJoinInput = [],
   >(
     q: QueryArg<F, S, J, never>,
-    options: QueryRow<S, J> extends EntityW ? { populate: H } : never,
-  ): Promise<Loaded<Extract<QueryRow<S, J>, EntityW>, H>[]>;
+    options: QueryRow<S, ResolvedJoins<F, J>> extends EntityW ? { populate: H } : never,
+  ): Promise<Loaded<Extract<QueryRow<S, ResolvedJoins<F, J>>, EntityW>, H>[]>;
   public query(q: unknown, options?: { populate: LoadHint<EntityW> }): Promise<any[]> {
     this.#assertFindAllowed("query");
     const em = this;
@@ -614,9 +615,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public execute<const Q extends SetQuery<readonly SetOperand[]>>(
     statement: Q & CheckSetQuery<Q>,
   ): Promise<ExecuteResult<SetQueryRow<Q>>>;
-  public execute<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoins = []>(
+  public execute<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoinInput = []>(
     statement: QueryArg<F, S, J, never>,
-  ): Promise<ExecuteResult<QueryRow<S, J>>>;
+  ): Promise<ExecuteResult<QueryRow<S, ResolvedJoins<F, J>>>>;
   public execute(statement: unknown): Promise<ExecuteResult<unknown>> {
     const em = this;
     return (async function execute() {

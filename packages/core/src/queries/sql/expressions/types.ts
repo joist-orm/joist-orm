@@ -9,7 +9,7 @@ import type { CoalesceInput, ParsedCoalesceExpression } from "src/queries/sql/ex
 import type { GreatestInput, ParsedGreatestExpression } from "src/queries/sql/expressions/greatest.ts";
 import type { LeastInput, ParsedLeastExpression } from "src/queries/sql/expressions/least.ts";
 import type { NullIfInput, ParsedNullIfExpression } from "src/queries/sql/expressions/nullIf.ts";
-import type { CompatibleValue, MaybeNull, QueryJoins } from "src/queries/sql/query.ts";
+import type { CompatibleValue, MaybeNull, QueryJoinList } from "src/queries/sql/query.ts";
 
 /** Each operation owns its input fields; the combined input permits exactly one operation. */
 interface ExprInputs {
@@ -42,7 +42,7 @@ export type ExprFromInput<I> = Expr<InputResult<I, []>, ExpressionSources<I>> & 
  * Computes the TypeScript result type, including null from LEFT joins.
  * I.e. Book.title is string | null when Book is LEFT-joined; COALESCE(Book.title, "Unknown") is string.
  */
-export type ExpressionValue<V, J extends QueryJoins> = unknown extends V
+export type ExpressionValue<V, J extends QueryJoinList> = unknown extends V
   ? V
   : V extends { readonly [inputBrand]: infer I }
     ? InputResult<I, J>
@@ -81,7 +81,7 @@ type WidenLiteral<V> = V extends string
  * Uses existing expressions' result types for their literal fallbacks, just as their codecs do at runtime.
  * I.e. COALESCE(Book.id, "b:9") returns BookId rather than string. ExpressionValue supplies the nullability.
  */
-type InputResult<I, J extends QueryJoins> = [Exclude<BranchResult<I>, null>] extends [never]
+type InputResult<I, J extends QueryJoinList> = [Exclude<BranchResult<I>, null>] extends [never]
   ? ExpressionValue<I, J>
   : Exclude<BranchResult<I>, null> | (null extends ExpressionValue<I, J> ? null : never);
 
@@ -99,7 +99,7 @@ type BranchResult<V> = unknown extends V
           : never;
 
 /** A fixed non-null candidate guarantees a result; a possibly empty candidate array does not. */
-type CoalesceValue<A extends readonly unknown[], J extends QueryJoins> = A extends readonly [infer H, ...infer T]
+type CoalesceValue<A extends readonly unknown[], J extends QueryJoinList> = A extends readonly [infer H, ...infer T]
   ? Exclude<ExpressionValue<H, J>, null> | (null extends ExpressionValue<H, J> ? CoalesceValue<T, J> : never)
   : A extends readonly [...infer Before, infer Last]
     ?

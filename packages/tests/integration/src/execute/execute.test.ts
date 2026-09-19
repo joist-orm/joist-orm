@@ -2318,4 +2318,43 @@ describe("em.execute", () => {
     // Then the Tag is deleted
     expect(result).toEqual({ rowCount: 1, rows: [] });
   });
+
+  it.each(["update", "delete"] as const)("combines %s WHERE array conditions with AND", async (operation) => {
+    // Given Tags that each match one or both restrictions
+    await insertTag({ name: "Selected" });
+    await insertTag({ name: "Selected" });
+    await insertTag({ name: "Other" });
+    const em = newEntityManager();
+    const t = table(Tag);
+    // And a readonly array with optional restrictions omitted
+    const where = [t.name.eq("Selected"), t.id.ne("t:2"), undefined, t.name.eq(undefined)] as const;
+
+    // When mutating only Tags that match both restrictions
+    const result = await em.execute(
+      operation === "update"
+        ? { update: t, set: { name: "Changed" }, where, returning: t.id }
+        : { delete: t, where, returning: t.id },
+    );
+
+    // Then only the first Tag is affected
+    expect(result).toEqual({ rowCount: 1, rows: ["t:1"] });
+  });
+
+  it.each(["update", "delete"] as const)("rejects a fully pruned %s WHERE array", async (operation) => {
+    // Given a Tag with no defined mutation restrictions
+    await insertTag({ name: "Preserved" });
+    const em = newEntityManager();
+    const t = table(Tag);
+    const where = [undefined, t.name.eq(undefined)];
+
+    // When the optional restrictions all prune without full-table consent
+    const result = em.execute(
+      operation === "update" ? { update: t, set: { name: "Changed" }, where } : { delete: t, where },
+    );
+
+    // Then the mutation requires explicit full-table consent
+    await expect(result).rejects.toThrow(
+      "UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned",
+    );
+  });
 });

@@ -327,4 +327,28 @@ describe("paginateCursor", () => {
     await expect(page.pageInfo.hasNextPage).resolves.toEqual(true);
     expect(numberOfQueries).toEqual(4);
   });
+
+  it.withCtx("preserves WHERE arrays when applying cursor bounds", async (ctx) => {
+    // Given matching Authors on both sides of the cursor
+    await insertAuthor({ first_name: "Alice", age: 30 });
+    await insertAuthor({ first_name: "Alice", age: 40 });
+    // And Authors that each fail one of the query restrictions
+    await insertAuthor({ first_name: "Alice", age: 15 });
+    await insertAuthor({ first_name: "Bob", age: 30 });
+    const [a] = tables(Author);
+    const query = {
+      from: a,
+      select: a,
+      where: [a.firstName.eq("Alice"), a.age.gte(18), undefined] as const,
+    } satisfies Query;
+
+    // When paging past the first matching Author
+    const page = await paginateCursor(ctx, query, { first: 10, after: Buffer.from("a:1").toString("base64") });
+
+    // Then the cursor and both restrictions apply to the page and its counts
+    expect(page.nodes.map((author) => author.id)).toEqual(["a:2"]);
+    await expect(page.pageInfo.totalCount).resolves.toEqual(2);
+    await expect(page.pageInfo.hasPreviousPage).resolves.toEqual(true);
+    await expect(page.pageInfo.hasNextPage).resolves.toEqual(false);
+  });
 });

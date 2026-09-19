@@ -41,12 +41,14 @@ import {
   type ExpressionValue,
   buildExpr,
 } from "src/queries/sql/expressions/expression.ts";
+import { type CheckJoinInput, type TreeEntries, compileJoinTree } from "src/queries/sql/JoinTree.ts";
 import { kq, kqStar, safeKq } from "src/queries/sql/keywords.ts";
 import {
   JoinTableHandle,
   type M2mJoinTable,
   type Table,
   type TableBrand,
+  type TableFor,
   type TableMgmt,
   collectionJoin,
   getTableMetadata,
@@ -138,7 +140,22 @@ export type QuerySource =
  * form, since a subquery has no FK metadata.
  */
 export type QueryJoin = InnerJoin<QuerySource, QueryCondition> | LeftJoin<QuerySource, QueryCondition>;
-export type QueryJoins = readonly (QueryJoin | undefined)[];
+export type QueryJoinList = readonly (QueryJoin | undefined)[];
+
+/** A flat SQL join list or a domain relationship tree rooted at from. */
+export type QueryJoinInput = QueryJoinList | Readonly<Record<string, unknown>>;
+
+/**
+ * Resolves tree bindings to join types for scope and result nullability.
+ * Deferring the extracted entry union avoids expanding recursive constraints in generic query signatures.
+ */
+export type ResolvedJoins<F, J> = J extends QueryJoinList
+  ? J
+  : F extends TableFor<infer T extends Entity>
+    ? TreeEntries<T, J> extends infer E
+      ? readonly Extract<E, QueryJoin>[]
+      : never
+    : [];
 
 /**
  * A CTE declaration: a `query(...)` value with named columns, i.e. a POJO or set-operation select.
@@ -217,7 +234,7 @@ type CheckSelect<S> = S extends QuerySource | ExprLike<unknown>
  * `S` and `J` are generic so callers keep the literal shape of `select` and `join`; the defaults let
  * a standalone object use `satisfies Query` (or `satisfies Clauses` for a source-less fragment).
  */
-export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins> {
+export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoinInput = QueryJoinInput> {
   /**
    * CTEs to include in a `WITH` clause, declared as `query(...)` values; either a single value or an array.
    *
@@ -227,6 +244,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
    * the same pruning `join` gets (see "Pruning"); `pruneJoins: false` keeps every CTE.
    */
   with?: WithInput;
+  /** A flat join list, or a domain relationship tree rooted at the entity table in from. */
   join?: J;
   /** A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`. */
   where?: QueryCondition;
@@ -249,7 +267,7 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
 }
 
 /** A whole query: `Clauses` plus its source. `query(q)` turns it into a value; `em.query(q)` runs it. */
-export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoins = QueryJoins>
+export interface Query<S extends QuerySelect = QuerySelect, J extends QueryJoinInput = QueryJoinInput>
   extends Clauses<S, J>, Partial<Record<SetOperation | MutationKey | "ctes", never>> {
   from: QuerySource;
 }
@@ -358,7 +376,10 @@ export type ReadQueryRow<Q> = SetOperand extends Q
     ? R
     : Q extends { select: infer S }
       ? // A declared Query<S, J> has an optional join property that still carries J's LEFT joins.
-        QueryRow<S, "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoins> : []>
+        QueryRow<
+          S,
+          ResolvedJoins<Q[keyof Q & "from"], "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoinInput> : []>
+        >
       : [OperandsOf<Q>] extends [never]
         ? never
         : SetQueryRow<Q>;
@@ -508,7 +529,7 @@ export type CheckReadQuery<Q> = SetOperand extends Q
       : Q extends { readonly [entityQueryBrand]: unknown }
         ? { readonly [K in keyof Q]: K extends typeof entityQueryBrand ? unknown : never }
         : Q extends { readonly from: unknown; readonly select: unknown }
-          ? {
+          ? CheckJoinInput<Q["from"], "join" extends keyof Q ? Exclude<Q[keyof Q & "join"], undefined> : []> & {
               readonly [K in keyof Q]: K extends "select"
                 ? CheckSelect<Q[K]>
                 : K extends keyof Clauses | "from" | "as"
@@ -578,7 +599,7 @@ type NullableSources<X, Left = LeftJoined<X>> =
  * table named `string` would nullify every column in the query. That is why anonymous subqueries
  * share the literal sentinel `"?"` instead.
  */
-export type MaybeNull<R, Src extends string, J extends QueryJoins> = string extends Src
+export type MaybeNull<R, Src extends string, J extends QueryJoinList> = string extends Src
   ? [NullableSources<J[number]>] extends [never]
     ? R
     : R | null
@@ -594,7 +615,9 @@ export type MaybeNull<R, Src extends string, J extends QueryJoins> = string exte
  * - single expression (`select: b.id.count()`) is that expression's value, used by scalar subqueries
  * - POJO mode is a mapped type over the select keys, with left-join nullability applied
  */
-export type QueryRow<S, J extends QueryJoins = []> = S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
+export type QueryRow<S, J extends QueryJoinList = []> = S extends {
+  readonly [tableMgmt]: { readonly __entity: infer T };
+}
   ? T
   : S extends { readonly [subqueryBrand]: { readonly __row: infer R } }
     ? R
@@ -657,7 +680,7 @@ export type NotWidened<S> = QuerySelect extends S
   : unknown;
 
 /** What `query()` returns, by select shape: an entity list, a scalar/list subquery, or a derived table. */
-export type QueryValue<S, J extends QueryJoins, Name extends string> = S extends {
+export type QueryValue<S, J extends QueryJoinList, Name extends string> = S extends {
   readonly [tableMgmt]: { readonly __entity: infer T extends Entity };
 }
   ? EntityQuery<T>
@@ -671,7 +694,7 @@ type JoinedName<X> = X extends { readonly inner: infer A }
   : X extends { readonly left: infer A }
     ? NameOf<A>
     : never;
-type InScope<F, J extends QueryJoins> = NameOf<F> | JoinedName<J[number]>;
+type InScope<F, J extends QueryJoinList> = NameOf<F> | JoinedName<J[number]>;
 
 /**
  * Asks, for every column of a POJO select: is its source key among `from` + `join` at all? If no, the
@@ -688,7 +711,7 @@ type InScope<F, J extends QueryJoins> = NameOf<F> | JoinedName<J[number]>;
  * `S` to `never` when `select` is missing, and a distributive conditional over `never` would swallow the
  * whole parameter type.
  */
-export type CheckScope<S, F, J extends QueryJoins> = [S] extends [never]
+export type CheckScope<S, F, J extends QueryJoinInput> = [S] extends [never]
   ? unknown
   : // A source-shaped select (`select: a`, `select: bookStats`) must be the `from`: a joined source's
     // rows would need left-join nullability (and entity hydration) that source-shaped selects don't
@@ -701,7 +724,7 @@ export type CheckScope<S, F, J extends QueryJoins> = [S] extends [never]
     : [S] extends [Record<string, SelectExpression>]
       ? {
           select: {
-            [K in keyof S]: CheckExpressionScope<S[K], InScope<F, J>>;
+            [K in keyof S]: CheckExpressionScope<S[K], InScope<F, ResolvedJoins<F, J>>>;
           };
         }
       : unknown;
@@ -715,13 +738,16 @@ type CheckExpressionScope<V, Scope> =
       : `table '${Exclude<ExpressionSources<V>, Scope> & string}' is not in from/join`;
 
 /** The one argument type `query()` and `em.query()` share: a `Query` POJO plus its source, name, and checks. */
-export type QueryArg<F extends QuerySource, S extends QuerySelect, J extends QueryJoins, Name extends string> = Query<
-  S,
-  J
-> & {
+export type QueryArg<
+  F extends QuerySource,
+  S extends QuerySelect,
+  J extends QueryJoinInput,
+  Name extends string,
+> = Query<S, J> & {
   from: F;
   as?: Name;
 } & CheckScope<S, F, J> &
+  NoInfer<CheckJoinInput<F, J>> &
   NotWidened<S> & { select: CheckSelect<NoInfer<S>> };
 
 /**
@@ -748,26 +774,18 @@ export function query<const Q extends SetQuery<readonly SetOperand[]>, Name exte
 export function query<
   F extends QuerySource,
   const S extends QuerySelect = never,
-  J extends QueryJoins = [],
+  J extends QueryJoinInput = [],
   Name extends string = "?",
->(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name>;
+>(q: QueryArg<F, S, J, Name>): QueryValue<S, ResolvedJoins<F, J>, Name>;
 export function query(q: AnyReadQuery): unknown {
-  const handle = new SubqueryHandle(toQuery(q));
-  const output = handle.output();
-  if (output.kind === "entity") {
-    return { [entityQueryBrand]: handle } as any;
-  } else if (output.kind === "scalar") {
-    return new SubqueryExpr(handle) as any;
-  } else {
-    return newSubqueryProxy(handle) as any;
-  }
+  return createQueryValue(q);
 }
 
 /**
- * Builds a query value only when its user-supplied `where` survives pruning.
+ * Builds a query value only when its user-supplied `where` or join-tree filters survive pruning.
  *
  * Missing or empty conditions prune the value, including nested groups and `pruneIfUndefined`.
- * Joins, HAVING, and implicit soft-delete/STI conditions do not keep the value alive.
+ * Alias-only joins, HAVING, and implicit soft-delete/STI conditions do not keep the value alive.
  *
  * I.e. `queryMaybe({ from: b, where: b.authorId.eq(enabled ? a.id : undefined), select: b.id })`
  * returns `undefined` when `enabled` is false, so an enclosing `notExists` also prunes.
@@ -775,11 +793,14 @@ export function query(q: AnyReadQuery): unknown {
 export function queryMaybe<
   F extends QuerySource,
   const S extends QuerySelect = never,
-  J extends QueryJoins = [],
+  J extends QueryJoinInput = [],
   Name extends string = "?",
->(q: QueryArg<F, S, J, Name>): QueryValue<S, J, Name> | undefined {
-  checkCondition(q.where);
-  return isPrunedQueryCondition(q.where) ? undefined : query(q);
+>(q: QueryArg<F, S, J, Name>): QueryValue<S, ResolvedJoins<F, J>, Name> | undefined {
+  const normalized = normalizeQueryJoins(q);
+  checkCondition(normalized.where);
+  return isPrunedQueryCondition(normalized.where)
+    ? undefined
+    : (createQueryValue(normalized) as QueryValue<S, ResolvedJoins<F, J>, Name>);
 }
 
 /**
@@ -810,13 +831,13 @@ export function recursiveQuery<
   Name extends string,
   F extends QuerySource,
   const S extends QuerySelect,
-  J extends QueryJoins,
+  J extends QueryJoinInput,
 >(
   name: Name,
   base: QueryArg<F, S, J, Name>,
-  step: (self: Subquery<QueryRow<S, J>, Name>) => SetOperand,
+  step: (self: Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name>) => SetOperand,
   opts: RecursiveOptions = {},
-): Subquery<QueryRow<S, J>, Name> {
+): Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name> {
   if (typeof name !== "string" || name === "") fail("A recursive CTE needs a name");
   if (opts.union !== undefined && opts.union !== "all" && opts.union !== "distinct") {
     fail("A recursive CTE's union must be 'all' or 'distinct'");
@@ -824,7 +845,7 @@ export function recursiveQuery<
   // Start on the base term so `self`'s columns resolve while the step term is still being built.
   const handle = new SubqueryHandle(toQuery(base), true);
   if (handle.output().kind !== "pojo") fail("A recursive CTE's base term needs a named projection");
-  const self = newSubqueryProxy(handle) as Subquery<QueryRow<S, J>, Name>;
+  const self = newSubqueryProxy(handle) as Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name>;
   const operands = [base, step(self)] as unknown as readonly SetOperand[];
   handle.setBody(opts.union === "distinct" ? { union: operands, as: name } : { unionAll: operands, as: name });
   return self;
@@ -1339,6 +1360,7 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
     setOrderBys(q, first);
     return { kind: first.kind, columns };
   }
+  q = normalizeQueryJoins(q);
   const { select } = q;
   if (isTable(select)) return { kind: "entity", columns: [] };
   if (isSubqueryValue(select)) return readValueHandle(select).output();
@@ -1367,7 +1389,7 @@ function projectionOutput(select: unknown): QueryOutput {
  * Only direct columns carry sqlSource; COUNT and COALESCE retain their own SQL nullability.
  * I.e. selecting Book.title from a LEFT-joined Book makes its output nullable, but COUNT(Book.id) stays NOT NULL.
  */
-function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): QueryOutput {
+function joinedOutput(output: QueryOutput, joins: QueryJoinList | undefined): QueryOutput {
   if (!joins?.some((join) => join?.left)) return output;
   const left = new Set<object>();
   for (const join of resolveReferenceJoins(joins)) if (join.left) left.add(handleOf(join.left));
@@ -1387,7 +1409,7 @@ function joinedOutput(output: QueryOutput, joins: QueryJoins | undefined): Query
  * Only .as() carries a source handle; explicit INNER joins retain their filtering semantics.
  * I.e. LEFT Book followed by Book.author.as(a) adds Author to the set of nullable handles.
  */
-function resolveReferenceJoins(joins: QueryJoins | undefined): QueryJoin[] {
+function resolveReferenceJoins(joins: QueryJoinList | undefined): QueryJoin[] {
   const left = new Set<object>();
   return (joins ?? []).filter(isDefined).map((join) => {
     const source = (join as QueryJoin & { [referenceJoinSource]?: object })[referenceJoinSource];
@@ -1686,6 +1708,7 @@ function parseQuery(
 ): Plan {
   validateReadQuery(q);
   if (isSetQuery(q)) return parseSetQuery(q, parent, assigner, recursiveSelf);
+  q = normalizeQueryJoins(q);
   const ctx = new Ctx(assigner, parent);
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
   const joinEntries = resolveReferenceJoins(q.join);
@@ -2483,6 +2506,26 @@ function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
+}
+
+/** Lowers a relationship tree before SQL rendering or output nullability is calculated. */
+function normalizeQueryJoins(q: AnyQuery): AnyQuery {
+  if (q.join === undefined || Array.isArray(q.join)) return q;
+  const tree = compileJoinTree(q.from, q.join);
+  return { ...q, join: tree.joins, where: { and: [tree.condition, q.where] } };
+}
+
+/** Creates the runtime query value after the public signature has checked its input. */
+function createQueryValue(q: AnyReadQuery): unknown {
+  const handle = new SubqueryHandle(toQuery(q));
+  const output = handle.output();
+  if (output.kind === "entity") {
+    return { [entityQueryBrand]: handle };
+  } else if (output.kind === "scalar") {
+    return new SubqueryExpr(handle);
+  } else {
+    return newSubqueryProxy(handle);
+  }
 }
 
 /** Keeps shorthand declarations callable-only, without recursively copying sql's own shorthand properties. */

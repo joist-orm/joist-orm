@@ -16,7 +16,7 @@ import {
   type NameOf,
   type Plan,
   type Query,
-  type QueryJoins,
+  type QueryJoinInput,
   type QueryRow,
   type ReadQueryRow,
   type SetOperand,
@@ -450,7 +450,7 @@ type CheckValues<T extends Entity, V> =
       ? never
       : CheckAssignments<Exclude<V, readonly unknown[]>, InsertValues<T>, never>);
 type CheckSourceScope<Q> = Q extends { readonly select: infer S; readonly from: infer F }
-  ? CheckScope<S, F, "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoins> : []>
+  ? CheckScope<S, F, "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoinInput> : []>
   : {
       [K in keyof Q]: K extends SetOperation
         ? Q[K] extends readonly unknown[]

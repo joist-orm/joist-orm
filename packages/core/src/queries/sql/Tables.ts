@@ -1035,7 +1035,7 @@ function physicalRelation(meta: EntityMetadata, key: string): Field | undefined 
  * I.e. Author.firstName uses the first_name column but resolves its alias in each query scope.
  * Collections, polymorphic references, and inherited nonlocal fields require explicit expressions.
  */
-function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
+export function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
   const { meta } = mgmt;
   const conditions: SqlCondition[] = [];
   if (!filter || typeof filter !== "object" || Array.isArray(filter)) {
@@ -1084,6 +1084,18 @@ function tableWhere(mgmt: TableMgmt, filter: object): SqlCondition {
     }
   }
   return conditions.length === 0 ? skipCondition : { and: conditions };
+}
+
+/**
+ * Converts relationship filters into conditions on the joined table's id column.
+ * I.e. Author's `join: { books: "b:1" }` filters Book.id to 1; `{ books: book }` uses book.id.
+ * Lists match any supplied ID, `true` requires a Book, and `null` or `false` requires no Book.
+ */
+export function tableEntityWhere(mgmt: TableMgmt, value: unknown): SqlCondition {
+  const parsed = parseEntityFilter(mgmt.meta, value);
+  if (!parsed) return skipCondition;
+  if (parsed.kind === "join") fail(`Expected an entity or ID filter for ${mgmt.meta.type}`);
+  return new TableColumn(mgmt.meta, mgmt.meta.fields.id.serde!.columns[0].column, mgmt).addCondition(parsed);
 }
 
 /** Rejects nested relations, scopes, and aliases before parsing owning-reference values. */

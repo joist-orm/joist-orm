@@ -5,13 +5,17 @@ import {
   type ExprLike,
   type GraphQLFilterWithAlias,
   type Query,
+  type QueryJoinList,
   type TableFor,
   query,
 } from "joist-core";
 
 export type ContextWithEm = { em: EntityManager };
 export type PaginationFilter<T extends Entity> = GraphQLFilterWithAlias<T>;
-export type PaginationQuery<T extends Entity> = Query<TableFor<T> & { readonly id: EntityColumn<T, never, string> }>;
+export type PaginationQuery<T extends Entity> = Query<
+  TableFor<T> & { readonly id: EntityColumn<T, never, string> },
+  QueryJoinList
+>;
 
 export const defaultLimit = 100;
 

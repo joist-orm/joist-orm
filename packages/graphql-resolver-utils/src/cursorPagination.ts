@@ -3,6 +3,7 @@ import {
   type FindGqlFilterOptions,
   type IdOf,
   type MaybeAbstractEntityConstructor,
+  type QueryCondition,
   type ValueGraphQLFilter,
 } from "joist-core";
 
@@ -131,7 +132,7 @@ function withCursorQuery<T extends Entity>(
     ...base,
     where: {
       and: [
-        base.where,
+        ...(Array.isArray(base.where) ? base.where : [base.where as QueryCondition | undefined]),
         args.after ? base.select.id.gt(decodeCursor(args.after) as IdOf<T>) : undefined,
         args.before ? base.select.id.lt(decodeCursor(args.before) as IdOf<T>) : undefined,
       ],

@@ -440,6 +440,41 @@ Joining a collection fans rows out — one row per book, not per author. To _fil
 
 :::
 
+### Relationship trees
+
+Instead of a flat join list, `join` can be a domain relationship tree rooted at the entity table in `from`:
+
+```ts
+const [a, b] = tables(Author, Book);
+const rows = await em.query({
+  from: a,
+  join: {
+    firstName: "Alice",
+    books: { as: b, title: { ilike: "%database%" } },
+  },
+  select: { author: a.first_name, title: b.title },
+});
+```
+
+Tree keys use domain field names, like `em.find` and `Table.where`. Inline filters become `WHERE`
+conditions, ANDed with any explicit `where`. Nested objects walk relationships; `as` optionally binds
+an existing `table(...)` handle so its columns can be used in `select`, `where`, or other clauses.
+Nodes without `as` get internal handles. Root `as` is optional and, when provided, must be the same
+handle as `from`.
+
+For reusable fragments, `const joins = { books: { as: b } } satisfies JoinTree<Author>` checks the
+domain fields while retaining the exact table bindings for result-type inference.
+
+Join kinds, nullable result types, soft deletes, and pruning follow the relationship joins above.
+Owning-reference ID filters such as `{ author: "a:1" }` compare the FK without joining. Collection
+joins retain SQL row multiplicity; use `distinct`, aggregation, or a subquery when needed.
+
+Trees work with entity, POJO, and scalar selections, including reusable `query(...)` values. They
+require an entity table in `from`, and cannot be mixed with explicit joins in an array. This initial
+form supports simple field filters and ordinary relationships; polymorphic fields, inherited-field
+traversal, find scopes, and tree-level `and`/`or` groups are not supported. Use explicit query conditions
+for boolean composition.
+
 ## Condition & Join Pruning
 
 `em.query` prunes exactly like [find queries](./queries-find#condition--join-pruning): a condition given `undefined` drops out, and a join that nothing references anymore drops with it.
@@ -487,7 +522,7 @@ const authors = await em.query({
 
 With a defined `titleFilter`, this returns Authors with a matching Book. With `undefined`, the Book condition, subquery, and outer `in` condition all disappear, so Authors without Books are included too.
 
-`queryMaybe` preserves `query`'s select-shape inference and adds `| undefined` to its return type; `query` itself always returns a query value. An omitted or empty `where` also prunes the value. Only the supplied `where` controls this decision: joins, `having`, and implicit soft-delete or STI conditions do not keep the query alive.
+`queryMaybe` preserves `query`'s select-shape inference and adds `| undefined` to its return type; `query` itself always returns a query value. The supplied `where` and inline join-tree filters control this decision: if neither has a surviving condition, the value prunes. Alias-only joins, `having`, and implicit soft-delete or STI conditions do not keep the query alive.
 
 Nested `and`/`or` groups follow the existing `pruneIfUndefined` policy: `"all"` (the default) prunes a group when all conditions prune, while `"any"` prunes it when any condition prunes. A fixed condition or correlation otherwise keeps the subquery alive even when an optional filter disappears. Use `pruneIfUndefined: "any"`, or make the whole `where` conditional, when those restrictions should depend on the optional filter.
 

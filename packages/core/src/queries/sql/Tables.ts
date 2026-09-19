@@ -18,7 +18,7 @@ import {
   getBaseSelfAndSubMetas,
   getMetadata,
 } from "src/EntityMetadata.ts";
-import { maybeResolveReferenceToId, toIdOf } from "src/keys.ts";
+import { maybeResolveReferenceToId, taggedIdPrefix, toIdOf } from "src/keys.ts";
 import type { SqlCondition } from "src/queries/conditions.ts";
 import type { ParsedValueFilter } from "src/queries/parsedConditions.ts";
 import { buildValueCondition } from "src/queries/renderConditions.ts";
@@ -299,6 +299,8 @@ export interface EntityColumn<T, N extends null | never = never, Src extends str
   IdOf<T> | N,
   Src
 > {
+  /** Produces the tagged ID as SQL text, preserving NULL and the column's source. */
+  taggedId(): Expr<string | N, Src>;
   eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   // Adding `| null` for GraphQL support
@@ -352,7 +354,7 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       if (typeof key !== "string") return undefined;
       const descriptor = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
       if (descriptor) {
-        return descriptor.idMetadata && key !== "id"
+        return descriptor.idMetadata
           ? new EntityColumnImpl(meta, descriptor, mgmt)
           : new PrimitiveColumnImpl(meta, descriptor, mgmt);
       }
@@ -586,6 +588,11 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn impleme
 }
 
 class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
+  /** Uses the ID target's tag, including for foreign keys and polymorphic components. */
+  taggedId(): Expr<string, string> {
+    return new TaggedIdExpr(this) as unknown as Expr<string, string>;
+  }
+
   in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     if (values === undefined) {
       return skipCondition;
@@ -666,6 +673,35 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     if (value === null) throw new Error("Unsupported");
     if (isExpr(value)) return this.compareToExpr(op, value);
     return this.addCondition({ kind, value: value as any });
+  }
+}
+
+/** Converts a physical ID to SQL text so nested SQL expressions also receive the tag. */
+class TaggedIdExpr extends BaseExpr {
+  constructor(private column: TableColumn) {
+    super();
+  }
+
+  toSql(ctx: ExprContext): SqlFragment {
+    const fragment = this.column.toSql(ctx);
+    const meta = this.column.idMetadata ?? fail("Tagged IDs require an ID column");
+    return {
+      ...fragment,
+      sql: `(? || ${fragment.sql}::text)`,
+      bindings: [taggedIdPrefix(meta), ...fragment.bindings],
+    };
+  }
+
+  get outputType(): TypeInfo {
+    return { dbType: "text", domain: String, arrayElementSafe: true };
+  }
+
+  get sqlNullable(): boolean | undefined {
+    return this.column.sqlNullable;
+  }
+
+  get sqlSource(): object {
+    return this.column.sqlSource;
   }
 }
 

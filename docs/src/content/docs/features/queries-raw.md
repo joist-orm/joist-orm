@@ -884,6 +884,8 @@ These codecs are internal compatibility information, not a public coercion/decod
 
 ## Escape Hatches: `sql`
 
+ID and FK columns support `.taggedId()` to produce tagged text inside SQL, i.e. `b.id.taggedId()` produces `"b:1"` and `b.authorId.taggedId()` produces `"a:1"`. Use this instead of manually concatenating a tag in a SQL template. The result is a string expression, uses the configured tag delimiter, and preserves NULL for nullable FKs and LEFT joins. Unlike selecting a bare ID column, the tag is available to SQL functions, comparisons, and aggregates before result decoding.
+
 For SQL that Joist does not model, the `sql` tagged template creates a typed expression, `sql.condition` creates a condition, and `sql.ref` reaches an unmodeled column:
 
 ```ts

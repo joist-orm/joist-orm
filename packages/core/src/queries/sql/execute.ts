@@ -364,7 +364,11 @@ export function decodeStatementResult(
 type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
 type MutationFilter = {
-  /** Arrays are shorthand for an AND group; undefined conditions are pruned. */
+  /**
+   * An `{ and: [...] }` or `{ or: [...] }` group, a boolean expression, or a bare condition such as `a.age.gte(18)`.
+   *
+   * Arrays are shorthand for `{ and: [...] }`; undefined conditions are pruned.
+   */
   readonly where?: SqlCondition | ExprLike<boolean> | readonly (SqlCondition | undefined)[];
   /** Allows a supplied where to be undefined or fully pruned; unnecessary when where is omitted. */
   readonly allowAll?: boolean;

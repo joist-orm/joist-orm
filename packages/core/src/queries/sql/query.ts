@@ -247,9 +247,9 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   /** A flat join list, or a domain relationship tree rooted at the entity table in from. */
   join?: J;
   /**
-   * A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`.
+   * An `{ and: [...] }` or `{ or: [...] }` group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`.
    *
-   * Arrays are shorthand for an AND group; undefined conditions are pruned.
+   * Arrays are shorthand for `{ and: [...] }`; undefined conditions are pruned.
    */
   where?: QueryCondition | readonly (QueryCondition | undefined)[];
   groupBy?: readonly ExprLike<any>[];

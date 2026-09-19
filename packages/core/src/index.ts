@@ -28,6 +28,7 @@ export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
+export type { JoinTree, ResolvedJoins } from "src/queries/sql/JoinTree.ts";
 export {
   type AndCondition,
   type ConditionGroup,
@@ -219,7 +220,8 @@ export {
   type QueryArg,
   type QueryCondition,
   type QueryJoin,
-  type QueryJoins,
+  type QueryJoinInput,
+  type QueryJoinList,
   type QueryRow,
   type QuerySelect,
   type QuerySource,

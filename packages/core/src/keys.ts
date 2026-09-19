@@ -87,7 +87,12 @@ function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
 /** Converts `dbValue` (big int, int, uuid) to a tagged string, unless its undefined. */
 export function keyToTaggedId(meta: HasTagName, dbValue: string | number): TaggedId | undefined {
   if (dbValue === undefined || dbValue === null) return undefined;
-  return `${meta.tagName}${tagDelimiter ?? ""}${dbValue}`;
+  return `${taggedIdPrefix(meta)}${dbValue}`;
+}
+
+/** Returns the entity tag followed by the configured ID delimiter. */
+export function taggedIdPrefix(meta: Pick<HasTagName, "tagName">): string {
+  return `${meta.tagName}${tagDelimiter ?? ""}`;
 }
 
 /** Fails if any keys are untagged; internal batch-loader keys must always be tagged. */

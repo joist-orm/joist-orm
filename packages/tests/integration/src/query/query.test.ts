@@ -3763,4 +3763,42 @@ describe("em.query", () => {
       { name: "a2", senior: null },
     ]);
   });
+
+  it("tags a primary key in SQL", async () => {
+    // Given an Author named Alice
+    await insertAuthor({ first_name: "Alice" });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When selecting Alice's tagged ID with a tagged SQL comparison
+    const rows = await em.query({
+      from: a,
+      where: a.id.taggedId().eq("a:1"),
+      select: { id: a.id.taggedId() },
+    });
+
+    // Then the ID is tagged in both the comparison and the result
+    expect(rows).toEqual([{ id: "a:1" }]);
+    expectTypeOf(rows).toEqualTypeOf<{ id: string }[]>();
+  });
+
+  it("tags a foreign key and preserves null", async () => {
+    // Given an Author without a mentor
+    await insertAuthor({ first_name: "Alice" });
+    // And an Author mentored by Alice
+    await insertAuthor({ first_name: "Bob", mentor_id: 1 });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When selecting the Authors' tagged mentor IDs
+    const rows = await em.query({
+      from: a,
+      select: { mentorId: a.mentorId.taggedId() },
+      orderBy: [{ sort: a.id, order: "ASC" }],
+    });
+
+    // Then Bob's mentor ID has the Author tag and Alice's remains null
+    expect(rows).toEqual([{ mentorId: null }, { mentorId: "a:1" }]);
+    expectTypeOf(rows).toEqualTypeOf<{ mentorId: string | null }[]>();
+  });
 });

@@ -104,7 +104,7 @@ A CTE the statement never reads is pruned, as on a read query. The CTE scope del
 
 ## Guards and expressions
 
-UPDATE and DELETE require a user `where` that survives [condition pruning](/features/queries-raw/#condition--join-pruning), unless `allowAll: true` is explicit. An absent or fully pruned guard fails before SQL; injected soft-delete filters do not count as consent. This is not general tautology detection. `allowAll` neither removes an existing predicate nor disables soft-delete filtering.
+UPDATE and DELETE without a `where` property apply to all rows allowed by soft-delete filtering; no `allowAll` is needed. If a supplied `where` is `undefined` or fully removed by [condition pruning](/features/queries-raw/#condition--join-pruning), execution fails before SQL unless `allowAll: true` is explicit. Injected soft-delete filters do not bypass this safeguard. This is not general tautology detection. `allowAll` neither removes an existing predicate nor disables soft-delete filtering.
 
 Both default to `softDeletes: "exclude"`; use `"include"` to reach soft-deleted rows. **DELETE physically deletes rows**, rather than setting `deleted_at`. Database constraints, triggers, and database-defined cascades still apply.
 

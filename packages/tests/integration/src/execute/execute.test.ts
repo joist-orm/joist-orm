@@ -1221,24 +1221,23 @@ describe("em.execute", () => {
 
   describe("runtime rejection", () => {
     it.each(["update", "delete"] as const)(
-      "rejects absent and fully pruned %s guards before soft-delete injection",
+      "rejects fully pruned %s guards before soft-delete injection",
       async (operation) => {
         // Given a soft-deletable Author target whose metadata filter is not user consent
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
         const a = table(Author);
         const statement = operation === "update" ? { update: a, set: { age: 50 } } : { delete: a };
-        // And each user condition is absent or contains only omitted Author filters
+        // And each user condition contains only omitted Author filters
         const guards = [
-          {},
-          { where: undefined },
           { where: a.firstName.eq(undefined) },
           { where: { and: [a.firstName.eq(undefined), { or: [a.age.eq(undefined)] }] } },
         ];
         // When executing without allowAll, even though a deleted_at predicate could be injected
+        // Then the fully pruned Author filters are rejected
         for (const guard of guards) {
           await expect(execute({ ...statement, ...guard })).rejects.toThrow(
-            "UPDATE and DELETE require a nonempty user where or allowAll: true",
+            "UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned",
           );
         }
         // Then no unguarded statement reaches PostgreSQL
@@ -2199,5 +2198,124 @@ describe("em.execute", () => {
         else delete column.mapToDbValue;
       }
     });
+  });
+
+  it("allows UPDATE without a where clause", async () => {
+    // Given two Tags with no filter restricting the mutation
+    await insertTag({ name: "First" });
+    // And another Tag must also be updated
+    await insertTag({ name: "Second" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When all Tags are explicitly targeted without allowAll
+    const result = await em.execute({ update: t, set: { name: "Changed" } });
+
+    // Then both Tags are affected
+    expect(result).toEqual({ rowCount: 2, rows: [] });
+  });
+
+  it("rejects UPDATE with an undefined where clause", async () => {
+    // Given a Tag that must not be updated if its restriction is undefined
+    await insertTag({ name: "First" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When the mutation passes an undefined where without allowAll
+    const result = em.execute({ update: t, set: { name: "Changed" }, where: undefined });
+
+    // Then the undefined restriction is rejected and the Tag remains unchanged
+    await expect(result).rejects.toThrow(
+      "UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned",
+    );
+    expect(await select("tags")).toMatchObject([{ id: 1, name: "First" }]);
+  });
+
+  it("allows fully pruned UPDATE filters with allowAll", async () => {
+    // Given two Tags and a filter whose value is omitted
+    await insertTag({ name: "First" });
+    // And another Tag must also be updated after pruning
+    await insertTag({ name: "Second" });
+    const em = newEntityManager();
+    const t = table(Tag);
+    const where = t.name.eq(undefined);
+
+    // When allowAll explicitly permits the Tag filter to be pruned
+    const result = await em.execute({ update: t, set: { name: "Changed" }, where, allowAll: true });
+
+    // Then both Tags are affected
+    expect(result).toEqual({ rowCount: 2, rows: [] });
+  });
+
+  it("allows DELETE without a where clause", async () => {
+    // Given two Tags with no filter restricting the deletion
+    await insertTag({ name: "First" });
+    // And another Tag must also be deleted
+    await insertTag({ name: "Second" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When all Tags are explicitly deleted without allowAll
+    const result = await em.execute({ delete: t });
+
+    // Then both Tags are deleted
+    expect(result).toEqual({ rowCount: 2, rows: [] });
+  });
+
+  it("rejects DELETE with an undefined where clause", async () => {
+    // Given a Tag that must not be deleted if its restriction is undefined
+    await insertTag({ name: "First" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When the deletion passes an undefined where without allowAll
+    const result = em.execute({ delete: t, where: undefined });
+
+    // Then the undefined restriction is rejected and the Tag remains stored
+    await expect(result).rejects.toThrow(
+      "UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned",
+    );
+    expect(await select("tags")).toMatchObject([{ id: 1, name: "First" }]);
+  });
+
+  it("allows fully pruned DELETE filters with allowAll", async () => {
+    // Given two Tags and a filter whose value is omitted
+    await insertTag({ name: "First" });
+    // And another Tag must also be deleted after pruning
+    await insertTag({ name: "Second" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When allowAll explicitly permits the Tag filter to be pruned
+    const result = await em.execute({ delete: t, where: t.name.eq(undefined), allowAll: true });
+
+    // Then both Tags are deleted
+    expect(result).toEqual({ rowCount: 2, rows: [] });
+  });
+
+  it("allows UPDATE with an undefined where clause and allowAll", async () => {
+    // Given a Tag whose update restriction is undefined
+    await insertTag({ name: "First" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When allowAll explicitly permits the undefined restriction
+    const result = await em.execute({ update: t, set: { name: "Changed" }, where: undefined, allowAll: true });
+
+    // Then the Tag is updated
+    expect(result).toEqual({ rowCount: 1, rows: [] });
+  });
+
+  it("allows DELETE with an undefined where clause and allowAll", async () => {
+    // Given a Tag whose deletion restriction is undefined
+    await insertTag({ name: "First" });
+    const em = newEntityManager();
+    const t = table(Tag);
+
+    // When allowAll explicitly permits the undefined restriction
+    const result = await em.execute({ delete: t, where: undefined, allowAll: true });
+
+    // Then the Tag is deleted
+    expect(result).toEqual({ rowCount: 1, rows: [] });
   });
 });

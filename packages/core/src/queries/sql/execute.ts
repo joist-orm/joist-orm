@@ -299,8 +299,9 @@ export function parseStatement(arg: unknown): Plan | undefined {
       statement.softDeletes !== "exclude"
     )
       fail("softDeletes must be 'include' or 'exclude'");
-    const user = mutationCondition(statement.where, ctx);
-    if (!user && statement.allowAll !== true) fail("UPDATE and DELETE require a nonempty user where or allowAll: true");
+    const whereCondition = mutationCondition(statement.where, ctx);
+    if (Object.hasOwn(statement, "where") && !whereCondition && statement.allowAll !== true)
+      fail("UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned");
     if (operation === "update") {
       const entries = assignments(meta, statement.set, "update");
       sql +=
@@ -321,7 +322,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
       ctx,
       true,
     );
-    const conditions = [user, injected].filter((condition) => condition !== undefined);
+    const conditions = [whereCondition, injected].filter((condition) => condition !== undefined);
     if (conditions.length) {
       sql += ` WHERE ${conditions.map((condition) => `(${condition.sql})`).join(" AND ")}`;
       for (const condition of conditions) {
@@ -364,6 +365,7 @@ type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
 type MutationFilter = {
   readonly where?: SqlCondition | ExprLike<boolean>;
+  /** Allows a supplied where to be undefined or fully pruned; unnecessary when where is omitted. */
   readonly allowAll?: boolean;
   readonly softDeletes?: "include" | "exclude";
 };

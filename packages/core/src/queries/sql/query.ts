@@ -246,8 +246,12 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   with?: WithInput;
   /** A flat join list, or a domain relationship tree rooted at the entity table in from. */
   join?: J;
-  /** A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`. */
-  where?: QueryCondition;
+  /**
+   * A boolean group, an exists/notExists query, or a bare condition such as `a.age.gte(18)`.
+   *
+   * Arrays are shorthand for an AND group; undefined conditions are pruned.
+   */
+  where?: QueryCondition | readonly (QueryCondition | undefined)[];
   groupBy?: readonly ExprLike<any>[];
   having?: QueryCondition;
   select: S;
@@ -797,8 +801,9 @@ export function queryMaybe<
   Name extends string = "?",
 >(q: QueryArg<F, S, J, Name>): QueryValue<S, ResolvedJoins<F, J>, Name> | undefined {
   const normalized = normalizeQueryJoins(q);
-  checkCondition(normalized.where);
-  return isPrunedQueryCondition(normalized.where)
+  const where = normalizeWhere(normalized.where);
+  checkCondition(where);
+  return isPrunedQueryCondition(where)
     ? undefined
     : (createQueryValue(normalized) as QueryValue<S, ResolvedJoins<F, J>, Name>);
 }
@@ -1751,7 +1756,8 @@ function parseQuery(
   const sti = stiEntityPlan(q, from);
   const { selects, decodeRows, output } = selectsToSql(q, ctx, from, cti.selects ?? sti.selects);
   const fromInjected = [...injectedConditions(from, softDeletes), ...sti.conditions];
-  const where = conditionToSql(fromInjected.length > 0 ? { and: [q.where, ...fromInjected] } : q.where, ctx, true);
+  const predicate = normalizeWhere(q.where);
+  const where = conditionToSql(fromInjected.length > 0 ? { and: [predicate, ...fromInjected] } : predicate, ctx, true);
   const having = conditionToSql(q.having, ctx, true);
   const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
   const orderBys = orderBysToSql(q, ctx);
@@ -2512,7 +2518,12 @@ function isDefined<T>(value: T | undefined): value is T {
 function normalizeQueryJoins(q: AnyQuery): AnyQuery {
   if (q.join === undefined || Array.isArray(q.join)) return q;
   const tree = compileJoinTree(q.from, q.join);
-  return { ...q, join: tree.joins, where: { and: [tree.condition, q.where] } };
+  return { ...q, join: tree.joins, where: { and: [tree.condition, normalizeWhere(q.where)] } };
+}
+
+/** Gives WHERE arrays the same pruning and validation as explicit AND groups. */
+function normalizeWhere(where: AnyQuery["where"]): QueryCondition | undefined {
+  return Array.isArray(where) ? { and: where } : (where as QueryCondition | undefined);
 }
 
 /** Creates the runtime query value after the public signature has checked its input. */

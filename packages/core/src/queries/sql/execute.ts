@@ -364,7 +364,8 @@ export function decodeStatementResult(
 type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
 type MutationFilter = {
-  readonly where?: SqlCondition | ExprLike<boolean>;
+  /** Arrays are shorthand for an AND group; undefined conditions are pruned. */
+  readonly where?: SqlCondition | ExprLike<boolean> | readonly (SqlCondition | undefined)[];
   /** Allows a supplied where to be undefined or fully pruned; unnecessary when where is omitted. */
   readonly allowAll?: boolean;
   readonly softDeletes?: "include" | "exclude";
@@ -556,6 +557,7 @@ function assignmentToSql(meta: EntityMetadata, column: Column, value: unknown, c
 /** Checks the user predicate independently so metadata filters cannot turn a pruned guard into consent. */
 function mutationCondition(value: unknown, ctx: Ctx): SqlFragment | undefined {
   if (isExpr(value)) return asNode(value).toSql(ctx);
+  if (Array.isArray(value)) return conditionToSql({ and: value }, ctx, true);
   return conditionToSql(value as SqlCondition | undefined, ctx, true);
 }
 

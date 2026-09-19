@@ -10,6 +10,7 @@ import {
   getAliasMgmt,
   getMetadata,
   query,
+  queryMaybe,
   skipCondition,
   sql,
   table,
@@ -3800,5 +3801,59 @@ describe("em.query", () => {
     // Then Bob's mentor ID has the Author tag and Alice's remains null
     expect(rows).toEqual([{ mentorId: null }, { mentorId: "a:1" }]);
     expectTypeOf(rows).toEqualTypeOf<{ mentorId: string | null }[]>();
+  });
+
+  it("combines WHERE array conditions with AND", async () => {
+    // Given Authors that each match one or both restrictions
+    await insertAuthor({ first_name: "Alice", age: 30 });
+    await insertAuthor({ first_name: "Alice", age: 15 });
+    await insertAuthor({ first_name: "Bob", age: 30 });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When selecting adult Alices with optional restrictions omitted
+    const rows = await em.query({
+      from: a,
+      select: { name: a.firstName, age: a.age },
+      where: [
+        a.firstName.eq("Alice"),
+        { or: [a.age.gte(18), a.age.eq(null)] },
+        undefined,
+        a.lastName.eq(undefined),
+      ] as const,
+    });
+
+    // Then only the Author matching both restrictions is returned
+    expect(rows).toEqual([{ name: "Alice", age: 30 }]);
+  });
+
+  it("prunes an empty WHERE array", async () => {
+    // Given an Author without query restrictions
+    await insertAuthor({ first_name: "Alice" });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When selecting Authors with an empty condition array
+    const rows = await em.query({ from: a, select: a.firstName, where: [] });
+
+    // Then the Author is returned
+    expect(rows).toEqual(["Alice"]);
+  });
+
+  it("prunes optional subqueries with fully omitted WHERE arrays", async () => {
+    // Given an Author and an optional name restriction
+    await insertAuthor({ first_name: "Alice" });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When the optional subquery has no defined restrictions
+    const rows = await em.query({
+      from: a,
+      select: a.firstName,
+      where: { exists: queryMaybe({ from: a, select: a.id, where: [a.firstName.eq(undefined)] }) },
+    });
+
+    // Then the omitted subquery does not restrict Authors
+    expect(rows).toEqual(["Alice"]);
   });
 });

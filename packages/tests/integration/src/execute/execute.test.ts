@@ -98,10 +98,10 @@ describe("em.execute", () => {
       allowAll: true,
       returning,
     });
-    // Then SQL NULL remains distinct from empty arrays
+    // Then top-level SQL NULL decodes as undefined and remains distinct from empty arrays
     expect(cleared.rows).toEqual([
-      { decimal: null, bigint: null },
-      { decimal: null, bigint: null },
+      { decimal: undefined, bigint: undefined },
+      { decimal: undefined, bigint: undefined },
     ]);
   });
 
@@ -169,8 +169,8 @@ describe("em.execute", () => {
     await em.flush();
     // When deleting the audit Tag with scalar RETURNING
     const cleared = await em.execute({ delete: t, allowAll: true, returning: history });
-    // Then SQL NULL bypasses the custom element decoder
-    expect(cleared.rows).toEqual([null]);
+    // Then top-level SQL NULL bypasses the custom element decoder and decodes as undefined
+    expect(cleared.rows).toEqual([undefined]);
   });
 
   describe("INSERT VALUES", () => {
@@ -184,8 +184,8 @@ describe("em.execute", () => {
         values: { firstName: "Importer", numberOfBooks: 0, search: "catalog" },
         returning: { isFunny: a.isFunny, bookComments: a.bookComments },
       });
-      // Then the SQL false default and physically nullable derived storage retain their values
-      expect(inserted.rows).toEqual([{ isFunny: false, bookComments: null }]);
+      // Then the SQL false default is retained and nullable derived storage decodes as undefined
+      expect(inserted.rows).toEqual([{ isFunny: false, bookComments: undefined }]);
       expect(await select("authors")).toMatchObject([{ ts_search: "'catalog':1" }]);
       // When backfilling the ordinary persisted search field
       await em.execute({ update: a, set: { search: "history" }, allowAll: true });
@@ -254,14 +254,14 @@ describe("em.execute", () => {
         ],
         returning: { title: b.title, order: b.order, acknowledgements: b.acknowledgements },
       });
-      // Then each omitted cell uses its SQL default rather than another row's value or SQL NULL
+      // Then each omitted cell uses its SQL default, whose SQL NULL decodes as undefined
       expect(result).toEqual({
         rowCount: 4,
         rows: [
           { title: "Explicit", order: 9, acknowledgements: "Thanks" },
-          { title: "Undefined", order: 1, acknowledgements: null },
-          { title: "Omitted", order: 1, acknowledgements: null },
-          { title: "Default", order: 1, acknowledgements: null },
+          { title: "Undefined", order: 1, acknowledgements: undefined },
+          { title: "Omitted", order: 1, acknowledgements: undefined },
+          { title: "Default", order: 1, acknowledgements: undefined },
         ],
       });
       expect(queries).toMatchInlineSnapshot(`
@@ -1019,12 +1019,12 @@ describe("em.execute", () => {
         ],
         returning: { address: a.address, colors: a.favoriteColors, quotes: a.quotes },
       });
-      // Then null bypasses schema and enum codecs, while SQL still distinguishes the two kinds of null
+      // Then top-level null values decode as undefined while physical storage retains their distinction
       expect(result).toEqual({
         rowCount: 3,
         rows: [
-          { address: null, colors: null, quotes: null },
-          { address: null, colors: [], quotes: null },
+          { address: undefined, colors: undefined, quotes: undefined },
+          { address: undefined, colors: [], quotes: undefined },
           { address: { street: "Main" }, colors: [Color.Blue], quotes: [] },
         ],
       });
@@ -1064,9 +1064,9 @@ describe("em.execute", () => {
         where: a.id.eq("a:1"),
         returning: a.favoriteColors,
       });
-      // Then scalar results retain their array/null identity
+      // Then scalar results retain empty arrays while SQL NULL decodes as undefined
       expect(empty).toEqual({ rowCount: 1, rows: [[]] });
-      expect(absent).toEqual({ rowCount: 1, rows: [null] });
+      expect(absent).toEqual({ rowCount: 1, rows: [undefined] });
       expect(await select("authors")).toMatchObject([{ favorite_colors: null }]);
     });
 
@@ -1102,13 +1102,13 @@ describe("em.execute", () => {
           where: t.id.eq("t:1"),
           returning: { password: passwordQuery },
         });
-        // Then null bypasses the custom decoder and stays null in the returned POJO
-        expect(cleared).toEqual({ rowCount: 1, rows: [{ password: null }] });
+        // Then SQL NULL bypasses the custom decoder and becomes undefined in the returned POJO
+        expect(cleared).toEqual({ rowCount: 1, rows: [{ password: undefined }] });
         expect(decode).toHaveBeenCalledTimes(1);
         // When deleting the Tag with scalar password RETURNING
         const removed = await em.execute({ delete: t, where: t.id.eq("t:1"), returning: passwordQuery });
-        // Then scalar custom decoding also preserves SQL NULL
-        expect(removed).toEqual({ rowCount: 1, rows: [null] });
+        // Then scalar custom decoding also maps SQL NULL to undefined
+        expect(removed).toEqual({ rowCount: 1, rows: [undefined] });
         expect(decode).toHaveBeenCalledTimes(1);
       } finally {
         decode.mockRestore();
@@ -1143,7 +1143,7 @@ describe("em.execute", () => {
     it("returns selected-row counts for paginated scalar and named read POJOs", async () => {
       // Given three Authors whose order makes the read page deterministic
       await insertAuthor({ first_name: "Alpha", age: 10 });
-      // And Beta has a nullable age that the scalar decoder must preserve
+      // And Beta has a nullable age that the scalar decoder maps to undefined
       await insertAuthor({ first_name: "Beta" });
       // And Gamma lies outside the requested page
       await insertAuthor({ first_name: "Gamma", age: 30 });
@@ -1167,9 +1167,9 @@ describe("em.execute", () => {
           limit: 1,
         }),
       );
-      // Then counts describe the selected page, not all source rows
-      expect(scalar).toEqual({ rowCount: 1, rows: [null] });
-      expect(named).toEqual({ rowCount: 1, rows: [{ id: "a:2", age: null }] });
+      // Then counts describe the selected page and SQL NULL decodes as undefined
+      expect(scalar).toEqual({ rowCount: 1, rows: [undefined] });
+      expect(named).toEqual({ rowCount: 1, rows: [{ id: "a:2", age: undefined }] });
       expect(em.entities).toEqual([]);
     });
 

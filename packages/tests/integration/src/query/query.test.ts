@@ -105,12 +105,14 @@ describe("em.query", () => {
       orderBy: [{ sort: a.firstName, order: "ASC" }],
     });
 
-    // Then known ages produce typed values and unknown ages remain null
+    // Then known ages produce typed values and unknown ages become undefined
     expect(rows).toEqual([
       { age: 32, label: "30", adult: true },
-      { age: null, label: null, adult: null },
+      { age: undefined, label: undefined, adult: undefined },
     ]);
-    expectTypeOf(rows).toEqualTypeOf<{ age: number | null; label: string | null; adult: boolean | null }[]>();
+    expectTypeOf(rows).toEqualTypeOf<
+      { age: number | undefined; label: string | undefined; adult: boolean | undefined }[]
+    >();
   });
 
   describe("select shapes", () => {
@@ -310,11 +312,11 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { authorId: "a:1", name: "a1", age: 30, range: BookRange.Few },
-        { authorId: "a:2", name: "a2", age: null, range: null },
+        { authorId: "a:2", name: "a2", age: undefined, range: undefined },
       ]);
     });
 
-    it("decodes custom passwords in projections and hydration without converting nulls", async () => {
+    it("decodes custom passwords in projections and converts SQL NULL to undefined", async () => {
       // Given User u1 with an encoded password and no manager, so its left join has an absent row
       const password = PasswordValue.fromPlainText("secret");
       await insertUser({ name: "u1", password: password.encoded });
@@ -332,10 +334,10 @@ describe("em.query", () => {
         select: { name: u.name, password: u.password, managerPassword: m.password },
         orderBy: [{ sort: u.name, order: "ASC" }],
       });
-      // Then stored passwords decode to PasswordValue while missing passwords or managers remain null
+      // Then stored passwords decode to PasswordValue while missing passwords and managers become undefined
       expect(rows).toEqual([
-        { name: "u1", password, managerPassword: null },
-        { name: "u2", password: null, managerPassword: password },
+        { name: "u1", password, managerPassword: undefined },
+        { name: "u2", password: undefined, managerPassword: password },
       ]);
       expect(rows[0].password!.matches("secret")).toBe(true);
       // When loading the same Users as entities
@@ -345,7 +347,7 @@ describe("em.query", () => {
       expect(users[0].password!.matches("secret")).toBe(true);
     });
 
-    it("preserves null enum array projections while hydration defaults them to empty arrays", async () => {
+    it("converts null enum array projections to undefined while hydration defaults them to empty arrays", async () => {
       // Given Author a1 with two stored Color ids
       await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
       // And Author a2 initially has the schema's empty-array default
@@ -363,13 +365,13 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { name: "a1", colors: [Color.Red, Color.Green] },
-        { name: "a2", colors: null },
+        { name: "a2", colors: undefined },
         { name: "a3", colors: [] },
       ]);
-      // Bare scalar selects must also preserve NULL without the POJO decoder's null handling.
+      // Bare scalar selects use the same top-level NULL conversion as POJO projections.
       expect(
         await em.query({ from: a, select: a.favoriteColors, orderBy: [{ sort: a.firstName, order: "ASC" }] }),
-      ).toEqual([[Color.Red, Color.Green], null, []]);
+      ).toEqual([[Color.Red, Color.Green], undefined, []]);
       expect(await em.loadAll(Author, ["a:1", "a:2", "a:3"])).toMatchEntity([
         { favoriteColors: [Color.Red, Color.Green] },
         { favoriteColors: [] },
@@ -394,10 +396,10 @@ describe("em.query", () => {
         select: { name: a.firstName, address: a.businessAddress },
         orderBy: [{ sort: a.firstName, order: "ASC" }],
       });
-      // Then AddressSchema strips a1's extra key while a2's missing address remains null
+      // Then AddressSchema strips a1's extra key while a2's missing address becomes undefined
       expect(rows).toEqual([
         { name: "a1", address: { street: "123 Main" } },
-        { name: "a2", address: null },
+        { name: "a2", address: undefined },
       ]);
       // When loading the same Authors as entities
       const authors = await em.loadAll(Author, ["a:1", "a:2"]);
@@ -639,7 +641,7 @@ describe("em.query", () => {
       // it must stay one quoted identifier instead of becoming SQL
       const evil = 'name" FROM authors; --';
       const rows = await em.query({ from: a, select: { "Book Count": a.age, [evil]: a.firstName } } as any);
-      expect(rows).toEqual([{ "Book Count": null, [evil]: "a1" }]);
+      expect(rows).toEqual([{ "Book Count": undefined, [evil]: "a1" }]);
       // And an invalid 64-byte select key; PG silently truncates identifiers over 63 bytes,
       // which would break decoding, so those fail fast
       await expect(em.query({ from: a, select: { ["x".repeat(64)]: a.firstName } } as any)).rejects.toThrow(
@@ -665,10 +667,10 @@ describe("em.query", () => {
         select: { text: c.text, authorId: c.parentAuthorId, author: a.firstName },
         orderBy: { text: "ASC" },
       });
-      // Then Author ids decode with their tag and other parent components remain null
+      // Then Author ids decode with their tag and absent joined Authors are undefined
       expect(rows).toEqual([
         { text: "on author", authorId: "a:1", author: "a1" },
-        { text: "on book", authorId: null, author: null },
+        { text: "on book", authorId: undefined, author: undefined },
       ]);
     });
 
@@ -739,7 +741,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { author: "a1", title: "b1" },
-        { author: "a2", title: null },
+        { author: "a2", title: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -799,16 +801,16 @@ describe("em.query", () => {
         orderBy: { title: "ASC" },
       });
 
-      // Then both required references inherit NULL while the root and fallback stay required
+      // Then both required references inherit undefined while the root and fallback stay required
       expect(rows).toEqual([
         { title: "reviewed", reviewedTitle: "reviewed", author: "writer", fallback: "writer" },
-        { title: "unreviewed", reviewedTitle: null, author: null, fallback: "none" },
+        { title: "unreviewed", reviewedTitle: undefined, author: undefined, fallback: "none" },
       ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
           title: string;
-          reviewedTitle: string | null;
-          author: string | null;
+          reviewedTitle: string | undefined;
+          author: string | undefined;
           fallback: string;
         }[]
       >();
@@ -846,12 +848,12 @@ describe("em.query", () => {
         orderBy: { author: "ASC" },
       });
 
-      // Then Authors without Comments survive and only the parent's name is nullable
+      // Then Authors without Comments survive and only the parent's name can be absent
       expect(rows).toEqual([
         { author: "commented", parent: "commented" },
-        { author: "uncommented", parent: null },
+        { author: "uncommented", parent: undefined },
       ]);
-      expectTypeOf(rows).toEqualTypeOf<{ author: string; parent: string | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ author: string; parent: string | undefined }[]>();
     });
 
     it("percolates an optional Book through required Author references", async () => {
@@ -877,12 +879,12 @@ describe("em.query", () => {
         orderBy: { text: "ASC" },
       });
 
-      // Then Comments without Books survive with a nullable Author name
+      // Then Comments without Books survive with an absent Author name
       expect(rows).toEqual([
-        { text: "author comment", author: null },
+        { text: "author comment", author: undefined },
         { text: "book comment", author: "writer" },
       ]);
-      expectTypeOf(rows).toEqualTypeOf<{ text: string | null; author: string | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ text: string | undefined; author: string | undefined }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT c.text AS text, a.first_name AS author FROM comments AS c LEFT OUTER JOIN books AS b ON c.parent_book_id = b.id LEFT OUTER JOIN authors AS a ON b.author_id = a.id ORDER BY text ASC",
@@ -893,9 +895,9 @@ describe("em.query", () => {
       const names = query({ from: c, join: joins, select: { text: c.text, author: a.firstName } });
       const nested = await em.query({ from: names, select: names, orderBy: { text: "ASC" } });
 
-      // Then the subquery retains the nullable output
+      // Then the subquery retains the optional output
       expect(nested).toEqual(rows);
-      expectTypeOf(nested).toEqualTypeOf<{ text: string | null; author: string | null }[]>();
+      expectTypeOf(nested).toEqualTypeOf<{ text: string | undefined; author: string | undefined }[]>();
 
       // When explicitly requiring the Book's Author
       const required = await em.query({
@@ -931,8 +933,8 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { author: "small", publisher: "small", city: "sf" },
-        { author: "large", publisher: "large", city: null },
-        { author: "none", publisher: null, city: null },
+        { author: "large", publisher: "large", city: undefined },
+        { author: "none", publisher: undefined, city: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -961,7 +963,7 @@ describe("em.query", () => {
       // Given Authors a1 and a2, with a2 left without Books
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
-      // And a Book for a1, while a2 must remain in the result with a null title
+      // And a Book for a1, while a2 must remain in the result with an undefined title
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
@@ -974,7 +976,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { author: "a1", title: "b1" },
-        { author: "a2", title: null },
+        { author: "a2", title: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -1037,7 +1039,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { name: "mentee", mentor: "mentor" },
-        { name: "mentor", mentor: null },
+        { name: "mentor", mentor: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -1064,7 +1066,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { title: "b1", sequel: "b2" },
-        { title: "b2", sequel: null },
+        { title: "b2", sequel: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -1091,7 +1093,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { author: "a1", tag: "t1" },
-        { author: "a2", tag: null },
+        { author: "a2", tag: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -1415,7 +1417,7 @@ describe("em.query", () => {
       // Then the unreviewed Books do not join, but their Author remains
       expect(reviewed).toEqual([
         { name: "reviewed", title: "reviewed" },
-        { name: "unreviewed", title: null },
+        { name: "unreviewed", title: undefined },
       ]);
 
       // When excluding Author groups with any reviewed Book
@@ -1576,7 +1578,7 @@ describe("em.query", () => {
       });
     });
 
-    it("returns zero counts and null aggregates when no Authors match", async () => {
+    it("returns zero counts and undefined aggregates when no Authors match", async () => {
       // Given a persisted Author outside the requested name filter
       await insertAuthor({ first_name: "Other" });
       const em = newEntityManager();
@@ -1596,9 +1598,18 @@ describe("em.query", () => {
           names: a.firstName.stringAgg(","),
         },
       });
-      // Then PostgreSQL's empty-input results survive decoding without hydration
+      // Then PostgreSQL's empty-input NULLs become undefined without hydration
       expect(rows).toEqual([
-        { count: 0, distinct: 0, sum: null, avg: null, min: null, max: null, array: null, names: null },
+        {
+          count: 0,
+          distinct: 0,
+          sum: undefined,
+          avg: undefined,
+          min: undefined,
+          max: undefined,
+          array: undefined,
+          names: undefined,
+        },
       ]);
       expect(em.entities).toEqual([]);
     });
@@ -1682,7 +1693,11 @@ describe("em.query", () => {
       // Then ordering preserves one null element and filtering does not remove other aggregate rows
       expect(rows).toEqual([{ descending: [null, 30, 20], ascending: [20, 30, null], allAuthors: 5 }]);
       expectTypeOf(rows).toEqualTypeOf<
-        { descending: (number | null)[] | null; ascending: (number | null)[] | null; allAuthors: number }[]
+        {
+          descending: (number | null)[] | undefined;
+          ascending: (number | null)[] | undefined;
+          allAuthors: number;
+        }[]
       >();
     });
 
@@ -1713,7 +1728,7 @@ describe("em.query", () => {
 
       // Then each parameter applies to its own expression and both sort keys determine the array order
       expect(rows).toEqual([{ names: ["Carol!", "Bob!", "Alice!"] }]);
-      expectTypeOf(rows).toEqualTypeOf<{ names: string[] | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ names: string[] | undefined }[]>();
     });
 
     it("retains the Book join when only arrayAgg orderBy references it", async () => {
@@ -1821,8 +1836,8 @@ describe("em.query", () => {
       });
 
       // Then ids keep their tags, omitted filters keep all Books, and empty inputs use the requested fallback
-      expect(rows).toEqual([{ ids: ["b:2", "b:1"], empty: null, fallback: ["b:9"], emptyArray: [] }]);
-      expectTypeOf(rows[0].ids).toEqualTypeOf<Book["id"][] | null>();
+      expect(rows).toEqual([{ ids: ["b:2", "b:1"], empty: undefined, fallback: ["b:9"], emptyArray: [] }]);
+      expectTypeOf(rows[0].ids).toEqualTypeOf<Book["id"][] | undefined>();
       expectTypeOf(rows[0].fallback).toEqualTypeOf<Book["id"][]>();
     });
 
@@ -2701,8 +2716,8 @@ describe("em.query", () => {
         orderBy: form === "object" ? { age: byAge, name: "ASC" } : [undefined, {}, { age: byAge }, { name: "ASC" }],
       });
       expect(rows).toEqual([
-        { name: "a1", age: null },
-        { name: "a2", age: null },
+        { name: "a1", age: undefined },
+        { name: "a2", age: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -3050,7 +3065,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { name: "a1", bookCount: 2, lastTitle: "b2" },
-        { name: "a2", bookCount: 0, lastTitle: null },
+        { name: "a2", bookCount: 0, lastTitle: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -3287,7 +3302,7 @@ describe("em.query", () => {
       });
       expect(tasks).toEqual([
         { id: "task:1", special: 1 },
-        { id: "task:2", special: null },
+        { id: "task:2", special: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -3318,7 +3333,7 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([
         { item: "ti:1", task: "task:1" },
-        { item: "ti:2", task: null },
+        { item: "ti:2", task: undefined },
         { item: "ti:3", task: "task:2" },
       ]);
       expect(queries).toMatchInlineSnapshot(`
@@ -3344,7 +3359,7 @@ describe("em.query", () => {
       });
       expect(tasks).toEqual([
         { id: "task:1", newId: "task:1" },
-        { id: "task:2", newId: null },
+        { id: "task:2", newId: undefined },
       ]);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -3388,16 +3403,16 @@ describe("em.query", () => {
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
     });
 
-    it("nulls out a left-joined soft-deleted entity instead of dropping the row", async () => {
+    it("makes a left-joined soft-deleted entity undefined instead of dropping the row", async () => {
       // Given live Author a1
       await insertAuthor({ first_name: "a1" });
       // And only a soft-deleted Book for a1, leaving no live collection member to join
       await insertBook({ title: "b1", author_id: 1, deleted_at: new Date() });
       const em = newEntityManager();
       const [a, b] = tables(Author, Book);
-      // The injected condition lives in the join's ON, so the LEFT join keeps a1 with a null title
+      // The injected condition lives in the join's ON, so the LEFT join keeps a1 with an undefined title
       const rows = await em.query({ from: a, join: [a.books.as(b)], select: { name: a.firstName, title: b.title } });
-      expect(rows).toEqual([{ name: "a1", title: null }]);
+      expect(rows).toEqual([{ name: "a1", title: undefined }]);
     });
 
     it("drops rows of an inner-joined soft-deleted entity", async () => {
@@ -3745,7 +3760,7 @@ describe("em.query", () => {
     await insertBook({ title: "b2", author_id: 3 });
     const em = newEntityManager();
     const [a, b] = tables(Author, Book);
-    // And a shared senior flag for selection and sorting, which stays null for an unknown Author age
+    // And a shared senior flag for selection and sorting, which becomes undefined for an unknown Author age
     const isSenior = sql<boolean>`${a.age} >= ${40}`;
     const rows = await em.query({
       from: a,
@@ -3761,7 +3776,7 @@ describe("em.query", () => {
     expect(rows).toEqual([
       { name: "a3", senior: true },
       { name: "a1", senior: false },
-      { name: "a2", senior: null },
+      { name: "a2", senior: undefined },
     ]);
   });
 
@@ -3783,7 +3798,7 @@ describe("em.query", () => {
     expectTypeOf(rows).toEqualTypeOf<{ id: string }[]>();
   });
 
-  it("tags a foreign key and preserves null", async () => {
+  it("tags a foreign key and converts SQL NULL to undefined", async () => {
     // Given an Author without a mentor
     await insertAuthor({ first_name: "Alice" });
     // And an Author mentored by Alice
@@ -3798,9 +3813,9 @@ describe("em.query", () => {
       orderBy: [{ sort: a.id, order: "ASC" }],
     });
 
-    // Then Bob's mentor ID has the Author tag and Alice's remains null
-    expect(rows).toEqual([{ mentorId: null }, { mentorId: "a:1" }]);
-    expectTypeOf(rows).toEqualTypeOf<{ mentorId: string | null }[]>();
+    // Then Bob's mentor ID has the Author tag and Alice's becomes undefined
+    expect(rows).toEqual([{ mentorId: undefined }, { mentorId: "a:1" }]);
+    expectTypeOf(rows).toEqualTypeOf<{ mentorId: string | undefined }[]>();
   });
 
   it("combines WHERE array conditions with AND", async () => {

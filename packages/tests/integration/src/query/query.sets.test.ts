@@ -113,8 +113,8 @@ describe("em.query / sets", () => {
           { from: a, select: { age: a.age } },
         ],
       });
-      // Then the two NULL rows collapse to one
-      expect(rows).toEqual([{ age: null }]);
+      // Then the two SQL NULL rows collapse to one and decode as undefined
+      expect(rows).toEqual([{ age: undefined }]);
     });
 
     it("returns no rows for two empty operands", async () => {
@@ -214,8 +214,8 @@ describe("em.query / sets", () => {
           { from: a, select: { age: a.age } },
         ],
       });
-      // Then NULL rows retain their multiplicity
-      expect(rows).toEqual([{ age: null }, { age: null }]);
+      // Then SQL NULL rows retain their multiplicity and decode as undefined
+      expect(rows).toEqual([{ age: undefined }, { age: undefined }]);
     });
 
     it("returns no rows for two empty operands", async () => {
@@ -333,8 +333,8 @@ describe("em.query / sets", () => {
           { from: a, select: { age: a.age } },
         ],
       });
-      // Then NULL is a matching set value
-      expect(rows).toEqual([{ age: null }]);
+      // Then SQL NULL is a matching set value and decodes as undefined
+      expect(rows).toEqual([{ age: undefined }]);
     });
 
     it("returns no rows for two empty operands", async () => {
@@ -514,8 +514,8 @@ describe("em.query / sets", () => {
           { from: a, select: { age: a.age } },
         ],
       });
-      // Then both NULL matches survive
-      expect(rows).toEqual([{ age: null }, { age: null }]);
+      // Then both SQL NULL matches survive and decode as undefined
+      expect(rows).toEqual([{ age: undefined }, { age: undefined }]);
     });
 
     it("returns no rows for two empty operands", async () => {
@@ -1154,9 +1154,9 @@ describe("em.query / sets", () => {
               ? { 'Display "Name"': byName, age: "DESC NULLS FIRST" }
               : [{ 'Display "Name"': byName }, { age: "DESC NULLS FIRST" }],
         });
-        // Then SQL treats display keys as identifiers and leaves the NULL age first
+        // Then SQL treats display keys as identifiers and leaves the NULL age first before it decodes as undefined
         expect(rows).toEqual([
-          { 'Display "Name"': "a", age: null, union: "a" },
+          { 'Display "Name"': "a", age: undefined, union: "a" },
           { 'Display "Name"': "b", age: 20, union: "b" },
         ]);
       },
@@ -1320,10 +1320,10 @@ describe("em.query / sets", () => {
           select: { name: a.firstName, id: ids.id, fallback: ids.id.coalesce("a:9") },
           orderBy: { name: "ASC" },
         });
-        // Then the absent row remains NULL and only coalesce produces the encoded Author-id fallback
+        // Then the absent row is undefined and only coalesce produces the encoded Author-id fallback
         expect(rows).toEqual([
           { name: "a1", id: "a:1", fallback: "a:1" },
-          { name: "a2", id: null, fallback: "a:9" },
+          { name: "a2", id: undefined, fallback: "a:9" },
         ]);
         expect(queries).toHaveLength(1);
         expect(queries).toMatchInlineSnapshot(`
@@ -1379,15 +1379,15 @@ describe("em.query / sets", () => {
     );
 
     it.each(["nullable first", "nullable last"] as const)(
-      "preserves left-join NULLs with the %s branch",
+      "preserves left-join absence with the %s branch",
       async (order) => {
-        // Given an Author without Books, producing a NULL from the left join
+        // Given an Author without Books, producing undefined from the left join
         await insertAuthor({ first_name: "a1" });
         // And an EntityManager for the nullable union
         const em = newEntityManager();
         // And Author and Book aliases with different sources but compatible varchar outputs
         const [a, b] = tables(Author, Book);
-        // And a nullable projection of the missing left-joined Book
+        // And an optional projection of the missing left-joined Book
         const nullable = {
           from: a,
           join: [{ left: b, on: b.authorId.eq(a.id) }],
@@ -1400,8 +1400,8 @@ describe("em.query / sets", () => {
           union: order === "nullable first" ? [nullable, required] : [required, nullable],
           orderBy: { name: "ASC NULLS LAST" },
         });
-        // Then the missing Book stays NULL rather than using the required branch's assumptions
-        expect(rows).toEqual([{ name: "a1" }, { name: null }]);
+        // Then the missing Book stays undefined rather than using the required branch's assumptions
+        expect(rows).toEqual([{ name: "a1" }, { name: undefined }]);
       },
     );
 
@@ -1419,8 +1419,8 @@ describe("em.query / sets", () => {
           { from: other, select: { age: other.age } },
         ],
       });
-      // Then deduplication returns one NULL, not a fabricated number or an unknown raw-SQL codec
-      expect(rows).toEqual([{ age: null }]);
+      // Then deduplication returns one SQL NULL decoded as undefined, not a fabricated number or unknown codec
+      expect(rows).toEqual([{ age: undefined }]);
     });
 
     it("decodes matching SUM outputs as numbers rather than driver int8 strings", async () => {
@@ -1471,7 +1471,7 @@ describe("em.query / sets", () => {
       const scalars = await em.query(values);
       // Then the shared numeric domain returns a number rather than a driver string
       expect(scalars).toEqual([{ value: 1.25 }]);
-      expectTypeOf(scalars).toEqualTypeOf<{ value: number | null }[]>();
+      expectTypeOf(scalars).toEqualTypeOf<{ value: number | undefined }[]>();
       // When aggregating the agreed numeric output and combining it with the stored samples
       const arrays = await em.query({
         union: [
@@ -1555,7 +1555,13 @@ describe("em.query / sets", () => {
           address: { street: "123 Main" },
           createdAt: new Date("2020-01-02T03:04:05.000Z"),
         },
-        { name: "a2", range: null, shape: null, address: null, createdAt: new Date("2021-02-03T04:05:06.000Z") },
+        {
+          name: "a2",
+          range: undefined,
+          shape: undefined,
+          address: undefined,
+          createdAt: new Date("2021-02-03T04:05:06.000Z"),
+        },
       ]);
     });
 
@@ -1660,12 +1666,16 @@ describe("em.query / sets", () => {
       });
       // When filtering both a physical alias and the compound's derived array column
       const direct = await em.query({ from: u, where: u.passwordHistory.eq(history), select: u.passwordHistory });
-      const combined = await em.query({ from: histories, where: histories.history.eq(history), select: histories });
+      const combined = await em.query({
+        from: histories,
+        where: histories.history.eq(history as PasswordValue[] | undefined),
+        select: histories,
+      });
       const found = await em.find(User, { passwordHistory: { eq: history } });
-      // Then each path encodes elements, preserves SQL NULL, and decodes the same domain array
-      expect(direct).toEqual([history]);
-      expect(combined).toEqual([{ history }]);
-      expectTypeOf(combined).toEqualTypeOf<{ history: PasswordValue[] | null }[]>();
+      // Then each path encodes elements, converts top-level SQL NULL, and decodes the same domain array
+      expect(direct).toEqual([history ?? undefined]);
+      expect(combined).toEqual([{ history: history ?? undefined }]);
+      expectTypeOf(combined).toEqualTypeOf<{ history: PasswordValue[] | undefined }[]>();
       expect(found).toEqual([user]);
       if (kind === "populated") {
         expect(combined[0].history![0]).toBeInstanceOf(PasswordValue);
@@ -1708,8 +1718,8 @@ describe("em.query / sets", () => {
         ],
         orderBy: { names: "ASC NULLS LAST" },
       });
-      // Then the empty array and SQL NULL remain separate SQL values
-      expect(rows).toEqual([{ names: [] }, { names: null }]);
+      // Then the empty array and SQL NULL remain separate SQL values, with NULL decoded as undefined
+      expect(rows).toEqual([{ names: [] }, { names: undefined }]);
     });
 
     it("decodes compatible Author-id arrayAgg outputs and encodes each fallback element", async () => {
@@ -2554,10 +2564,10 @@ describe("em.query / sets", () => {
         select: { name: a.firstName, comment: query({ from: ids, select: ids.id }) },
         orderBy: { name: "ASC" },
       });
-      // Then the join survives pruning and the unmatched Author receives SQL NULL
+      // Then the join survives pruning and the unmatched Author receives undefined for SQL NULL
       expect(rows).toEqual([
         { name: "a1", comment: "comment:1" },
-        { name: "a2", comment: null },
+        { name: "a2", comment: undefined },
       ]);
       expect(queries).toHaveLength(1);
       expect(queries).toMatchInlineSnapshot(`
@@ -2680,8 +2690,8 @@ describe("em.query / sets", () => {
         ],
         orderBy: { title: "ASC NULLS LAST" },
       });
-      // Then the default left join still returns its Author row with a NULL title
-      expect(rows).toEqual([{ title: "deleted book" }, { title: null }]);
+      // Then the default left join still returns its Author row with an undefined title
+      expect(rows).toEqual([{ title: "deleted book" }, { title: undefined }]);
       expect(queries).toHaveLength(1);
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -2843,8 +2853,8 @@ describe("em.query / sets", () => {
       try {
         // When selecting the empty scalar directly and through coalesce
         const rows = await em.query({ from: a, select: { id, fallback: id.coalesce("a:9") } });
-        // Then zero scalar rows become NULL only in expression context and the fallback is a physical key
-        expect(rows).toEqual([{ id: null, fallback: "a:9" }]);
+        // Then zero scalar rows become SQL NULL, decode as undefined, and leave the fallback as a physical key
+        expect(rows).toEqual([{ id: undefined, fallback: "a:9" }]);
         expect(queries).toHaveLength(1);
         expect(queries).toMatchInlineSnapshot(`
          [

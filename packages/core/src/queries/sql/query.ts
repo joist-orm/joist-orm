@@ -75,7 +75,7 @@ import { fail } from "src/utils.ts";
  *     select: { name: a.first_name, n: bookStats.n },
  *     orderBy: { n: "DESC" },
  *   });
- *   // rows: { name: string; n: number | null }[]   (null because of the LEFT join)
+ *   // rows: { name: string; n: number | undefined }[]   (undefined because of the LEFT join)
  *
  * `em.query(pojo)` runs it. `select` decides the row type: a bare table returns entities, a
  * `{ key: expr }` object returns typed POJOs, a bare subquery returns that subquery's rows.
@@ -369,7 +369,7 @@ type FirstOperand<Q> = OperandsOf<Q>[0];
  * Resolves the named rows of an ordinary or compound read operand, including its LEFT join nullability.
  *
  * I.e. a query from Author `a` with a LEFT-joined Book `b` and `select: { title: b.title }` has row type
- * `{ title: string | null }`, even though Book.title is required. A reusable `query(...)` value already
+ * `{ title: string | undefined }`, even though Book.title is required. A reusable `query(...)` value already
  * stores that row type in its brand; a nested compound combines its own operands recursively.
  */
 export type ReadQueryRow<Q> = SetOperand extends Q
@@ -392,8 +392,8 @@ export type ReadQueryRow<Q> = SetOperand extends Q
  * UNION combines each column's values; INTERSECT and EXCEPT conservatively retain the left row.
  *
  * I.e. Author first names projected as `{ name: string }` unioned with LEFT-joined Book titles projected
- * as `{ name: string | null }` produce `{ name: string | null }`. EXCEPT with those Author names on the
- * left retains `{ name: string }`; it neither adds the right side's NULL nor promises narrower values.
+ * as `{ name: string | undefined }` produce `{ name: string | undefined }`. EXCEPT with those Author names on
+ * the left retains `{ name: string }`; it neither adds the right side's absence nor promises narrower values.
  *
  * The outer conditional distributes over a TypeScript union of alternative queries. I.e. a runtime
  * choice between an Author-name UNION and a Book-order EXCEPT must retain `{ name: string } | { order: number }`.
@@ -589,7 +589,7 @@ type NullableSources<X, Left = LeftJoined<X>> =
 
 /**
  * Asks: is this expression's source key among the LEFT-joined sources in this query's join list? If
- * yes, the value can be `null`, so `R` becomes `R | null`; if no, `R` is unchanged.
+ * yes, SQL can return NULL, so `R` becomes `R | null`; if no, `R` is unchanged.
  *
  * I.e. `MaybeNull<number, "book_stats", [LeftJoin<typeof bookStats>]>` is `number | null`,
  * because `book_stats` is in `NullableSources<J[number]>`; with an inner join it stays `number`.
@@ -626,13 +626,33 @@ export type QueryRow<S, J extends QueryJoinList = []> = S extends {
   : S extends { readonly [subqueryBrand]: { readonly __row: infer R } }
     ? R
     : S extends ExprLike<unknown>
-      ? ExpressionValue<S, J>
+      ? QueryResultValue<ExpressionValue<S, J>>
       : {
           // Inline inputs retain readonly tuples for inference; result rows are still mutable.
           -readonly [K in keyof S]: S[K] extends SelectExpression
-            ? ExpressionValue<S[K] extends ExprInput ? ExprFromInput<S[K]> : S[K], J>
+            ? QueryResultValue<ExpressionValue<S[K] extends ExprInput ? ExprFromInput<S[K]> : S[K], J>>
             : never;
         };
+
+/**
+ * Converts top-level SQL NULL to Joist's public undefined convention.
+ *
+ * Column metadata and expressions retain `T | null` because null is an explicit SQL value used by
+ * predicates, assignments, and functions such as COALESCE. Undefined instead means an omitted input.
+ * Keeping that distinction also lets reusable queries become SQL expressions without changing domains.
+ * The conversion therefore happens only at the executed-row boundary; nested array and JSON nulls remain null.
+ */
+type QueryResultValue<V> = Exclude<V, null> | (null extends V ? undefined : never);
+
+/**
+ * Restores SQL NULL when a public query result is reused as an expression or mutation source.
+ *
+ * A future alternative is to retain both domains on every expression, i.e.
+ * `Expr<Sql, Src extends string = string, Result = QueryResultValue<Sql>>`. QueryRow could then use Result
+ * while predicates and reusable queries use Sql, avoiding this reverse conversion without making the
+ * common expression declaration verbose.
+ */
+export type SqlExpressionValue<V> = Exclude<V, undefined> | (undefined extends V ? null : never);
 
 // =====================================================================================================
 // `query()`: a query POJO becomes a typed table, scalar, or entity list
@@ -645,7 +665,7 @@ export type QueryRow<S, J extends QueryJoinList = []> = S extends {
  */
 export type Subquery<R, Name extends string> = {
   readonly [subqueryBrand]: SubqueryBrand<R, Name>;
-} & { readonly [K in keyof R]: Expr<R[K], Name> };
+} & { readonly [K in keyof R]: Expr<SqlExpressionValue<R[K]>, Name> };
 
 /** An entity-mode query (`select: a`): runnable, but it has no columns to reference. */
 export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } } & Partial<
@@ -653,7 +673,7 @@ export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { rea
 >;
 
 /** A scalar/list query that remains distinguishable from ordinary expressions for EXISTS. */
-export type ScalarQuery<R> = Expr<R | null, never> & { readonly [scalarQueryBrand]: true };
+export type ScalarQuery<R> = Expr<SqlExpressionValue<R> | null, never> & { readonly [scalarQueryBrand]: true };
 
 /**
  * Rejects a `select` that a `: Query` annotation widened to the whole `QuerySelect` union.
@@ -956,8 +976,9 @@ export function isReadQueryValue(arg: unknown): boolean {
 export function projectionToSql(
   select: unknown,
   ctx: Ctx,
+  joins?: QueryJoinList,
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
-  const output = projectionOutput(select);
+  const output = joinedOutput(projectionOutput(select), joins);
   if (output.kind === "scalar") {
     // Scalar mode: one value per row, used by scalar/IN-list subqueries
     const expr = output.columns[0][1];
@@ -965,7 +986,7 @@ export function projectionToSql(
     const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
     return {
       selects,
-      decodeRows: (_, rows) => rows.map((row) => expr.decode(row.value)),
+      decodeRows: (_, rows) => rows.map((row) => decodeValue(expr, row.value)),
       output,
     };
   }
@@ -1390,7 +1411,7 @@ function projectionOutput(select: unknown): QueryOutput {
 }
 
 /**
- * Adds physical NULL from unmatched LEFT joins without mutating shared expressions or their codecs.
+ * Adds SQL nullability from unmatched LEFT joins without mutating shared expressions or their codecs.
  * Only direct columns carry sqlSource; COUNT and COALESCE retain their own SQL nullability.
  * I.e. selecting Book.title from a LEFT-joined Book makes its output nullable, but COUNT(Book.id) stays NOT NULL.
  */
@@ -1514,7 +1535,7 @@ function parseSetQuery(
     bindings,
     outerRefs: [...new Set(outerRefs.filter((ref) => !cteAliases.has(ref)))],
     output,
-    decodeRows: plans[0].decodeRows,
+    decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
   };
 }
 
@@ -1974,9 +1995,7 @@ function selectsToSql(
       output,
     };
   }
-  const projection = projectionToSql(select, ctx);
-  projection.output = joinedOutput(projection.output, q.join);
-  return projection;
+  return projectionToSql(select, ctx, q.join);
 }
 
 /**
@@ -2112,7 +2131,7 @@ function decodeRow(row: any, decoders: readonly (readonly [string, BaseExpr])[])
   const result: any = {};
   for (const [key, expr] of decoders) {
     const value = row[key];
-    const decoded = value === null || value === undefined ? null : expr.decode(value);
+    const decoded = decodeValue(expr, value);
     // A projected __proto__ is data, not a request to replace the result object's prototype.
     if (key === "__proto__") {
       Object.defineProperty(result, key, { value: decoded, enumerable: true, configurable: true, writable: true });
@@ -2121,6 +2140,11 @@ function decodeRow(row: any, decoders: readonly (readonly [string, BaseExpr])[])
     }
   }
   return result;
+}
+
+/** Decodes a top-level projected SQL NULL using Joist's undefined convention. */
+function decodeValue(expr: BaseExpr, value: unknown): unknown {
+  return value === null ? undefined : expr.decode(value);
 }
 
 const ORDER_BY_DIRECTIONS: string[] = [

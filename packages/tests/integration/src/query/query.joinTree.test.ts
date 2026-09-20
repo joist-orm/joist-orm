@@ -45,7 +45,7 @@ describe("em.query / join trees", () => {
        "SELECT a.first_name AS name, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE (((a.first_name = $1) AND (b.title ILIKE $2)) AND b.id != $3) AND a.deleted_at IS NULL",
      ]
     `);
-    expectTypeOf(rows).toEqualTypeOf<{ name: string; title: string | null }[]>();
+    expectTypeOf(rows).toEqualTypeOf<{ name: string; title: string | undefined }[]>();
   });
 
   it("walks unbound nodes and inherits nullability through required references", async () => {
@@ -66,12 +66,12 @@ describe("em.query / join trees", () => {
       orderBy: { name: "ASC" },
     });
 
-    // Then Authors without Books survive and their descendant columns are nullable
+    // Then Authors without Books survive and their descendant columns are undefined
     expect(rows).toEqual([
       { name: "Alice", owner: "Alice" },
-      { name: "Bob", owner: null },
+      { name: "Bob", owner: undefined },
     ]);
-    expectTypeOf(rows).toEqualTypeOf<{ name: string; owner: string | null }[]>();
+    expectTypeOf(rows).toEqualTypeOf<{ name: string; owner: string | undefined }[]>();
   });
 
   it("keeps required references non-null and nullable references nullable", async () => {
@@ -90,9 +90,9 @@ describe("em.query / join trees", () => {
       select: { author: a.firstName, reviewer: reviewer.firstName },
     });
 
-    // Then only the optional reviewer adds NULL to the result type
-    expect(rows).toEqual([{ author: "Alice", reviewer: null }]);
-    expectTypeOf(rows).toEqualTypeOf<{ author: string; reviewer: string | null }[]>();
+    // Then only the optional reviewer adds undefined to the result type
+    expect(rows).toEqual([{ author: "Alice", reviewer: undefined }]);
+    expectTypeOf(rows).toEqualTypeOf<{ author: string; reviewer: string | undefined }[]>();
   });
 
   it("filters through many-to-many bridges", async () => {
@@ -281,8 +281,8 @@ describe("em.query / join trees", () => {
 
     // When projecting the Author's collection
     const rows = await em.query({ from: a, join: { books: { as: b } }, select: { name: a.firstName, title: b.title } });
-    // Then the deleted Book becomes NULL without removing Alice
-    expect(rows).toEqual([{ name: "Alice", title: null }]);
+    // Then the deleted Book becomes undefined without removing Alice
+    expect(rows).toEqual([{ name: "Alice", title: undefined }]);
   });
 
   it("follows references to soft-deleted entities", async () => {
@@ -349,8 +349,8 @@ describe("em.query / join trees", () => {
     const titles = query({ from: a, join: { books: { as: b } }, select: { title: b.title }, as: "titles" });
     const rows = await em.query({ from: titles, select: titles, orderBy: { title: "ASC NULLS LAST" } });
     // Then derived-table output retains the join's nullable type and values
-    expect(rows).toEqual([{ title: "One" }, { title: null }]);
-    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | null }, "titles">>();
+    expect(rows).toEqual([{ title: "One" }, { title: undefined }]);
+    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | undefined }, "titles">>();
   });
 
   it("keeps a conditional scalar query with a surviving tree filter", async () => {
@@ -397,9 +397,9 @@ describe("em.query / join trees", () => {
     });
     const rows = await em.query({ from: titles, select: titles, orderBy: { title: "ASC NULLS LAST" } });
 
-    // Then the compound retains both the Book title and the unmatched Author's NULL
-    expect(rows).toEqual([{ title: "One" }, { title: null }]);
-    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | null }, "titles">>();
+    // Then the compound retains both the Book title and the unmatched Author's undefined
+    expect(rows).toEqual([{ title: "One" }, { title: undefined }]);
+    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | undefined }, "titles">>();
   });
 
   it("rejects a root binding that differs from from", async () => {
@@ -484,8 +484,8 @@ function treeTypeAssertions() {
   // When a reusable literal uses the Query shape
   const input = { from: a, join: { books: { as: b } }, select: { title: b.title } } satisfies Query;
   // Then inference retains the nullable Book title
-  expectTypeOf(em.query(input)).toEqualTypeOf<Promise<{ title: string | null }[]>>();
-  expectTypeOf(em.execute(input)).toMatchTypeOf<Promise<{ rows: { title: string | null }[] }>>();
+  expectTypeOf(em.query(input)).toEqualTypeOf<Promise<{ title: string | undefined }[]>>();
+  expectTypeOf(em.execute(input)).toMatchTypeOf<Promise<{ rows: { title: string | undefined }[] }>>();
   // And queries that preserve an omitted join or explicitly choose the list form
   const noJoin = { from: a, select: { name: a.firstName } } satisfies Query;
   const typedNoJoin: Query<{ name: typeof a.firstName }, []> = noJoin;
@@ -495,7 +495,7 @@ function treeTypeAssertions() {
   em.query({ from: a, join: joinList, select: { title: b.title } });
   const preciseTree = { books: { as: b } } satisfies JoinTree<Author>;
   expectTypeOf(em.query({ from: a, join: preciseTree, select: { title: b.title } })).toEqualTypeOf<
-    Promise<{ title: string | null }[]>
+    Promise<{ title: string | undefined }[]>
   >();
 
   // When a tree uses invalid fields, values, bindings, or roots

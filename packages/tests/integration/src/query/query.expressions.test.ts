@@ -150,9 +150,9 @@ describe("em.query / expressions", () => {
       ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
-          authorIds: (number | null)[] | null;
-          titles: string[] | null;
-          labels: string[] | null;
+          authorIds: (number | null)[] | undefined;
+          titles: string[] | undefined;
+          labels: string[] | undefined;
           fallback: Book["id"][];
         }[]
       >();
@@ -252,9 +252,9 @@ describe("em.query / expressions", () => {
       });
 
       // Then the result remains a named projection rather than becoming a scalar expression
-      expect(rows).toEqual([{ coalesce: "Alice", case: "Alice", nullIf: null, greatest: 18, least: 65 }]);
+      expect(rows).toEqual([{ coalesce: "Alice", case: "Alice", nullIf: undefined, greatest: 18, least: 65 }]);
       expectTypeOf(rows).toEqualTypeOf<
-        { coalesce: string; case: string; nullIf: string | null; greatest: number; least: number }[]
+        { coalesce: string; case: string; nullIf: string | undefined; greatest: number; least: number }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -304,7 +304,7 @@ describe("em.query / expressions", () => {
         { id: "b:1", name: "Alice" },
         { id: "b:10", name: "No books" },
       ]);
-      expectTypeOf(firstBook).toEqualTypeOf<ScalarQuery<Book["id"] | null>>();
+      expectTypeOf(firstBook).toEqualTypeOf<ScalarQuery<Book["id"] | undefined>>();
       expectTypeOf(rows).toEqualTypeOf<{ id: Book["id"]; name: string }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -355,7 +355,7 @@ describe("em.query / expressions", () => {
 
       // Then the combined rows retain the nullable name type from NULLIF
       expect(rows).toEqual([{ name: "Alice" }, { name: "Apple" }]);
-      expectTypeOf(rows).toEqualTypeOf<{ name: string | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT COALESCE(a.last_name, a.first_name) AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION ALL (SELECT NULLIF(b.title, $1::varchar) AS name FROM books AS b WHERE b.deleted_at IS NULL) ORDER BY name ASC",
@@ -412,13 +412,13 @@ describe("em.query / expressions", () => {
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
-      // Then empty and null last names use the first name, while other last names remain unchanged
+      // Then empty and null last names decode as undefined, while other last names remain unchanged
       expect(rows).toEqual([
-        { lastName: null, name: "Alice" },
-        { lastName: null, name: "Bob" },
+        { lastName: undefined, name: "Alice" },
+        { lastName: undefined, name: "Bob" },
         { lastName: "Clark", name: "Clark" },
       ]);
-      expectTypeOf(rows).toEqualTypeOf<{ lastName: string | null; name: string }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ lastName: string | undefined; name: string }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT NULLIF(a.last_name, $1::varchar) AS "lastName", COALESCE(NULLIF(a.last_name, $2::varchar), a.first_name) AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -447,9 +447,9 @@ describe("em.query / expressions", () => {
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
-      // Then equal values return null, but a null comparison operand leaves the Author name intact
-      expect(rows).toEqual([{ name: null }, { name: "Bob" }]);
-      expectTypeOf(rows).toEqualTypeOf<{ name: string | null }[]>();
+      // Then equal values decode as undefined, but a null comparison operand leaves the Author name intact
+      expect(rows).toEqual([{ name: undefined }, { name: "Bob" }]);
+      expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT NULLIF(a.first_name, b.title) AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -488,20 +488,20 @@ describe("em.query / expressions", () => {
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
-      // Then null operands are ignored, and only all-null inputs return null
+      // Then null operands are ignored, and only all-null inputs decode as undefined
       expect(rows).toEqual([
         { greatest: 18, least: 10, bounded: 18, nullableGreatest: 10, nullableLeast: 10 },
         { greatest: 30, least: 30, bounded: 30, nullableGreatest: 30, nullableLeast: 30 },
         { greatest: 80, least: 65, bounded: 65, nullableGreatest: 80, nullableLeast: 80 },
-        { greatest: 18, least: 65, bounded: 18, nullableGreatest: null, nullableLeast: null },
+        { greatest: 18, least: 65, bounded: 18, nullableGreatest: undefined, nullableLeast: undefined },
       ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
           greatest: number;
           least: number;
           bounded: number;
-          nullableGreatest: number | null;
-          nullableLeast: number | null;
+          nullableGreatest: number | undefined;
+          nullableLeast: number | undefined;
         }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
@@ -534,23 +534,23 @@ describe("em.query / expressions", () => {
         },
       });
 
-      // Then GREATEST and LEAST can return the Author name, while NULLIF keeps its null first operand
+      // Then GREATEST and LEAST can return the Author name, while nullable results decode as undefined
       expect(rows).toEqual([
         {
           greatest: "Alice",
           least: "Alice",
-          missingGreatest: null,
-          missingLeast: null,
-          missingFirst: null,
+          missingGreatest: undefined,
+          missingLeast: undefined,
+          missingFirst: undefined,
         },
       ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
           greatest: string;
           least: string;
-          missingGreatest: string | null;
-          missingLeast: string | null;
-          missingFirst: string | null;
+          missingGreatest: string | undefined;
+          missingLeast: string | undefined;
+          missingFirst: string | undefined;
         }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
@@ -588,7 +588,7 @@ describe("em.query / expressions", () => {
       // Then fixed non-null candidates guarantee values even when the extra bounds are empty
       expect(rows).toEqual([{ name: "Alice", greatest: 30, least: 30, middleBound: 30, dynamic: 30 }]);
       expectTypeOf(rows).toEqualTypeOf<
-        { name: string; greatest: number; least: number; middleBound: number; dynamic: number | null }[]
+        { name: string; greatest: number; least: number; middleBound: number; dynamic: number | undefined }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -627,12 +627,14 @@ describe("em.query / expressions", () => {
       const rows = await em.query({ from: ids, select: ids });
 
       // Then PostgreSQL compares integer ids and Joist returns the selected ids with Book tags
-      expect(rows).toEqual([{ equal: null, different: "b:1", nullFirst: null, greatest: "b:10", least: "b:1" }]);
+      expect(rows).toEqual([
+        { equal: undefined, different: "b:1", nullFirst: undefined, greatest: "b:10", least: "b:1" },
+      ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
-          equal: Book["id"] | null;
-          different: Book["id"] | null;
-          nullFirst: null;
+          equal: Book["id"] | undefined;
+          different: Book["id"] | undefined;
+          nullFirst: undefined;
           greatest: Book["id"];
           least: Book["id"];
         }[]
@@ -664,9 +666,9 @@ describe("em.query / expressions", () => {
       });
 
       // Then parameter order matches SQL order and numeric results remain numbers
-      expect(rows).toEqual([{ value: 7, different: 4, nullComparison: 4, allNull: null }]);
+      expect(rows).toEqual([{ value: 7, different: 4, nullComparison: 4, allNull: undefined }]);
       expectTypeOf(rows).toEqualTypeOf<
-        { value: number; different: number | null; nullComparison: number | null; allNull: null }[]
+        { value: number; different: number | undefined; nullComparison: number | undefined; allNull: undefined }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
             [
@@ -778,7 +780,7 @@ describe("em.query / expressions", () => {
 
       // Then a true condition with a null name still lets COALESCE try the next candidate
       expect(rows).toEqual([{ name: "Alice" }, { name: "Brown" }]);
-      expectTypeOf(rows).toEqualTypeOf<{ name: string | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE((CASE WHEN (a.id IS NOT NULL) THEN a.last_name END), (CASE WHEN (a.id IS NOT NULL) THEN a.first_name END)) AS name FROM authors AS a WHERE COALESCE((CASE WHEN (a.id IS NOT NULL) THEN a.last_name END), (CASE WHEN (a.id IS NOT NULL) THEN a.first_name END)) != $1 AND a.deleted_at IS NULL ORDER BY name ASC",
@@ -809,9 +811,11 @@ describe("em.query / expressions", () => {
         },
       });
 
-      // Then a fixed fallback guarantees a name, while the empty dynamic list does not
-      expect(rows).toEqual([{ nullable: null, fallback: "Unknown", onlyDynamic: null }]);
-      expectTypeOf(rows).toEqualTypeOf<{ nullable: string | null; fallback: string; onlyDynamic: string | null }[]>();
+      // Then a fixed fallback guarantees a name, while the empty dynamic list decodes as undefined
+      expect(rows).toEqual([{ nullable: undefined, fallback: "Unknown", onlyDynamic: undefined }]);
+      expectTypeOf(rows).toEqualTypeOf<
+        { nullable: string | undefined; fallback: string; onlyDynamic: string | undefined }[]
+      >();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(a.last_name) AS nullable, COALESCE(a.last_name, $1::varchar) AS fallback, COALESCE($2::text) AS "onlyDynamic" FROM authors AS a WHERE a.deleted_at IS NULL",
@@ -844,27 +848,27 @@ describe("em.query / expressions", () => {
         },
       });
 
-      // Then only candidates that can all be null produce nullable result types
+      // Then candidates that can all be null decode as undefined
       expect(rows).toEqual([
         {
-          title: null,
+          title: undefined,
           name: "Alice",
           literal: "Unknown",
-          conditional: null,
+          conditional: undefined,
           nested: "Alice",
           bookId: "b:9",
-          missingId: null,
+          missingId: undefined,
         },
       ]);
       expectTypeOf(rows).toEqualTypeOf<
         {
-          title: string | null;
+          title: string | undefined;
           name: string;
           literal: string;
-          conditional: string | null;
+          conditional: string | undefined;
           nested: string;
           bookId: Book["id"];
-          missingId: Book["id"] | null;
+          missingId: Book["id"] | undefined;
         }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
@@ -900,9 +904,9 @@ describe("em.query / expressions", () => {
       });
 
       // Then the ELSE entries provide values, while dynamic arrays retain conservative nullability
-      expect(rows).toEqual([{ fixed: "Unknown", dynamic: "Unknown", nullable: null, nested: "Alice" }]);
+      expect(rows).toEqual([{ fixed: "Unknown", dynamic: "Unknown", nullable: undefined, nested: "Alice" }]);
       expectTypeOf(rows).toEqualTypeOf<
-        { fixed: string; dynamic: string | null; nullable: string | null; nested: string }[]
+        { fixed: string; dynamic: string | undefined; nullable: string | undefined; nested: string }[]
       >();
       expect(queries).toMatchInlineSnapshot(`
        [
@@ -988,12 +992,14 @@ describe("em.query / expressions", () => {
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
 
-      // Then CASE stops at the first true arm, even when that arm returns null
+      // Then CASE stops at the first true arm, and SQL NULL results decode as undefined
       expect(rows).toEqual([
-        { category: "Adult", adultName: "Alice", stopsAtNull: null },
-        { category: "Unknown", adultName: null, stopsAtNull: "Unknown" },
+        { category: "Adult", adultName: "Alice", stopsAtNull: undefined },
+        { category: "Unknown", adultName: undefined, stopsAtNull: "Unknown" },
       ]);
-      expectTypeOf(rows).toEqualTypeOf<{ category: string; adultName: string | null; stopsAtNull: string | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<
+        { category: string; adultName: string | undefined; stopsAtNull: string | undefined }[]
+      >();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (a.age >= $1) THEN $2::text WHEN (a.age >= $3) THEN $4::text ELSE $5::text END) AS category, (CASE WHEN (a.age >= $6) THEN a.first_name END) AS "adultName", (CASE WHEN (a.age >= $7) THEN $8::varchar WHEN (a.age >= $9) THEN a.first_name ELSE $10::varchar END) AS "stopsAtNull" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -1023,7 +1029,7 @@ describe("em.query / expressions", () => {
       });
 
       // Then the Book's presence decides which Author names are returned
-      expect(rows).toEqual([{ name: "Alice" }, { name: null }]);
+      expect(rows).toEqual([{ name: "Alice" }, { name: undefined }]);
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (b.id IS NOT NULL) THEN a.first_name END) AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -1054,7 +1060,7 @@ describe("em.query / expressions", () => {
       });
 
       // Then the CASE fallback remains and the unused Book join does not duplicate Alice
-      expect(rows).toEqual([{ name: "Alice", missing: null }]);
+      expect(rows).toEqual([{ name: "Alice", missing: undefined }]);
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, $1::varchar AS missing FROM authors AS a WHERE a.deleted_at IS NULL",
@@ -1113,7 +1119,7 @@ describe("em.query / expressions", () => {
 
       // Then the fallback reaches SQL as an integer and returns as a tagged Book id
       expect(rows).toEqual([{ id: "b:9" }]);
-      expectTypeOf(rows).toEqualTypeOf<{ id: Book["id"] | null }[]>();
+      expectTypeOf(rows).toEqualTypeOf<{ id: Book["id"] | undefined }[]>();
       expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT sq.id AS id FROM (SELECT COALESCE(b.id, (CASE WHEN (a.id IS NOT NULL) THEN $1::int4 END)) AS id FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE COALESCE(b.id, (CASE WHEN (a.id IS NOT NULL) THEN $2::int4 END)) = $3 AND a.deleted_at IS NULL) AS sq",

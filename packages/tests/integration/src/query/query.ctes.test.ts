@@ -831,7 +831,7 @@ describe("em.query / ctes", () => {
       expectTypeOf(rows).toEqualTypeOf<{ name: string; count: number }[]>();
     });
 
-    it("nullifies a LEFT-joined CTE's columns", async () => {
+    it("makes a LEFT-joined CTE's columns undefined", async () => {
       const em = newEntityManager();
       // Given a CTE counting each Author's Books
       const stats = query({
@@ -840,15 +840,15 @@ describe("em.query / ctes", () => {
         select: { authorId: b.authorId, count: b.id.count() },
         as: "book_stats",
       });
-      // When it is LEFT joined, so its unmatched rows are null
+      // When it is LEFT joined, so its unmatched rows are undefined
       const rows = await em.query({
         with: stats,
         from: a,
         join: [{ left: stats, on: stats.authorId.eq(a.id) }],
         select: { name: a.firstName, count: stats.count },
       });
-      // Then the CTE's column is nullable, but the from's is not
-      expectTypeOf(rows).toEqualTypeOf<{ name: string; count: number | null }[]>();
+      // Then the CTE's column can be absent, but the from's cannot
+      expectTypeOf(rows).toEqualTypeOf<{ name: string; count: number | undefined }[]>();
     });
 
     it("selects a CTE's own rows", async () => {

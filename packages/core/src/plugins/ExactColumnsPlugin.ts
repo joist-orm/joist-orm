@@ -9,9 +9,9 @@ import { oneToManyFindOperation } from "../dataloaders/oneToManyFindDataLoader.t
 import { type Entity } from "../Entity.ts";
 import { type FindOperation, type MaybeAbstractEntityConstructor } from "../EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
-import { kq, kqDot } from "../keywords.ts";
 import { Plugin } from "../PluginManager.ts";
-import { type ParsedFindQuery } from "../QueryParser.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { kq, kqDot } from "src/queries/sql/keywords.ts";
 
 export interface ExactColumnsPluginOpts {
   /** Called when a narrowed endpoint reads an un-fetched column, i.e. for telemetry, before the retry/rethrow. */

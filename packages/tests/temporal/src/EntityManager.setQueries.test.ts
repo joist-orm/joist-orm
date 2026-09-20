@@ -15,7 +15,7 @@ import {
 } from "src/utils";
 
 describe("EntityManager.setQueries", () => {
-  it("decodes same-field PlainDate, PlainTime, and PlainDateTime UNION outputs and preserves SQL NULL", async () => {
+  it("decodes same-field PlainDate, PlainTime, and PlainDateTime UNION outputs and maps SQL NULL to undefined", async () => {
     // Given an Author with distinct date, microsecond time, and local timestamp values
     await knex
       .insert({ firstName: "a1", birthday: "2018-01-01", time: "10:01:00.123456", timestamp: "2018-01-01 10:00:00" })
@@ -39,10 +39,10 @@ describe("EntityManager.setQueries", () => {
       orderBy: { birthday: "ASC" },
     });
 
-    // Then SQL deduplicates each row and each non-NULL field retains its Temporal domain
+    // Then SQL deduplicates each row, exposes NULL as undefined, and retains each Temporal domain
     expect(rows).toEqual([
       { birthday: jan1, time: ten01AndMicros, timestamp: jan1at10am },
-      { birthday: jan2, time: null, timestamp: jan1at11am },
+      { birthday: jan2, time: undefined, timestamp: jan1at11am },
     ]);
     expect(rows[0].birthday).toBeInstanceOf(Temporal.PlainDate);
     expect(rows[0].time).toBeInstanceOf(Temporal.PlainTime);
@@ -153,9 +153,9 @@ describe("EntityManager.setQueries", () => {
         },
       });
 
-      // Then NULL remains NULL in the direct projection, while the fallback decodes to a microsecond PlainTime
+      // Then the direct projection exposes NULL as undefined, while the fallback decodes to a microsecond PlainTime
       expect(rows).toEqual([
-        { birthday: jan1, time: null, fallback: ten01AndMicros, timestamp: jan1at10am, createdAt: jan1DateTime },
+        { birthday: jan1, time: undefined, fallback: ten01AndMicros, timestamp: jan1at10am, createdAt: jan1DateTime },
       ]);
       expect(rows[0].fallback).toBeInstanceOf(Temporal.PlainTime);
       expect(rows[0].fallback.toString()).toBe("10:01:00.123456");

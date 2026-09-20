@@ -267,9 +267,9 @@ async function typeAssertions() {
   // Entity mode: a bare alias returns the entity itself, not a row of columns
   const entities = em.query({ from: a, select: a });
   expectTypeOf(entities).resolves.toEqualTypeOf<Author[]>();
-  // POJO mode: one key per column, each with its decoded type (tagged ids, field nullability)
+  // POJO mode: one key per column, with top-level SQL NULL decoded as undefined
   const pojo = em.query({ from: a, select: { id: a.id, name: a.firstName, age: a.age } });
-  expectTypeOf(pojo).resolves.toEqualTypeOf<{ id: AuthorId; name: string; age: number | null }[]>();
+  expectTypeOf(pojo).resolves.toEqualTypeOf<{ id: AuthorId; name: string; age: number | undefined }[]>();
 
   // === `query(...)` turns the same POJO into a derived table with typed columns
   const bookStats = query({
@@ -282,14 +282,16 @@ async function typeAssertions() {
   expectTypeOf(bookStats.authorId).toEqualTypeOf<Expr<AuthorId, "book_stats">>();
   // `count()` is non-null inside the subquery (every group has rows)...
   expectTypeOf(bookStats.bookCount).toEqualTypeOf<Expr<number, "book_stats">>();
-  // ...while `max()` is nullable even inside it (SQL `max` over an empty group)
+  // ...while `max()` and the reusable SQL expression remain nullable inside it
   expectTypeOf(bookStats.lastTitle).toEqualTypeOf<Expr<string | null, "book_stats">>();
   // `arrayAgg()` keeps the element's own nullability, and is itself `| null` (zero rows aggregate as NULL)
   expectTypeOf<ReturnType<typeof b.title.arrayAgg>>().toEqualTypeOf<Expr<string[] | null, "Book">>();
   expectTypeOf<ReturnType<typeof a.age.arrayAgg>>().toEqualTypeOf<Expr<(number | null)[] | null, "Author">>();
-  // `select: <subquery>` is that table's `select *`, returning its full row type
+  // `select: <subquery>` returns its full row type, with top-level SQL NULL decoded as undefined
   const star = em.query({ from: bookStats, select: bookStats });
-  expectTypeOf(star).resolves.toEqualTypeOf<{ authorId: AuthorId; bookCount: number; lastTitle: string | null }[]>();
+  expectTypeOf(star).resolves.toEqualTypeOf<
+    { authorId: AuthorId; bookCount: number; lastTitle: string | undefined }[]
+  >();
 
   // === The join list decides nullability: the same column, inner- vs left-joined
   // Inner join: the row is guaranteed a match, so `bookCount` stays `number`
@@ -299,13 +301,13 @@ async function typeAssertions() {
     select: { name: a.firstName, bookCount: bookStats.bookCount },
   });
   expectTypeOf(inner).resolves.toEqualTypeOf<{ name: string; bookCount: number }[]>();
-  // Left join: the same column picks up `| null`, and `.coalesce(0)` recovers the non-null type
+  // Left join: the same column picks up `| undefined`, and `.coalesce(0)` recovers the required type
   const left = em.query({
     from: a,
     join: [{ left: bookStats, on: bookStats.authorId.eq(a.id) }],
     select: { name: a.firstName, bookCount: bookStats.bookCount, safe: bookStats.bookCount.coalesce(0) },
   });
-  expectTypeOf(left).resolves.toEqualTypeOf<{ name: string; bookCount: number | null; safe: number }[]>();
+  expectTypeOf(left).resolves.toEqualTypeOf<{ name: string; bookCount: number | undefined; safe: number }[]>();
 
   // === Nullability is per-source: a left join nullifies only its own columns
   // `table(Author, "m")` gives the self-join its own source key, so left-joining the mentor
@@ -319,7 +321,9 @@ async function typeAssertions() {
     ],
     select: { mentee: a.firstName, mentor: m.firstName, publisher: p.name },
   });
-  expectTypeOf(mentors).resolves.toEqualTypeOf<{ mentee: string; mentor: string | null; publisher: string | null }[]>();
+  expectTypeOf(mentors).resolves.toEqualTypeOf<
+    { mentee: string; mentor: string | undefined; publisher: string | undefined }[]
+  >();
 
   // === Subqueries as expressions
   // A single-expression select is a scalar subquery: `| null` because it can return no row
@@ -366,12 +370,12 @@ async function typeAssertions() {
       { name: "ASC NULLS LAST" },
     ] as const,
   });
-  expectTypeOf(ordered).resolves.toEqualTypeOf<{ name: string; age: number | null }[]>();
+  expectTypeOf(ordered).resolves.toEqualTypeOf<{ name: string; age: number | undefined }[]>();
   // Physical columns and derived-table output names are also accepted in keyed array entries
   em.query({ from: a, select: a, orderBy: [{ firstName: "DESC" }, { age: "ASC NULLS LAST" }] });
   const orderedStats = em.query({ from: bookStats, select: bookStats, orderBy: [{ bookCount: "DESC" }] });
   expectTypeOf(orderedStats).resolves.toEqualTypeOf<
-    { authorId: AuthorId; bookCount: number; lastTitle: string | null }[]
+    { authorId: AuthorId; bookCount: number; lastTitle: string | undefined }[]
   >();
   // query() shares the same orderBy array support and keeps its derived-table row type
   const orderedNames = query({
@@ -396,8 +400,8 @@ async function typeAssertions() {
   // Given a Comment table whose parent can reference an Author or another entity
   // When selecting the physical Author component rather than the parent relationship
   const parentIds = em.query({ from: c, select: { authorId: c.parentAuthorId } });
-  // Then the component keeps its Author id domain and physical column nullability
-  expectTypeOf(parentIds).resolves.toEqualTypeOf<{ authorId: AuthorId | null }[]>();
+  // Then the component keeps its Author id domain and decodes top-level SQL NULL as undefined
+  expectTypeOf(parentIds).resolves.toEqualTypeOf<{ authorId: AuthorId | undefined }[]>();
 
   // Given an Author alias for entity-shaped find filters
   const findAuthor = alias(Author);
@@ -418,13 +422,15 @@ async function typeAssertions() {
 
   // === Relationship join sugar: the relation is the join factory, and the join kind follows the
   // === relation's nullability, so the row types come out right with no annotations
-  // A collection (`books`) and a nullable reference (`publisher`) default to LEFT: their columns gain `| null`
+  // A collection (`books`) and a nullable reference (`publisher`) default to LEFT: their columns gain `| undefined`
   const sugar = em.query({
     from: a,
     join: [a.books.as(b), a.publisher.as(p)],
     select: { name: a.firstName, title: b.title, publisher: p.name },
   });
-  expectTypeOf(sugar).resolves.toEqualTypeOf<{ name: string; title: string | null; publisher: string | null }[]>();
+  expectTypeOf(sugar).resolves.toEqualTypeOf<
+    { name: string; title: string | undefined; publisher: string | undefined }[]
+  >();
   // A required reference (`book.author`) defaults to INNER: `author` stays non-null
   const requiredInner = em.query({ from: b, join: [b.author.as(a)], select: { title: b.title, author: a.firstName } });
   expectTypeOf(requiredInner).resolves.toEqualTypeOf<{ title: string; author: string }[]>();
@@ -434,7 +440,7 @@ async function typeAssertions() {
   // An o2o (`book.sequel`) is LEFT like any collection; the self-join needs its own named alias
   const s = table(Book, "s");
   const withSequel = em.query({ from: b, join: [b.sequel.as(s)], select: { title: b.title, sequel: s.title } });
-  expectTypeOf(withSequel).resolves.toEqualTypeOf<{ title: string; sequel: string | null }[]>();
+  expectTypeOf(withSequel).resolves.toEqualTypeOf<{ title: string; sequel: string | undefined }[]>();
 
   // Given physical Publisher and SmallPublisher tables with independent source keys
   const sp = table(SmallPublisher);
@@ -464,11 +470,11 @@ async function typeAssertions() {
     select: { name: p.name, city: sp.city },
   });
   // Then only the LEFT-joined subtype becomes nullable
-  expectTypeOf(subtypeLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf(subtypeLeft).resolves.toEqualTypeOf<{ name: string; city: string | undefined }[]>();
   expectTypeOf(subtypeInner).resolves.toEqualTypeOf<{ name: string; city: string }[]>();
-  expectTypeOf(namedLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf(namedLeft).resolves.toEqualTypeOf<{ name: string; city: string | undefined }[]>();
   expectTypeOf(namedInner).resolves.toEqualTypeOf<{ name: string; city: string }[]>();
-  expectTypeOf(explicitLeft).resolves.toEqualTypeOf<{ name: string; city: string | null }[]>();
+  expectTypeOf(explicitLeft).resolves.toEqualTypeOf<{ name: string; city: string | undefined }[]>();
   expectTypeOf<SourceOf<typeof sp.city>>().toEqualTypeOf<"SmallPublisher">();
   expectTypeOf<SourceOf<typeof namedSmall.city>>().toEqualTypeOf<"small">();
   expectTypeOf<ResultOf<typeof p.groupId>>().toEqualTypeOf<PublisherGroupId | null>();
@@ -504,14 +510,14 @@ async function typeAssertions() {
       author: oldTask.specialNewAuthorId,
     },
   });
-  // Then SQL nullability and FK domains come from storage, not TaskOld's narrower entity fields
+  // Then storage determines nullability and FK domains, with top-level SQL NULL decoded as undefined
   expectTypeOf(shared).resolves.toEqualTypeOf<
     {
-      old: number | null;
-      newer: number | null;
-      copied: TaskId | null;
-      parent: TaskId | null;
-      author: AuthorId | null;
+      old: number | undefined;
+      newer: number | undefined;
+      copied: TaskId | undefined;
+      parent: TaskId | undefined;
+      author: AuthorId | undefined;
     }[]
   >();
   expectTypeOf<ResultOf<typeof task.specialOldField>>().toEqualTypeOf<number | null>();

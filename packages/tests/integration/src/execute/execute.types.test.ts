@@ -103,12 +103,12 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     returning: b.reviewerId,
   } satisfies DeleteStatement<Book>;
   // When executing these POJOs without explicit execution type arguments
-  // Then satisfies retains exact scalar and POJO envelopes, including ID flavors and SQL NULL
+  // Then satisfies retains exact scalar and POJO envelopes, including ID flavors and normalized SQL NULL
   expectTypeOf(em.execute(insert)).resolves.toEqualTypeOf<
     ExecuteResult<{ id: BookId; author: AuthorId; title: string }>
   >();
   expectTypeOf(em.execute(update)).resolves.toEqualTypeOf<ExecuteResult<number>>();
-  expectTypeOf(em.execute(deletion)).resolves.toEqualTypeOf<ExecuteResult<AuthorId | null>>();
+  expectTypeOf(em.execute(deletion)).resolves.toEqualTypeOf<ExecuteResult<AuthorId | undefined>>();
   expectTypeOf(em.execute({ ...insert, returning: undefined })).resolves.toEqualTypeOf<ExecuteResult<never>>();
 
   // Given a runtime choice between mutations with different RETURNING shapes
@@ -116,14 +116,14 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When inferring the choice without an explicit execution result type
   // Then the envelope retains both possible row shapes
   expectTypeOf(em.execute(chosenMutation)).resolves.toEqualTypeOf<
-    ExecuteResult<{ id: BookId; author: AuthorId; title: string } | AuthorId | null>
+    ExecuteResult<{ id: BookId; author: AuthorId; title: string } | AuthorId | undefined>
   >();
 
   // When fresh statements return required scalars, nullable scalars, or named expressions
   // Then all mutation forms infer decoded values rather than entities or { value: ... } wrappers
   expectTypeOf(em.execute({ insert: b, values, returning: b.id })).resolves.toEqualTypeOf<ExecuteResult<BookId>>();
   expectTypeOf(em.execute({ insert: b, values, returning: b.acknowledgements })).resolves.toEqualTypeOf<
-    ExecuteResult<string | null>
+    ExecuteResult<string | undefined>
   >();
   expectTypeOf(
     em.execute({
@@ -132,10 +132,10 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       allowAll: true,
       returning: { title: b.title, acknowledgements: b.acknowledgements },
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<{ title: string; acknowledgements: string | null }>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<{ title: string; acknowledgements: string | undefined }>>();
   expectTypeOf(
     em.execute({ delete: b, allowAll: true, returning: { id: b.id, reviewer: b.reviewerId } }),
-  ).resolves.toEqualTypeOf<ExecuteResult<{ id: BookId; reviewer: AuthorId | null }>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<{ id: BookId; reviewer: AuthorId | undefined }>>();
   expectTypeOf(em.execute({ delete: b, allowAll: true, returning: b.title })).resolves.toEqualTypeOf<
     ExecuteResult<string>
   >();
@@ -171,7 +171,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   >();
   expectTypeOf(
     em.execute({ update: b, set: { acknowledgements: sourceTitle }, allowAll: true, returning: sourceTitle }),
-  ).resolves.toEqualTypeOf<ExecuteResult<string | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<string | undefined>>();
 
   // Given an Author import with a required persisted derived field and timestamps omitted by convention
   const authorValues = { firstName: "Imported", numberOfBooks: 0 } satisfies InsertValues<Author>;
@@ -216,22 +216,22 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     },
   } satisfies InsertStatement<Author>;
   // When inserting native values and explicitly backfilling persisted derived columns
-  // Then decoding preserves native values, array elements, ID domains, and physical nullability
+  // Then decoding preserves native values, array elements, and ID domains while normalizing SQL NULL
   expectTypeOf(em.execute(nativeInsert)).resolves.toEqualTypeOf<
     ExecuteResult<{
       id: AuthorId;
       numberOfBooks: number;
-      nickNames: string[] | null;
-      graduated: Date | null;
-      atoms: bigint | null;
-      address: Address | null;
-      businessAddress: { street: string } | null;
-      quotes: Quotes | null;
-      certificate: Uint8Array | null;
-      range: BookRange | null;
-      colors: Color[] | null;
-      shape: FavoriteShape | null;
-      publisher: PublisherId | null;
+      nickNames: string[] | undefined;
+      graduated: Date | undefined;
+      atoms: bigint | undefined;
+      address: Address | undefined;
+      businessAddress: { street: string } | undefined;
+      quotes: Quotes | undefined;
+      certificate: Uint8Array | undefined;
+      range: BookRange | undefined;
+      colors: Color[] | undefined;
+      shape: FavoriteShape | undefined;
+      publisher: PublisherId | undefined;
       createdAt: Date;
     }>
   >();
@@ -259,10 +259,10 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       allowAll: true,
       returning: a.favoriteColors,
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<Color[] | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<Color[] | undefined>>();
   expectTypeOf(
     em.execute({ update: a, set: { favoriteColors: [] }, allowAll: true, returning: a.favoriteColors }),
-  ).resolves.toEqualTypeOf<ExecuteResult<Color[] | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<Color[] | undefined>>();
   expectTypeOf(
     em.execute({
       insert: stat,
@@ -280,7 +280,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
   expectTypeOf(
     em.execute({ update: stat, set: { json: null }, allowAll: true, returning: stat.json }),
-  ).resolves.toEqualTypeOf<ExecuteResult<Object | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<Object | undefined>>();
   expectTypeOf(
     em.execute({ update: stat, set: { json: sql<object>`'null'::jsonb` }, allowAll: true, returning: stat.bigint }),
   ).resolves.toEqualTypeOf<ExecuteResult<bigint>>();
@@ -304,7 +304,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       allowAll: true,
       returning: { decimal: stat.decimalSamples, bigint: stat.bigintSamples },
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<{ decimal: number[] | null; bigint: bigint[] | null }>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<{ decimal: number[] | undefined; bigint: bigint[] | undefined }>>();
   const user = table(User);
   expectTypeOf(
     em.execute({
@@ -312,7 +312,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       values: { name: "Password audit" },
       returning: query({ from: user, select: user.passwordHistory, limit: 1 }),
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<PasswordValue[] | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<PasswordValue[] | undefined>>();
   // @ts-expect-error: numeric samples retain number elements
   em.execute({ update: stat, set: { decimalSamples: ["1.25"] }, allowAll: true });
   // @ts-expect-error: bigint samples cannot accept potentially imprecise numbers
@@ -373,7 +373,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       },
       returning: a.lastName,
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<string | null>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<string | undefined>>();
 
   // Given a POJO compound selecting Author IDs from both primary and foreign keys
   const authorIds = query({
@@ -402,7 +402,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When executing the read inputs supported by em.query through the metadata-bearing API
   // Then selected rows keep their ordinary scalar, POJO, entity, and LEFT join nullability
   expectTypeOf(em.execute({ from: b, select: b.title })).resolves.toEqualTypeOf<ExecuteResult<string>>();
-  expectTypeOf(em.execute(scalarRead)).resolves.toEqualTypeOf<ExecuteResult<number | null>>();
+  expectTypeOf(em.execute(scalarRead)).resolves.toEqualTypeOf<ExecuteResult<number | undefined>>();
   expectTypeOf(em.execute(sourceRead)).resolves.toEqualTypeOf<
     ExecuteResult<{ title: string; authorId: AuthorId; notes: string }>
   >();
@@ -418,7 +418,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(em.execute({ from: b, select: b })).resolves.toEqualTypeOf<ExecuteResult<Book>>();
   expectTypeOf(em.execute(entityRead)).resolves.toEqualTypeOf<ExecuteResult<Book>>();
   expectTypeOf(em.execute({ from: a, join: [a.books.left(b)], select: b.title })).resolves.toEqualTypeOf<
-    ExecuteResult<string | null>
+    ExecuteResult<string | undefined>
   >();
   expectTypeOf(
     em.execute({
@@ -426,7 +426,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
       join: [a.books.left(b)],
       select: { id: a.id, title: b.title, fallback: b.title.coalesce("None") },
     }),
-  ).resolves.toEqualTypeOf<ExecuteResult<{ id: AuthorId; title: string | null; fallback: string }>>();
+  ).resolves.toEqualTypeOf<ExecuteResult<{ id: AuthorId; title: string | undefined; fallback: string }>>();
   // When selecting a Book title through a reusable scalar query
   // Then the query retains its scalar brand and allows SQL NULL when no Book is selected
   expectTypeOf(sourceTitle).toEqualTypeOf<ScalarQuery<string>>();
@@ -858,11 +858,11 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // And a DELETE annotation that explicitly has no RETURNING projection
   const annotatedDelete: DeleteStatement<Book, undefined> = { delete: b, allowAll: true };
   // When execution infers results from annotations instead of required literal RETURNING properties
-  // Then optional projections retain their row domains without undefined rows or readonly POJO fields
+  // Then optional projections retain their row domains and normalize SQL NULL without readonly POJO fields
   expectTypeOf(em.execute(annotatedInsert)).resolves.toEqualTypeOf<
     ExecuteResult<{ id: BookId; author: AuthorId; title: string }>
   >();
-  expectTypeOf(em.execute(annotatedUpdate)).resolves.toEqualTypeOf<ExecuteResult<AuthorId | null>>();
+  expectTypeOf(em.execute(annotatedUpdate)).resolves.toEqualTypeOf<ExecuteResult<AuthorId | undefined>>();
   expectTypeOf(em.execute(annotatedDelete)).resolves.toEqualTypeOf<ExecuteResult<never>>();
 
   // Given a nonliteral INSERT carrying an UPDATE/DELETE-only predicate

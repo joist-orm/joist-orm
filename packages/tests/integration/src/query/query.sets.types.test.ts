@@ -67,24 +67,24 @@ function typeAssertions() {
   expectTypeOf(query({ intersect: readonlyDynamicNames })).toEqualTypeOf<Subquery<{ name: string }, "?">>();
 
   // When a nullable last name occurs first, in the middle, or last
-  // Then both UNION variants combine column nullability from every branch
+  // Then both UNION variants combine column nullability and decode top-level SQL NULL as undefined
   expectTypeOf(em.query({ union: [lastNames, authorNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ union: [authorNames, lastNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ union: [authorNames, bookNames, lastNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [lastNames, authorNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [authorNames, lastNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [authorNames, bookNames, lastNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
 
   // Given a required Book title made nullable only by its branch's LEFT join
@@ -98,22 +98,22 @@ function typeAssertions() {
   // When the LEFT-joined branch occupies each possible position in a three-way union
   // Then inference uses QueryRow, not just the nonnullable type of Book.title
   expectTypeOf(em.query({ union: [leftBookNames, authorNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ union: [authorNames, leftBookNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ union: [authorNames, bookNames, leftBookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [leftBookNamesValue, authorNames, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [authorNames, leftBookNamesValue, bookNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ unionAll: [authorNames, bookNames, leftBookNamesValue] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(
     em.query({
@@ -131,7 +131,7 @@ function typeAssertions() {
         },
       ],
     }),
-  ).resolves.toEqualTypeOf<{ name: string; title: string | null; count: number }[]>();
+  ).resolves.toEqualTypeOf<{ name: string; title: string | undefined; count: number }[]>();
 
   // When a nullable right branch is intersected or subtracted from required Author names
   // Then neither operation widens the left row, including its ALL variant
@@ -140,14 +140,18 @@ function typeAssertions() {
   expectTypeOf(em.query({ intersect: [authorNames, leftBookNamesValue] })).resolves.toEqualTypeOf<{ name: string }[]>();
   expectTypeOf(em.query({ intersectAll: [authorNames, lastNames] })).resolves.toEqualTypeOf<{ name: string }[]>();
   // When the left branch itself is nullable
-  // Then EXCEPT and INTERSECT conservatively retain NULL instead of promising narrowing
-  expectTypeOf(em.query({ except: [leftBookNames, authorNames] })).resolves.toEqualTypeOf<{ name: string | null }[]>();
-  expectTypeOf(em.query({ exceptAll: [lastNames, authorNames] })).resolves.toEqualTypeOf<{ name: string | null }[]>();
+  // Then EXCEPT and INTERSECT conservatively retain nullable output instead of promising narrowing
+  expectTypeOf(em.query({ except: [leftBookNames, authorNames] })).resolves.toEqualTypeOf<
+    { name: string | undefined }[]
+  >();
+  expectTypeOf(em.query({ exceptAll: [lastNames, authorNames] })).resolves.toEqualTypeOf<
+    { name: string | undefined }[]
+  >();
   expectTypeOf(em.query({ intersect: [leftBookNamesValue, authorNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
   expectTypeOf(em.query({ intersectAll: [lastNames, authorNames] })).resolves.toEqualTypeOf<
-    { name: string | null }[]
+    { name: string | undefined }[]
   >();
 
   // Given a required scalar Book order query and a nullable scalar Author age query
@@ -161,18 +165,18 @@ function typeAssertions() {
     select: b.order,
   } satisfies Query;
   // When constructing ordinary scalar subqueries and executing scalar SELECT inputs
-  // Then expression use adds SQL NULL, while execution retains each selected row's nullability
+  // Then expressions retain SQL nullability, while execution decodes top-level SQL NULL as undefined
   expectTypeOf(orders).toEqualTypeOf<ScalarQuery<number>>();
-  expectTypeOf(ages).toEqualTypeOf<ScalarQuery<number | null>>();
-  expectTypeOf(query(leftOrders)).toEqualTypeOf<ScalarQuery<number | null>>();
+  expectTypeOf(ages).toEqualTypeOf<ScalarQuery<number | undefined>>();
+  expectTypeOf(query(leftOrders)).toEqualTypeOf<ScalarQuery<number | undefined>>();
   expectTypeOf(orders.coalesce(0)).toEqualTypeOf<Expr<number, never>>();
   expectTypeOf(em.query({ from: a, select: { order: orders, fallback: orders.coalesce(0) } })).resolves.toEqualTypeOf<
-    { order: number | null; fallback: number }[]
+    { order: number | undefined; fallback: number }[]
   >();
   expectTypeOf(em.query({ from: b, select: b.order })).resolves.toEqualTypeOf<number[]>();
-  expectTypeOf(em.query({ from: a, select: a.age })).resolves.toEqualTypeOf<(number | null)[]>();
+  expectTypeOf(em.query({ from: a, select: a.age })).resolves.toEqualTypeOf<(number | undefined)[]>();
   expectTypeOf(em.query({ from: a, join: leftOrders.join, select: b.order })).resolves.toEqualTypeOf<
-    (number | null)[]
+    (number | undefined)[]
   >();
 
   // Given a compound POJO checked with satisfies rather than widened to SetQuery
@@ -207,7 +211,7 @@ function typeAssertions() {
       join: [{ left: namedNames, on: namedNames.name.eq(a.firstName) }],
       select: { author: a.firstName, name: namedNames.name, fallback: namedNames.name.coalesce("") },
     }),
-  ).resolves.toEqualTypeOf<{ author: string; name: string | null; fallback: string }[]>();
+  ).resolves.toEqualTypeOf<{ author: string; name: string | undefined; fallback: string }[]>();
 
   // Given nested mixed operators combining POJOs, ordinary query values, and named set values
   const nestedNames = {
@@ -218,8 +222,8 @@ function typeAssertions() {
   } satisfies SetQuery;
   // When constructing and directly executing the nested compound
   // Then its nullable left UNION row survives the outer EXCEPT
-  expectTypeOf(query(nestedNames)).toEqualTypeOf<Subquery<{ name: string | null }, "?">>();
-  expectTypeOf(em.query(nestedNames)).resolves.toEqualTypeOf<{ name: string | null }[]>();
+  expectTypeOf(query(nestedNames)).toEqualTypeOf<Subquery<{ name: string | undefined }, "?">>();
+  expectTypeOf(em.query(nestedNames)).resolves.toEqualTypeOf<{ name: string | undefined }[]>();
   expectTypeOf(
     em.query({ union: [namedNames, { from: namedBookNames, select: namedBookNames }] }),
   ).resolves.toEqualTypeOf<{ name: string }[]>();
@@ -244,12 +248,12 @@ function typeAssertions() {
   // And a reusable Book projection whose first key is detail rather than name
   const bookDetails = query({ from: b, select: { detail: b.notes, name: b.title }, as: "book_details" });
   // When combining projections by their keys rather than their insertion order
-  // Then the output preserves both names and combines nullability per column
+  // Then the output preserves both names and normalizes top-level nullability per column
   expectTypeOf(em.query({ union: [authorDetails, bookDetails] })).resolves.toEqualTypeOf<
-    { name: string; detail: string | null }[]
+    { name: string; detail: string | undefined }[]
   >();
   expectTypeOf(query({ unionAll: [bookDetails, authorDetails] })).toEqualTypeOf<
-    Subquery<{ detail: string | null; name: string }, "?">
+    Subquery<{ detail: string | undefined; name: string }, "?">
   >();
   expectTypeOf(
     query({
@@ -554,19 +558,19 @@ function typeAssertions() {
   // Then the set overloads preserve their original row types and entity mode
   expectTypeOf(em.query(authorNames)).resolves.toEqualTypeOf<{ name: string }[]>();
   expectTypeOf(query(authorNames)).toEqualTypeOf<Subquery<{ name: string }, "?">>();
-  expectTypeOf(em.query(joinedAuthors)).resolves.toEqualTypeOf<{ name: string; title: string | null }[]>();
-  expectTypeOf(query(joinedAuthors)).toEqualTypeOf<Subquery<{ name: string; title: string | null }, "?">>();
+  expectTypeOf(em.query(joinedAuthors)).resolves.toEqualTypeOf<{ name: string; title: string | undefined }[]>();
+  expectTypeOf(query(joinedAuthors)).toEqualTypeOf<Subquery<{ name: string; title: string | undefined }, "?">>();
   // When an explicitly parameterized Query carries its join type in an optional property
   // Then set operands retain that declared LEFT join nullability
   expectTypeOf(em.query({ union: [joinedAuthors, joinedAuthors] })).resolves.toEqualTypeOf<
-    { name: string; title: string | null }[]
+    { name: string; title: string | undefined }[]
   >();
   // And an explicitly parameterized scalar Query carries the same optional LEFT join property
   const annotatedOrders: Query<typeof b.order, typeof leftOrders.join> = leftOrders;
   // When constructing and executing that ordinary scalar query
   // Then its declared LEFT join remains nullable without making it a set operand
-  expectTypeOf(query(annotatedOrders)).toEqualTypeOf<ScalarQuery<number | null>>();
-  expectTypeOf(em.query(annotatedOrders)).resolves.toEqualTypeOf<(number | null)[]>();
+  expectTypeOf(query(annotatedOrders)).toEqualTypeOf<ScalarQuery<number | undefined>>();
+  expectTypeOf(em.query(annotatedOrders)).resolves.toEqualTypeOf<(number | undefined)[]>();
   // @ts-expect-error: an explicit Query annotation does not make scalar projections eligible for sets
   query({ union: [annotatedOrders, annotatedOrders] });
   expectTypeOf(entityValue).toEqualTypeOf<EntityQuery<Author>>();

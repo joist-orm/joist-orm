@@ -113,11 +113,11 @@ describe("EntityManager.execute", () => {
     expectTypeOf(inserted).toEqualTypeOf<
       ExecuteResult<{
         birthdays: Temporal.PlainDate[];
-        maybeBirthdays: Temporal.PlainDate[] | null;
+        maybeBirthdays: Temporal.PlainDate[] | undefined;
         times: Temporal.PlainTime[];
-        maybeTimes: Temporal.PlainTime[] | null;
+        maybeTimes: Temporal.PlainTime[] | undefined;
         timestamps: Temporal.PlainDateTime[];
-        maybeTimestamps: Temporal.PlainDateTime[] | null;
+        maybeTimestamps: Temporal.PlainDateTime[] | undefined;
       }>
     >();
     expect(inserted.rowCount).toBe(1);
@@ -245,7 +245,7 @@ describe("EntityManager.execute", () => {
     // Then PostgreSQL preserves each instant while RETURNING uses the session's UTC zone
     expectTypeOf(inserted.rows[0].publishedAt).toEqualTypeOf<Temporal.ZonedDateTime>();
     expectTypeOf(inserted.rows[0].instants).toEqualTypeOf<Temporal.ZonedDateTime[]>();
-    expectTypeOf(inserted.rows[0].maybeInstants).toEqualTypeOf<Temporal.ZonedDateTime[] | null>();
+    expectTypeOf(inserted.rows[0].maybeInstants).toEqualTypeOf<Temporal.ZonedDateTime[] | undefined>();
     expect(inserted).toEqual({
       rowCount: 1,
       rows: [
@@ -346,17 +346,17 @@ describe("EntityManager.execute", () => {
       },
     });
 
-    // Then null bypasses the array codecs while missing cells use DEFAULT, not SQL NULL
+    // Then null writes SQL NULL and the public result exposes it as undefined, while missing cells use DEFAULT
     expect(result.rowCount).toBe(5);
     expect(result.rows).toMatchObject([
-      { time: null, birthdays: null, times: null, timestamps: null },
+      { time: undefined, birthdays: undefined, times: undefined, timestamps: undefined },
       { birthdays: [], times: [], timestamps: [] },
       { birthdays: [], times: [], timestamps: [] },
       { birthdays: [], times: [], timestamps: [] },
       { birthdays: [], times: [], timestamps: [] },
     ]);
-    expect(result.rows.map((row) => row.time?.toString() ?? null)).toEqual([
-      null,
+    expect(result.rows.map((row) => row.time?.toString())).toEqual([
+      undefined,
       "00:00:00",
       "00:00:00",
       "00:00:00",
@@ -456,14 +456,14 @@ describe("EntityManager.execute", () => {
       returning: { instants: b.timestampTzs, maybeInstants: b.maybeTimestampTzs, deletedAt: b.deletedAt },
     });
 
-    // Then SQL NULL stays distinct from both explicitly empty and server-defaulted arrays
+    // Then the public result exposes SQL NULL as undefined, distinct from empty and server-defaulted arrays
     expect(result).toEqual({
       rowCount: 4,
       rows: [
-        { instants: [], maybeInstants: null, deletedAt: null },
-        { instants: [], maybeInstants: [], deletedAt: null },
-        { instants: [], maybeInstants: [], deletedAt: null },
-        { instants: [], maybeInstants: [], deletedAt: null },
+        { instants: [], maybeInstants: undefined, deletedAt: undefined },
+        { instants: [], maybeInstants: [], deletedAt: undefined },
+        { instants: [], maybeInstants: [], deletedAt: undefined },
+        { instants: [], maybeInstants: [], deletedAt: undefined },
       ],
     });
     expect(await knex("book").select("timestamp_tzs", "maybe_timestamp_tzs").orderBy("id")).toEqual([
@@ -478,73 +478,76 @@ describe("EntityManager.execute", () => {
     { field: "maybeBirthdays" as const, value: "2018-01-02" },
     { field: "maybeTimes" as const, value: "10:01:00.123456" },
     { field: "maybeTimestamps" as const, value: "2018-01-01T11:00:00" },
-  ])("preserves scalar array RETURNING and UPDATE omission, null, and DEFAULT for Author.$field", async (testCase) => {
-    // Given an Author with nonempty values in each nullable physical Temporal array
-    const em = newEntityManager();
-    const a = table(Author);
-    const inserted = await em.execute({
-      insert: a,
-      values: {
-        firstName: "Arrays",
-        birthday: jan1,
-        maybeBirthdays: [jan2],
-        maybeTimes: [ten01AndMicros],
-        maybeTimestamps: [jan1at11am],
-      },
-      returning: a[testCase.field],
-    });
-    // And the selected nullable column supplies its real array decoder to scalar RETURNING
-    const returning = a[testCase.field];
+  ])(
+    "maps scalar array RETURNING null to undefined across UPDATE omission and DEFAULT for Author.$field",
+    async (testCase) => {
+      // Given an Author with nonempty values in each nullable physical Temporal array
+      const em = newEntityManager();
+      const a = table(Author);
+      const inserted = await em.execute({
+        insert: a,
+        values: {
+          firstName: "Arrays",
+          birthday: jan1,
+          maybeBirthdays: [jan2],
+          maybeTimes: [ten01AndMicros],
+          maybeTimestamps: [jan1at11am],
+        },
+        returning: a[testCase.field],
+      });
+      // And the selected nullable column supplies its real array decoder to scalar RETURNING
+      const returning = a[testCase.field];
 
-    // When replacing the selected array with an empty domain array
-    const empty = await em.execute({
-      update: a,
-      set: { maybeBirthdays: [], maybeTimes: [], maybeTimestamps: [] },
-      where: a.id.eq("a:1"),
-      returning,
-    });
-    // And a later update explicitly stores SQL NULL instead of the column's empty-array default
-    const absent = await em.execute({
-      update: a,
-      set: { maybeBirthdays: null, maybeTimes: null, maybeTimestamps: null },
-      where: a.id.eq("a:1"),
-      returning,
-    });
-    // And undefined must leave SQL NULL unchanged rather than restoring its default
-    const omitted = await em.execute({
-      update: a,
-      set: {
-        firstName: "Retained null",
-        maybeBirthdays: undefined,
-        maybeTimes: undefined,
-        maybeTimestamps: undefined,
-      },
-      where: a.id.eq("a:1"),
-      returning,
-    });
-    // And explicit SQL DEFAULT restores the physical empty-array default
-    const defaulted = await em.execute({
-      update: a,
-      set: {
-        maybeBirthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
-        maybeTimes: sql<Temporal.PlainTime[]>`DEFAULT`,
-        maybeTimestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
-      },
-      where: a.id.eq("a:1"),
-      returning,
-    });
+      // When replacing the selected array with an empty domain array
+      const empty = await em.execute({
+        update: a,
+        set: { maybeBirthdays: [], maybeTimes: [], maybeTimestamps: [] },
+        where: a.id.eq("a:1"),
+        returning,
+      });
+      // And a later update explicitly stores SQL NULL instead of the column's empty-array default
+      const absent = await em.execute({
+        update: a,
+        set: { maybeBirthdays: null, maybeTimes: null, maybeTimestamps: null },
+        where: a.id.eq("a:1"),
+        returning,
+      });
+      // And undefined must leave SQL NULL unchanged rather than restoring its default
+      const omitted = await em.execute({
+        update: a,
+        set: {
+          firstName: "Retained null",
+          maybeBirthdays: undefined,
+          maybeTimes: undefined,
+          maybeTimestamps: undefined,
+        },
+        where: a.id.eq("a:1"),
+        returning,
+      });
+      // And explicit SQL DEFAULT restores the physical empty-array default
+      const defaulted = await em.execute({
+        update: a,
+        set: {
+          maybeBirthdays: sql<Temporal.PlainDate[]>`DEFAULT`,
+          maybeTimes: sql<Temporal.PlainTime[]>`DEFAULT`,
+          maybeTimestamps: sql<Temporal.PlainDateTime[]>`DEFAULT`,
+        },
+        where: a.id.eq("a:1"),
+        returning,
+      });
 
-    // Then each array-valued scalar result preserves its null or empty-array identity
-    expect(inserted.rowCount).toBe(1);
-    expect(inserted.rows).toHaveLength(1);
-    expect(inserted.rows[0]!.map((value) => value.toString())).toEqual([testCase.value]);
-    expect(empty).toEqual({ rowCount: 1, rows: [[]] });
-    expect(absent).toEqual({ rowCount: 1, rows: [null] });
-    expect(omitted).toEqual({ rowCount: 1, rows: [null] });
-    expect(defaulted).toEqual({ rowCount: 1, rows: [[]] });
-  });
+      // Then each array-valued scalar result distinguishes boundary undefined from an empty array
+      expect(inserted.rowCount).toBe(1);
+      expect(inserted.rows).toHaveLength(1);
+      expect(inserted.rows[0]!.map((value) => value.toString())).toEqual([testCase.value]);
+      expect(empty).toEqual({ rowCount: 1, rows: [[]] });
+      expect(absent).toEqual({ rowCount: 1, rows: [undefined] });
+      expect(omitted).toEqual({ rowCount: 1, rows: [undefined] });
+      expect(defaulted).toEqual({ rowCount: 1, rows: [[]] });
+    },
+  );
 
-  it("preserves scalar zoned array RETURNING through empty, null, omitted, and DEFAULT updates", async () => {
+  it("maps scalar zoned array RETURNING null to undefined through empty, omitted, and DEFAULT updates", async () => {
     // Given a persisted Author for a Book with a nonempty nullable zoned array
     await knex("authors").insert({ firstName: "Owner", birthday: "2018-01-01" });
     // And the Book starts with a concrete publication instant in the nullable array
@@ -584,16 +587,16 @@ describe("EntityManager.execute", () => {
       returning: b.maybeTimestampTzs,
     });
 
-    // Then scalar RETURNING preserves the zoned-array type and its SQL nullability
-    expectTypeOf(absent).toEqualTypeOf<ExecuteResult<Temporal.ZonedDateTime[] | null>>();
+    // Then scalar RETURNING exposes SQL NULL as undefined in the nullable zoned-array type
+    expectTypeOf(absent).toEqualTypeOf<ExecuteResult<Temporal.ZonedDateTime[] | undefined>>();
     expect(empty).toEqual({ rowCount: 1, rows: [[]] });
-    expect(absent).toEqual({ rowCount: 1, rows: [null] });
-    expect(omitted).toEqual({ rowCount: 1, rows: [null] });
+    expect(absent).toEqual({ rowCount: 1, rows: [undefined] });
+    expect(omitted).toEqual({ rowCount: 1, rows: [undefined] });
     expect(defaulted).toEqual({ rowCount: 1, rows: [[]] });
     expect(await knex("book").select("maybe_timestamp_tzs")).toEqual([{ maybe_timestamp_tzs: [] }]);
   });
 
-  it("keeps an omitted PlainTime unchanged, stores explicit null, and restores SQL DEFAULT", async () => {
+  it("keeps an omitted PlainTime unchanged, exposes stored null as undefined, and restores SQL DEFAULT", async () => {
     // Given an Author with a nondefault microsecond time
     await knex("authors").insert({ firstName: "Time", birthday: "2018-01-01", time: "10:01:00.123456" });
     const em = newEntityManager({ onQuery: (sql) => queries.push(sql) });
@@ -617,11 +620,11 @@ describe("EntityManager.execute", () => {
       returning: a.time,
     });
 
-    // Then nullable scalar RETURNING reports all three distinct outcomes
-    expectTypeOf(omitted).toEqualTypeOf<ExecuteResult<Temporal.PlainTime | null>>();
+    // Then nullable scalar RETURNING reports SQL NULL as undefined alongside the two concrete outcomes
+    expectTypeOf(omitted).toEqualTypeOf<ExecuteResult<Temporal.PlainTime | undefined>>();
     expect(omitted.rowCount).toBe(1);
     expect(omitted.rows.map((time) => time?.toString())).toEqual(["10:01:00.123456"]);
-    expect(absent).toEqual({ rowCount: 1, rows: [null] });
+    expect(absent).toEqual({ rowCount: 1, rows: [undefined] });
     expect(defaulted.rowCount).toBe(1);
     expect(defaulted.rows.map((time) => time?.toString())).toEqual(["00:00:00"]);
     expect(queries).toMatchInlineSnapshot(`
@@ -1015,7 +1018,7 @@ describe("EntityManager.execute", () => {
     const updated = await em.execute({ update: a, set: { time }, where: a.id.eq("a:2"), returning: time });
 
     // Then the scalar subquery retains its Temporal decoder in RETURNING as well as its source scope
-    expectTypeOf(updated).toEqualTypeOf<ExecuteResult<Temporal.PlainTime | null>>();
+    expectTypeOf(updated).toEqualTypeOf<ExecuteResult<Temporal.PlainTime | undefined>>();
     expect(updated.rowCount).toBe(1);
     expect(updated.rows.map((value) => value?.toString())).toEqual(["11:02:00.654321"]);
     expect(updated.rows[0]).toBeInstanceOf(Temporal.PlainTime);
@@ -1039,8 +1042,8 @@ describe("EntityManager.execute", () => {
       returning: { time: a.time, source: missing },
     });
 
-    // Then both target-column and scalar-subquery RETURNING preserve SQL NULL
-    expect(cleared).toEqual({ rowCount: 1, rows: [{ time: null, source: null }] });
+    // Then both target-column and scalar-subquery RETURNING expose SQL NULL as undefined
+    expect(cleared).toEqual({ rowCount: 1, rows: [{ time: undefined, source: undefined }] });
     expect(await knex("authors").select("time").orderBy("id")).toEqual([{ time: "11:02:00.654321" }, { time: null }]);
     expect(em.entities).toEqual([]);
   });

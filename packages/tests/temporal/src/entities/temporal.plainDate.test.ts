@@ -65,10 +65,10 @@ describe("plainDate", () => {
       select: { birthday: a.birthday, childrenBirthdays: a.childrenBirthdays, maybeBirthdays: a.maybeBirthdays },
       orderBy: [{ sort: a.firstName, order: "ASC" }],
     });
-    // Then dates decode to PlainDate values while empty arrays and SQL NULL remain distinct
+    // Then dates decode to PlainDate values while empty arrays and absent arrays remain distinct
     expect(rows).toEqual([
       { birthday: jan1, childrenBirthdays: [jan1, jan2], maybeBirthdays: [jan2] },
-      { birthday: jan2, childrenBirthdays: [], maybeBirthdays: null },
+      { birthday: jan2, childrenBirthdays: [], maybeBirthdays: undefined },
     ]);
     // When loading the same Authors as entities
     // em.loadAll exercises binary-decoded Temporal inputs when the lazy variant is enabled.

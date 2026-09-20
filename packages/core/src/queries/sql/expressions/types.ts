@@ -39,11 +39,12 @@ export type ExprFromInput<I> = Expr<InputResult<I, []>, ExpressionSources<I>> & 
 };
 
 /**
- * Computes the TypeScript result type, including null from LEFT joins.
+ * Computes the SQL expression type, including null from LEFT joins.
  * I.e. Book.title is string | null when Book is LEFT-joined; COALESCE(Book.title, "Unknown") is string.
  */
 export type ExpressionValue<V, J extends QueryJoinList> = unknown extends V
-  ? V
+  ? // Keep unknown and any broad instead of interpreting a widened public input as a structural expression shape.
+    V
   : V extends { readonly [inputBrand]: infer I }
     ? InputResult<I, J>
     : V extends { readonly [exprBrand]: ExprBrand<infer R, infer S> }

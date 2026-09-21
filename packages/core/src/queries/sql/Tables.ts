@@ -30,6 +30,7 @@ import {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
+  RefExpr,
   type SqlFragment,
   asNode,
   deferredCondition,
@@ -108,6 +109,21 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = Tabl
     : {
         /** Builds an AND condition from local domain fields, without implicit joins. */
         where(filter: TableFilter<T>): SqlCondition;
+      }) &
+  ("column" extends keyof TableShape<T, Name>
+    ? {}
+    : {
+        /**
+         * References a column Joist does not model, i.e. `a.column<string>("ts_search")`.
+         *
+         * The expression keeps this table's source key, so it is scope-checked and nullified by a
+         * LEFT join like any modeled column. `R` is unchecked: it asserts what the database returns,
+         * and the value is not decoded through a codec.
+         *
+         * A schema that has its own `column` column or relation keeps that meaning, and then has no
+         * escape hatch for unmodeled columns.
+         */
+        column<R = unknown>(column: string): Expr<R, Name>;
       });
 
 /** Domain filters for fields stored on this physical table, without relationship traversal. */
@@ -371,6 +387,9 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       if (key === "where" && !isRelation(meta.allFields[key])) {
         return (filter: TableFilter<T>) => tableWhere(mgmt, filter);
       }
+      if (key === "column" && !isRelation(meta.allFields[key])) {
+        return (column: string) => new RefExpr(mgmt, column);
+      }
       const field = relation ?? fail(`No physical field ${key} on ${cstr.name}; join its base table explicitly`);
       switch (field.kind) {
         case "m2o":
@@ -392,7 +411,11 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       return (
         key === tableMgmt ||
         (typeof key === "string" &&
-          (key === "where" || Object.hasOwn(meta.columns, key) || !!physicalRelation(meta, key) || subtypes.has(key)))
+          (key === "where" ||
+            key === "column" ||
+            Object.hasOwn(meta.columns, key) ||
+            !!physicalRelation(meta, key) ||
+            subtypes.has(key)))
       );
     },
   });

@@ -3482,7 +3482,7 @@ describe("em.query", () => {
       const rows = await em.query({
         from: a,
         where: {
-          and: [a.firstName.is`= ${"O'Brien"}`, sql.ref(a, "age").is`BETWEEN ${25} AND ${35}`],
+          and: [a.firstName.is`= ${"O'Brien"}`, a.column("age").is`BETWEEN ${25} AND ${35}`],
         },
         select: { name: a.firstName },
       });
@@ -3545,8 +3545,8 @@ describe("em.query", () => {
       expect(counts).toEqual([{ count: 2 }]);
     });
 
-    // sql.ref supports unmodeled physical columns; the modeled Author age column exercises the same path.
-    it("can use sql.condition and sql.ref for unmodeled columns", async () => {
+    // a.column supports unmodeled physical columns; the modeled Author age column exercises the same path.
+    it("can use sql.condition and a.column for unmodeled columns", async () => {
       // Given Author a1 below the raw SQL age threshold of 35
       await insertAuthor({ first_name: "a1", age: 30 });
       // And Author a2 above the threshold, so only a2 passes the physical-column filter
@@ -3555,14 +3555,14 @@ describe("em.query", () => {
       const [a] = tables(Author);
       const rows = await em.query({
         from: a,
-        where: { and: [sql.condition`${sql.ref<number>(a, "age")} > ${35}`] },
+        where: { and: [sql.condition`${a.column<number>("age")} > ${35}`] },
         select: { name: a.firstName },
       });
       expect(rows).toEqual([{ name: "a2" }]);
     });
 
     // A component-specific IS NOT NULL selects Comments on Authors rather than any non-null parent.
-    it("can filter a polymorphic component with sql.ref", async () => {
+    it("can filter a polymorphic component with a.column", async () => {
       // Given an Author and a Book as possible Comment parents with the same numeric id
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
@@ -3574,7 +3574,7 @@ describe("em.query", () => {
       const [c] = tables(Comment);
       const rows = await em.query({
         from: c,
-        where: { and: [sql.condition`${sql.ref(c, "parent_author_id")} IS NOT NULL`] },
+        where: { and: [sql.condition`${c.column("parent_author_id")} IS NOT NULL`] },
         select: { text: c.text },
       });
       expect(rows).toEqual([{ text: "on author" }]);
@@ -3853,6 +3853,19 @@ describe("em.query", () => {
 
     // Then the Author is returned
     expect(rows).toEqual(["Alice"]);
+  });
+
+  it("selects an unmodeled column referenced from the table itself", async () => {
+    // Given an Author with an age
+    await insertAuthor({ first_name: "a1", age: 30 });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When selecting the unmodeled column via the table's own `column`
+    const rows = await em.query({ from: a, select: { age: a.column<number>("age") } });
+
+    // Then the raw value is returned
+    expect(rows).toEqual([{ age: 30 }]);
   });
 
   it("prunes optional subqueries with fully omitted WHERE arrays", async () => {

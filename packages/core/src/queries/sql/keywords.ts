@@ -114,7 +114,7 @@ export function kq(ident: string): string {
 
 /**
  * Quotes a possibly-untrusted identifier, i.e. an em.query select key, subquery `as` name, or
- * `sql.ref` column.
+ * `a.column` column.
  *
  * `kq`'s inputs are trusted metadata (codegen'd table/column names), and its quoting assumes that;
  * these idents are user strings, so embedded quotes are escaped like PG's own quote_ident, which

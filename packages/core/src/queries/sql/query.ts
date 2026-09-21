@@ -22,7 +22,6 @@ import {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
-  RefExpr,
   type SqlFragment,
   TemplateExpr,
   asNode,
@@ -596,7 +595,7 @@ type NullableSources<X, Left = LeftJoined<X>> =
  * Default references from nullable sources are included transitively.
  *
  * Source-less expressions (`Src` is `never`, i.e. `b.id.count()`) are never nullified. Untracked ones
- * (`Src` is `string`, i.e. a `sql.ref` on an unknown table) might come from any left-joined table,
+ * (`Src` is `string`, i.e. a table whose entity type is not statically known) might come from any left-joined table,
  * so they are conservatively nullified whenever the query has a left join at all.
  *
  * `string` must never be a *table's* name: `Extract<"Author", string>` matches, so one left-joined
@@ -889,9 +888,9 @@ export function recursiveQuery<
  * // Selecting this expression keeps the join to Book b.
  * sql.number`${b.order} * ${2}`
  *
- * // Reference an unmodeled column; it is untracked at the type level.
- * sql.ref<string>(a, "ts_search")
- * sql.condition`${sql.ref(a, "ts_search")} @@ plainto_tsquery(${term})`
+ * // Reference an unmodeled column; prefer the table's own `column`, which keeps its source key.
+ * a.column<string>("ts_search")
+ * sql.condition`${a.column("ts_search")} @@ plainto_tsquery(${term})`
  * ```
  */
 export function sql<R = unknown>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
@@ -937,11 +936,6 @@ sql.booleanArrayOrNull = typedSql<boolean[] | null>;
 /** A raw condition for `where`, `having`, or `on`. */
 sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
   return deferredCondition((ctx) => new TemplateExpr(strings, values).toSql(ctx));
-};
-
-/** A column Joist does not model, on a source that is in the query. */
-sql.ref = function ref<R = unknown>(source: QuerySource, column: string): Expr<R, string> {
-  return new RefExpr(handleOf(source), column) as any;
 };
 
 /**

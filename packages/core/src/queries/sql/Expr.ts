@@ -38,7 +38,7 @@ export const exprBrand: unique symbol = Symbol("joist.expr");
  * Two special keys opt out of both questions:
  *
  * - `Expr<number, never>` reads from nothing that can be left-joined away, i.e. `b.id.count()`
- * - `Expr<number, string>` (the default) is untracked, i.e. `sql.ref` on an unknown table
+ * - `Expr<number, string>` (the default) is untracked, i.e. a table whose entity type is not statically known
  */
 export interface ExprBrand<R, Src extends string> {
   readonly __result: R;
@@ -516,7 +516,7 @@ export class BindingExpr extends BaseExpr {
   }
 }
 
-/** An unmodeled column on a known source, i.e. `sql.ref(a, "ts_search")`; untracked at the type level. */
+/** An unmodeled column on a known source, i.e. `a.column("ts_search")`. */
 export class RefExpr extends BaseExpr {
   constructor(
     private handle: object,
@@ -531,7 +531,7 @@ export class RefExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
-    // safeKq for both halves: sql.ref takes user strings, and a subquery alias is its `as` name
+    // safeKq for both halves: an unmodeled column is a user string, and a subquery alias is its `as` name
     return { sql: `${safeKq(alias)}.${safeKq(this.column)}`, bindings: [], refs: [alias] };
   }
 }

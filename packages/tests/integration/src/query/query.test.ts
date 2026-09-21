@@ -3884,4 +3884,26 @@ describe("em.query", () => {
     // Then the omitted subquery does not restrict Authors
     expect(rows).toEqual(["Alice"]);
   });
+
+  it("queries unmodeled tables through explicit columns", async () => {
+    // Given an Author row in a physical table treated as outside the Joist domain model
+    await insertAuthor({ first_name: "Alice" });
+    const em = newEntityManager();
+    const authors = table("authors");
+    // And a separately named handle for the same unmodeled table
+    const other = table("authors", "other");
+
+    // When the unmodeled handles are joined and projected through explicit columns
+    const rows = await em.query({
+      from: authors,
+      join: [{ inner: other, on: authors.column<number>("id").eq(other.column<number>("id")) }],
+      select: {
+        name: authors.column<string>("first_name"),
+        otherName: other.column<string>("first_name"),
+      },
+    });
+
+    // Then the physical table and both handles participate in the query normally
+    expect(rows).toEqual([{ name: "Alice", otherName: "Alice" }]);
+  });
 });

@@ -7,7 +7,7 @@ import {
   type TableFilter,
   type TableFor,
   getTableMgmt,
-  isTable,
+  isEntityTable,
   newTableProxy,
   tableEntityWhere,
   tableWhere,
@@ -192,7 +192,7 @@ type CheckRelationTree<T extends Entity, J> = J extends object
  * I.e. Author.books.author emits Book before its Author, even if only the final Author has an as binding.
  */
 export function compileJoinTree(from: unknown, tree: unknown): { joins: QueryJoin[]; condition: QueryCondition } {
-  if (!isTable(from)) fail("Join trees require an entity table in from");
+  if (!isEntityTable(from)) fail("Join trees require an entity table in from");
   const joins: QueryJoin[] = [];
   const conditions: QueryCondition[] = [];
   const bound = new Set<object>([getTableMgmt(from)]);
@@ -236,7 +236,7 @@ function visitTree(
       if (!("otherMetadata" in field)) fail(`Unsupported join tree field ${mgmt.meta.type}.${key}`);
       const meta = field.otherMetadata();
       const target = isTreeObject(value) && value.as !== undefined ? value.as : newTableProxy(meta.cstr);
-      if (!isTable(target) || getTableMgmt(target).meta !== meta) {
+      if (!isEntityTable(target) || getTableMgmt(target).meta !== meta) {
         fail(`Join tree binding for ${mgmt.meta.type}.${key} must be a ${meta.type} table`);
       }
       const identity = getTableMgmt(target);

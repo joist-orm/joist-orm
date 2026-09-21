@@ -82,6 +82,33 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(em.execute({ delete: b, where: b.id.eq(bookId) })).resolves.toEqualTypeOf<ExecuteResult<never>>();
   expectTypeOf(em.execute({ insert: b, values: [] })).resolves.toEqualTypeOf<ExecuteResult<never>>();
 
+  // Given an unmodeled table whose physical columns are named explicitly
+  const rawAuthors = table("authors", "rawAuthors");
+  // When executing raw mutations with values, expressions, predicates, and RETURNING
+  // Then the result retains each explicit column assertion without generated entity metadata
+  expectTypeOf(
+    em.execute({
+      insert: rawAuthors,
+      values: { first_name: "Raw", age: sql<number>`${20} + 1` },
+      returning: rawAuthors.column<number>("id"),
+    }),
+  ).resolves.toEqualTypeOf<ExecuteResult<number>>();
+  expectTypeOf(
+    em.execute({
+      update: rawAuthors,
+      set: { first_name: "Changed" },
+      where: rawAuthors.column<number>("id").eq(1),
+      returning: { name: rawAuthors.column<string>("first_name") },
+    }),
+  ).resolves.toEqualTypeOf<ExecuteResult<{ name: string }>>();
+  expectTypeOf(
+    em.execute({ delete: rawAuthors, allowAll: true, returning: rawAuthors.column<number>("id") }),
+  ).resolves.toEqualTypeOf<ExecuteResult<number>>();
+  // When an unmodeled mutation requests entity-specific soft-delete behavior
+  // Then the option is rejected because the table has no soft-delete metadata
+  // @ts-expect-error: unmodeled table mutations have no entity soft-delete policy
+  em.execute({ delete: rawAuthors, allowAll: true, softDeletes: "include" });
+
   // Given a reusable INSERT POJO checked without widening its RETURNING projection
   const insert = {
     insert: b,

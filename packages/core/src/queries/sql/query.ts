@@ -49,9 +49,12 @@ import {
   type TableBrand,
   type TableFor,
   type TableMgmt,
+  type TableSourceBrand,
+  type TableSourceMgmt,
   collectionJoin,
   getTableMetadata,
   getTableMgmt,
+  isEntityTable,
   isTable,
   m2mJoinTable,
   referenceJoinSource,
@@ -130,6 +133,11 @@ export interface SubqueryBrand<R, Name extends string> {
 
 /** Anything that can be a source or be joined: an entity table or a table-shaped subquery. */
 export type QuerySource =
+  | { readonly [tableMgmt]: TableSourceBrand<string> }
+  | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
+
+/** A generated entity table or table-shaped subquery that supports `select: source`. */
+type SelectableQuerySource =
   | { readonly [tableMgmt]: TableBrand<any, string> }
   | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
 
@@ -216,7 +224,7 @@ type CheckedExpressionOrderBy<S> = ExpressionOrderBy &
       : { readonly [K in Exclude<OrderByKey<S>, keyof ExpressionOrderBy>]?: never });
 
 /** The three select shapes: a source, an existing scalar expression, or a POJO naming result columns. */
-export type QuerySelect = QuerySource | ExprLike<unknown> | Record<string, SelectExpression>;
+export type QuerySelect = SelectableQuerySource | ExprLike<unknown> | Record<string, SelectExpression>;
 
 /** A named projection value may be an existing expression or an inline expression literal. */
 export type SelectExpression = ExprLike<unknown> | ExprInput;
@@ -1213,7 +1221,7 @@ function isPlainSelect(select: unknown): select is Record<string, SelectExpressi
 }
 
 /** Returns the runtime identity of a source: a table's `TableMgmt` or a subquery's handle. */
-function handleOf(source: unknown): TableMgmt | SubqueryHandle {
+function handleOf(source: unknown): TableSourceMgmt | SubqueryHandle {
   if (isTable(source)) return getTableMgmt(source);
   if (isSubqueryValue(source)) return readValueHandle(source);
   return fail(`Expected a table or a query(...) value, got ${source}`);
@@ -1676,12 +1684,12 @@ export class Ctx implements ExprContext {
 function describeHandle(handle: object): string {
   if (handle instanceof SubqueryHandle) return `Subquery ${handle.describe()}`;
   if (handle instanceof JoinTableHandle) return `Join table ${handle.joinTableName}`;
-  if ("tableName" in handle) return `Table for ${(handle as TableMgmt).tableName}`;
+  if ("tableName" in handle) return `Table for ${(handle as TableSourceMgmt).tableName}`;
   return "Table";
 }
 
 interface ParsedSource {
-  handle: TableMgmt | SubqueryHandle | JoinTableHandle;
+  handle: TableSourceMgmt | SubqueryHandle | JoinTableHandle;
   alias: string;
   /** `table AS alias` or `(SELECT ...) AS alias`. */
   sql: string;
@@ -1881,16 +1889,18 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
       };
     };
   } else {
-    const meta = getTableMetadata(source as any);
-    const alias = assigner.getAlias(meta.tableName);
+    const mgmt = getTableMgmt(source as any);
+    const { tableName } = mgmt;
+    const meta = "meta" in mgmt ? mgmt.meta : undefined;
+    const alias = assigner.getAlias(tableName);
     ctx.register(handle, alias);
     return () => {
       // Ordinary entity mode selects the table's columns, excluding lazy ones like em.find.
-      const entitySelects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
+      const entitySelects = !meta ? [] : meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
       return {
         handle,
         alias,
-        sql: `${kq(meta.tableName)} AS ${kq(alias)}`,
+        sql: `${kq(tableName)} AS ${kq(alias)}`,
         bindings: [],
         refs: [],
         entitySelects,
@@ -1953,7 +1963,10 @@ function selectsToSql(
   entitySelects?: SqlFragment[],
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
-  if (isTable(select)) {
+  if (isTable(select) && !isEntityTable(select)) {
+    fail("An unmodeled table cannot be selected as an entity; select its columns individually");
+  }
+  if (isEntityTable(select)) {
     // Ordinary entity mode: `a.*`, hydrated through the identity map. Only the from is
     // hydratable: a joined alias would need null-row skipping and left-join nullability (see TODO.md)
     if (from.handle !== getTableMgmt(select)) {
@@ -2006,7 +2019,7 @@ function ctiEntityPlan(
   assigner: AliasAssigner,
 ): { joins: ParsedJoin[]; selects: SqlFragment[] | undefined } {
   // CTI expansion belongs only to entity mode. Column projections keep their explicit physical-table shape.
-  if (!isTable(q.select) || from.handle !== getTableMgmt(q.select)) return { joins: [], selects: undefined };
+  if (!isEntityTable(q.select) || from.handle !== getTableMgmt(q.select)) return { joins: [], selects: undefined };
   const meta = getTableMetadata(q.select);
   if (meta.inheritanceType !== "cti") return { joins: [], selects: undefined };
 
@@ -2071,7 +2084,7 @@ function stiEntityPlan(
   from: ParsedSource,
 ): { selects: SqlFragment[] | undefined; conditions: ColumnCondition[] } {
   // As with CTI, only a table selected from itself requests entity hydration and inheritance behavior.
-  if (!isTable(q.select) || from.handle !== getTableMgmt(q.select)) return { selects: undefined, conditions: [] };
+  if (!isEntityTable(q.select) || from.handle !== getTableMgmt(q.select)) return { selects: undefined, conditions: [] };
   const meta = getTableMetadata(q.select);
   if (meta.inheritanceType !== "sti") return { selects: undefined, conditions: [] };
 
@@ -2101,7 +2114,7 @@ function ctiJoin(from: ParsedSource, meta: EntityMetadata, alias: string): Parse
   return {
     kind: "left",
     source: {
-      handle: { tableName: meta.tableName, meta },
+      handle: { tableName: meta.tableName, meta } as TableMgmt,
       alias,
       sql: `${kq(meta.tableName)} AS ${safeKq(alias)}`,
       bindings: [],

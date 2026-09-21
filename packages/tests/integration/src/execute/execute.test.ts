@@ -1514,10 +1514,10 @@ describe("em.execute", () => {
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
       const t = table(Tag);
       // When a constructor is passed where a target alias is required
-      await expect(execute({ insert: Tag, values: [] })).rejects.toThrow("A mutation target must be an entity table");
+      await expect(execute({ insert: Tag, values: [] })).rejects.toThrow("A mutation target must be a table");
       // And a reusable named read is not a mutable table target
       await expect(execute({ delete: query({ from: t, select: { name: t.name } }), allowAll: true })).rejects.toThrow(
-        "A mutation target must be an entity table",
+        "A mutation target must be a table",
       );
       // And primitive VALUES are not domain-field assignments
       await expect(execute({ insert: t, values: "name" })).rejects.toThrow("insert assignments must be a field POJO");
@@ -2356,5 +2356,62 @@ describe("em.execute", () => {
     await expect(result).rejects.toThrow(
       "UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned",
     );
+  });
+
+  it("inserts raw physical values into an unmodeled table", async () => {
+    // Given the Authors table is addressed without generated entity metadata
+    const em = newEntityManager();
+    const authors = table("authors");
+
+    // When an Author is inserted with physical column names and a raw SQL expression
+    const result = await em.execute({
+      insert: authors,
+      values: {
+        first_name: "Raw",
+        initials: "R",
+        number_of_books: 0,
+        tags_of_all_books: "",
+        age: sql<number>`${20} + 1`,
+      },
+      returning: { id: authors.column<number>("id"), age: authors.column<number>("age") },
+    });
+
+    // Then the raw values are stored and returned without entity codecs
+    expect(result).toEqual({ rowCount: 1, rows: [{ id: 1, age: 21 }] });
+  });
+
+  it("updates an unmodeled table through explicit columns", async () => {
+    // Given an Author row and an unmodeled handle for its physical table
+    await insertAuthor({ first_name: "Before" });
+    const em = newEntityManager();
+    const authors = table("authors");
+
+    // When the physical name is updated through an explicit-column predicate
+    const result = await em.execute({
+      update: authors,
+      set: { first_name: "After" },
+      where: authors.column<number>("id").eq(1),
+      returning: authors.column<string>("first_name"),
+    });
+
+    // Then the raw scalar is returned
+    expect(result).toEqual({ rowCount: 1, rows: ["After"] });
+  });
+
+  it("deletes from an unmodeled table through explicit columns", async () => {
+    // Given an Author row and an unmodeled handle for its physical table
+    await insertAuthor({ first_name: "Delete me" });
+    const em = newEntityManager();
+    const authors = table("authors");
+
+    // When the row is deleted through an explicit-column predicate
+    const result = await em.execute({
+      delete: authors,
+      where: authors.column<number>("id").eq(1),
+      returning: authors.column<string>("first_name"),
+    });
+
+    // Then the deleted raw scalar is returned
+    expect(result).toEqual({ rowCount: 1, rows: ["Delete me"] });
   });
 });

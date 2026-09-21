@@ -246,6 +246,23 @@ async function typeAssertions() {
   const em = newEntityManager();
   const [a, b, p] = tables(Author, Book, Publisher);
 
+  // === Unmodeled tables expose only explicitly typed physical columns
+  const unknownAuthors = table("authors");
+  const otherUnknownAuthors = table("authors", "other");
+  expectTypeOf(unknownAuthors.column<string>("first_name")).toEqualTypeOf<Expr<string, "authors">>();
+  expectTypeOf(otherUnknownAuthors.column<number>("id")).toEqualTypeOf<Expr<number, "other">>();
+  const unknownRows = em.query({
+    from: unknownAuthors,
+    join: [
+      {
+        left: otherUnknownAuthors,
+        on: unknownAuthors.column<number>("id").eq(otherUnknownAuthors.column<number>("id")),
+      },
+    ],
+    select: { name: unknownAuthors.column<string>("first_name"), otherId: otherUnknownAuthors.column<number>("id") },
+  });
+  expectTypeOf(unknownRows).resolves.toEqualTypeOf<{ name: string; otherId: number | undefined }[]>();
+
   // === Table columns are typed expressions: `Expr<R, Src>` where `R` is the decoded result type and
   // === `Src` is the source key that left-join nullability and scope checking look up
   // A required primitive keeps its bare type
@@ -534,6 +551,10 @@ async function typeAssertions() {
   }>();
 
   // === Mistakes that must not compile
+  // @ts-expect-error: unmodeled tables have no generated column properties
+  unknownAuthors.firstName;
+  // @ts-expect-error: unmodeled tables cannot be selected as entities
+  em.query({ from: unknownAuthors, select: unknownAuthors });
   // Given a nonliteral Author read carrying the reserved `ctes` spelling, which `with` does not replace
   const withCte = { from: a, select: { name: a.firstName }, ctes: [] };
   // And an otherwise valid compound with that invalid later operand

@@ -45,6 +45,8 @@ import { fail } from "src/utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
 export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Table<T>;
+/** Creates an unmodeled physical table whose columns must be referenced with `column()`. */
+export function table<TableName extends string>(tableName: TableName): UnknownTable<TableName>;
 /**
  * Creates a table with an explicit type-level name, i.e. `table(Author, "m")` for a self-join.
  *
@@ -55,9 +57,11 @@ export function table<T extends Entity, Name extends string>(
   cstr: MaybeAbstractEntityConstructor<T>,
   name: Name,
 ): Table<T, Name>;
-export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>, _name?: string): unknown {
+/** Creates a named unmodeled physical table for joins and self-joins. */
+export function table<Name extends string>(tableName: string, name: Name): UnknownTable<Name>;
+export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T> | string, _name?: string): unknown {
   // The name only exists at the type level; the SQL alias is still assigned by the query parser
-  return newTableProxy(cstr);
+  return typeof cstr === "string" ? newUnknownTableProxy(cstr) : newTableProxy(cstr);
 }
 
 /** Creates multiple physical table handles. */
@@ -73,9 +77,13 @@ export function tables<T extends readonly MaybeAbstractEntityConstructor<any>[]>
  * `__entity` lets `QueryRow` recover `T` for entity mode (you cannot `infer T` back out of a mapped
  * type), and `__name` is the table's source key (see `Expr`).
  */
-export interface TableBrand<T, Name extends string> extends TableMgmt {
-  readonly __entity: T;
+export interface TableSourceBrand<Name extends string> extends TableSourceMgmt {
   readonly __name: Name;
+}
+
+/** A modeled table source that can hydrate its generated entity type. */
+export interface TableBrand<T, Name extends string> extends TableSourceBrand<Name>, TableMgmt {
+  readonly __entity: T;
 }
 
 /**
@@ -125,6 +133,14 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = Tabl
          */
         column<R = unknown>(column: string): Expr<R, Name>;
       });
+
+/** A physical table omitted from Joist codegen, with no known columns or entity metadata. */
+export type UnknownTable<Name extends string = string> = {
+  readonly [unknownTable]: true;
+  readonly [tableMgmt]: TableSourceBrand<Name>;
+  /** References a physical column and asserts its database result type. */
+  column<R = unknown>(column: string): Expr<R, Name>;
+};
 
 /** Domain filters for fields stored on this physical table, without relationship traversal. */
 export type TableFilter<T extends Entity> = {
@@ -332,14 +348,22 @@ export interface EntityColumn<T, N extends null | never = never, Src extends str
 }
 
 export const tableMgmt = Symbol("tableMgmt");
+export const unknownTable = Symbol("unknownTable");
 
-export function getTableMgmt(table: TableFor<unknown>): TableMgmt {
+export function getTableMgmt<T extends Entity>(table: TableFor<T>): TableMgmt;
+export function getTableMgmt(table: UnknownTable): TableSourceMgmt;
+export function getTableMgmt(table: TableFor<Entity> | UnknownTable): TableSourceMgmt;
+export function getTableMgmt(table: TableFor<Entity> | UnknownTable): TableSourceMgmt {
   return table[tableMgmt];
 }
 
 /** The identity SQL queries bind a table by, plus its original entity metadata. */
-export interface TableMgmt {
+export interface TableSourceMgmt {
   tableName: string;
+}
+
+/** The identity and generated metadata of a modeled entity table. */
+export interface TableMgmt extends TableSourceMgmt {
   /**
    * The metadata this table was created with, i.e. `table(TaskNew)` keeps `taskNewMeta`.
    *
@@ -422,9 +446,33 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   return proxy;
 }
 
-export function isTable(obj: unknown): obj is Table<any, any> {
-  // Oddly enough `typeof` will be a function b/c we are proxying the constructors
-  return typeof obj === "function" && tableMgmt in obj;
+/** Creates a table handle without requiring generated entity metadata. */
+function newUnknownTableProxy<Name extends string>(tableName: string): UnknownTable<Name> {
+  const mgmt: TableSourceMgmt = { tableName };
+  return new Proxy(
+    {},
+    {
+      get(_, key: PropertyKey): unknown {
+        if (key === tableMgmt) return mgmt;
+        if (key === unknownTable) return true;
+        if (key === "column") return (column: string) => new RefExpr(mgmt, column);
+        if (typeof key !== "string") return undefined;
+        return fail(`Unknown table ${tableName} has no modeled column ${key}; use .column("${key}")`);
+      },
+      has(_, key): boolean {
+        return key === tableMgmt || key === unknownTable || key === "column";
+      },
+    },
+  ) as UnknownTable<Name>;
+}
+
+export function isTable(obj: unknown): obj is Table<any, any> | UnknownTable {
+  return (typeof obj === "function" || (typeof obj === "object" && obj !== null)) && tableMgmt in obj;
+}
+
+/** Whether a physical table has generated entity metadata. */
+export function isEntityTable(obj: unknown): obj is Table<any, any> {
+  return isTable(obj) && "meta" in obj[tableMgmt];
 }
 
 /**
@@ -998,7 +1046,7 @@ class ManyToManyJoinImpl extends CollectionJoinImpl {
 
 /** Fails fast when a join factory is passed something other than a table. */
 function requireTable(other: object): TableFor<Entity> {
-  if (!isTable(other)) return fail(`Expected a table to join, got ${other}`);
+  if (!isEntityTable(other)) return fail(`Expected an entity table to join, got ${other}`);
   return other;
 }
 

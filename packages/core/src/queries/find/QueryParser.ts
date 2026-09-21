@@ -21,13 +21,7 @@ import { type Scope, isScope, isScopeJoinFilter, resolveScope } from "src/querie
 import type { ColumnCondition, ParsedExpressionFilter, RawCondition } from "src/queries/parsedConditions.ts";
 import { isDeferredCondition } from "src/queries/sql/Expr.ts";
 import { kq, kqDot } from "src/queries/sql/keywords.ts";
-import {
-  type ParsedEntityFilter,
-  isNilIdValue,
-  mapToDb,
-  parseEntityFilter,
-  parseValueFilter,
-} from "src/queries/valueFilters.ts";
+import { type ParsedEntityFilter, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
 import { abbreviation, fail } from "src/utils.ts";
 
 // `skipCondition` lives in its own leaf module, shared by domain aliases and SQL expressions
@@ -415,7 +409,6 @@ export function parseFindQuery(
           // We're left with basically a ValueFilter against the ids
           // For now only support eq/ne/in/is-null
           if (f.kind === "eq" || f.kind === "ne") {
-            if (isNilIdValue(f.value)) return;
             const comp = field.components.find((p) => {
               const otherMeta = p.otherMetadata();
               const cstr = getConstructorFromTaggedId(f.value as string);
@@ -569,9 +562,7 @@ export function parseFindQuery(
             columnName: field.columnNames[1],
             dbType: otherMeta.idDbType,
             mapToDb(value: any) {
-              return value === null || isNilIdValue(value)
-                ? value
-                : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
+              return value === null ? value : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
             },
           };
           targetCb.addSimpleCondition({

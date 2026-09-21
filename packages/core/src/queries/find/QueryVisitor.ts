@@ -40,6 +40,11 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
   }
 }
 
+/** Returns whether a parsed query contains a condition tree that cannot match any database row. */
+export function isQueryProvablyEmpty(query: ParsedFindQuery): boolean {
+  return query.condition ? isConditionProvablyFalse(query.condition) : false;
+}
+
 /** Finds ExistsCondition nodes in a condition tree and pushes their subqueries onto the todo list. */
 function visitExistsSubqueries(condition: ParsedExpressionCondition, todo: ParsedFindQuery[]): void {
   if (condition.kind === "exp") {
@@ -100,5 +105,25 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
     // EXISTS conditions are handled at the query level
   } else {
     assertNever(pc);
+  }
+}
+
+/** Evaluates only conditions whose false result can be proven without querying the database. */
+function isConditionProvablyFalse(condition: ParsedExpressionCondition): boolean {
+  switch (condition.kind) {
+    case "column":
+      return condition.cond.kind === "in" && condition.cond.value.length === 0;
+    case "exp":
+      // Pruning can leave an empty group, which buildWhereClause drops as no predicate instead of rendering as FALSE.
+      if (condition.conditions.length === 0) return false;
+      return condition.op === "and"
+        ? condition.conditions.some(isConditionProvablyFalse)
+        : condition.conditions.every(isConditionProvablyFalse);
+    case "exists":
+      return !condition.negate && isQueryProvablyEmpty(condition.subquery);
+    case "raw":
+      return false;
+    default:
+      return assertNever(condition);
   }
 }

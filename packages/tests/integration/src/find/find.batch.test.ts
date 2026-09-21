@@ -9,6 +9,7 @@ import {
   FavoriteShape,
   Publisher,
   PublisherType,
+  SmallPublisher,
 } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { jan1 } from "src/testDates";
@@ -771,5 +772,29 @@ describe("em.find / batch", () => {
     ]);
     expect(q1).toEqual([]);
     expect(q2).toEqual([]);
+  });
+
+  it("omits impossible entries while preserving viable finds", async () => {
+    // Given a persisted Author belongs to p1 and another Publisher is new
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const newPublisherEntity = em.create(SmallPublisher, {
+      name: "p2",
+      city: "c2",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When same-shaped finds for both Publishers execute together
+    const [impossible, viable] = await Promise.all([
+      em.find(Author, { publisher: newPublisherEntity }),
+      em.find(Author, { publisher: "p:1" }),
+    ]);
+
+    // Then only the viable find enters the loader and queries the database
+    expect(impossible).toEqual([]);
+    expect(viable).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
   });
 });

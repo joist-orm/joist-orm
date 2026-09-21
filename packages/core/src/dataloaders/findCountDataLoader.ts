@@ -16,6 +16,7 @@ import { getMetadata } from "src/EntityMetadata.ts";
 import type { FilterAndSettings, FindFilter } from "src/queries/find/EntityFilter.ts";
 import type { GraphQLFilterWithAlias } from "src/queries/find/EntityGraphQLFilter.ts";
 import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty } from "src/queries/find/QueryVisitor.ts";
 import { isScope, isSelectAllFilter, resolveScope } from "src/queries/find/scopes.ts";
 import { kq } from "src/queries/sql/keywords.ts";
 import { buildUnnestCte } from "src/queries/unnest.ts";
@@ -37,6 +38,8 @@ export function findCountDataLoader<T extends Entity>(
   const query = parseFindQuery(meta, where, opts);
   const pendingDeletedIds = appendPendingDeletedIds(em, type, query, meta.idDbType, where, opts);
   const { findSettings } = em["prepareFind"](meta, findCountOperation, query, { ...opts, checkLimit: false });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve(0);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, pendingDeletedIds, query, bindings, findSettings };

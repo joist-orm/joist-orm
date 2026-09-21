@@ -15,6 +15,7 @@ import type { LoadHint } from "src/loading/loadHints.ts";
 import { hintKey } from "src/normalizeHints.ts";
 import type { FilterAndSettings } from "src/queries/find/EntityFilter.ts";
 import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty } from "src/queries/find/QueryVisitor.ts";
 import { buildUnnestCte } from "src/queries/unnest.ts";
 
 interface PreparedPaginatedFindEntry<T extends Entity> {
@@ -37,6 +38,8 @@ export function findPaginatedDataLoader<T extends Entity>(
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
   const { findSettings } = em["prepareFind"](meta, findOperation, query, { ...opts, limit, offset, checkLimit: false });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve([]);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = {

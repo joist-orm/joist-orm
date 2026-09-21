@@ -18,7 +18,7 @@ import {
   parseAlias,
   parseFindQuery,
 } from "src/queries/find/QueryParser.ts";
-import { visitConditions } from "src/queries/find/QueryVisitor.ts";
+import { isQueryProvablyEmpty, visitConditions } from "src/queries/find/QueryVisitor.ts";
 import type { ColumnCondition, ParsedValueFilter, RawCondition } from "src/queries/parsedConditions.ts";
 import { kqDot } from "src/queries/sql/keywords.ts";
 import { buildUnnestCte } from "src/queries/unnest.ts";
@@ -51,6 +51,8 @@ export function findDataLoader<T extends Entity>(
     ...opts,
     limit: em.entityLimit,
   });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve([]);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, query, bindings, findSettings, checkLimit } satisfies PreparedFindEntry<T>;

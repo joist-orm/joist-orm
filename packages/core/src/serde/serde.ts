@@ -395,7 +395,7 @@ export class KeySerde implements ScalarCodec {
   }
 
   mapToDb(value: any) {
-    // Sometimes the nilIdValue will pass -1 as already a number, but usually this should be a tagged id
+    // Numeric IDs are already database values; tagged string IDs still need to be resolved and untagged.
     if (value === null || typeof value === "number") return value;
     // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` pass entities directly.
     return keyToNumber(this.meta, maybeResolveReferenceToId(value));

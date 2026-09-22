@@ -358,7 +358,7 @@ describe("em.find", () => {
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "eq", value: -1 } }],
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
       },
       orderBys: [expect.anything()],
     });
@@ -2300,7 +2300,7 @@ describe("em.find", () => {
                 op: "and",
                 conditions: [
                   { kind: "raw", condition: "a.id = att.author_id" },
-                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [] } },
                 ],
               },
             },
@@ -4117,6 +4117,136 @@ describe("em.find", () => {
     const em = newEntityManager();
     const result = await em.find(BookReview, { comment: "comment:1" });
     expect(result).toMatchEntity([{ id: "br:1" }]);
+  });
+
+  it("skips find queries that compare a relation to a new entity", async () => {
+    // Given an Author belongs to a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding persisted Authors that belong to the Publisher
+    const authors = await em.find(Author, { publisher });
+
+    // Then Joist returns no Authors without querying the database
+    expect(authors).toEqual([]);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("queries when another OR branch can match", async () => {
+    // Given a persisted Author and a new Publisher
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors that match either value
+    const where = { or: [{ publisher }, { firstName: "a1" }] } as unknown as AuthorFilter;
+    const authors = await em.find(Author, where);
+
+    // Then the viable branch still finds the persisted Author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("skips paginated find queries that compare a relation to a new entity", async () => {
+    // Given a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding one page of persisted Authors that belong to the Publisher
+    const authors = await em.find(Author, { publisher }, { limit: 1 });
+
+    // Then Joist returns no Authors without querying the database
+    expect(authors).toEqual([]);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("skips count queries that compare a relation to a new entity", async () => {
+    // Given a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When counting persisted Authors that belong to the Publisher
+    const count = await em.findCount(Author, { publisher });
+
+    // Then Joist returns zero without querying the database
+    expect(count).toBe(0);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("does not treat primitive sentinel values as impossible", async () => {
+    // Given a persisted Author has a primitive value of -1
+    await insertAuthor({ first_name: "a1", age: -1 });
+    const em = newEntityManager();
+    resetQueryCount();
+
+    // When finding Authors by that primitive value
+    const authors = await em.find(Author, { age: -1 });
+
+    // Then Joist queries and returns the matching Author
+    expect(authors).toMatchEntity([{ firstName: "a1", age: -1 }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("treats a relation not equal to a new entity as not null", async () => {
+    // Given one Author has a Publisher, another does not, and a different Publisher is new
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const newPublisher = em.create(SmallPublisher, {
+      name: "p2",
+      city: "c2",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors whose Publisher is not the new Publisher
+    const authors = await em.find(Author, { publisher: { ne: newPublisher } });
+
+    // Then Joist returns only the Author with a persisted Publisher
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("removes new entities from mixed relation lists", async () => {
+    // Given an Author belongs to a persisted Publisher and another Publisher is new
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const persistedPublisher = await em.load(Publisher, "p:1");
+    const newPublisher = em.create(SmallPublisher, {
+      name: "p2",
+      city: "c2",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors by both Publishers
+    const authors = await em.find(Author, { publisher: [newPublisher, persistedPublisher] });
+
+    // Then Joist queries with the persisted Publisher and returns its Author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
   });
 });
 

@@ -17,7 +17,7 @@ export type ParsedEntityFilter =
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEntityFilter | undefined {
+export function parseEntityFilter(_meta: EntityMetadata, filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
     // This matches legacy `em.find(Book, { author: undefined })` behavior
     return undefined;
@@ -41,12 +41,15 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
   } else if (Array.isArray(filter)) {
     return {
       kind: "in",
-      value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? (v.idTaggedMaybe ?? nilIdValue(meta)) : v;
+      value: filter.flatMap((value: string | number | Entity) => {
+        if (!isEntity(value)) return [value];
+        // If no IDs remain, `in: []` marks the condition as unable to match a database row.
+        return isNotInDb(value) ? [] : [value.idTagged];
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.idTaggedMaybe || nilIdValue(meta) };
+    // We use `in: []` to mark an ID-less entity as unable to match a database row.
+    return isNotInDb(filter) ? { kind: "in", value: [] } : { kind: "eq", value: filter.idTagged };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -60,7 +63,8 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.idTaggedMaybe || nilIdValue(meta) };
+        // No persisted FK can equal an ID-less entity, and SQL `!=` excludes nulls, so this is `IS NOT NULL`.
+        return isNotInDb(value) ? { kind: "not-null" } : { kind: "ne", value: value.idTagged };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -75,7 +79,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.idTaggedMaybe || nilIdValue(meta) };
+        return isNotInDb(value) ? { kind: "in", value: [] } : { kind: "eq", value: value.idTagged };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -85,8 +89,8 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     // and convert them over here before getting into parseValueFilter.
     const subFilter = {} as any;
     for (const [key, value] of Object.entries(filter)) {
-      if (value && typeof value === "object" && !isPlainObject(value) && "idTaggedMaybe" in value) {
-        subFilter[key] = value.idTaggedMaybe || nilIdValue(meta);
+      if (value && typeof value === "object" && !isEntity(value) && !isPlainObject(value) && "idTaggedMaybe" in value) {
+        subFilter[key] = value.idTaggedMaybe === undefined ? [] : value.idTaggedMaybe;
       } else {
         subFilter[key] = value;
       }
@@ -260,39 +264,20 @@ export function makeLike(search: any | undefined): any {
   return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
 }
 
-/** Recognizes placeholder IDs used when a filter contains an unpersisted entity. */
-export function isNilIdValue(value: unknown): boolean {
-  return value === -1 || value === "00000000-0000-0000-0000-000000000000";
-}
-
-/**
- * We use this value if users include new (id-less) entities as em.find conditions.
- *
- * The idea is that this condition would never be met, but we still want to do the em.find
- * query in case it's in an `OR` clause that would match false, but some other part of the
- * clause would match. I.e. instead of just skipping the DB query all together, which is
- * also something we could consider doing.
- *
- * For int IDs we use -1, and for uuid IDs, we use the nil UUID value:
- *
- * https://en.wikipedia.org/wiki/Universally_unique_identifier#Nil_UUID
- */
-function nilIdValue(meta: EntityMetadata): any {
-  switch (meta.idDbType) {
-    case "int":
-    case "bigint":
-      return -1;
-    case "uuid":
-      return "00000000-0000-0000-0000-000000000000";
-    case "text":
-      return "0";
-    default:
-      return assertNever(meta.idDbType);
-  }
-}
-
 /** Returns true for values that should be treated like an omitted filter. */
 function shouldPruneValueFilter(key: unknown, value: unknown): boolean {
   if (value === undefined) return true;
   return value === false && key !== "eq" && key !== "ne";
+}
+
+/**
+ * Returns whether an entity is known not to be queryable from the database.
+ *
+ * We check `idTaggedMaybe` instead of `isNewEntity` because commit rules run after INSERTs while those
+ * entities still report as new until the flush completes (and yet, because they are in the database, we
+ * must keep them in the query instead of ignoring them). An ID can also be assigned before INSERT, so an
+ * ID-bearing entity conservatively falls through to a harmless database query.
+ */
+function isNotInDb(value: Entity): boolean {
+  return value.idTaggedMaybe === undefined;
 }

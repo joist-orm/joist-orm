@@ -1,4 +1,4 @@
-import { Author, Publisher } from "src/entities";
+import { Author, Publisher, SmallPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { oneTo } from "src/utils";
@@ -110,5 +110,23 @@ describe("em.findIds", () => {
     const [odds, evens] = await Promise.all([oddsPromise, evensPromise]);
     expect(odds).toHaveLength(5);
     expect(evens).toHaveLength(5);
+  });
+
+  it("skips ID queries that compare a relation to a new entity", async () => {
+    // Given a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding persisted Author IDs that belong to the Publisher
+    const ids = await em.findIds(Author, { publisher });
+
+    // Then Joist returns no IDs without querying the database
+    expect(ids).toEqual([]);
+    expect(numberOfQueries).toBe(0);
   });
 });

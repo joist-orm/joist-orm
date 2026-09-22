@@ -44,6 +44,7 @@ import {
 import { type CheckJoinInput, type TreeEntries, compileJoinTree } from "src/queries/sql/JoinTree.ts";
 import { kq, kqStar, safeKq } from "src/queries/sql/keywords.ts";
 import {
+  type InQueryCondition,
   JoinTableHandle,
   type M2mJoinTable,
   type Table,
@@ -55,6 +56,7 @@ import {
   collectionJoin,
   getTableMetadata,
   getTableMgmt,
+  inQueryCondition,
   isEntityTable,
   isTable,
   m2mJoinTable,
@@ -867,12 +869,15 @@ export function queryMaybe<
   J extends QueryJoinInput = [],
   Name extends string = "?",
 >(q: QueryArg<F, S, J, Name>): QueryValue<S, ResolvedJoins<F, J>, Name> | undefined {
+  return createMaybeQueryValue(q) as QueryValue<S, ResolvedJoins<F, J>, Name> | undefined;
+}
+
+/** Applies queryMaybe's structural pruning before creating any kind of read-query value. */
+function createMaybeQueryValue(q: AnyQuery): unknown | undefined {
   const normalized = normalizeQueryJoins(q);
   const where = normalizeWhere(normalized.where);
   checkCondition(where);
-  return isPrunedQueryCondition(where)
-    ? undefined
-    : (createQueryValue(normalized) as QueryValue<S, ResolvedJoins<F, J>, Name>);
+  return isPrunedQueryCondition(where) ? undefined : createQueryValue(normalized);
 }
 
 /**
@@ -2295,6 +2300,11 @@ function checkCondition(value: unknown): void {
       "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
     );
   if (value === undefined || value === skipCondition) return;
+  if (isInQueryCondition(value)) {
+    const q = normalizeQueryJoins(toQuery(value[inQueryCondition].query) as AnyQuery);
+    checkCondition(normalizeWhere(q.where));
+    return;
+  }
   if (!value || typeof value !== "object" || Array.isArray(value) || isExpr(value))
     fail("Query predicate must be a condition or an and/or group");
   const condition = value as Record<string, unknown>;
@@ -2402,6 +2412,13 @@ function checkConditionKeys(value: object, allowed: readonly PropertyKey[], desc
  */
 function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): ConditionInput | undefined {
   if (cond === undefined) return undefined;
+  if (isInQueryCondition(cond)) {
+    const { column, query } = cond[inQueryCondition];
+    const value = createMaybeQueryValue(query as AnyQuery);
+    if (value === undefined) return undefined;
+    if (!isExpr(value)) return fail("An in query literal must select one expression");
+    return column.in(value);
+  }
   if ("and" in cond && cond.and) {
     return {
       and: cond.and.map((child) => resolveQueryCondition(child, ctx)),
@@ -2439,6 +2456,10 @@ function isFilter(cond: ConditionInput): cond is ConditionGroup<ConditionInput> 
  */
 function isPrunedQueryCondition(cond: QueryCondition | undefined): boolean {
   if (cond === undefined || cond === skipCondition) return true;
+  if (isInQueryCondition(cond)) {
+    const q = normalizeQueryJoins(cond[inQueryCondition].query as AnyQuery);
+    return isPrunedQueryCondition(normalizeWhere(q.where));
+  }
   if ("and" in cond || "or" in cond) {
     const children = (cond.and ?? cond.or ?? []).map(isPrunedQueryCondition);
     return (
@@ -2449,6 +2470,11 @@ function isPrunedQueryCondition(cond: QueryCondition | undefined): boolean {
   if ("exists" in cond) return cond.exists === undefined;
   if ("notExists" in cond) return cond.notExists === undefined;
   return false;
+}
+
+/** Recognizes the direct query-literal condition created by EntityColumn.in. */
+function isInQueryCondition(value: unknown): value is InQueryCondition {
+  return typeof value === "object" && value !== null && inQueryCondition in value;
 }
 
 /** The physical source aliases a parsed condition tree references. */

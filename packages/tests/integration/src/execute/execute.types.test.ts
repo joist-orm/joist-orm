@@ -10,6 +10,7 @@ import {
   type SetQuery,
   type UpdateStatement,
   type UpdateValues,
+  customTable,
   query,
   sql,
   table,
@@ -82,32 +83,42 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(em.execute({ delete: b, where: b.id.eq(bookId) })).resolves.toEqualTypeOf<ExecuteResult<never>>();
   expectTypeOf(em.execute({ insert: b, values: [] })).resolves.toEqualTypeOf<ExecuteResult<never>>();
 
-  // Given an unmodeled table whose physical columns are named explicitly
-  const rawAuthors = table("authors", "rawAuthors");
-  // When executing raw mutations with values, expressions, predicates, and RETURNING
-  // Then the result retains each explicit column assertion without generated entity metadata
+  // Given a custom table whose primitive columns are declared without entity metadata
+  const customAuthorsTable = customTable("authors", {
+    id: { type: "int", hasDefault: true },
+    firstName: "text",
+    age: { type: "int", nullable: true },
+    search: { type: "text", generated: true },
+  });
+  const customAuthors = table(customAuthorsTable, "customAuthors");
+  // When executing custom mutations with values, expressions, predicates, and RETURNING
+  // Then assignments and results use the declared column types
   expectTypeOf(
     em.execute({
-      insert: rawAuthors,
-      values: { first_name: "Raw", age: sql<number>`${20} + 1` },
-      returning: rawAuthors.column<number>("id"),
+      insert: customAuthors,
+      values: { firstName: "Raw", age: sql<number>`${20} + 1` },
+      returning: customAuthors.id,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
   expectTypeOf(
     em.execute({
-      update: rawAuthors,
-      set: { first_name: "Changed" },
-      where: rawAuthors.column<number>("id").eq(1),
-      returning: { name: rawAuthors.column<string>("first_name") },
+      update: customAuthors,
+      set: { firstName: "Changed" },
+      where: customAuthors.id.eq(1),
+      returning: { name: customAuthors.firstName },
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<{ name: string }>>();
   expectTypeOf(
-    em.execute({ delete: rawAuthors, allowAll: true, returning: rawAuthors.column<number>("id") }),
+    em.execute({ delete: customAuthors, allowAll: true, returning: customAuthors.id }),
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
-  // When an unmodeled mutation requests entity-specific soft-delete behavior
+  // When a custom mutation requests entity-specific soft-delete behavior
   // Then the option is rejected because the table has no soft-delete metadata
-  // @ts-expect-error: unmodeled table mutations have no entity soft-delete policy
-  em.execute({ delete: rawAuthors, allowAll: true, softDeletes: "include" });
+  // @ts-expect-error: custom table mutations have no entity soft-delete policy
+  em.execute({ delete: customAuthors, allowAll: true, softDeletes: "include" });
+  // @ts-expect-error: custom inserts require declared non-null columns without defaults
+  em.execute({ insert: customAuthors, values: { age: 42 } });
+  // @ts-expect-error: custom generated columns are not writable
+  em.execute({ update: customAuthors, set: { search: "manual" }, allowAll: true });
 
   // Given a reusable INSERT POJO checked without widening its RETURNING projection
   const insert = {

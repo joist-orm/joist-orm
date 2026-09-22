@@ -24,6 +24,15 @@ import type { ParsedValueFilter } from "src/queries/parsedConditions.ts";
 import { buildValueCondition } from "src/queries/renderConditions.ts";
 import { skipCondition } from "src/queries/skipCondition.ts";
 import {
+  type CustomColumnInputs,
+  type CustomTable,
+  type CustomTableDefinition,
+  type CustomTableFor,
+  type CustomTableMgmt,
+  getCustomTableDefinition,
+  isCustomTableDefinition,
+} from "src/queries/sql/custom.ts";
+import {
   BaseExpr,
   type Expr,
   type ExprContext,
@@ -45,8 +54,10 @@ import { fail } from "src/utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
 export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Table<T>;
-/** Creates an unmodeled physical table whose columns must be referenced with `column()`. */
-export function table<TableName extends string>(tableName: TableName): UnknownTable<TableName>;
+/** Creates a typed physical handle for a table declared with `customTable`. */
+export function table<TableName extends string, C extends CustomColumnInputs>(
+  definition: CustomTableDefinition<TableName, C>,
+): CustomTable<C, TableName>;
 /**
  * Creates a table with an explicit type-level name, i.e. `table(Author, "m")` for a self-join.
  *
@@ -57,11 +68,17 @@ export function table<T extends Entity, Name extends string>(
   cstr: MaybeAbstractEntityConstructor<T>,
   name: Name,
 ): Table<T, Name>;
-/** Creates a named unmodeled physical table for joins and self-joins. */
-export function table<Name extends string>(tableName: string, name: Name): UnknownTable<Name>;
-export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T> | string, _name?: string): unknown {
+/** Creates a named custom-table handle for joins and self-joins. */
+export function table<C extends CustomColumnInputs, TableName extends string, Name extends string>(
+  definition: CustomTableDefinition<TableName, C>,
+  name: Name,
+): CustomTable<C, Name>;
+export function table<T extends Entity>(
+  cstr: MaybeAbstractEntityConstructor<T> | CustomTableDefinition<string, CustomColumnInputs>,
+  _name?: string,
+): unknown {
   // The name only exists at the type level; the SQL alias is still assigned by the query parser
-  return typeof cstr === "string" ? newUnknownTableProxy(cstr) : newTableProxy(cstr);
+  return isCustomTableDefinition(cstr) ? newCustomTableProxy(cstr) : newTableProxy(cstr);
 }
 
 /** Creates multiple physical table handles. */
@@ -133,14 +150,6 @@ export type Table<T extends Entity, Name extends string = TableNameOf<T>> = Tabl
          */
         column<R = unknown>(column: string): Expr<R, Name>;
       });
-
-/** A physical table omitted from Joist codegen, with no known columns or entity metadata. */
-export type UnknownTable<Name extends string = string> = {
-  readonly [unknownTable]: true;
-  readonly [tableMgmt]: TableSourceBrand<Name>;
-  /** References a physical column and asserts its database result type. */
-  column<R = unknown>(column: string): Expr<R, Name>;
-};
 
 /** Domain filters for fields stored on this physical table, without relationship traversal. */
 export type TableFilter<T extends Entity> = {
@@ -348,12 +357,11 @@ export interface EntityColumn<T, N extends null | never = never, Src extends str
 }
 
 export const tableMgmt = Symbol("tableMgmt");
-export const unknownTable = Symbol("unknownTable");
 
 export function getTableMgmt<T extends Entity>(table: TableFor<T>): TableMgmt;
-export function getTableMgmt(table: UnknownTable): TableSourceMgmt;
-export function getTableMgmt(table: TableFor<Entity> | UnknownTable): TableSourceMgmt;
-export function getTableMgmt(table: TableFor<Entity> | UnknownTable): TableSourceMgmt {
+export function getTableMgmt(table: CustomTableFor): CustomTableMgmt;
+export function getTableMgmt(table: TableFor<Entity> | CustomTableFor): TableSourceMgmt;
+export function getTableMgmt(table: TableFor<Entity> | CustomTableFor): TableSourceMgmt {
   return table[tableMgmt];
 }
 
@@ -446,27 +454,31 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   return proxy;
 }
 
-/** Creates a table handle without requiring generated entity metadata. */
-function newUnknownTableProxy<Name extends string>(tableName: string): UnknownTable<Name> {
-  const mgmt: TableSourceMgmt = { tableName };
+/** Creates a typed handle for primitive columns declared outside Joist codegen. */
+function newCustomTableProxy<TableName extends string, C extends CustomColumnInputs>(
+  definition: CustomTableDefinition<TableName, C>,
+): CustomTable<C, TableName> {
+  const { tableName, columns } = getCustomTableDefinition(definition);
+  const mgmt: CustomTableMgmt = { tableName, columns };
   return new Proxy(
     {},
     {
       get(_, key: PropertyKey): unknown {
         if (key === tableMgmt) return mgmt;
-        if (key === unknownTable) return true;
-        if (key === "column") return (column: string) => new RefExpr(mgmt, column);
         if (typeof key !== "string") return undefined;
-        return fail(`Unknown table ${tableName} has no modeled column ${key}; use .column("${key}")`);
+        const descriptor = Object.hasOwn(columns, key) ? columns[key] : undefined;
+        if (descriptor) return new PrimitiveColumnImpl(undefined, descriptor, mgmt);
+        if (key === "column") return (column: string) => new RefExpr(mgmt, column);
+        return fail(`Custom table ${tableName} has no declared column ${key}; use .column("${key}")`);
       },
       has(_, key): boolean {
-        return key === tableMgmt || key === unknownTable || key === "column";
+        return key === tableMgmt || key === "column" || (typeof key === "string" && Object.hasOwn(columns, key));
       },
     },
-  ) as UnknownTable<Name>;
+  ) as CustomTable<C, TableName>;
 }
 
-export function isTable(obj: unknown): obj is Table<any, any> | UnknownTable {
+export function isTable(obj: unknown): obj is Table<any, any> | CustomTableFor {
   return (typeof obj === "function" || (typeof obj === "object" && obj !== null)) && tableMgmt in obj;
 }
 
@@ -475,15 +487,20 @@ export function isEntityTable(obj: unknown): obj is Table<any, any> {
   return isTable(obj) && "meta" in obj[tableMgmt];
 }
 
+/** Whether a physical table has columns declared through `customTable`. */
+export function isCustomTable(obj: unknown): obj is CustomTableFor {
+  return isTable(obj) && "columns" in obj[tableMgmt];
+}
+
 /**
  * A physical table column implements `Expr`: it renders as `alias."column"`, decodes result
  * values through the column's shared scalar codec, and inherits aggregate methods from `BaseExpr`.
  */
 class TableColumn extends BaseExpr {
   public constructor(
-    readonly meta: EntityMetadata,
+    readonly meta: EntityMetadata | undefined,
     readonly column: Column,
-    readonly mgmt: TableMgmt,
+    readonly mgmt: TableSourceMgmt,
   ) {
     super();
   }

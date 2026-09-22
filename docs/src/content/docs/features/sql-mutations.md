@@ -55,6 +55,8 @@ Required columns must appear in every VALUES row or INSERT source projection. In
 
 Generated `BookColumns`/`AuthorColumns` and `ColumnsOf<T>` supply physical keys, value types, nullability, and insert/update policies for SQL inputs. They are separate from domain `BookFields`/`AuthorFields` and `OptsOf<T>`: entity defaults and setters do not define SQL requiredness. `TypeMap.columnsType` connects these types to the entity, and runtime `EntityMetadata.columns` maps physical keys to their owning domain fields and existing serde columns. See [Tables and generated columns](/features/queries-raw/#tables-and-generated-columns) for the read-side split, relationship sugar, and entity hydration.
 
+[`customTable`](/features/queries-raw/#custom-tables) declarations can also be mutation targets. Their `values`, `set`, and INSERT SELECT output keys use declaration property names, which map to physical columns. Declared nullability, defaults, generated status, and codecs provide the same required-field, write-policy, encoding, and storage-compatibility checks available for generated primitive columns. Custom tables do not have entity references, tagged IDs, hooks, or soft-delete policy.
+
 Run codegen before using mutations. Each entry in the existing `FieldSerde.columns` array carries physical `sqlNullable`, `hasDefault`, and `isGenerated` facts. Generated metadata passes these facts as the final serde constructor argument. Built-in single-column serdes initialize the properties on their existing column (`this`), without replacing column objects or codecs. Mutation checks do not infer these facts from entity requirements or codec defaults. Older custom columns remain valid for reads, but mutations fail clearly when physical facts are missing.
 
 The examples omit timestamps according to Joist's existing `createdAt`/`updatedAt` configuration and column-name convention. Codegen does not inspect trigger bodies or certify that a trigger will supply them, and there is no new public provider override. If your database has no timestamp default or trigger, supply those values explicitly; PostgreSQL enforces its actual constraints. Conventional numeric primary keys are optional on INSERT; UUID/text primary keys without a SQL default remain required. Joist does not infer `ALWAYS` versus `BY DEFAULT` identity policy, so PostgreSQL also enforces restrictions on explicit IDs. Ordinary persisted derived fields are writable for imports/backfills. Database-generated expression columns are omit-only, even for explicit `DEFAULT`; UPDATE primary keys are forbidden.
@@ -99,8 +101,7 @@ UPDATE authors AS a SET first_name = $1
 WHERE (a.id IN (SELECT book_authors."authorId" AS value FROM book_authors))
 ```
 
-A CTE the statement never reads is pruned, as on a read query. The CTE scope deliberately sits *above* the target, so a `VALUES` cell or an `INSERT ... SELECT` source can read the CTEs without also seeing the row being written.
-
+A CTE the statement never reads is pruned, as on a read query. The CTE scope deliberately sits _above_ the target, so a `VALUES` cell or an `INSERT ... SELECT` source can read the CTEs without also seeing the row being written.
 
 ## Guards and expressions
 

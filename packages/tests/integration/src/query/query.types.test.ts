@@ -16,6 +16,7 @@ import {
   type SqlPredicate,
   type Subquery,
   alias,
+  customTable,
   expr,
   type exprBrand,
   getAliasMgmt,
@@ -246,22 +247,29 @@ async function typeAssertions() {
   const em = newEntityManager();
   const [a, b, p] = tables(Author, Book, Publisher);
 
-  // === Unmodeled tables expose only explicitly typed physical columns
-  const unknownAuthors = table("authors");
-  const otherUnknownAuthors = table("authors", "other");
-  expectTypeOf(unknownAuthors.column<string>("first_name")).toEqualTypeOf<Expr<string, "authors">>();
-  expectTypeOf(otherUnknownAuthors.column<number>("id")).toEqualTypeOf<Expr<number, "other">>();
-  const unknownRows = em.query({
-    from: unknownAuthors,
+  // === Custom tables expose declared columns and retain one-off column access
+  const customAuthorsTable = customTable("authors", {
+    id: { type: "int", hasDefault: true },
+    firstName: "text",
+    age: { type: "int", nullable: true },
+  });
+  const customAuthors = table(customAuthorsTable);
+  const otherCustomAuthors = table(customAuthorsTable, "other");
+  expectTypeOf(customAuthors.firstName).toMatchTypeOf<Expr<string, "authors">>();
+  expectTypeOf(customAuthors.age).toMatchTypeOf<Expr<number | null, "authors">>();
+  expectTypeOf(otherCustomAuthors.id).toMatchTypeOf<Expr<number, "other">>();
+  expectTypeOf(customAuthors.column<string>("search")).toEqualTypeOf<Expr<string, "authors">>();
+  const customRows = em.query({
+    from: customAuthors,
     join: [
       {
-        left: otherUnknownAuthors,
-        on: unknownAuthors.column<number>("id").eq(otherUnknownAuthors.column<number>("id")),
+        left: otherCustomAuthors,
+        on: customAuthors.id.eq(otherCustomAuthors.id),
       },
     ],
-    select: { name: unknownAuthors.column<string>("first_name"), otherId: otherUnknownAuthors.column<number>("id") },
+    select: { name: customAuthors.firstName, otherId: otherCustomAuthors.id },
   });
-  expectTypeOf(unknownRows).resolves.toEqualTypeOf<{ name: string; otherId: number | undefined }[]>();
+  expectTypeOf(customRows).resolves.toEqualTypeOf<{ name: string; otherId: number | undefined }[]>();
 
   // === Table columns are typed expressions: `Expr<R, Src>` where `R` is the decoded result type and
   // === `Src` is the source key that left-join nullability and scope checking look up
@@ -551,10 +559,10 @@ async function typeAssertions() {
   }>();
 
   // === Mistakes that must not compile
-  // @ts-expect-error: unmodeled tables have no generated column properties
-  unknownAuthors.firstName;
-  // @ts-expect-error: unmodeled tables cannot be selected as entities
-  em.query({ from: unknownAuthors, select: unknownAuthors });
+  // @ts-expect-error: custom tables expose only their declared column properties
+  customAuthors.lastName;
+  // @ts-expect-error: custom tables cannot be selected as entities
+  em.query({ from: customAuthors, select: customAuthors });
   // Given a nonliteral Author read carrying the reserved `ctes` spelling, which `with` does not replace
   const withCte = { from: a, select: { name: a.firstName }, ctes: [] };
   // And an otherwise valid compound with that invalid later operand

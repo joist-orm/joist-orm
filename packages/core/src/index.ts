@@ -70,7 +70,6 @@ export {
   type TableFor,
   type TableMgmt,
   type TableSourceMgmt,
-  type UnknownTable,
   type ReferenceJoin,
   type PrimitiveColumn,
   type EntityColumn,
@@ -78,6 +77,16 @@ export {
   type CollectionJoin,
   type PolyReference,
 } from "src/queries/sql/Tables.ts";
+export {
+  customTable,
+  type CustomColumnConfig,
+  type CustomColumnInput,
+  type CustomColumnInputs,
+  type CustomColumnType,
+  type CustomTable,
+  type CustomTableDefinition,
+  type CustomTableFor,
+} from "src/queries/sql/custom.ts";
 export { BaseEntity, getInstanceData } from "src/BaseEntity.ts";
 export { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
 export { type Entity, type IdType, isEntity } from "src/Entity.ts";

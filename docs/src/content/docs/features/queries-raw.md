@@ -58,6 +58,34 @@ Each column descriptor has direct `nullable: true | false`, `insert: "required" 
 
 Relationship names remain join sugar: `b.author.as(a)` and `a.books.as(b)` still work. Polymorphic `c.parent.eq(...)`, `.ne(...)`, and `.in(...)` remain predicate sugar that selects the appropriate physical component. This does not make `parent` a selectable column or a supported mutation assignment.
 
+### Custom tables
+
+Use `customTable` for tables intentionally omitted from Joist codegen. Declare the table once, then create reusable handles with `table`, including named handles for self-joins:
+
+```ts
+const auditEntries = customTable("audit_entries", {
+  id: { type: "int", hasDefault: true },
+  actorName: "text",
+  payload: { type: "jsonb", nullable: true },
+  createdAt: { type: "timestamptz", hasDefault: true },
+});
+
+const ae = table(auditEntries);
+const previous = table(auditEntries, "previous");
+
+const rows = await em.query({
+  from: ae,
+  where: ae.actorName.eq("Alice"),
+  select: { id: ae.id, actorName: ae.actorName, payload: ae.payload },
+});
+```
+
+Property names default to snake_case physical columns, so `actorName: "text"` reads `actor_name`. Use `columnName` for a different physical name. The expanded options are `nullable`, `hasDefault`, `generated`, and `array`; SQL arrays are supported for `boolean`, `int`, `float`, `bigint`, `text`, and `uuid`.
+
+Supported scalar storage types are `boolean`, `int`, `float`, `bigint`, `text`, `uuid`, `date`, `timestamp`, `timestamptz`, `json`, and `jsonb`. They map to their normal JavaScript domains; unvalidated JSON is `unknown`. A custom handle also retains `column<R>(name)` for truly one-off columns that are not worth declaring.
+
+Custom tables have physical columns and codecs, but no entity metadata. They support explicit joins, predicates, projections, subqueries, and SQL mutations, but not entity hydration, relationship join sugar, domain filters, inheritance, tagged IDs, or soft-delete policy. Select their columns individually instead of writing `select: ae`.
+
 ## Selecting
 
 The `select` key determines the `rows` return type:

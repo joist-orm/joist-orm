@@ -5,6 +5,13 @@ import type { EntityMetadata } from "src/EntityMetadata.ts";
 import { keyToTaggedId, toTaggedId } from "src/keys.ts";
 import type { SqlCondition } from "src/queries/conditions.ts";
 import { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
+import {
+  type CustomColumnInputs,
+  type CustomColumnValue,
+  type CustomColumnsOf,
+  type CustomTableFor,
+  type CustomTableMgmt,
+} from "src/queries/sql/custom.ts";
 import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "src/queries/sql/Expr.ts";
 import { kq, safeKq } from "src/queries/sql/keywords.ts";
 import {
@@ -38,8 +45,8 @@ import {
 } from "src/queries/sql/query.ts";
 import {
   type TableFor,
-  type UnknownTable,
   getTableMgmt,
+  isCustomTable,
   isEntityTable,
   isTable,
   tableMgmt,
@@ -141,10 +148,14 @@ export type MutationInput = (
   | { readonly insert: TableFor<Entity>; readonly from: SetOperand; readonly values?: never }
   | { readonly update: TableFor<Entity>; readonly set: object }
   | { readonly delete: TableFor<Entity> }
-  | { readonly insert: UnknownTable; readonly values: object | readonly object[]; readonly from?: never }
-  | { readonly insert: UnknownTable; readonly from: SetOperand; readonly values?: never }
-  | { readonly update: UnknownTable; readonly set: object }
-  | { readonly delete: UnknownTable }
+  | {
+      readonly insert: CustomTableFor;
+      readonly values: object | readonly object[];
+      readonly from?: never;
+    }
+  | { readonly insert: CustomTableFor; readonly from: SetOperand; readonly values?: never }
+  | { readonly update: CustomTableFor; readonly set: object }
+  | { readonly delete: CustomTableFor }
 ) & { readonly returning?: MutationReturning; readonly with?: WithInput } & MutationFilter;
 
 /** Without RETURNING the row type is never; scalar expressions produce scalar rows. */
@@ -158,9 +169,8 @@ export type MutationRow<M> = M extends { readonly returning?: infer R }
 
 /** Checks nonliteral statements as well as fresh literals without widening their inferred result. */
 export type CheckMutation<M> = M extends unknown
-  ? TargetTable<M> extends UnknownTable
-    ? CheckUnknownMutation<M>
-    : TargetEntity<M> extends infer T extends Entity
+  ? [CustomColumnsOf<TargetTable<M>>] extends [never]
+    ? TargetEntity<M> extends infer T extends Entity
       ? TypeMapEntry<T, "supportsEmExecute"> extends true
         ? { readonly [K in keyof M]: K extends MutationClause<M> ? unknown : never } & {
             readonly returning?: M extends { readonly returning?: infer R }
@@ -178,6 +188,7 @@ export type CheckMutation<M> = M extends unknown
             )
         : "SQL mutations require a supported non-inherited target and regenerated metadata"
       : never
+    : CheckCustomMutation<M>
   : never;
 
 /** Classifies mutation roots before EntityManager applies write permissions, including malformed roots. */
@@ -218,6 +229,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   if (!isTable(target)) fail("A mutation target must be a table");
   const mgmt = getTableMgmt(target);
   const meta = isEntityTable(target) ? getTableMgmt(target).meta : undefined;
+  const custom = isCustomTable(target) ? getTableMgmt(target) : undefined;
   if (meta) {
     if (meta.inheritanceType || meta.baseType || meta.baseTypes.length || meta.subTypes.length) {
       fail("SQL mutations do not support CTI/STI targets or inherited table families");
@@ -226,9 +238,9 @@ export function parseStatement(arg: unknown): Plan | undefined {
       fail(`SQL mutations require supported physical metadata for ${meta.type}; run codegen`);
     for (const field of Object.values(meta.columns)) requireColumnMetadata(meta, field);
   } else if (statement.softDeletes !== undefined) {
-    fail("Unmodeled table mutations do not support softDeletes");
+    fail("Custom table mutations do not support softDeletes");
   }
-  const fields = meta ? Object.entries(meta.columns) : undefined;
+  const fields = Object.entries(meta?.columns ?? custom!.columns);
   const assigner = new AliasAssigner();
   // A CTE is in scope for the whole statement, so its scope is the parent of every other one here. It
   // deliberately holds no target alias, which is what lets INSERT VALUES cells and the INSERT SELECT
@@ -246,7 +258,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   const bindings: unknown[] = [];
   if (operation === "insert") {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");
-    const required = fields?.filter(([, column]) => column.insert === "required") ?? [];
+    const required = fields.filter(([, column]) => column.insert === "required");
     if ("values" in statement) {
       const rows = Array.isArray(statement.values) ? statement.values : [statement.values];
       // A VALUES cell *is* the new row, so there is no existing row for it to read: this scope skips
@@ -256,21 +268,17 @@ export function parseStatement(arg: unknown): Plan | undefined {
       // scope rather than `ctx`, so a cell can read a `with` entry but not the row being written.
       const valuesCtx = new Ctx(assigner, withCtx);
       const entries = rows.map((row) =>
-        meta ? assignments(meta, row, "insert") : unmodeledAssignments(row, "insert"),
+        meta ? assignments(meta, row, "insert") : customAssignments(custom!, row, "insert"),
       );
-      if (meta) {
-        for (const row of entries) {
-          for (const [key] of required) {
-            if (!row.some((entry) => entry[0] === key)) fail(`INSERT requires ${meta.type}.${key}`);
-          }
+      for (const row of entries) {
+        for (const [key] of required) {
+          if (!row.some((entry) => entry[0] === key)) fail(`INSERT requires ${meta?.type ?? custom!.tableName}.${key}`);
         }
       }
       if (rows.length === 0) return undefined;
       const keys = fields
-        ? fields
-            .filter(([key]) => entries.some((row) => row.some((entry) => entry[0] === key)))
-            .map(([key, field]) => [key, field.columnName] as const)
-        : [...new Set(entries.flatMap((row) => row.map(([key]) => key)))].map((key) => [key, key] as const);
+        .filter(([key]) => entries.some((row) => row.some((entry) => entry[0] === key)))
+        .map(([key, field]) => [key, field.columnName] as const);
       sql += ` (${keys.map(([, column]) => kq(column)).join(", ")}) VALUES `;
       sql += entries
         .map((row) => {
@@ -279,7 +287,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
             if (!entry) return "DEFAULT";
             const cell = meta
               ? assignmentToSql(meta, writableField(meta, key, "insert"), entry[1], valuesCtx)
-              : unmodeledAssignmentToSql(entry[1], valuesCtx);
+              : customAssignmentToSql(custom!, customWritableField(custom!, key, "insert"), entry[1], valuesCtx);
             bindings.push(...cell.bindings);
             refs.push(...cell.refs);
             return cell.sql;
@@ -291,14 +299,13 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const source = parseNestedQuery(statement.from, withCtx, assigner);
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
       const columns = source.output.columns;
-      if (meta) {
-        for (const [key] of required) {
-          if (!columns.some((column) => column[0] === key)) fail(`INSERT requires ${meta.type}.${key}`);
+      for (const [key] of required) {
+        if (!columns.some((column) => column[0] === key)) {
+          fail(`INSERT requires ${meta?.type ?? custom!.tableName}.${key}`);
         }
       }
       for (const [key, expr] of columns) {
-        if (!meta) continue;
-        const field = writableField(meta, key, "insert");
+        const field = meta ? writableField(meta, key, "insert") : customWritableField(custom!, key, "insert");
         const left = field.outputType;
         const right = expr.outputType;
         if (
@@ -308,16 +315,14 @@ export function parseStatement(arg: unknown): Plan | undefined {
           left.domain !== right.domain ||
           left.idMeta !== right.idMeta
         ) {
-          fail(`INSERT SELECT ${meta.type}.${key} has incompatible or unknown storage codecs`);
+          fail(`INSERT SELECT ${meta?.type ?? custom!.tableName}.${key} has incompatible or unknown storage codecs`);
         }
         if (!field.sqlNullable && expr.sqlNullable === true)
-          fail(`INSERT SELECT ${meta.type}.${key} cannot accept a nullable output`);
+          fail(`INSERT SELECT ${meta?.type ?? custom!.tableName}.${key} cannot accept a nullable output`);
       }
       const keys = fields
-        ? fields
-            .filter(([key]) => columns.some((column) => column[0] === key))
-            .map(([key, field]) => [key, field.columnName] as const)
-        : columns.map(([key]) => [key, key] as const);
+        .filter(([key]) => columns.some((column) => column[0] === key))
+        .map(([key, field]) => [key, field.columnName] as const);
       const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
       sql += ` (${keys.map(([, column]) => kq(column)).join(", ")}) SELECT ${keys.map(([key]) => `${sourceAlias}.${safeKq(key)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
       bindings.push(...source.bindings);
@@ -335,18 +340,21 @@ export function parseStatement(arg: unknown): Plan | undefined {
     if (Object.hasOwn(statement, "where") && !whereCondition && statement.allowAll !== true)
       fail("UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned");
     if (operation === "update") {
-      const entries = meta ? assignments(meta, statement.set, "update") : unmodeledAssignments(statement.set, "update");
+      const entries = meta
+        ? assignments(meta, statement.set, "update")
+        : customAssignments(custom!, statement.set, "update");
       sql +=
         " SET " +
         entries
           .map((entry) => {
             const [key, value] = entry;
-            const field = meta ? writableField(meta, key, "update") : undefined;
-            const cell =
-              meta && field ? assignmentToSql(meta, field, value, ctx) : unmodeledAssignmentToSql(value, ctx);
+            const field = meta ? writableField(meta, key, "update") : customWritableField(custom!, key, "update");
+            const cell = meta
+              ? assignmentToSql(meta, field, value, ctx)
+              : customAssignmentToSql(custom!, field, value, ctx);
             bindings.push(...cell.bindings);
             refs.push(...cell.refs);
-            return `${kq(field?.columnName ?? key)} = ${cell.sql}`;
+            return `${kq(field.columnName)} = ${cell.sql}`;
           })
           .join(", ");
     }
@@ -392,8 +400,11 @@ export function decodeStatementResult(
   return { rowCount: result.rowCount, rows: plan.decodeRows(em, result.rows) };
 }
 
+/** An entity table whose generated metadata permits direct SQL mutations. */
 type MutationTarget<T extends Entity> = TableFor<T> &
   (TypeMapEntry<T, "supportsEmExecute"> extends true ? unknown : never);
+
+/** Shared filtering and full-table consent clauses for UPDATE and DELETE. */
 type MutationFilter = {
   /**
    * An `{ and: [...] }` or `{ or: [...] }` group, a boolean expression, or a bare condition such as `a.age.gte(18)`.
@@ -405,6 +416,8 @@ type MutationFilter = {
   readonly allowAll?: boolean;
   readonly softDeletes?: "include" | "exclude";
 };
+
+/** Read-only query clauses that mutations explicitly reject. */
 type NoMutationReadClauses = Partial<
   Record<
     | "select"
@@ -429,18 +442,22 @@ type NoMutationReadClauses = Partial<
     never
   >
 >;
+
 /** Column keys allowed in INSERT, i.e. Book's optional `id` and required `authorId`. */
 type InsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" | "optional" } ? K : never;
 }[keyof ColumnsOf<T>];
+
 /** Column keys that each INSERT row must supply, i.e. Book's `authorId` despite its ORM default. */
 type RequiredInsertKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { insert: "required" } ? K : never;
 }[keyof ColumnsOf<T>];
+
 /** Column keys allowed in UPDATE SET, i.e. Book's `title` and `authorId`, but not `id`. */
 type UpdateKey<T> = {
   [K in keyof ColumnsOf<T>]: ColumnsOf<T>[K] extends { update: true } ? K : never;
 }[keyof ColumnsOf<T>];
+
 /** A column's domain value before SQL nullability is added, i.e. Book's `id` is BookId and `authorId` is AuthorId. */
 type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
   ? IdOf<T>
@@ -449,37 +466,108 @@ type DomainValue<T, K extends keyof ColumnsOf<T>> = K extends "id"
     : ColumnsOf<T>[K] extends { type: infer V }
       ? V
       : never;
+
+/** A modeled column's domain value with SQL nullability applied. */
 type SqlValue<T, K extends keyof ColumnsOf<T>> =
   | DomainValue<T, K>
   | (ColumnsOf<T>[K] extends { nullable: true } ? null : never);
+
+/** A modeled-column value, entity reference, or SQL expression that produces one. */
 type Assignment<T, K extends keyof ColumnsOf<T>> =
   | SqlValue<T, K>
   | ExprLike<SqlValue<T, K>>
   | (K extends "id" ? never : ColumnsOf<T>[K] extends { entity: infer U } ? U : never);
+
+/** A custom column's declared value with SQL nullability applied. */
+type CustomSqlValue<I> = CustomColumnValue<I> | (I extends { nullable: true } ? null : never);
+
+/** A custom-column value or SQL expression that produces one. */
+type CustomAssignment<I> = CustomSqlValue<I> | ExprLike<CustomSqlValue<I>>;
+
+/** Custom-column keys accepted by INSERT, excluding generated columns. */
+type CustomInsertKey<C extends CustomColumnInputs> = {
+  [K in keyof C]: C[K] extends { generated: true } ? never : K;
+}[keyof C];
+
+/** Custom-column keys each INSERT row must supply because they have no default and are not nullable. */
+type CustomRequiredInsertKey<C extends CustomColumnInputs> = {
+  [K in CustomInsertKey<C>]: C[K] extends { nullable: true } | { hasDefault: true } ? never : K;
+}[CustomInsertKey<C>];
+
+/** Custom-column keys accepted by UPDATE, excluding generated columns and the physical primary key. */
+type CustomUpdateKey<C extends CustomColumnInputs> = {
+  [K in keyof C]: C[K] extends { generated: true }
+    ? never
+    : K extends "id"
+      ? never
+      : C[K] extends { columnName: "id" }
+        ? never
+        : K;
+}[keyof C];
+
+/** Values accepted by INSERT for a custom table's declared columns. */
+type CustomInsertValues<C extends CustomColumnInputs> = {
+  [K in CustomRequiredInsertKey<C>]: CustomAssignment<C[K]>;
+} & {
+  [K in Exclude<CustomInsertKey<C>, CustomRequiredInsertKey<C>>]?: CustomAssignment<C[K]> | undefined;
+};
+
+/** Assignments accepted by UPDATE for a custom table's writable columns. */
+type CustomUpdateValues<C extends CustomColumnInputs> = {
+  [K in CustomUpdateKey<C>]?: CustomAssignment<C[K]> | undefined;
+};
+
+/** Named row shape that an INSERT SELECT source must produce for a custom table. */
+type CustomInsertSourceRow<C extends CustomColumnInputs> = {
+  [K in CustomRequiredInsertKey<C>]: CustomSqlValue<C[K]>;
+} & {
+  [K in Exclude<CustomInsertKey<C>, CustomRequiredInsertKey<C>>]?: CustomSqlValue<C[K]>;
+};
+
+/** Named row shape that an entity INSERT SELECT source must produce. */
 type InsertSourceRow<T> = { [K in RequiredInsertKey<T>]: SqlValue<T, K> } & {
   [K in Exclude<InsertKey<T>, RequiredInsertKey<T>>]?: SqlValue<T, K>;
 };
+
+/** Named expression projection accepted from an entity INSERT SELECT source. */
 type InsertProjection<T> = { [K in RequiredInsertKey<T>]: ExprLike<SqlValue<T, K>> } & {
   [K in Exclude<InsertKey<T>, RequiredInsertKey<T>>]?: ExprLike<SqlValue<T, K>>;
 };
+
+/** Collects the keys from every member of a union instead of only their shared keys. */
 type UnionKeys<V> = V extends unknown ? keyof V : never;
+
 /** Collects every alternative before scope checking; a valid branch cannot hide an unrelated alias. */
 type UnionValue<V, K extends PropertyKey> = V extends unknown ? (K extends keyof V ? V[K] : never) : never;
+
+/** Extracts the source names carried by a SQL expression. */
 type ExprSource<V> = V extends { readonly [exprBrand]: ExprBrand<unknown, infer Src> } ? Src : never;
+
+/** Rejects expressions that reference tables outside the statement's allowed scope. */
 type CheckExprScope<V, Scope> =
   string extends ExprSource<V>
     ? unknown
     : [Exclude<ExprSource<V>, Scope>] extends [never]
       ? unknown
       : "Expression source is not in the statement scope";
+
+/** Extracts each expression from a scalar or named RETURNING projection. */
 type ReturningExpr<R> = R extends ExprLike<unknown> ? R : R extends undefined ? never : R[keyof R];
+
+/** Detects an empty named RETURNING projection. */
 type EmptyReturning<R> = R extends object ? (keyof R extends never ? true : false) : false;
+
+/** Rejects empty RETURNING objects and expressions outside the target scope. */
 type CheckReturning<R, Scope> = true extends EmptyReturning<R> ? never : CheckExprScope<ReturningExpr<R>, Scope>;
+
+/** Validates assignment keys, values, and expression sources without distributing union inputs. */
 type CheckAssignments<V, Allowed, Scope> = [Exclude<UnionKeys<V>, keyof Allowed>] extends [never]
   ? Allowed & {
       [K in UnionKeys<V>]?: CheckExprScope<UnionValue<V, K>, Scope>;
     }
   : "SQL assignments have unknown target fields";
+
+/** Checks one entity INSERT row or a readonly collection against writable columns. */
 type CheckValues<T extends Entity, V> =
   | ([Extract<V, readonly unknown[]>] extends [never]
       ? never
@@ -489,44 +577,65 @@ type CheckValues<T extends Entity, V> =
       : CheckAssignments<Exclude<V, readonly unknown[]>, InsertValues<T>, never>);
 
 /**
- * Checks an unmodeled mutation without assuming generated column metadata.
+ * Checks a custom-table mutation against its declared primitive columns.
  *
  * Only clauses for the selected operation are allowed, and `softDeletes` is rejected because there is no entity
- * policy. Assignment keys may be any physical column name, but their expressions must be in scope: INSERT VALUES
- * cannot read the target row, while UPDATE SET and RETURNING can. INSERT SELECT must be a valid named read, but its
- * output columns cannot be checked for required fields, generated fields, codecs, nullability, or database types.
+ * policy. Assignments use declaration keys and honor nullability, defaults, and generated columns. INSERT VALUES
+ * cannot read the target row, while UPDATE SET and RETURNING can. INSERT SELECT must be a valid named read with all
+ * required columns and compatible declared value types; runtime checks also compare its SQL codecs and nullability.
  */
-type CheckUnknownMutation<M> = {
+type CheckCustomMutation<M> = {
+  // Reject clauses outside the selected operation, plus softDeletes because custom tables have no entity policy.
   readonly [K in keyof M]: K extends MutationClause<M> ? (K extends "softDeletes" ? never : unknown) : never;
 } & {
   readonly returning?: M extends { readonly returning?: infer R } ? CheckReturning<R, NameOf<TargetTable<M>>> : never;
-} & (
-    | (M extends { readonly values: infer V } ? { readonly values: CheckUnknownValues<V> } : never)
-    | (M extends { readonly from: infer Q extends SetOperand } ? { readonly from: CheckUnknownInsertSource<Q> } : never)
-    | (M extends { readonly set: infer V }
-        ? { readonly set: CheckUnknownAssignments<V, NameOf<TargetTable<M>>> }
+} &
+  // INSERT VALUES checks every row against the custom table's writable columns.
+  (
+    | (M extends { readonly values: infer V }
+        ? { readonly values: CheckCustomValues<CustomColumnsOf<TargetTable<M>>, V> }
         : never)
+    // INSERT SELECT checks the source's names, values, and expression scopes.
+    | (M extends { readonly from: infer Q extends SetOperand }
+        ? { readonly from: CheckCustomInsertSource<CustomColumnsOf<TargetTable<M>>, Q> }
+        : never)
+    // UPDATE checks assignments against writable columns and permits target-scoped expressions.
+    | (M extends { readonly set: infer V }
+        ? {
+            readonly set: CheckAssignments<
+              V,
+              CustomUpdateValues<CustomColumnsOf<TargetTable<M>>>,
+              NameOf<TargetTable<M>>
+            >;
+          }
+        : never)
+    // DELETE has no assignments or source that needs further type checking.
     | (M extends { readonly delete: unknown } ? unknown : never)
   );
 
-/** INSERT VALUES expressions cannot reference the target; UPDATE SET expressions may reference only the target. */
-type CheckUnknownAssignments<V, Scope> = V extends object
-  ? { readonly [K in keyof V]: CheckExprScope<V[K], Scope> }
-  : never;
-
-/** Checks expression scope for either one raw INSERT row or a readonly collection of rows. */
-type CheckUnknownValues<V> =
+/** Checks one custom INSERT row or a readonly collection against declared writable columns. */
+type CheckCustomValues<C extends CustomColumnInputs, V> =
+  // Use Extract to recognize and validate collection-shaped values, i.e. `values: [authorInput]`.
   | ([Extract<V, readonly unknown[]>] extends [never]
       ? never
-      : readonly CheckUnknownAssignments<Extract<V, readonly unknown[]>[number], never>[])
+      : readonly CheckAssignments<Extract<V, readonly unknown[]>[number], CustomInsertValues<C>, never>[])
+  // Use Exclude to recognize and validate single-row values, i.e. `values: authorInput`.
   | ([Exclude<V, readonly unknown[]>] extends [never]
       ? never
-      : CheckUnknownAssignments<Exclude<V, readonly unknown[]>, never>);
+      : CheckAssignments<Exclude<V, readonly unknown[]>, CustomInsertValues<C>, never>);
 
-/** Checks that a raw INSERT SELECT retains named output columns and a valid read source. */
-type CheckUnknownInsertSource<Q> = SetOperand extends Q
+/** Checks a custom INSERT SELECT's named outputs, required columns, values, and read source. */
+type CheckCustomInsertSource<C extends CustomColumnInputs, Q> = SetOperand extends Q
   ? "INSERT source type lost its select keys; use `satisfies Query` or `satisfies SetQuery` instead of a type annotation"
-  : CheckReadQuery<Q> & CheckSourceScope<Q> & (Q extends SetQuery<readonly SetOperand[]> ? CheckSetQuery<Q> : unknown);
+  : ReadQueryRow<Q> extends CustomInsertSourceRow<C>
+    ? Exclude<UnionKeys<ReadQueryRow<Q>>, CustomInsertKey<C>> extends never
+      ? CheckReadQuery<Q> &
+          CheckSourceScope<Q> &
+          (Q extends SetQuery<readonly SetOperand[]> ? CheckSetQuery<Q> : unknown)
+      : "INSERT SELECT has unknown target fields"
+    : "INSERT SELECT requires compatible values for all SQL-required fields";
+
+/** Checks every SELECT expression against the tables visible within its read-query branch. */
 type CheckSourceScope<Q> = Q extends { readonly select: infer S; readonly from: infer F }
   ? CheckScope<S, F, "join" extends keyof Q ? Extract<Q[keyof Q & "join"], QueryJoinInput> : []>
   : {
@@ -536,6 +645,8 @@ type CheckSourceScope<Q> = Q extends { readonly select: infer S; readonly from: 
           : unknown
         : unknown;
     };
+
+/** Checks an entity INSERT SELECT's named outputs, required columns, values, and read source. */
 type CheckInsertSource<T, Q extends SetOperand> = SetOperand extends Q
   ? "INSERT source type lost its select keys; use `satisfies Query` or `satisfies SetQuery` instead of a type annotation"
   : ReadQueryRow<Q> extends InsertSourceRow<T>
@@ -545,24 +656,31 @@ type CheckInsertSource<T, Q extends SetOperand> = SetOperand extends Q
           (Q extends SetQuery<readonly SetOperand[]> ? CheckSetQuery<Q> : unknown)
       : "INSERT SELECT has unknown target fields"
     : "INSERT SELECT requires compatible values for all SQL-required fields";
+
+/** Extracts the entity type from any mutation target clause. */
 type TargetEntity<M> = M extends
   | { readonly insert: TableFor<infer T> }
   | { readonly update: TableFor<infer T> }
   | { readonly delete: TableFor<infer T> }
   ? T
   : never;
+
+/** Extracts the table handle from any mutation target clause. */
 type TargetTable<M> = M extends
   | { readonly insert: infer A }
   | { readonly update: infer A }
   | { readonly delete: infer A }
   ? A
   : never;
+
+/** Clauses permitted by the selected INSERT, UPDATE, or DELETE operation. */
 type MutationClause<M> =
   | "returning"
   | "with"
   | (M extends { readonly insert: unknown }
       ? "insert" | (M extends { readonly values: unknown } ? "values" : "from")
       : "where" | "allowAll" | "softDeletes" | (M extends { readonly update: unknown } ? "update" | "set" : "delete"));
+
 /** SQL mutations require complete physical metadata. */
 function requireColumnMetadata(meta: EntityMetadata, column: Column): void {
   if (
@@ -585,20 +703,31 @@ function assignments(meta: EntityMetadata, value: unknown, operation: "insert" |
   return defined;
 }
 
-/** Uses physical column names and raw driver values when no generated metadata exists. */
-function unmodeledAssignments(value: unknown, operation: "insert" | "update"): [string, unknown][] {
+/** Validates assignment keys against a custom table's declared writable columns. */
+function customAssignments(
+  table: CustomTableMgmt,
+  value: unknown,
+  operation: "insert" | "update",
+): [string, unknown][] {
   if (!value || typeof value !== "object" || Array.isArray(value) || isExpr(value) || isEntity(value)) {
     fail(`${operation} assignments must be a field POJO`);
   }
   const entries = Object.entries(value);
-  checkPojo(
-    value,
-    entries.map(([key]) => key),
-    `${operation} assignments`,
-  );
+  for (const [key] of entries) customWritableField(table, key, operation);
+  checkPojo(value, Object.keys(table.columns), `${operation} assignments`);
   const defined = entries.filter((entry) => entry[1] !== undefined);
   if (!defined.length) fail(`${operation} requires at least one defined field; empty rows/sets are not DEFAULT VALUES`);
   return defined;
+}
+
+/** Applies physical write restrictions declared by `customTable`. */
+function customWritableField(table: CustomTableMgmt, key: string, operation: "insert" | "update"): Column {
+  const column = Object.hasOwn(table.columns, key) ? table.columns[key] : undefined;
+  if (!column) fail(`Unsupported SQL mutation field ${table.tableName}.${key}`);
+  if (operation === "update" ? !column.update : column.insert === "never") {
+    fail(`Unsupported SQL mutation field ${table.tableName}.${key}`);
+  }
+  return column;
 }
 
 /** Applies physical write restrictions, not ORM-derived, protected, or business-immutable flags. */
@@ -645,9 +774,14 @@ function assignmentToSql(meta: EntityMetadata, column: Column, value: unknown, c
   return { sql: "?", bindings: [column.mapToDbValue(value)], refs: [] };
 }
 
-/** Renders an unmodeled assignment without applying a generated field codec. */
-function unmodeledAssignmentToSql(value: unknown, ctx: Ctx): SqlFragment {
-  return isExpr(value) ? asNode(value).toSql(ctx) : { sql: "?", bindings: [value], refs: [] };
+/** Encodes a custom-table literal through its declared primitive codec. */
+function customAssignmentToSql(table: CustomTableMgmt, column: Column, value: unknown, ctx: Ctx): SqlFragment {
+  if (isExpr(value)) return asNode(value).toSql(ctx);
+  if (value === null) {
+    if (!column.sqlNullable) fail(`${table.tableName}.${column.columnName} is physically NOT NULL`);
+    return { sql: "NULL", bindings: [], refs: [] };
+  }
+  return { sql: "?", bindings: [column.mapToDbValue(value)], refs: [] };
 }
 
 /** Checks the user predicate independently so metadata filters cannot turn a pruned guard into consent. */

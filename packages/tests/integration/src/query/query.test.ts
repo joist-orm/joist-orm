@@ -7,6 +7,7 @@ import {
   Query,
   type RawCondition,
   alias,
+  customTable,
   getAliasMgmt,
   getMetadata,
   query,
@@ -3885,21 +3886,22 @@ describe("em.query", () => {
     expect(rows).toEqual(["Alice"]);
   });
 
-  it("queries unmodeled tables through explicit columns", async () => {
-    // Given an Author row in a physical table treated as outside the Joist domain model
+  it("queries custom tables through declared columns", async () => {
+    // Given an Author row in a physical table declared outside the Joist domain model
     await insertAuthor({ first_name: "Alice" });
     const em = newEntityManager();
-    const authors = table("authors");
-    // And a separately named handle for the same unmodeled table
-    const other = table("authors", "other");
+    const authorsTable = customTable("authors", { id: "int", firstName: "text" });
+    const authors = table(authorsTable);
+    // And a separately named handle for the same custom table
+    const other = table(authorsTable, "other");
 
-    // When the unmodeled handles are joined and projected through explicit columns
+    // When the custom handles are joined and projected through declared columns
     const rows = await em.query({
       from: authors,
-      join: [{ inner: other, on: authors.column<number>("id").eq(other.column<number>("id")) }],
+      join: [{ inner: other, on: authors.id.eq(other.id) }],
       select: {
-        name: authors.column<string>("first_name"),
-        otherName: other.column<string>("first_name"),
+        name: authors.firstName,
+        otherName: other.firstName,
       },
     });
 

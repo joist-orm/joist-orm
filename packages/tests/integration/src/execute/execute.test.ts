@@ -4,6 +4,7 @@ import {
   type ExecuteResult,
   type RawCondition,
   alias,
+  customTable,
   getMetadata,
   query,
   sql,
@@ -2358,57 +2359,65 @@ describe("em.execute", () => {
     );
   });
 
-  it("inserts raw physical values into an unmodeled table", async () => {
-    // Given the Authors table is addressed without generated entity metadata
+  it("inserts declared values into a custom table", async () => {
+    // Given the Authors table is declared without generated entity metadata
     const em = newEntityManager();
-    const authors = table("authors");
+    const authorsTable = customTable("authors", {
+      id: { type: "int", hasDefault: true },
+      firstName: "text",
+      initials: "text",
+      numberOfBooks: "int",
+      tagsOfAllBooks: "text",
+      age: { type: "int", nullable: true },
+    });
+    const authors = table(authorsTable);
 
-    // When an Author is inserted with physical column names and a raw SQL expression
+    // When an Author is inserted with declaration keys and a SQL expression
     const result = await em.execute({
       insert: authors,
       values: {
-        first_name: "Raw",
+        firstName: "Raw",
         initials: "R",
-        number_of_books: 0,
-        tags_of_all_books: "",
+        numberOfBooks: 0,
+        tagsOfAllBooks: "",
         age: sql<number>`${20} + 1`,
       },
-      returning: { id: authors.column<number>("id"), age: authors.column<number>("age") },
+      returning: { id: authors.id, age: authors.age },
     });
 
-    // Then the raw values are stored and returned without entity codecs
+    // Then names are mapped to physical columns and values use the declared codecs
     expect(result).toEqual({ rowCount: 1, rows: [{ id: 1, age: 21 }] });
   });
 
-  it("updates an unmodeled table through explicit columns", async () => {
-    // Given an Author row and an unmodeled handle for its physical table
+  it("updates a custom table through declared columns", async () => {
+    // Given an Author row and a custom handle for its physical table
     await insertAuthor({ first_name: "Before" });
     const em = newEntityManager();
-    const authors = table("authors");
+    const authors = table(customTable("authors", { id: "int", firstName: "text" }));
 
-    // When the physical name is updated through an explicit-column predicate
+    // When the declared name is updated through its typed predicate
     const result = await em.execute({
       update: authors,
-      set: { first_name: "After" },
-      where: authors.column<number>("id").eq(1),
-      returning: authors.column<string>("first_name"),
+      set: { firstName: "After" },
+      where: authors.id.eq(1),
+      returning: authors.firstName,
     });
 
     // Then the raw scalar is returned
     expect(result).toEqual({ rowCount: 1, rows: ["After"] });
   });
 
-  it("deletes from an unmodeled table through explicit columns", async () => {
-    // Given an Author row and an unmodeled handle for its physical table
+  it("deletes from a custom table through declared columns", async () => {
+    // Given an Author row and a custom handle for its physical table
     await insertAuthor({ first_name: "Delete me" });
     const em = newEntityManager();
-    const authors = table("authors");
+    const authors = table(customTable("authors", { id: "int", firstName: "text" }));
 
-    // When the row is deleted through an explicit-column predicate
+    // When the row is deleted through a declared-column predicate
     const result = await em.execute({
       delete: authors,
-      where: authors.column<number>("id").eq(1),
-      returning: authors.column<string>("first_name"),
+      where: authors.id.eq(1),
+      returning: authors.firstName,
     });
 
     // Then the deleted raw scalar is returned

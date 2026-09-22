@@ -1964,7 +1964,7 @@ function selectsToSql(
 ): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
   if (isTable(select) && !isEntityTable(select)) {
-    fail("An unmodeled table cannot be selected as an entity; select its columns individually");
+    fail("A custom table cannot be selected as an entity; select its columns individually");
   }
   if (isEntityTable(select)) {
     // Ordinary entity mode: `a.*`, hydrated through the identity map. Only the from is

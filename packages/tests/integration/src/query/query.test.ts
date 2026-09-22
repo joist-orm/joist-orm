@@ -3908,4 +3908,27 @@ describe("em.query", () => {
     // Then the physical table and both handles participate in the query normally
     expect(rows).toEqual([{ name: "Alice", otherName: "Alice" }]);
   });
+
+  it("uses column field names for array select rows", async () => {
+    // Given Authors with and without a last name
+    await insertAuthor({ first_name: "Alice", last_name: "A" });
+    await insertAuthor({ first_name: "Bob" });
+    const em = newEntityManager();
+    const a = table(Author);
+    resetQueryCount();
+
+    // When selecting an array of Author columns
+    const rows = await em.query({ from: a, select: [a.firstName, a.lastName], orderBy: { firstName: "ASC" } });
+
+    // Then each column is aliased to its field name on the wire, which is what keys the rows
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "SELECT a.first_name AS "firstName", a.last_name AS "lastName" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "firstName" ASC",
+     ]
+    `);
+    expect(rows).toEqual([
+      { firstName: "Alice", lastName: "A" },
+      { firstName: "Bob", lastName: undefined },
+    ]);
+  });
 });

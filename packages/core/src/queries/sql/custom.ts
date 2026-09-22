@@ -52,7 +52,7 @@ export interface CustomTableDefinition<TableName extends string, C extends Custo
 export type CustomTable<C extends CustomColumnInputs, Name extends string = string> = {
   readonly [tableMgmt]: CustomTableBrand<C, Name>;
 } & {
-  readonly [K in keyof C]: PrimitiveColumn<CustomColumnValue<C[K]>, CustomColumnNull<C[K]>, Name>;
+  readonly [K in keyof C & string]: PrimitiveColumn<CustomColumnValue<C[K]>, CustomColumnNull<C[K]>, Name, K>;
 } & ("column" extends keyof C
     ? {}
     : {

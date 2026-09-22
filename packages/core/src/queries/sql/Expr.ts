@@ -19,6 +19,8 @@ import { type TypeInfo, arrayOutputType } from "src/serde/TypeInfo.ts";
  */
 
 export const exprBrand: unique symbol = Symbol("joist.expr");
+/** Carries a column's table property name so array selects can infer and decode named result rows. */
+export const selectKeyBrand: unique symbol = Symbol("joist.selectKey");
 
 /**
  * Phantom type information carried by every `Expr`.

@@ -168,7 +168,7 @@ const b = alias(Book);
 const excluded = sql.excluded(b);
 const result = await em.execute({
   insert: b,
-  values: { id: "b:1", title: "Revised", author: "a:1", notes: "incoming" },
+  values: [{ id: "b:1", title: "Revised", author: "a:1", notes: "incoming" }],
   onConflict: {
     target: { fields: ["id"] },
     doUpdate: {

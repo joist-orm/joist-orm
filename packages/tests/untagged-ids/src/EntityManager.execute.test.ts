@@ -19,7 +19,7 @@ describe("EntityManager.execute with untagged ids", () => {
       // When inserting an Author with scalar PK RETURNING
       const author = await em.execute({
         insert: a,
-        values: { id: authorId, firstName: "Owner", createdAt: timestamp, updatedAt: timestamp },
+        values: [{ id: authorId, firstName: "Owner", createdAt: timestamp, updatedAt: timestamp }],
         returning: a.id,
       });
       // Then the scalar Author id has no internal tag
@@ -28,13 +28,15 @@ describe("EntityManager.execute with untagged ids", () => {
       // When assigning the returned Author id to a Book foreign key
       const book = await em.execute({
         insert: b,
-        values: {
-          id: bookId,
-          title: "Imported",
-          authorId: author.rows[0],
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
+        values: [
+          {
+            id: bookId,
+            title: "Imported",
+            authorId: author.rows[0],
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
         returning: { id: b.id, author: b.authorId, createdAt: b.createdAt, updatedAt: b.updatedAt },
       });
       // Then POJO RETURNING removes the Book PK tag and the Author FK tag
@@ -70,13 +72,15 @@ describe("EntityManager.execute with untagged ids", () => {
       // When reinserting the returned PK and FK without converting either value
       const restored = await em.execute({
         insert: b,
-        values: {
-          id: deleted.rows[0].id,
-          authorId: deleted.rows[0].author,
-          title: "Restored",
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
+        values: [
+          {
+            id: deleted.rows[0].id,
+            authorId: deleted.rows[0].author,
+            title: "Restored",
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
         returning: b.id,
       });
       // Then scalar Book PK RETURNING remains untagged
@@ -114,18 +118,20 @@ describe("EntityManager.execute with untagged ids", () => {
       // And BookReview.book references an existing UUID Author, not a Book or another BookReview
       const author = await em.execute({
         insert: a,
-        values: {
-          id: "20000000-0000-0000-0000-000000000001",
-          firstName: "Owner",
-          createdAt: new Date("2026-01-02T03:04:05.000Z"),
-          updatedAt: new Date("2026-01-02T03:04:05.000Z"),
-        },
+        values: [
+          {
+            id: "20000000-0000-0000-0000-000000000001",
+            firstName: "Owner",
+            createdAt: new Date("2026-01-02T03:04:05.000Z"),
+            updatedAt: new Date("2026-01-02T03:04:05.000Z"),
+          },
+        ],
         returning: a.id,
       });
       // When inserting a BookReview with its complete public TEXT id and the returned Author FK
       const inserted = await em.execute({
         insert: br,
-        values: { id, rating: 1, bookId: author.rows[0] },
+        values: [{ id, rating: 1, bookId: author.rows[0] }],
         returning: { id: br.id, book: br.bookId },
       });
       // Then storage and POJO RETURNING preserve every character of the TEXT PK and UUID FK
@@ -167,7 +173,7 @@ describe("EntityManager.execute with untagged ids", () => {
       // When assigning the returned PK and FK directly to a replacement BookReview
       const restored = await em.execute({
         insert: br,
-        values: { id: deleted.rows[0].id, bookId: deleted.rows[0].book, rating: 3 },
+        values: [{ id: deleted.rows[0].id, bookId: deleted.rows[0].book, rating: 3 }],
         returning: br.id,
       });
       // Then scalar RETURNING, public reads, and physical storage retain the original TEXT id
@@ -201,7 +207,7 @@ describe("EntityManager.execute with untagged ids", () => {
     delete values[field];
     // When executing an incomplete import without ORM id or timestamp generation
     // @ts-expect-error Partial values cannot guarantee the required UUID and first_name
-    const result = em.execute({ insert: a, values });
+    const result = em.execute({ insert: a, values: [values] });
     // Then Joist requires the UUID, while PostgreSQL enforces omitted conventional timestamps
     await expect(result).rejects.toThrow(
       field === "id" ? "INSERT requires Author.id" : `null value in column "${columnName}"`,

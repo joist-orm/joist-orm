@@ -76,12 +76,17 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
 
   // When executing each operation without RETURNING
   // Then the whole envelope has a numeric command count and never[] rows
-  expectTypeOf(em.execute({ insert: b, values })).resolves.toEqualTypeOf<{ rowCount: number; rows: never[] }>();
+  expectTypeOf(em.execute({ insert: b, values: [values] })).resolves.toEqualTypeOf<{
+    rowCount: number;
+    rows: never[];
+  }>();
   expectTypeOf(em.execute({ update: b, set: { title: "Revised" }, where: b.id.eq(bookId) })).resolves.toEqualTypeOf<
     ExecuteResult<never>
   >();
   expectTypeOf(em.execute({ delete: b, where: b.id.eq(bookId) })).resolves.toEqualTypeOf<ExecuteResult<never>>();
   expectTypeOf(em.execute({ insert: b, values: [] })).resolves.toEqualTypeOf<ExecuteResult<never>>();
+  // @ts-expect-error: modeled INSERT values must always be an array
+  em.execute({ insert: b, values });
 
   // Given a custom table whose primitive columns are declared without entity metadata
   const customAuthorsTable = customTable("authors", {
@@ -96,7 +101,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       insert: customAuthors,
-      values: { firstName: "Raw", age: sql<number>`${20} + 1` },
+      values: [{ firstName: "Raw", age: sql<number>`${20} + 1` }],
       returning: customAuthors.id,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
@@ -116,14 +121,16 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: custom table mutations have no entity soft-delete policy
   em.execute({ delete: customAuthors, allowAll: true, softDeletes: "include" });
   // @ts-expect-error: custom inserts require declared non-null columns without defaults
-  em.execute({ insert: customAuthors, values: { age: 42 } });
+  em.execute({ insert: customAuthors, values: [{ age: 42 }] });
+  // @ts-expect-error: custom INSERT values must always be an array
+  em.execute({ insert: customAuthors, values: { firstName: "Raw" } });
   // @ts-expect-error: custom generated columns are not writable
   em.execute({ update: customAuthors, set: { search: "manual" }, allowAll: true });
 
   // Given a reusable INSERT POJO checked without widening its RETURNING projection
   const insert = {
     insert: b,
-    values,
+    values: [values],
     returning: { id: b.id, author: b.authorId, title: b.title },
   } satisfies InsertStatement<Book>;
   // And a reusable UPDATE with target-column arithmetic and scalar RETURNING
@@ -159,8 +166,10 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
 
   // When fresh statements return required scalars, nullable scalars, or named expressions
   // Then all mutation forms infer decoded values rather than entities or { value: ... } wrappers
-  expectTypeOf(em.execute({ insert: b, values, returning: b.id })).resolves.toEqualTypeOf<ExecuteResult<BookId>>();
-  expectTypeOf(em.execute({ insert: b, values, returning: b.acknowledgements })).resolves.toEqualTypeOf<
+  expectTypeOf(em.execute({ insert: b, values: [values], returning: b.id })).resolves.toEqualTypeOf<
+    ExecuteResult<BookId>
+  >();
+  expectTypeOf(em.execute({ insert: b, values: [values], returning: b.acknowledgements })).resolves.toEqualTypeOf<
     ExecuteResult<string | undefined>
   >();
   expectTypeOf(
@@ -194,7 +203,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     ExecuteResult<BookId>
   >();
   expectTypeOf(
-    em.execute({ insert: b, values: { ...values, title: sourceTitle.coalesce("Untitled") } }),
+    em.execute({ insert: b, values: [{ ...values, title: sourceTitle.coalesce("Untitled") }] }),
   ).resolves.toEqualTypeOf<ExecuteResult<never>>();
   expectTypeOf(
     em.execute({
@@ -235,7 +244,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // And a RETURNING projection checked as a reusable POJO rather than an entity alias
   const nativeInsert = {
     insert: a,
-    values: nativeValues,
+    values: [nativeValues],
     returning: {
       id: a.id,
       numberOfBooks: a.numberOfBooks,
@@ -304,15 +313,17 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       insert: stat,
-      values: {
-        smallint: 1,
-        integer: 1,
-        bigint: 1n,
-        decimal: 1.5,
-        real: 1.5,
-        doublePrecision: 1.5,
-        json: { imported: true },
-      },
+      values: [
+        {
+          smallint: 1,
+          integer: 1,
+          bigint: 1n,
+          decimal: 1.5,
+          real: 1.5,
+          doublePrecision: 1.5,
+          json: { imported: true },
+        },
+      ],
       returning: stat.decimal,
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<number>>();
@@ -347,7 +358,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   expectTypeOf(
     em.execute({
       insert: tag,
-      values: { name: "Password audit" },
+      values: [{ name: "Password audit" }],
       returning: query({ from: user, select: user.passwordHistory, limit: 1 }),
     }),
   ).resolves.toEqualTypeOf<ExecuteResult<PasswordValue[] | undefined>>();
@@ -472,39 +483,39 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When required SQL inputs are missing, undefined, null, or given the wrong native domain
   // Then configuration defaults, factories, and ORM-derived flags do not relax physical constraints
   // @ts-expect-error: Book.title is SQL-required
-  em.execute({ insert: b, values: { authorId: authorId, notes: "Imported" } });
+  em.execute({ insert: b, values: [{ authorId: authorId, notes: "Imported" }] });
   // @ts-expect-error: Book.author has only a configuration default
-  em.execute({ insert: b, values: { title: "Imported", notes: "Imported" } });
+  em.execute({ insert: b, values: [{ title: "Imported", notes: "Imported" }] });
   // @ts-expect-error: Book.notes has only a configuration default
-  em.execute({ insert: b, values: { title: "Imported", authorId: authorId } });
+  em.execute({ insert: b, values: [{ title: "Imported", authorId: authorId }] });
   // @ts-expect-error: persisted derived Author.numberOfBooks is physically NOT NULL without a SQL default
-  em.execute({ insert: a, values: { firstName: "Imported" } });
+  em.execute({ insert: a, values: [{ firstName: "Imported" }] });
   // @ts-expect-error: every bulk row must supply the required Book fields
   em.execute({ insert: b, values: [values, { title: "Incomplete" }] });
   // @ts-expect-error: an empty row is not the supported empty-array shortcut
-  em.execute({ insert: b, values: {} });
+  em.execute({ insert: b, values: [{}] });
   // @ts-expect-error: undefined cannot omit required Book.notes
-  em.execute({ insert: b, values: { ...values, notes: undefined } });
+  em.execute({ insert: b, values: [{ ...values, notes: undefined }] });
   // @ts-expect-error: null cannot replace required Book.author
-  em.execute({ insert: b, values: { ...values, authorId: null } });
+  em.execute({ insert: b, values: [{ ...values, authorId: null }] });
   // @ts-expect-error: null cannot replace a required scalar field
   em.execute({ update: b, set: { title: null }, allowAll: true });
   // @ts-expect-error: persisted derived columns retain physical NOT NULL
   em.execute({ update: a, set: { numberOfBooks: null }, allowAll: true });
   // @ts-expect-error: optional server-supplied timestamps are not nullable
-  em.execute({ insert: b, values: { ...values, createdAt: null } });
+  em.execute({ insert: b, values: [{ ...values, createdAt: null }] });
   // @ts-expect-error: Book.order uses numbers, not strings
   em.execute({ update: b, set: { order: "1" }, allowAll: true });
   // @ts-expect-error: expression domains must match assignments
   em.execute({ update: b, set: { order: sql<string>`'1'` }, allowAll: true });
   // @ts-expect-error: zero-row scalar subqueries are nullable until a fallback is supplied
-  em.execute({ insert: b, values: { ...values, title: sourceTitle } });
+  em.execute({ insert: b, values: [{ ...values, title: sourceTitle }] });
   // @ts-expect-error: Book IDs cannot satisfy an Author FK
-  em.execute({ insert: b, values: { ...values, authorId: bookId } });
+  em.execute({ insert: b, values: [{ ...values, authorId: bookId }] });
   // @ts-expect-error: nullable FKs still retain the Author ID brand
   em.execute({ update: b, set: { reviewerId: bookId }, allowAll: true });
   // @ts-expect-error: an explicit INSERT primary key must have the target's ID brand
-  em.execute({ insert: b, values: { ...values, id: authorId } });
+  em.execute({ insert: b, values: [{ ...values, id: authorId }] });
   // @ts-expect-error: UPDATE cannot write a primary key, even to its current value
   em.execute({ update: b, set: { title: "Revised", id: bookId }, where: b.id.eq(bookId) });
   // @ts-expect-error: UPDATE key exclusion applies before pruning undefined
@@ -541,17 +552,17 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When passing nonliteral assignments or ORM relationship inputs
   // Then only supported physical columns can be written
   // @ts-expect-error: domain relationship names are not SQL column names
-  em.execute({ insert: b, values: unknownValues });
+  em.execute({ insert: b, values: [unknownValues] });
   // @ts-expect-error: unknown fields must also be checked on reusable UPDATE objects
   em.execute({ update: b, set: unknownSet, allowAll: true });
   // @ts-expect-error: nonliteral bulk rows cannot hide unknown fields
   em.execute({ insert: b, values: unknownBulk });
   // @ts-expect-error: nested creation is not a persisted reference
-  em.execute({ insert: b, values: { ...values, authorId: { firstName: "New" } } });
+  em.execute({ insert: b, values: [{ ...values, authorId: { firstName: "New" } }] });
   // @ts-expect-error: polymorphic references have no supported single-column assignment
   em.execute({ update: c, set: { parent: authorId }, allowAll: true });
   // @ts-expect-error: many-to-many collections cannot be assigned
-  em.execute({ insert: b, values: { ...values, tags: [] } });
+  em.execute({ insert: b, values: [{ ...values, tags: [] }] });
   // @ts-expect-error: inverse collections require ORM relationship processing
   em.execute({ update: a, set: { books: [] }, allowAll: true });
   // @ts-expect-error: inverse one-to-one references are not owning FKs
@@ -629,7 +640,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When expressions refer to rows absent from the mutation's lexical scope
   // Then INSERT VALUES has no target row, and UPDATE/RETURNING do not add implicit joins
   // @ts-expect-error: INSERT VALUES cannot read its target title directly
-  em.execute({ insert: b, values: { ...values, title: b.title } });
+  em.execute({ insert: b, values: [{ ...values, title: b.title }] });
   // @ts-expect-error: UPDATE SET cannot read an unrelated source alias
   em.execute({ update: b, set: { title: source.title }, allowAll: true });
   // @ts-expect-error: source scope is independent of target RETURNING scope
@@ -638,19 +649,19 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // Given a nonliteral mutation carrying an unknown root clause
   const unknownStatement = { ...insert, typo: true };
   // And a valid read POJO spread together with an INSERT root
-  const readMutation = { ...sourceRead, insert: b, values };
+  const readMutation = { ...sourceRead, insert: b, values: [values] };
   // When mixing operation roots, assignments, read clauses, or future extension syntax
   // Then exactly one supported statement shape is accepted, including nonliteral POJOs
   // @ts-expect-error: unknown roots are not statements
-  em.execute({ upsert: b, values });
+  em.execute({ upsert: b, values: [values] });
   // @ts-expect-error: INSERT and UPDATE roots are mutually exclusive
-  em.execute({ insert: b, values, update: b, set: { title: "Revised" }, allowAll: true });
+  em.execute({ insert: b, values: [values], update: b, set: { title: "Revised" }, allowAll: true });
   // @ts-expect-error: UPDATE and DELETE roots are mutually exclusive
   em.execute({ update: b, set: { title: "Revised" }, delete: b, allowAll: true });
   // @ts-expect-error: INSERT and DELETE roots are mutually exclusive
-  em.execute({ insert: b, values, delete: b });
+  em.execute({ insert: b, values: [values], delete: b });
   // @ts-expect-error: an undefined second operation key is still an excluded root
-  em.execute({ insert: b, values, delete: undefined });
+  em.execute({ insert: b, values: [values], delete: undefined });
   // @ts-expect-error: UNION cannot share a mutation root
   em.execute({ ...insert, union: [sourceRead, sourceRead] });
   // @ts-expect-error: UNION ALL cannot share a mutation root
@@ -664,9 +675,9 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: EXCEPT ALL cannot share a mutation root
   em.execute({ ...deletion, exceptAll: [sourceRead, sourceRead] });
   // @ts-expect-error: INSERT must choose VALUES or SELECT, not both
-  em.execute({ insert: b, values, from: sourceRead });
+  em.execute({ insert: b, values: [values], from: sourceRead });
   // @ts-expect-error: an undefined from key does not remove the second INSERT source
-  em.execute({ insert: b, values, from: undefined });
+  em.execute({ insert: b, values: [values], from: undefined });
   // @ts-expect-error: INSERT requires a source
   em.execute({ insert: b });
   // @ts-expect-error: UPDATE requires SET
@@ -674,11 +685,11 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // @ts-expect-error: DELETE has no assignments
   em.execute({ delete: b, set: { title: "Revised" }, allowAll: true });
   // @ts-expect-error: INSERT has no user target-row predicate
-  em.execute({ insert: b, values, where: b.id.eq(bookId) });
+  em.execute({ insert: b, values: [values], where: b.id.eq(bookId) });
   // @ts-expect-error: INSERT has no full-table guard opt-out
-  em.execute({ insert: b, values, allowAll: true });
+  em.execute({ insert: b, values: [values], allowAll: true });
   // @ts-expect-error: INSERT has no target-row soft-delete policy
-  em.execute({ insert: b, values, softDeletes: "include" });
+  em.execute({ insert: b, values: [values], softDeletes: "include" });
   // @ts-expect-error: unknown nonliteral clauses must not escape through inference
   em.execute(unknownStatement);
   // @ts-expect-error: a read root cannot hide a mutation through another execute overload
@@ -748,7 +759,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // When targets are entities, relationships, read values, or inherited table families
   // Then mutation support is limited to ordinary non-inherited entity aliases
   // @ts-expect-error: an entity constructor is not an alias
-  em.execute({ insert: Book, values });
+  em.execute({ insert: Book, values: [values] });
   // @ts-expect-error: an entity instance is not a target alias
   em.execute({ delete: author, allowAll: true });
   // @ts-expect-error: a table-name string is not a target alias
@@ -856,7 +867,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // Given valid Book inputs passed to a function with union-typed parameters
   // When checking its body independently of these arguments
   // Then initializer narrowing cannot remove the invalid union alternatives from the assertions
-  unionInputAssertions(sourceRead, values, [values]);
+  unionInputAssertions(sourceRead, [values]);
 
   // Given an otherwise compatible nonliteral source with unsupported CTE declarations
   const sourceWithCte = { ...sourceRead, with: { copied: sourceValue } };
@@ -969,23 +980,19 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   // Given valid target expressions and domain values passed to union-typed scope parameters
   // When the assertion function retains both valid and unrelated-source alternatives
   // Then no valid union member can hide another member's out-of-scope column
-  unionScopeAssertions({ title: b.title }, values, b.title, { title: b.title });
+  unionScopeAssertions({ title: b.title }, [values], b.title, { title: b.title });
 
   /** Retains every source and row alternative instead of narrowing to the structurally simpler valid input. */
   function unionInputAssertions(
     sourceOrExtra: typeof sourceRead | typeof extraSource,
-    valuesOrExtra: typeof values | typeof unknownValues,
     rowsOrExtra: readonly (typeof values | typeof unknownValues)[],
   ) {
     // Given a source parameter that can select either valid Book fields or an extra name field
-    // And a VALUES parameter that can contain an unsupported author_id field
-    // And readonly bulk rows whose element union retains the unsupported field
+    // And readonly VALUES rows whose element union retains an unsupported field
     // When validating unions rather than only their shared field names
     // Then every possible source and assignment member must have supported target fields
     // @ts-expect-error: a valid source alternative cannot hide another alternative's extra output key
     em.execute({ insert: b, from: sourceOrExtra });
-    // @ts-expect-error: a valid VALUES alternative cannot hide another alternative's unknown field
-    em.execute({ insert: b, values: valuesOrExtra });
     // @ts-expect-error: readonly arrays must validate all keys in their row element union
     em.execute({ insert: b, values: rowsOrExtra });
   }
@@ -993,7 +1000,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   /** Checks expression sources across every union member without initializer narrowing or casts. */
   function unionScopeAssertions(
     set: { title: typeof b.title } | { title: typeof source.title },
-    row: typeof values | (Omit<typeof values, "title"> & { title: typeof b.title }),
+    rows: readonly (typeof values | (Omit<typeof values, "title"> & { title: typeof b.title }))[],
     scalarReturning: typeof b.title | typeof source.title,
     pojoReturning: { title: typeof b.title } | { title: typeof source.title },
   ) {
@@ -1006,7 +1013,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     // @ts-expect-error: a valid target SET expression cannot hide an unrelated source with the same key
     em.execute({ update: b, set, allowAll: true });
     // @ts-expect-error: a domain VALUES alternative cannot hide a target-column read before a row exists
-    em.execute({ insert: b, values: row });
+    em.execute({ insert: b, values: rows });
     // @ts-expect-error: scalar RETURNING must validate both expression-source alternatives
     em.execute({ delete: b, allowAll: true, returning: scalarReturning });
     // @ts-expect-error: same-key POJO RETURNING must validate both expression-source alternatives

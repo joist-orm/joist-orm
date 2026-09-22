@@ -43,16 +43,18 @@ describe("em.execute", () => {
     // When inserting domain arrays through the generated codecs
     const inserted = await em.execute({
       insert: s,
-      values: {
-        smallint: 1,
-        integer: 1,
-        bigint: 1n,
-        decimal: 1.5,
-        real: 1.5,
-        doublePrecision: 1.5,
-        decimalSamples: [0, 1.25, 2.5],
-        bigintSamples: [0n, 9007199254740993n],
-      },
+      values: [
+        {
+          smallint: 1,
+          integer: 1,
+          bigint: 1n,
+          decimal: 1.5,
+          real: 1.5,
+          doublePrecision: 1.5,
+          decimalSamples: [0, 1.25, 2.5],
+          bigintSamples: [0n, 9007199254740993n],
+        },
+      ],
       returning,
     });
     // Then RETURNING decodes array elements without scalar coercion or precision loss
@@ -112,16 +114,18 @@ describe("em.execute", () => {
     const s = table(AuthorStat);
     await em.execute({
       insert: s,
-      values: {
-        smallint: 1,
-        integer: 1,
-        bigint: 1n,
-        decimal: 1.5,
-        real: 1.5,
-        doublePrecision: 1.5,
-        decimalSamples: [],
-        bigintSamples: [],
-      },
+      values: [
+        {
+          smallint: 1,
+          integer: 1,
+          bigint: 1n,
+          decimal: 1.5,
+          real: 1.5,
+          doublePrecision: 1.5,
+          decimalSamples: [],
+          bigintSamples: [],
+        },
+      ],
     });
     // When storing NULL elements alongside zero, a fraction, and a bigint beyond Number's exact range
     const result = await em.execute({
@@ -148,7 +152,7 @@ describe("em.execute", () => {
     const t = table(Tag);
     const history = query({ from: u, where: u.id.eq(user.id), select: u.passwordHistory });
     // When a Tag mutation returns the stored password history
-    const inserted = await em.execute({ insert: t, values: { name: "Password audit" }, returning: history });
+    const inserted = await em.execute({ insert: t, values: [{ name: "Password audit" }], returning: history });
     // Then each returned element is the domain object, not its encoded text
     expect(inserted.rows).toEqual([[password]]);
     expect(inserted.rows[0]![0].matches("previous password")).toBe(true);
@@ -182,7 +186,7 @@ describe("em.execute", () => {
       // When writing search without running the ORM's derived-field reactions
       const inserted = await em.execute({
         insert: a,
-        values: { firstName: "Importer", numberOfBooks: 0, search: "catalog" },
+        values: [{ firstName: "Importer", numberOfBooks: 0, search: "catalog" }],
         returning: { isFunny: a.isFunny, bookComments: a.bookComments },
       });
       // Then the SQL false default is retained and nullable derived storage decodes as undefined
@@ -205,7 +209,7 @@ describe("em.execute", () => {
       // When inserting a Book without ORM defaults or timestamp assignments
       const result = await em.execute({
         insert: b,
-        values: { id: "b:10", title: "Imported", authorId: "a:1", notes: "Explicit notes" },
+        values: [{ id: "b:10", title: "Imported", authorId: "a:1", notes: "Explicit notes" }],
         returning: {
           id: b.id,
           title: b.title,
@@ -287,7 +291,11 @@ describe("em.execute", () => {
       // Given a frozen Tag statement that must not acquire aliases or normalized values
       const em = newEntityManager();
       const t = table(Tag);
-      const statement = Object.freeze({ insert: t, values: Object.freeze({ name: "Reusable" }), returning: t.id });
+      const statement = Object.freeze({
+        insert: t,
+        values: Object.freeze([Object.freeze({ name: "Reusable" })]),
+        returning: t.id,
+      });
       // When executing the same statement twice
       const first = await em.execute(statement);
       // And a second execution inserts another Tag rather than reusing a hydrated entity
@@ -295,7 +303,7 @@ describe("em.execute", () => {
       // Then each execution returns its own scalar id and leaves the input unchanged
       expect(first).toEqual({ rowCount: 1, rows: ["t:1"] });
       expect(second).toEqual({ rowCount: 1, rows: ["t:2"] });
-      expect(statement.values).toEqual({ name: "Reusable" });
+      expect(statement.values).toEqual([{ name: "Reusable" }]);
       expect(Object.keys(statement)).toEqual(["insert", "values", "returning"]);
       expect(em.entities).toEqual([]);
     });
@@ -350,7 +358,10 @@ describe("em.execute", () => {
       const em = newEntityManager();
       const b = table(Book);
       // When importing a Book that references the missing Author
-      const result = em.execute({ insert: b, values: { title: "Orphan", authorId: "a:999", notes: "Imported" } });
+      const result = em.execute({
+        insert: b,
+        values: [{ title: "Orphan", authorId: "a:999", notes: "Imported" }],
+      });
       // Then the database foreign-key constraint rejects the write without ORM fixups
       await expect(result).rejects.toMatchObject({ code: "23503" });
       expect(await select("books")).toEqual([]);
@@ -366,7 +377,7 @@ describe("em.execute", () => {
       const name = query({ from: t, where: t.id.eq("t:1"), select: t.name }).coalesce("Fallback");
       resetQueryCount();
       // When using that scalar expression in VALUES
-      const result = await em.execute({ insert: t, values: { name }, returning: t.name });
+      const result = await em.execute({ insert: t, values: [{ name }], returning: t.name });
       // Then the source is evaluated inside PostgreSQL and RETURNING refers to the inserted row
       expect(result).toEqual({ rowCount: 1, rows: ["Source"] });
       expect(queries).toMatchInlineSnapshot(`
@@ -867,7 +878,7 @@ describe("em.execute", () => {
       const a = table(Author);
       await em.execute({
         insert: a,
-        values: { firstName: "Falsy", numberOfBooks: 0, lastName: "Original", age: 42, isFunny: true },
+        values: [{ firstName: "Falsy", numberOfBooks: 0, lastName: "Original", age: 42, isFunny: true }],
       });
       // When replacing those values with empty text, zero, and false
       const result = await em.execute({
@@ -889,7 +900,7 @@ describe("em.execute", () => {
       // When inserting the Date as a domain value
       const result = await em.execute({
         insert: a,
-        values: { firstName: "Deleted", numberOfBooks: 0, deletedAt: deletedAt },
+        values: [{ firstName: "Deleted", numberOfBooks: 0, deletedAt: deletedAt }],
         returning: a.deletedAt,
       });
       // Then the returned Date and stored timestamp retain millisecond precision
@@ -905,7 +916,7 @@ describe("em.execute", () => {
       // When writing the domain object and returning its schema-backed column
       const result = await em.execute({
         insert: a,
-        values: { firstName: "Importer", numberOfBooks: 0, businessAddress: businessAddress },
+        values: [{ firstName: "Importer", numberOfBooks: 0, businessAddress: businessAddress }],
         returning: a.businessAddress,
       });
       // Then read-time parsing strips the marker without changing the persisted JSON
@@ -922,7 +933,7 @@ describe("em.execute", () => {
       // When writing invalid domain JSON without requesting read-time decoding
       const result = await em.execute({
         insert: a,
-        values: { firstName: "Importer", numberOfBooks: 0, address },
+        values: [{ firstName: "Importer", numberOfBooks: 0, address }],
       });
       // Then the write persists the JSON, while a public read applies Superstruct validation
       expect(result).toEqual({ rowCount: 1, rows: [] });
@@ -938,19 +949,21 @@ describe("em.execute", () => {
       // When writing the supported native and schema-backed fields without an entity setter
       const result = await em.execute({
         insert: a,
-        values: {
-          firstName: "Codecs",
-          numberOfBooks: 0,
-          rangeOfBooks: BookRange.Few,
-          favoriteColors: [Color.Red, Color.Green],
-          favoriteShape: FavoriteShape.Triangle,
-          nickNames: ["One", "Two"],
-          address: { street: "Home" },
-          businessAddress: { street: "Work" },
-          quotes: ["First", "Second"],
-          numberOfAtoms: 9007199254740993n,
-          graduated,
-        },
+        values: [
+          {
+            firstName: "Codecs",
+            numberOfBooks: 0,
+            rangeOfBooks: BookRange.Few,
+            favoriteColors: [Color.Red, Color.Green],
+            favoriteShape: FavoriteShape.Triangle,
+            nickNames: ["One", "Two"],
+            address: { street: "Home" },
+            businessAddress: { street: "Work" },
+            quotes: ["First", "Second"],
+            numberOfAtoms: 9007199254740993n,
+            graduated,
+          },
+        ],
         returning: {
           range: a.rangeOfBooks,
           colors: a.favoriteColors,
@@ -1086,7 +1099,7 @@ describe("em.execute", () => {
         // When a Tag INSERT returns the scalar password subquery
         const inserted = await em.execute({
           insert: t,
-          values: { name: "Credential audit" },
+          values: [{ name: "Credential audit" }],
           returning: passwordQuery,
         });
         // Then the subquery retains its custom column decoder instead of returning encoded text
@@ -1252,7 +1265,7 @@ describe("em.execute", () => {
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
       const t = table(Tag);
       // When an empty object is used as a row rather than the documented empty-array shortcut
-      await expect(execute({ insert: t, values: fields })).rejects.toThrow(
+      await expect(execute({ insert: t, values: [fields] })).rejects.toThrow(
         "insert requires at least one defined field",
       );
       // And an empty row inside a nonempty bulk array must not become DEFAULT VALUES
@@ -1278,7 +1291,7 @@ describe("em.execute", () => {
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
       const b = table(Book);
       // When executing the incomplete import
-      await expect(execute({ insert: b, values })).rejects.toThrow(`INSERT requires ${field}`);
+      await expect(execute({ insert: b, values: [values] })).rejects.toThrow(`INSERT requires ${field}`);
       // Then execute does not run configuration defaults or send invalid SQL
       expect(queries).toEqual([]);
     });
@@ -1303,7 +1316,7 @@ describe("em.execute", () => {
       const b = table(Book);
       // When a SQL INSERT tries to reference the unpersisted Author
       await expect(
-        em.execute({ insert: b, values: { title: "Premature", authorId: author, notes: "Imported" } }),
+        em.execute({ insert: b, values: [{ title: "Premature", authorId: author, notes: "Imported" }] }),
       ).rejects.toThrow("Cannot reference an unflushed Author, even with an assigned ID");
       // And UPDATE must reject the same unflushed reference before issuing SQL
       await expect(em.execute({ update: b, set: { authorId: author }, allowAll: true })).rejects.toThrow(
@@ -1323,7 +1336,10 @@ describe("em.execute", () => {
         const b = table(Book);
         // When the unknown, collection, inverse, or non-domain key is supplied with undefined
         await expect(
-          execute({ insert: b, values: { title: "Import", authorId: "a:1", notes: "Explicit", [field]: undefined } }),
+          execute({
+            insert: b,
+            values: [{ title: "Import", authorId: "a:1", notes: "Explicit", [field]: undefined }],
+          }),
         ).rejects.toThrow(`Unsupported SQL mutation field Book.${field}`);
         // And UPDATE must validate keys before pruning their undefined values
         await expect(
@@ -1403,7 +1419,7 @@ describe("em.execute", () => {
         const a = table(Author);
         const statement =
           operation === "insert"
-            ? { insert: a, values: { firstName: "Null initials", numberOfBooks: 0, initials: null } }
+            ? { insert: a, values: [{ firstName: "Null initials", numberOfBooks: 0, initials: null }] }
             : { update: a, set: { initials: null }, allowAll: true };
         // When explicitly assigning SQL NULL rather than omission or DEFAULT
         await expect(execute(statement)).rejects.toThrow("Author.initials is physically NOT NULL");
@@ -1418,11 +1434,11 @@ describe("em.execute", () => {
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
       const t = table(Tag);
       // When a direct column or SQL expression tries to read the row being inserted
-      await expect(execute({ insert: t, values: { name: t.name } })).rejects.toThrow(
+      await expect(execute({ insert: t, values: [{ name: t.name }] })).rejects.toThrow(
         "is not in this query's from/join",
       );
       // And wrapping the same target reference in a SQL fragment cannot add a source scope
-      await expect(execute({ insert: t, values: { name: sql<string>`upper(${t.name})` } })).rejects.toThrow(
+      await expect(execute({ insert: t, values: [{ name: sql<string>`upper(${t.name})` }] })).rejects.toThrow(
         "is not in this query's from/join",
       );
       // Then both invalid references fail before SQL
@@ -1520,8 +1536,13 @@ describe("em.execute", () => {
       await expect(execute({ delete: query({ from: t, select: { name: t.name } }), allowAll: true })).rejects.toThrow(
         "A mutation target must be a table",
       );
-      // And primitive VALUES are not domain-field assignments
-      await expect(execute({ insert: t, values: "name" })).rejects.toThrow("insert assignments must be a field POJO");
+      // And VALUES must be an array rather than a single row or primitive
+      await expect(execute({ insert: t, values: { name: "Single" } })).rejects.toThrow(
+        "INSERT values must be an array of field POJOs",
+      );
+      await expect(execute({ insert: t, values: "name" })).rejects.toThrow(
+        "INSERT values must be an array of field POJOs",
+      );
       // And an array of UPDATE sets does not mean a bulk UPDATE
       await expect(execute({ update: t, set: [{ name: "Changed" }], allowAll: true })).rejects.toThrow(
         "update assignments must be a field POJO",
@@ -1561,7 +1582,7 @@ describe("em.execute", () => {
       const read = em.query.bind(em) as (statement: unknown) => Promise<unknown[]>;
       const readValue = query as (statement: unknown) => unknown;
       const t = table(Tag);
-      const mutation = { insert: t, values: { name: "Imported" }, returning: { name: t.name } };
+      const mutation = { insert: t, values: [{ name: "Imported" }], returning: { name: t.name } };
       // When a mutation is passed to the ordinary read executor
       await expect(read(mutation)).rejects.toThrow(
         "Read queries do not support mutation clause 'insert'; use em.execute",
@@ -2143,7 +2164,7 @@ describe("em.execute", () => {
         try {
           // When inserting a Tag without the required physical column metadata
           // Then INSERT and UPDATE fail clearly before issuing SQL
-          await expect(em.execute({ insert: t, values: { name: "Forbidden" } })).rejects.toThrow(
+          await expect(em.execute({ insert: t, values: [{ name: "Forbidden" }] })).rejects.toThrow(
             "Missing physical metadata for Tag.name; run codegen",
           );
           // When updating Tag with the same incomplete metadata
@@ -2176,7 +2197,7 @@ describe("em.execute", () => {
       try {
         // When INSERT would need the unavailable domain-value write encoder
         // Then the Tag insertion is rejected instead of using the filter encoder
-        await expect(em.execute({ insert: t, values: { name: "Forbidden" } })).rejects.toThrow(
+        await expect(em.execute({ insert: t, values: [{ name: "Forbidden" }] })).rejects.toThrow(
           "The codec for Tag.name does not support SQL value writes",
         );
         // When UPDATE needs the unavailable domain-value write encoder
@@ -2375,13 +2396,15 @@ describe("em.execute", () => {
     // When an Author is inserted with declaration keys and a SQL expression
     const result = await em.execute({
       insert: authors,
-      values: {
-        firstName: "Raw",
-        initials: "R",
-        numberOfBooks: 0,
-        tagsOfAllBooks: "",
-        age: sql<number>`${20} + 1`,
-      },
+      values: [
+        {
+          firstName: "Raw",
+          initials: "R",
+          numberOfBooks: 0,
+          tagsOfAllBooks: "",
+          age: sql<number>`${20} + 1`,
+        },
+      ],
       returning: { id: authors.id, age: authors.age },
     });
 

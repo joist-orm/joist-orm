@@ -12,7 +12,7 @@ const b = table(Book);
 
 const insert = {
   insert: b,
-  values: { title: "Imported Book", author_id: "a:1", notes: "Imported without hooks" },
+  values: [{ title: "Imported Book", author_id: "a:1", notes: "Imported without hooks" }],
   returning: { id: b.id, title: b.title },
 } satisfies InsertStatement<Book>;
 const inserted = await em.execute(insert);
@@ -44,12 +44,12 @@ Every call returns `{ rowCount: number; rows: R[] }`. `rowCount` is the database
 
 ## Values and insert sources
 
-`values` accepts one column POJO or an array. Use physical column names (`author_id`, not `author`; `first_name`, not `firstName`) in both `values` and UPDATE `set`. Values remain domain values encoded by the existing write codecs, or typed SQL expressions. Owning FK columns accept the correct ID type or a persisted entity, not nested creation options or new/unflushed entities, even with preassigned IDs. ID-only references rely on database FK checks. Use `table`/`tables` for all SQL statements; `alias`/`aliases` are only for `em.find`.
+`values` accepts a readonly array of column POJOs, including a one-element array for a single row. Use physical column names (`author_id`, not `author`; `first_name`, not `firstName`) in both `values` and UPDATE `set`. Values remain domain values encoded by the existing write codecs, or typed SQL expressions. Owning FK columns accept the correct ID type or a persisted entity, not nested creation options or new/unflushed entities, even with preassigned IDs. ID-only references rely on database FK checks. Use `table`/`tables` for all SQL statements; `alias`/`aliases` are only for `em.find`.
 
 - Missing or `undefined` INSERT fields use SQL defaults, including per-row `DEFAULT` cells in bulk inserts. Missing/`undefined` UPDATE fields leave columns unchanged.
 - Explicit `null` means SQL `NULL`, checked against physical nullability before codecs run. For a stored JSON `null`, use a suitably typed expression such as `` sql<object>`'null'::jsonb` `` instead.
 - Explicit SQL defaults use expressions such as `` sql<string>`DEFAULT` ``. PostgreSQL validates supplied expressions/defaults; Joist does not apply entity configuration defaults.
-- A standalone `values: []` checks statement validity and write permissions, then returns `{ rowCount: 0, rows: [] }` without SQL or requiring driver count support. This shortcut is only for standalone execution, not CTE composition. `values: {}`, any row with no defined fields, and an empty/pruned UPDATE `set` fail; none means `DEFAULT VALUES`.
+- A standalone `values: []` checks statement validity and write permissions, then returns `{ rowCount: 0, rows: [] }` without SQL or requiring driver count support. This shortcut is only for standalone execution, not CTE composition. `values: [{}]`, any row with no defined fields, and an empty/pruned UPDATE `set` fail; none means `DEFAULT VALUES`.
 
 Required columns must appear in every VALUES row or INSERT source projection. In this schema, Book requires `title`, `author_id`, and `notes`, despite ORM defaults for the latter two; Author requires `first_name` and the derived `number_of_books`.
 

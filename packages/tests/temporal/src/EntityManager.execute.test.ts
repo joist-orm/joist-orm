@@ -58,7 +58,7 @@ describe("EntityManager.execute", () => {
     // When inserting the domain value without creating a managed Author
     const inserted = await em.execute({
       insert: a,
-      values: { firstName: "Temporal", birthday: jan1, ...testCase.values },
+      values: [{ firstName: "Temporal", birthday: jan1, ...testCase.values }],
       returning,
     });
 
@@ -96,16 +96,18 @@ describe("EntityManager.execute", () => {
     // When VALUES receives physical arrays rather than scalar filter parameters
     const inserted = await em.execute({
       insert: a,
-      values: {
-        firstName: "Arrays",
-        birthday: jan1,
-        childrenBirthdays: [jan1, jan2],
-        maybeBirthdays: [jan2, jan3],
-        times: [ten01AndMicros, ten02],
-        maybeTimes: [ten02, ten01AndMicros],
-        timestamps: [jan1at10am, jan1at11am],
-        maybeTimestamps: [jan1at11am, jan1at10am],
-      },
+      values: [
+        {
+          firstName: "Arrays",
+          birthday: jan1,
+          childrenBirthdays: [jan1, jan2],
+          maybeBirthdays: [jan2, jan3],
+          times: [ten01AndMicros, ten02],
+          maybeTimes: [ten02, ten01AndMicros],
+          timestamps: [jan1at10am, jan1at11am],
+          maybeTimestamps: [jan1at11am, jan1at10am],
+        },
+      ],
       returning,
     });
 
@@ -232,13 +234,15 @@ describe("EntityManager.execute", () => {
     // When inserting the ZonedDateTime scalar and both physical array fields
     const inserted = await em.execute({
       insert: b,
-      values: {
-        title: "Timezones",
-        authorId: "a:1",
-        publishedAt: winter,
-        timestampTzs: [winter, summer],
-        maybeTimestampTzs: [summer, winter],
-      },
+      values: [
+        {
+          title: "Timezones",
+          authorId: "a:1",
+          publishedAt: winter,
+          timestampTzs: [winter, summer],
+          maybeTimestampTzs: [summer, winter],
+        },
+      ],
       returning: { publishedAt: b.publishedAt, instants: b.timestampTzs, maybeInstants: b.maybeTimestampTzs },
     });
 
@@ -486,13 +490,15 @@ describe("EntityManager.execute", () => {
       const a = table(Author);
       const inserted = await em.execute({
         insert: a,
-        values: {
-          firstName: "Arrays",
-          birthday: jan1,
-          maybeBirthdays: [jan2],
-          maybeTimes: [ten01AndMicros],
-          maybeTimestamps: [jan1at11am],
-        },
+        values: [
+          {
+            firstName: "Arrays",
+            birthday: jan1,
+            maybeBirthdays: [jan2],
+            maybeTimes: [ten01AndMicros],
+            maybeTimestamps: [jan1at11am],
+          },
+        ],
         returning: a[testCase.field],
       });
       // And the selected nullable column supplies its real array decoder to scalar RETURNING
@@ -555,7 +561,7 @@ describe("EntityManager.execute", () => {
     const b = table(Book);
     await em.execute({
       insert: b,
-      values: { title: "Instants", authorId: "a:1", publishedAt: jan2DateTime, maybeTimestampTzs: [jan2DateTime] },
+      values: [{ title: "Instants", authorId: "a:1", publishedAt: jan2DateTime, maybeTimestampTzs: [jan2DateTime] }],
     });
 
     // When replacing the nullable array with an empty array
@@ -995,7 +1001,7 @@ describe("EntityManager.execute", () => {
     // When VALUES assigns all four kinds from ordinary scalar subqueries
     const inserted = await em.execute({
       insert: a,
-      values: { firstName: "Copied", birthday, time, timestamp, createdAt: createdAt },
+      values: [{ firstName: "Copied", birthday, time, timestamp, createdAt: createdAt }],
       returning: { birthday: a.birthday, time: a.time, timestamp: a.timestamp, createdAt: a.createdAt },
     });
 

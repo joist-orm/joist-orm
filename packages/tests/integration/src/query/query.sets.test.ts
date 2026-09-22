@@ -1451,15 +1451,17 @@ describe("em.query / sets", () => {
       // And an AuthorStat whose decimal and physical samples contain the same fractional value
       await em.execute({
         insert: s,
-        values: {
-          smallint: 1,
-          integer: 1,
-          bigint: 1n,
-          decimal: 1.25,
-          real: 1.25,
-          doublePrecision: 1.25,
-          decimalSamples: [1.25],
-        },
+        values: [
+          {
+            smallint: 1,
+            integer: 1,
+            bigint: 1n,
+            decimal: 1.25,
+            real: 1.25,
+            doublePrecision: 1.25,
+            decimalSamples: [1.25],
+          },
+        ],
       });
       // When combining a decimal column with PostgreSQL's numeric AVG output
       const values = query({

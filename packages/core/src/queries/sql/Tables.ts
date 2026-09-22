@@ -47,6 +47,7 @@ import {
   selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
 import { kqDot } from "src/queries/sql/keywords.ts";
+import type { QueryArg, QueryJoinInput, QuerySource } from "src/queries/sql/query.ts";
 import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
 import type { Column } from "src/serde/columns.ts";
 import type { TypeInfo } from "src/serde/TypeInfo.ts";
@@ -365,6 +366,14 @@ export interface EntityColumn<
   eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   ne(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   // Adding `| null` for GraphQL support
+  in<
+    F extends QuerySource,
+    const S extends ExprLike<IdOf<T> | null>,
+    J extends QueryJoinInput = [],
+    Name extends string = "?",
+  >(
+    value: QueryArg<F, S, J, Name>,
+  ): SqlCondition;
   in(value: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
   /** Applies an IN condition unless the list is empty, null, or undefined. */
   inNonEmpty(value: readonly (T | IdOf<T> | null)[] | null | undefined): SqlCondition;
@@ -377,6 +386,12 @@ export interface EntityColumn<
 }
 
 export const tableMgmt = Symbol("tableMgmt");
+export const inQueryCondition: unique symbol = Symbol("joist.inQueryCondition");
+
+/** Defers a direct IN query literal to query.ts, which owns query pruning and SQL generation. */
+export interface InQueryCondition {
+  readonly [inQueryCondition]: { column: BaseExpr; query: object };
+}
 
 export function getTableMgmt<T extends Entity>(table: TableFor<T>): TableMgmt;
 export function getTableMgmt(table: CustomTableFor): CustomTableMgmt;
@@ -706,13 +721,22 @@ class EntityColumnImpl<T> extends TableColumn implements EntityColumn<T> {
     return new TaggedIdExpr(this) as unknown as Expr<string, string>;
   }
 
-  in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
+  in<
+    F extends QuerySource,
+    const S extends ExprLike<IdOf<T> | null>,
+    J extends QueryJoinInput = [],
+    Name extends string = "?",
+  >(values: QueryArg<F, S, J, Name>): SqlCondition;
+  in(values: readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
+  in(values: object | readonly (T | IdOf<T> | null)[] | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
       throw new Error("Unsupported");
     } else if (isExpr(values)) {
       return this.inList("IN", values);
+    } else if (!Array.isArray(values)) {
+      return { [inQueryCondition]: { column: this, query: values } } as unknown as SqlCondition;
     } else if (values.includes(null)) {
       // Like `PrimitiveColumn.in`, split `[a1, null]` into `IS NULL OR IN (...)`
       const isNull = this.addCondition({ kind: "is-null" });

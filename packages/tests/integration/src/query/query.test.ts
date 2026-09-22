@@ -3178,7 +3178,7 @@ describe("em.query", () => {
       const [a, b] = tables(Author, Book);
       const authors = await em.query({
         from: a,
-        where: { and: [a.id.in(query({ from: b, where: { and: [b.title.eq("b1")] }, select: b.authorId }))] },
+        where: { and: [a.id.in({ from: b, where: { and: [b.title.eq("b1")] }, select: b.authorId })] },
         select: a,
       });
       expect(authors).toMatchEntity([{ firstName: "a1" }]);

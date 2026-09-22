@@ -359,6 +359,10 @@ async function typeAssertions() {
   expectTypeOf(scalar).toEqualTypeOf<ScalarQuery<number>>();
   // A single-column subquery is an IN-list target, checked against the column's id type
   a.id.in(query({ from: b, select: b.authorId }));
+  // The same scalar query can be passed directly and keeps its select-domain checks
+  a.id.in({ from: b, select: b.authorId });
+  // @ts-expect-error: Book IDs do not belong to an Author ID column
+  a.id.in({ from: b, select: b.id });
   // Non-empty IN accepts readonly id and scalar lists but not subqueries
   a.id.inNonEmpty(["a:1"] as const);
   a.firstName.inNonEmpty(["a1"] as const);

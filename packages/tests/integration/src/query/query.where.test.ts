@@ -372,6 +372,31 @@ describe("em.query / where", () => {
       expect(rows).toEqual([{ name: "Alice" }]);
       expectTypeOf(rows).toEqualTypeOf<{ name: string }[]>();
     });
+
+    it.each([false, true])("prunes an optional IN query literal when disabled (%s)", async (enabled) => {
+      // Given Alice with a matching Book
+      await insertAuthor({ id: 1, first_name: "Alice" });
+      await insertBook({ title: "Wanted", author_id: 1 });
+      // And Bob without a matching Book
+      await insertAuthor({ id: 2, first_name: "Bob" });
+      const em = newEntityManager();
+      const [a, b] = tables(Author, Book);
+
+      // When filtering Authors through an optional direct Book query
+      const names = await em.query({
+        from: a,
+        where: a.id.in({
+          from: b,
+          where: b.title.eq(enabled ? "Wanted" : undefined),
+          select: b.authorId,
+        }),
+        select: a.firstName,
+        orderBy: [{ sort: a.firstName, order: "ASC" }],
+      });
+
+      // Then disabling the Book title removes the whole IN restriction
+      expect(names).toEqual(enabled ? ["Alice"] : ["Alice", "Bob"]);
+    });
   });
 });
 

@@ -19,7 +19,7 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       // When inserting an Author with scalar PK RETURNING
       const author = await em.execute({
         insert: a,
-        values: { id: authorId, firstName: "Owner", createdAt: timestamp, updatedAt: timestamp },
+        values: [{ id: authorId, firstName: "Owner", createdAt: timestamp, updatedAt: timestamp }],
         returning: a.id,
       });
       // Then the scalar Author id retains its public tag
@@ -28,14 +28,16 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       // When assigning the returned Author id and the physically required status to a Book
       const book = await em.execute({
         insert: b,
-        values: {
-          id: bookId,
-          title: "Imported",
-          authorId: author.rows[0],
-          statusId: BookStatus.Draft,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
+        values: [
+          {
+            id: bookId,
+            title: "Imported",
+            authorId: author.rows[0],
+            statusId: BookStatus.Draft,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
         returning: {
           id: b.id,
           author: b.authorId,
@@ -83,14 +85,16 @@ describe("EntityManager.execute with tagged UUID ids", () => {
       // When reinserting the returned PK and FK without converting either value
       const restored = await em.execute({
         insert: b,
-        values: {
-          id: deleted.rows[0].id,
-          authorId: deleted.rows[0].author,
-          title: "Restored",
-          statusId: book.rows[0].status,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
+        values: [
+          {
+            id: deleted.rows[0].id,
+            authorId: deleted.rows[0].author,
+            title: "Restored",
+            statusId: book.rows[0].status,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
         returning: b.id,
       });
       // Then scalar Book PK RETURNING remains tagged
@@ -133,7 +137,7 @@ describe("EntityManager.execute with tagged UUID ids", () => {
     delete values[field];
     // When executing an incomplete import without ORM id or timestamp generation
     // @ts-expect-error Partial values cannot guarantee the required UUID and first_name
-    const result = em.execute({ insert: a, values });
+    const result = em.execute({ insert: a, values: [values] });
     // Then Joist requires the UUID, while PostgreSQL enforces omitted conventional timestamps
     await expect(result).rejects.toThrow(
       field === "id" ? "INSERT requires Author.id" : `null value in column "${columnName}"`,

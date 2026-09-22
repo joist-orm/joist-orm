@@ -17,7 +17,7 @@ describe("EntityManager.execute with number ids", () => {
       // When inserting an Author with scalar PK RETURNING
       const author = await em.execute({
         insert: a,
-        values: { firstName: "Owner", createdAt: timestamp, updatedAt: timestamp },
+        values: [{ firstName: "Owner", createdAt: timestamp, updatedAt: timestamp }],
         returning: a.id,
       });
       // Then the Author id is a number rather than an internal tagged string
@@ -26,7 +26,7 @@ describe("EntityManager.execute with number ids", () => {
       // When assigning the returned Author id to a Book foreign key
       const book = await em.execute({
         insert: b,
-        values: { title: "Imported", authorId: author.rows[0], createdAt: timestamp, updatedAt: timestamp },
+        values: [{ title: "Imported", authorId: author.rows[0], createdAt: timestamp, updatedAt: timestamp }],
         returning: { id: b.id, author: b.authorId, createdAt: b.createdAt, updatedAt: b.updatedAt },
       });
       // Then POJO RETURNING decodes both the bigint PK and integer FK as numbers
@@ -59,13 +59,15 @@ describe("EntityManager.execute with number ids", () => {
       // When reinserting the returned PK and FK without converting either value
       const restored = await em.execute({
         insert: b,
-        values: {
-          id: deleted.rows[0].id,
-          authorId: deleted.rows[0].author,
-          title: "Restored",
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
+        values: [
+          {
+            id: deleted.rows[0].id,
+            authorId: deleted.rows[0].author,
+            title: "Restored",
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
         returning: b.id,
       });
       // Then scalar bigint PK RETURNING remains numeric
@@ -98,7 +100,7 @@ describe("EntityManager.execute with number ids", () => {
     };
     // And one timestamp is omitted even though its column has no default or trigger
     // When omitting a conventional timestamp, the mutation compiler allows PostgreSQL to enforce the schema
-    const result = em.execute({ insert: a, values: { ...values, [field]: undefined } });
+    const result = em.execute({ insert: a, values: [{ ...values, [field]: undefined }] });
     // Then PostgreSQL rejects the missing value without inserting an Author
     await expect(result).rejects.toThrow(`null value in column "${columnName}"`);
     expect(await select("authors")).toEqual([]);

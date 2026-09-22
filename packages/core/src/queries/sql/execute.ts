@@ -98,7 +98,7 @@ export type InsertStatement<
   readonly with?: WithInput;
 } & NoMutationReadClauses &
   (
-    | { readonly values: InsertValues<T> | readonly InsertValues<T>[]; readonly from?: never }
+    | { readonly values: readonly InsertValues<T>[]; readonly from?: never }
     | { readonly from: Q & CheckInsertSource<T, Q>; readonly values?: never }
   );
 
@@ -144,13 +144,13 @@ export type MutationStatement<
 
 /** Inference starts with the literal POJO; CheckMutation checks its target and every supplied key. */
 export type MutationInput = (
-  | { readonly insert: TableFor<Entity>; readonly values: object | readonly object[]; readonly from?: never }
+  | { readonly insert: TableFor<Entity>; readonly values: readonly object[]; readonly from?: never }
   | { readonly insert: TableFor<Entity>; readonly from: SetOperand; readonly values?: never }
   | { readonly update: TableFor<Entity>; readonly set: object }
   | { readonly delete: TableFor<Entity> }
   | {
       readonly insert: CustomTableFor;
-      readonly values: object | readonly object[];
+      readonly values: readonly object[];
       readonly from?: never;
     }
   | { readonly insert: CustomTableFor; readonly from: SetOperand; readonly values?: never }
@@ -177,7 +177,9 @@ export type CheckMutation<M> = M extends unknown
               ? CheckReturning<R, NameOf<TargetTable<M>>>
               : never;
           } & (
-              | (M extends { readonly values: infer V } ? { readonly values: CheckValues<T, V> } : never)
+              | (M extends { readonly values: infer V extends readonly unknown[] }
+                  ? { readonly values: CheckValues<T, V> }
+                  : never)
               | (M extends { readonly from: infer Q extends SetOperand }
                   ? { readonly from: CheckInsertSource<T, Q> }
                   : never)
@@ -260,7 +262,8 @@ export function parseStatement(arg: unknown): Plan | undefined {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");
     const required = fields.filter(([, column]) => column.insert === "required");
     if ("values" in statement) {
-      const rows = Array.isArray(statement.values) ? statement.values : [statement.values];
+      if (!Array.isArray(statement.values)) fail("INSERT values must be an array of field POJOs");
+      const rows = statement.values;
       // A VALUES cell *is* the new row, so there is no existing row for it to read: this scope skips
       // the `ctx.register(mgmt, alias)` above, so a cell naming the target fails instead of emitting a
       // `b` with no FROM clause. I.e. an UPDATE can say `set: { title: b.title }`; an INSERT cannot.
@@ -567,14 +570,12 @@ type CheckAssignments<V, Allowed, Scope> = [Exclude<UnionKeys<V>, keyof Allowed>
     }
   : "SQL assignments have unknown target fields";
 
-/** Checks one entity INSERT row or a readonly collection against writable columns. */
-type CheckValues<T extends Entity, V> =
-  | ([Extract<V, readonly unknown[]>] extends [never]
-      ? never
-      : readonly CheckAssignments<Extract<V, readonly unknown[]>[number], InsertValues<T>, never>[])
-  | ([Exclude<V, readonly unknown[]>] extends [never]
-      ? never
-      : CheckAssignments<Exclude<V, readonly unknown[]>, InsertValues<T>, never>);
+/** Checks every entity INSERT row in a readonly collection against writable columns. */
+type CheckValues<T extends Entity, V extends readonly unknown[]> = readonly CheckAssignments<
+  V[number],
+  InsertValues<T>,
+  never
+>[];
 
 /**
  * Checks a custom-table mutation against its declared primitive columns.
@@ -592,7 +593,7 @@ type CheckCustomMutation<M> = {
 } &
   // INSERT VALUES checks every row against the custom table's writable columns.
   (
-    | (M extends { readonly values: infer V }
+    | (M extends { readonly values: infer V extends readonly unknown[] }
         ? { readonly values: CheckCustomValues<CustomColumnsOf<TargetTable<M>>, V> }
         : never)
     // INSERT SELECT checks the source's names, values, and expression scopes.
@@ -613,16 +614,12 @@ type CheckCustomMutation<M> = {
     | (M extends { readonly delete: unknown } ? unknown : never)
   );
 
-/** Checks one custom INSERT row or a readonly collection against declared writable columns. */
-type CheckCustomValues<C extends CustomColumnInputs, V> =
-  // Use Extract to recognize and validate collection-shaped values, i.e. `values: [authorInput]`.
-  | ([Extract<V, readonly unknown[]>] extends [never]
-      ? never
-      : readonly CheckAssignments<Extract<V, readonly unknown[]>[number], CustomInsertValues<C>, never>[])
-  // Use Exclude to recognize and validate single-row values, i.e. `values: authorInput`.
-  | ([Exclude<V, readonly unknown[]>] extends [never]
-      ? never
-      : CheckAssignments<Exclude<V, readonly unknown[]>, CustomInsertValues<C>, never>);
+/** Checks every custom INSERT row in a readonly collection against declared writable columns. */
+type CheckCustomValues<C extends CustomColumnInputs, V extends readonly unknown[]> = readonly CheckAssignments<
+  V[number],
+  CustomInsertValues<C>,
+  never
+>[];
 
 /** Checks a custom INSERT SELECT's named outputs, required columns, values, and read source. */
 type CheckCustomInsertSource<C extends CustomColumnInputs, Q> = SetOperand extends Q

@@ -17,7 +17,7 @@ describe("em.execute / execution", () => {
         em.mode = mode;
         // And each statement is otherwise valid, including the empty import shortcut
         const statements = [
-          { insert: t, values: { name: "Forbidden" } },
+          { insert: t, values: [{ name: "Forbidden" }] },
           { update: t, set: { name: "Forbidden" }, where: t.id.eq("t:1") },
           { delete: t, where: t.id.eq("t:1") },
           { insert: t, values: [] },
@@ -119,7 +119,7 @@ describe("em.execute / execution", () => {
       });
       // And valid mutation shapes include an empty import that must not bypass the lock
       const statements = [
-        { insert: t, values: { name: "Forbidden" } },
+        { insert: t, values: [{ name: "Forbidden" }] },
         { update: t, set: { name: "Forbidden" }, where: t.id.eq("t:1") },
         { delete: t, where: t.id.eq("t:1") },
         { insert: t, values: [] },
@@ -158,7 +158,7 @@ describe("em.execute / execution", () => {
 
       // And completing the hook releases the lock for the next application write
       resetQueryCount();
-      const inserted = await em.execute({ insert: t, values: { name: "After flush" } });
+      const inserted = await em.execute({ insert: t, values: [{ name: "After flush" }] });
 
       // Then ordinary immediate writes work again after the flush completes
       expect(inserted).toEqual({ rowCount: 1, rows: [] });

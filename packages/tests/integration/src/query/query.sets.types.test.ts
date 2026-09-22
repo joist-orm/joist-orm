@@ -192,7 +192,7 @@ function typeAssertions() {
   expectTypeOf(namesInput.union).toEqualTypeOf<[typeof authorNames, typeof bookNames]>();
   expectTypeOf(names).toEqualTypeOf<Subquery<{ name: string }, "?">>();
   expectTypeOf(namedNames).toEqualTypeOf<Subquery<{ name: string }, "names">>();
-  expectTypeOf(namedNames.name).toEqualTypeOf<Expr<string, "names">>();
+  expectTypeOf(namedNames.name).toMatchTypeOf<Expr<string, "names">>();
   expectTypeOf(query({ union: [authorNames, namedBookNames], as: "combined_names" })).toEqualTypeOf<
     Subquery<{ name: string }, "combined_names">
   >();

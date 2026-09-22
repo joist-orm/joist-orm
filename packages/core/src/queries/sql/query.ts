@@ -31,6 +31,7 @@ import {
   isExpr,
   orderByToSql,
   resolveDeferredConditions,
+  selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
 import {
   type CheckInput,
@@ -79,8 +80,8 @@ import { fail } from "src/utils.ts";
  *   });
  *   // rows: { name: string; n: number | undefined }[]   (undefined because of the LEFT join)
  *
- * `em.query(pojo)` runs it. `select` decides the row type: a bare table returns entities, a
- * `{ key: expr }` object returns typed POJOs, a bare subquery returns that subquery's rows.
+ * `em.query(pojo)` runs it. `select` decides the row type: a bare table returns entities, an array of
+ * columns or a `{ key: expr }` object returns typed POJOs, and a bare subquery returns its rows.
  *
  * `query(pojo)` turns the *same* POJO into a value: a derived table with typed columns, a scalar
  * expression, or an entity list. It is the one non-POJO step, and the subquery analog of `table(Author)`:
@@ -204,13 +205,24 @@ export type OrderByDirection =
  * An `undefined` direction prunes the entry, like any other condition. For expressions that are not
  * in `select`, mix in `{ sort, order }` entries in the array form.
  */
-export type OrderByKeys<S> = S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
-  ? T extends Entity
-    ? { readonly [K in keyof Table<T> as Table<T>[K] extends ExprLike<any> ? K : never]?: OrderByDirection | undefined }
-    : never
-  : S extends ExprLike<unknown>
-    ? never
-    : { readonly [K in keyof S & string]?: OrderByDirection | undefined };
+export type OrderByKeys<S> =
+  // If S is an array select, allow ordering by each selected column's field name.
+  S extends readonly NamedSelectExpression[]
+    ? { readonly [K in SelectKey<S[number]>]?: OrderByDirection | undefined }
+    : // Otherwise, if this is `select: a` entity mode, allow ordering by the entity's expression fields.
+      S extends { readonly [tableMgmt]: { readonly __entity: infer T } }
+      ? T extends Entity
+        ? {
+            readonly [K in keyof Table<T> as Table<T>[K] extends ExprLike<any> ? K : never]?:
+              | OrderByDirection
+              | undefined;
+          }
+        : never
+      : // Otherwise, a scalar expression select has no named result fields to order by.
+        S extends ExprLike<unknown>
+        ? never
+        : // Otherwise, this is POJO mode, so allow ordering by its select keys.
+          { readonly [K in keyof S & string]?: OrderByDirection | undefined };
 
 /** All sortable keys across select variants, not just the keys shared by every variant. */
 type OrderByKey<S> = S extends unknown ? keyof OrderByKeys<S> : never;
@@ -223,14 +235,24 @@ type CheckedExpressionOrderBy<S> = ExpressionOrderBy &
       ? unknown
       : { readonly [K in Exclude<OrderByKey<S>, keyof ExpressionOrderBy>]?: never });
 
-/** The three select shapes: a source, an existing scalar expression, or a POJO naming result columns. */
-export type QuerySelect = SelectableQuerySource | ExprLike<unknown> | Record<string, SelectExpression>;
+/** The select shapes: a source, scalar expression, named column array, or POJO naming result columns. */
+export type QuerySelect =
+  | SelectableQuerySource
+  | ExprLike<unknown>
+  | readonly NamedSelectExpression[]
+  | Record<string, SelectExpression>;
 
 /** A named projection value may be an existing expression or an inline expression literal. */
 export type SelectExpression = ExprLike<unknown> | ExprInput;
 
+/** A physical or subquery column that retains the field name used for array-select result rows. */
+export type NamedSelectExpression = ExprLike<unknown> & { readonly [selectKeyBrand]: string };
+
+/** Extracts the table property name carried by a column expression for array selects. */
+type SelectKey<S> = S extends { readonly [selectKeyBrand]: infer K extends string } ? K : never;
+
 /** Checks expression literals only inside named projections. */
-type CheckSelect<S> = S extends QuerySource | ExprLike<unknown>
+type CheckSelect<S> = S extends QuerySource | ExprLike<unknown> | readonly NamedSelectExpression[]
   ? unknown
   : { readonly [K in keyof S]: S[K] extends ExprInput ? CheckInput<S[K]> : unknown };
 
@@ -624,6 +646,7 @@ export type MaybeNull<R, Src extends string, J extends QueryJoinList> = string e
  * - entity mode (`select: a`) is the entity
  * - subquery mode (`select: bookStats`) is the subquery's row, i.e. `select *`
  * - single expression (`select: b.id.count()`) is that expression's value, used by scalar subqueries
+ * - column array mode uses each column's field name as the result key
  * - POJO mode is a mapped type over the select keys, with left-join nullability applied
  */
 export type QueryRow<S, J extends QueryJoinList = []> = S extends {
@@ -634,12 +657,19 @@ export type QueryRow<S, J extends QueryJoinList = []> = S extends {
     ? R
     : S extends ExprLike<unknown>
       ? QueryResultValue<ExpressionValue<S, J>>
-      : {
-          // Inline inputs retain readonly tuples for inference; result rows are still mutable.
-          -readonly [K in keyof S]: S[K] extends SelectExpression
-            ? QueryResultValue<ExpressionValue<S[K] extends ExprInput ? ExprFromInput<S[K]> : S[K], J>>
-            : never;
-        };
+      : // If S is an array select, use each column's field name as its result key.
+        S extends readonly NamedSelectExpression[]
+        ? {
+            // Map each selected column to its field name and decoded value type. Remove readonly because
+            // const-tuple inference is an input detail and must not make returned row properties readonly.
+            -readonly [E in S[number] as SelectKey<E>]: QueryResultValue<ExpressionValue<E, J>>;
+          }
+        : {
+            // Inline inputs retain readonly tuples for inference; result rows are still mutable.
+            -readonly [K in keyof S]: S[K] extends SelectExpression
+              ? QueryResultValue<ExpressionValue<S[K] extends ExprInput ? ExprFromInput<S[K]> : S[K], J>>
+              : never;
+          };
 
 /**
  * Converts top-level SQL NULL to Joist's public undefined convention.
@@ -672,7 +702,11 @@ export type SqlExpressionValue<V> = Exclude<V, undefined> | (undefined extends V
  */
 export type Subquery<R, Name extends string> = {
   readonly [subqueryBrand]: SubqueryBrand<R, Name>;
-} & { readonly [K in keyof R]: Expr<SqlExpressionValue<R[K]>, Name> };
+} & {
+  // For each field in row shape R, i.e. `firstName` in `{ firstName: string }`, expose an expression
+  // that retains the field name for array selects.
+  readonly [K in keyof R]: Expr<SqlExpressionValue<R[K]>, Name> & { readonly [selectKeyBrand]: Extract<K, string> };
+};
 
 /** An entity-mode query (`select: a`): runnable, but it has no columns to reference. */
 export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } } & Partial<
@@ -752,13 +786,19 @@ export type CheckScope<S, F, J extends QueryJoinInput> = [S] extends [never]
     ? NameOf<S> extends NameOf<F>
       ? unknown
       : { select: `'${NameOf<S> & string}' is a joined source, not the from; select its columns individually` }
-    : [S] extends [Record<string, SelectExpression>]
-      ? {
-          select: {
-            [K in keyof S]: CheckExpressionScope<S[K], InScope<F, ResolvedJoins<F, J>>>;
-          };
+    : [S] extends [readonly NamedSelectExpression[]]
+      ? // For an array select, verify that every selected column belongs to a source in from/join.
+        {
+          select: { [K in keyof S]: CheckExpressionScope<S[K], InScope<F, ResolvedJoins<F, J>>> };
         }
-      : unknown;
+      : [S] extends [Record<string, SelectExpression>]
+        ? // For a POJO select, verify that every named expression uses only sources in from/join.
+          {
+            select: {
+              [K in keyof S]: CheckExpressionScope<S[K], InScope<F, ResolvedJoins<F, J>>>;
+            };
+          }
+        : unknown;
 
 /** Includes columns nested in inline CASE values and fallbacks in the existing scope check. */
 type CheckExpressionScope<V, Scope> =
@@ -1110,6 +1150,10 @@ class SubqueryColumnExpr extends BaseExpr {
     super();
   }
 
+  get [selectKeyBrand](): string {
+    return this.key;
+  }
+
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
     // safeKq for the alias too: a subquery's canonical alias is its user-provided `as` name
@@ -1398,6 +1442,18 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
 /** Validates the projection before compiling SQL or exposing reusable query columns. */
 function projectionOutput(select: unknown): QueryOutput {
   if (isExpr(select)) return { kind: "scalar", columns: [["value", asExpr(select, "select")]] };
+  if (Array.isArray(select)) {
+    if (select.length === 0) fail("A column array projection must not be empty");
+    const columns: [string, BaseExpr][] = select.map((value, index) => {
+      const expr = asExpr(value, `select[${index}]`);
+      const key = (expr as BaseExpr & { readonly [selectKeyBrand]?: unknown })[selectKeyBrand];
+      if (typeof key !== "string") fail(`select[${index}] must be a physical or subquery column`);
+      return [key, expr];
+    });
+    const keys = new Set(columns.map(([key]) => key));
+    if (keys.size !== columns.length) fail("A column array projection must not contain duplicate field names");
+    return { kind: "pojo", columns };
+  }
   if (isPlainSelect(select)) {
     const columns: [string, BaseExpr][] = [];
     // Enumerate once: a projection proxy must not be revisited just to check for symbol keys.
@@ -2193,7 +2249,9 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
         result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
       } else {
         if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
-        const keys = isSubqueryValue(select) ? select[subqueryBrand].columnKeys() : Object.keys(select as object);
+        const keys = isSubqueryValue(select)
+          ? select[subqueryBrand].columnKeys()
+          : projectionOutput(select).columns.map(([key]) => key);
         if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
         result.push({ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] });
       }

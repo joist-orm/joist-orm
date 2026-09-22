@@ -44,6 +44,7 @@ import {
   asNode,
   deferredCondition,
   isExpr,
+  selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
 import { kqDot } from "src/queries/sql/keywords.ts";
 import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
@@ -177,17 +178,20 @@ type TableReferenceFilter<T extends Entity, N> =
   | undefined
   | { ne: T | IdOf<T> | N | undefined };
 
+/** Maps an entity's columns and relationships to expressions and joins for one typed table handle. */
 type TableShape<T extends Entity, Name extends string> = {
   readonly [tableMgmt]: TableBrand<T, Name>;
 } & {
-  [P in keyof ColumnsOf<T>]: P extends "id"
-    ? EntityColumn<T, never, Name>
+  // Add typed expressions for each physical column, including its property name for array selects.
+  [P in keyof ColumnsOf<T> & string]: P extends "id"
+    ? EntityColumn<T, never, Name, P>
     : ColumnsOf<T>[P] extends { entity: infer U extends Entity; nullable: infer N }
-      ? ReferenceColumn<U, N extends true ? null : never, Name>
+      ? ReferenceColumn<U, N extends true ? null : never, Name, P>
       : ColumnsOf<T>[P] extends { type: infer V; nullable: infer N }
-        ? PrimitiveColumn<V, N extends true ? null : never, Name>
+        ? PrimitiveColumn<V, N extends true ? null : never, Name, P>
         : never;
 } & {
+  // Add relation join sugar such as `a.books.as(b)` for fields that are not physical columns.
   [
     P in keyof FieldsOf<T> as P extends keyof ColumnsOf<T>
       ? never
@@ -202,6 +206,8 @@ type TableShape<T extends Entity, Name extends string> = {
         ? CollectionJoin<U>
         : never;
 } & {
+  // Add subtype join sugar such as `p.smallPublisher(sp)` for entities whose __type root is T.
+  // CTI joins the physical tables by ID; STI self-joins the shared table by ID plus its discriminator.
   [
     K in keyof TypeMap as TypeMap[K] extends {
       entityType: infer U extends Entity & { __type: { 0: TypeNameOf<T>; 1: string } };
@@ -262,8 +268,13 @@ interface SubtypeJoin<U extends Entity> extends CollectionJoin<U> {
  * (`b.authorId.as(a)` joins). The default join kind follows physical column nullability:
  * a NOT NULL FK is INNER unless its source was LEFT joined, a nullable one is LEFT, and the row type reflects it.
  */
-export interface ReferenceColumn<U extends Entity, N extends null | never, Src extends string>
-  extends EntityColumn<U, N, Src>, ReferenceJoin<U, N, Src> {}
+export interface ReferenceColumn<
+  U extends Entity,
+  N extends null | never,
+  Src extends string,
+  Key extends string = string,
+>
+  extends EntityColumn<U, N, Src, Key>, ReferenceJoin<U, N, Src> {}
 
 /**
  * A polymorphic reference: condition methods (each resolving the component column from the value), plus
@@ -282,7 +293,13 @@ export interface PolyReference<
   inNonEmpty(values: readonly (U | TaggedId)[] | undefined): SqlCondition;
 }
 
-export interface PrimitiveColumn<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
+export interface PrimitiveColumn<
+  V,
+  N extends null | never,
+  Src extends string = string,
+  Key extends string = string,
+> extends Expr<V | N, Src> {
+  readonly [selectKeyBrand]: Key;
   eq(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
   ne(value: V | ExprLike<V | N> | N | undefined): SqlCondition;
   in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): SqlCondition;
@@ -336,10 +353,13 @@ export interface PrimitiveColumn<V, N extends null | never, Src extends string =
   raw(exp: string, bindings: readonly any[] | undefined): SqlCondition;
 }
 
-export interface EntityColumn<T, N extends null | never = never, Src extends string = string> extends Expr<
-  IdOf<T> | N,
-  Src
-> {
+export interface EntityColumn<
+  T,
+  N extends null | never = never,
+  Src extends string = string,
+  Key extends string = string,
+> extends Expr<IdOf<T> | N, Src> {
+  readonly [selectKeyBrand]: Key;
   /** Produces the tagged ID as SQL text, preserving NULL and the column's source. */
   taggedId(): Expr<string | N, Src>;
   eq(value: T | IdOf<T> | ExprLike<IdOf<T> | null> | null | undefined): SqlCondition;
@@ -403,8 +423,8 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       const descriptor = Object.hasOwn(meta.columns, key) ? meta.columns[key] : undefined;
       if (descriptor) {
         return descriptor.idMetadata
-          ? new EntityColumnImpl(meta, descriptor, mgmt)
-          : new PrimitiveColumnImpl(meta, descriptor, mgmt);
+          ? new EntityColumnImpl(meta, descriptor, mgmt, key)
+          : new PrimitiveColumnImpl(meta, descriptor, mgmt, key);
       }
       const subtype = subtypes.get(key);
       if (subtype) {
@@ -467,7 +487,7 @@ function newCustomTableProxy<TableName extends string, C extends CustomColumnInp
         if (key === tableMgmt) return mgmt;
         if (typeof key !== "string") return undefined;
         const descriptor = Object.hasOwn(columns, key) ? columns[key] : undefined;
-        if (descriptor) return new PrimitiveColumnImpl(undefined, descriptor, mgmt);
+        if (descriptor) return new PrimitiveColumnImpl(undefined, descriptor, mgmt, key);
         if (key === "column") return (column: string) => new RefExpr(mgmt, column);
         return fail(`Custom table ${tableName} has no declared column ${key}; use .column("${key}")`);
       },
@@ -501,8 +521,13 @@ class TableColumn extends BaseExpr {
     readonly meta: EntityMetadata | undefined,
     readonly column: Column,
     readonly mgmt: TableSourceMgmt,
+    private readonly selectKey: string = column.columnName,
   ) {
     super();
+  }
+
+  get [selectKeyBrand](): string {
+    return this.selectKey;
   }
 
   /** Author.id, Book.authorId, and Comment.parentAuthorId use the same Author ID domain. */

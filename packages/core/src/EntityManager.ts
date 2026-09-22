@@ -557,9 +557,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * ```
    *
    * `select` decides the row type: a bare table (`select: a`) returns entities through the identity
-   * map, a `{ key: expr }` object returns typed POJOs, and a `query(...)` value returns its rows. Joins
-   * are pruned like `em.find`: an `undefined` condition drops out, and a join nothing references
-   * anymore drops with it. See `query.ts` for the full DSL, and `query()` for composing subqueries.
+   * map, an array of columns or a `{ key: expr }` object returns typed POJOs, and a `query(...)` value
+   * returns its rows. Joins are pruned like `em.find`: an `undefined` condition drops out, and a join
+   * nothing references anymore drops with it. See `query.ts` for the full DSL, and `query()` for
+   * composing subqueries.
    *
    * Entity selections accept a second argument, `{ populate: hint }`, and return `Loaded` entities.
    * Population runs after the query, using the same relation loaders as `em.populate`.

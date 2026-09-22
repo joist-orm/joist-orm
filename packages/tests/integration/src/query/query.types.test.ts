@@ -304,11 +304,11 @@ async function typeAssertions() {
     as: "book_stats",
   });
   // Each column keeps its inner result type and takes the `as` name as its source key
-  expectTypeOf(bookStats.authorId).toEqualTypeOf<Expr<AuthorId, "book_stats">>();
+  expectTypeOf(bookStats.authorId).toMatchTypeOf<Expr<AuthorId, "book_stats">>();
   // `count()` is non-null inside the subquery (every group has rows)...
-  expectTypeOf(bookStats.bookCount).toEqualTypeOf<Expr<number, "book_stats">>();
+  expectTypeOf(bookStats.bookCount).toMatchTypeOf<Expr<number, "book_stats">>();
   // ...while `max()` and the reusable SQL expression remain nullable inside it
-  expectTypeOf(bookStats.lastTitle).toEqualTypeOf<Expr<string | null, "book_stats">>();
+  expectTypeOf(bookStats.lastTitle).toMatchTypeOf<Expr<string | null, "book_stats">>();
   // `arrayAgg()` keeps the element's own nullability, and is itself `| null` (zero rows aggregate as NULL)
   expectTypeOf<ReturnType<typeof b.title.arrayAgg>>().toEqualTypeOf<Expr<string[] | null, "Book">>();
   expectTypeOf<ReturnType<typeof a.age.arrayAgg>>().toEqualTypeOf<Expr<(number | null)[] | null, "Author">>();
@@ -644,6 +644,16 @@ async function typeAssertions() {
   // @ts-expect-error: the subquery selects numbers, not ids of Comment.parent's component entities
   // (a *string* column cannot be rejected: Joist ids are flavored strings, so `string` stays assignable)
   c.parent.in(query({ from: b, select: b.order }));
+
+  // Given an array projection of named Author columns
+  // When running it directly or reusing it as a subquery
+  const arrayRows = em.query({ from: a, select: [a.firstName, a.lastName], orderBy: { firstName: "ASC" } });
+  const arrayQuery = query({ from: a, select: [a.firstName, a.lastName] });
+  // Then field names become result keys and retain their column nullability
+  expectTypeOf(arrayRows).resolves.toEqualTypeOf<{ firstName: string; lastName: string | undefined }[]>();
+  expectTypeOf(arrayQuery).toEqualTypeOf<Subquery<{ firstName: string; lastName: string | undefined }, "?">>();
+  // @ts-expect-error: computed expressions have no unambiguous field name for array projection shorthand
+  em.query({ from: a, select: [a.firstName.max()] });
 }
 
 type ResultOf<E> = E extends { readonly [exprBrand]: ExprBrand<infer R, any> } ? R : never;

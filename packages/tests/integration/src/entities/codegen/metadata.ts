@@ -309,6 +309,7 @@ const parentGroupMetaColumns = {
   "createdAt": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "embedding": new Column("embedding", true, false, false, false, true, undefined, new VectorSerde()),
+  "eagerEmbedding": new Column("eager_embedding", true, false, false, false, true, undefined, new VectorSerde()),
 } satisfies ColumnDescriptors;
 const parentItemMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => parentItemMeta, new KeySerde("pi", "int")),
@@ -984,6 +985,7 @@ export const parentGroupMeta: EntityMetadata<ParentGroup> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", parentGroupMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", parentGroupMetaColumns["updatedAt"]), immutable: false },
     "embedding": { kind: "primitive", fieldName: "embedding", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number[]", serde: new SimpleFieldSerde("embedding", parentGroupMetaColumns["embedding"]), immutable: false, lazy: true },
+    "eagerEmbedding": { kind: "primitive", fieldName: "eagerEmbedding", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number[]", serde: new SimpleFieldSerde("eagerEmbedding", parentGroupMetaColumns["eagerEmbedding"]), immutable: false },
     "childGroups": { kind: "o2m", fieldName: "childGroups", fieldIdName: "childGroupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
     "parentItems": { kind: "o2m", fieldName: "parentItems", fieldIdName: "parentItemIds", required: false, otherMetadata: () => parentItemMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
   },

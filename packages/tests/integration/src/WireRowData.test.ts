@@ -128,6 +128,14 @@ describe("WireRowData", () => {
       }
     });
 
+    it("auto-registers pgvector's vector to decode as number[]s", async () => {
+      await registerDatabaseBinaryParsers(pool);
+      const [classic, lazy] = await classicAndLazy("select '[0.1,-2.5,3]'::vector as v");
+      // Classic pg has no vector parser and returns the literal, which VectorSerde parses
+      expect(classic[0]).toEqual({ v: "[0.1,-2.5,3]" });
+      expect(lazy.toRow(0)).toEqual({ v: [0.1, -2.5, 3] });
+    });
+
     it("decodes dynamic-oid arrays that classic pg leaves as raw literals", async () => {
       // pg-types has no parsers for tsvector[]/tstzrange[] (classic returns the `{...}` literal
       // string); the binary registry decodes real arrays of the same element values

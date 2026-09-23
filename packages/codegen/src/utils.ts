@@ -150,6 +150,9 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
       return "Object";
     case "bytea":
       return "Uint8Array";
+    case "vector":
+      // pgvector columns are a single value (not a physical pg array), so `isArray` stays false
+      return "number[]";
     default:
       assertNever(dbType);
   }

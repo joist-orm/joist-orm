@@ -131,7 +131,8 @@ export type DatabaseColumnType =
   | "jsonb"
   | "bytea"
   | "tsvector"
-  | "tstzrange";
+  | "tstzrange"
+  | "vector";
 
 /**
  * A logical entity field.
@@ -143,7 +144,15 @@ interface Field {
   ignore?: boolean;
 }
 
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object" | "bigint" | "Uint8Array" | Code;
+export type PrimitiveTypescriptType =
+  | "boolean"
+  | "string"
+  | "number"
+  | "number[]"
+  | "Object"
+  | "bigint"
+  | "Uint8Array"
+  | Code;
 
 export type PrimitiveField = Field & {
   kind: "primitive";

@@ -43,6 +43,7 @@ export const PlainTimeSerde = imp("PlainTimeSerde@joist-orm");
 export const PlainDateTimeSerde = imp("PlainDateTimeSerde@joist-orm");
 export const ZonedDateTimeSerde = imp("ZonedDateTimeSerde@joist-orm");
 export const JsonSerde = imp("JsonSerde@joist-orm");
+export const VectorSerde = imp("VectorSerde@joist-orm");
 export const SuperstructSerde = imp("SuperstructSerde@joist-orm");
 export const TaggedId = imp("t:TaggedId@joist-orm");
 export const ZodSerde = imp("ZodSerde@joist-orm");

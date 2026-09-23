@@ -287,7 +287,10 @@ export interface Clauses<S extends QuerySelect = QuerySelect, J extends QueryJoi
   groupBy?: readonly ExprLike<any>[];
   having?: QueryCondition;
   select: S;
-  orderBy?: readonly (CheckedExpressionOrderBy<S> | OrderByKeys<S> | undefined)[] | OrderByKeys<S>;
+  orderBy?:
+    | readonly (CheckedExpressionOrderBy<S> | OrderByKeys<S> | undefined)[]
+    | CheckedExpressionOrderBy<S>
+    | OrderByKeys<S>;
   limit?: number;
   offset?: number;
   distinct?: boolean;
@@ -2226,7 +2229,7 @@ const ORDER_BY_DIRECTIONS: string[] = [
 ];
 
 /**
- * Generates ORDER BY SQL in entry order for keyed/expression arrays or a single keyed object.
+ * Generates ORDER BY SQL in entry order for keyed/expression arrays or a single entry.
  *
  * Expression entries retain bindings and alias references for join pruning. Undefined entries and
  * directions are omitted before expression references are collected.

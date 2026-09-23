@@ -3970,4 +3970,18 @@ describe("em.query", () => {
     // Then both expression directions determine the order of Authors
     expect(rows).toEqual([{ name: "Charlie" }, { name: "Bob" }, { name: "Alice" }]);
   });
+
+  it("orders by a single expression outside the selected columns", async () => {
+    // Given Authors whose names differ from their age order
+    await insertAuthor({ first_name: "Alice", age: 30 });
+    await insertAuthor({ first_name: "Bob", age: 20 });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When ordering the selected names by a single age expression
+    const rows = await em.query({ from: a, select: { name: a.firstName }, orderBy: a.age.asc() });
+
+    // Then Authors are returned in ascending age order
+    expect(rows).toEqual([{ name: "Bob" }, { name: "Alice" }]);
+  });
 });

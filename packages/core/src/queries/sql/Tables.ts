@@ -46,7 +46,7 @@ import {
   isExpr,
   selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
-import { kqDot } from "src/queries/sql/keywords.ts";
+import { kq, kqDot, safeKq } from "src/queries/sql/keywords.ts";
 import type { QueryArg, QueryJoinInput, QuerySource } from "src/queries/sql/query.ts";
 import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
 import type { Column } from "src/serde/columns.ts";
@@ -403,6 +403,12 @@ export function getTableMgmt(table: TableFor<Entity> | CustomTableFor): TableSou
 /** The identity SQL queries bind a table by, plus its original entity metadata. */
 export interface TableSourceMgmt {
   tableName: string;
+  schema?: string;
+}
+
+/** Qualifies custom tables without changing SQL for tables on the default search path. */
+export function tableSqlName(table: TableSourceMgmt): string {
+  return table.schema ? `${safeKq(table.schema)}.${kq(table.tableName)}` : kq(table.tableName);
 }
 
 /** The identity and generated metadata of a modeled entity table. */
@@ -493,8 +499,8 @@ export function newTableProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
 function newCustomTableProxy<TableName extends string, C extends CustomColumnInputs>(
   definition: CustomTableDefinition<TableName, C>,
 ): CustomTable<C, TableName> {
-  const { tableName, columns } = getCustomTableDefinition(definition);
-  const mgmt: CustomTableMgmt = { tableName, columns };
+  const { tableName, schema, columns } = getCustomTableDefinition(definition);
+  const mgmt: CustomTableMgmt = { tableName, schema, columns };
   return new Proxy(
     {},
     {

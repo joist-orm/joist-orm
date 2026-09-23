@@ -53,7 +53,7 @@ import {
   update,
 } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 /**
@@ -3930,5 +3930,25 @@ describe("em.query", () => {
       { firstName: "Alice", lastName: "A" },
       { firstName: "Bob", lastName: undefined },
     ]);
+  });
+
+  describe("custom tables in another schema", () => {
+    afterEach(async () => {
+      await knex.withSchema("archive").table("authors").delete();
+    });
+
+    it("queries a custom table in another schema", async () => {
+      // Given an archived Author in a table that also exists in public
+      await knex.withSchema("archive").table("authors").insert({ first_name: "Archived" });
+      // And an archived Authors declaration with no generated entity metadata
+      const em = newEntityManager();
+      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+
+      // When selecting archived Authors through the custom table
+      const rows = await em.query({ from: authors, select: authors.firstName });
+
+      // Then the archived table is read instead of the public Authors table
+      expect(rows).toEqual(["Archived"]);
+    });
   });
 });

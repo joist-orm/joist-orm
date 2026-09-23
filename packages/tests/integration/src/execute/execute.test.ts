@@ -4,7 +4,7 @@ import {
   type ExecuteResult,
   type RawCondition,
   alias,
-  customTable,
+  declareTable,
   getMetadata,
   query,
   sql,
@@ -2383,7 +2383,7 @@ describe("em.execute", () => {
   it("inserts declared values into a custom table", async () => {
     // Given the Authors table is declared without generated entity metadata
     const em = newEntityManager();
-    const authorsTable = customTable("authors", {
+    const authorsTable = declareTable("authors", {
       id: { type: "int", hasDefault: true },
       firstName: "text",
       initials: "text",
@@ -2416,7 +2416,7 @@ describe("em.execute", () => {
     // Given an Author row and a custom handle for its physical table
     await insertAuthor({ first_name: "Before" });
     const em = newEntityManager();
-    const authors = table(customTable("authors", { id: "int", firstName: "text" }));
+    const authors = table(declareTable("authors", { id: "int", firstName: "text" }));
 
     // When the declared name is updated through its typed predicate
     const result = await em.execute({
@@ -2434,7 +2434,7 @@ describe("em.execute", () => {
     // Given an Author row and a custom handle for its physical table
     await insertAuthor({ first_name: "Delete me" });
     const em = newEntityManager();
-    const authors = table(customTable("authors", { id: "int", firstName: "text" }));
+    const authors = table(declareTable("authors", { id: "int", firstName: "text" }));
 
     // When the row is deleted through a declared-column predicate
     const result = await em.execute({
@@ -2456,7 +2456,7 @@ describe("em.execute", () => {
       // Given an archived Authors table outside the Joist domain model
       const em = newEntityManager();
       const authors = table(
-        customTable("authors", { id: { type: "int", hasDefault: true }, firstName: "text" }, { schema: "archive" }),
+        declareTable("authors", { id: { type: "int", hasDefault: true }, firstName: "text" }, { schema: "archive" }),
       );
 
       // When adding an archived Author
@@ -2475,7 +2475,7 @@ describe("em.execute", () => {
       await knex.withSchema("archive").table("authors").insert({ first_name: "Before" });
       // And a custom handle for the archived table
       const em = newEntityManager();
-      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+      const authors = table(declareTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
 
       // When changing the archived Author's name
       const result = await em.execute({
@@ -2494,7 +2494,7 @@ describe("em.execute", () => {
       await knex.withSchema("archive").table("authors").insert({ first_name: "Delete me" });
       // And a custom handle for the archived table
       const em = newEntityManager();
-      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+      const authors = table(declareTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
 
       // When deleting the archived Author
       const result = await em.execute({

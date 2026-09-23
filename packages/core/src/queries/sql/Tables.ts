@@ -56,7 +56,7 @@ import { fail } from "src/utils.ts";
 
 /** Creates physical column expressions and relationship joins for `T`. */
 export function table<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Table<T>;
-/** Creates a typed physical handle for a table declared with `customTable`. */
+/** Creates a typed physical handle for a table declared with `declareTable`. */
 export function table<TableName extends string, C extends CustomColumnInputs>(
   definition: CustomTableDefinition<TableName, C>,
 ): CustomTable<C, TableName>;
@@ -528,7 +528,7 @@ export function isEntityTable(obj: unknown): obj is Table<any, any> {
   return isTable(obj) && "meta" in obj[tableMgmt];
 }
 
-/** Whether a physical table has columns declared through `customTable`. */
+/** Whether a physical table has columns declared through `declareTable`. */
 export function isCustomTable(obj: unknown): obj is CustomTableFor {
   return isTable(obj) && "columns" in obj[tableMgmt];
 }

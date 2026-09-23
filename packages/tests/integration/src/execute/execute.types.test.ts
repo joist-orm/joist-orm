@@ -10,7 +10,7 @@ import {
   type SetQuery,
   type UpdateStatement,
   type UpdateValues,
-  customTable,
+  declareTable,
   query,
   sql,
   table,
@@ -89,7 +89,7 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
   em.execute({ insert: b, values });
 
   // Given a custom table whose primitive columns are declared without entity metadata
-  const customAuthorsTable = customTable("authors", {
+  const customAuthorsTable = declareTable("authors", {
     id: { type: "int", hasDefault: true },
     firstName: "text",
     age: { type: "int", nullable: true },

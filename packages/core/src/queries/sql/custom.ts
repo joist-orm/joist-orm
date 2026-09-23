@@ -3,7 +3,7 @@ import type { PrimitiveColumn, TableSourceBrand, TableSourceMgmt, tableMgmt } fr
 import { Column, type ColumnDescriptors } from "src/serde/columns.ts";
 import { BigIntSerde, DateSerde, JsonSerde, PrimitiveSerde, type ScalarCodec } from "src/serde/serde.ts";
 
-const customTableDefinition = Symbol("customTableDefinition");
+const declaredTableDefinition = Symbol("declaredTableDefinition");
 
 /** Built-in storage types supported by concise custom-table declarations. */
 export type CustomColumnType =
@@ -43,9 +43,9 @@ export type CustomColumnConfig =
 export type CustomColumnInput = CustomColumnType | CustomColumnConfig;
 export type CustomColumnInputs = Readonly<Record<string, CustomColumnInput>>;
 
-/** A reusable declaration created by `customTable`; call `table(definition)` to create a query handle. */
+/** A reusable declaration created by `declareTable`; call `table(definition)` to create a query handle. */
 export interface CustomTableDefinition<TableName extends string, C extends CustomColumnInputs> {
-  readonly [customTableDefinition]: CustomTableDefinitionBrand<TableName, C>;
+  readonly [declaredTableDefinition]: CustomTableDefinitionBrand<TableName, C>;
 }
 
 /** A custom physical table with declared primitive columns but no entity or relationship metadata. */
@@ -76,7 +76,7 @@ export interface CustomTableMgmt extends TableSourceMgmt {
 }
 
 /** Declares a physical table that Joist codegen intentionally does not model as an entity. */
-export function customTable<const TableName extends string, const C extends CustomColumnInputs>(
+export function declareTable<const TableName extends string, const C extends CustomColumnInputs>(
   tableName: TableName,
   columns: C,
   options: { schema?: string } = {},
@@ -85,20 +85,20 @@ export function customTable<const TableName extends string, const C extends Cust
     Object.entries(columns).map(([fieldName, input]) => [fieldName, customColumn(fieldName, input)]),
   );
   return {
-    [customTableDefinition]: { tableName, schema: options.schema, columns: descriptors },
+    [declaredTableDefinition]: { tableName, schema: options.schema, columns: descriptors },
   } as CustomTableDefinition<TableName, C>;
 }
 
-/** Recognizes a declaration created by `customTable`. */
+/** Recognizes a declaration created by `declareTable`. */
 export function isCustomTableDefinition(value: unknown): value is CustomTableDefinition<string, CustomColumnInputs> {
-  return typeof value === "object" && value !== null && customTableDefinition in value;
+  return typeof value === "object" && value !== null && declaredTableDefinition in value;
 }
 
 /** Returns the normalized table name and columns stored in a custom-table declaration. */
 export function getCustomTableDefinition<TableName extends string, C extends CustomColumnInputs>(
   definition: CustomTableDefinition<TableName, C>,
 ): CustomTableDefinitionBrand<TableName, C> {
-  return definition[customTableDefinition];
+  return definition[declaredTableDefinition];
 }
 
 interface CustomTableDefinitionBrand<TableName extends string, C extends CustomColumnInputs> {

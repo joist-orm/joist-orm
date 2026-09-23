@@ -3951,4 +3951,23 @@ describe("em.query", () => {
       expect(rows).toEqual(["Archived"]);
     });
   });
+
+  it("orders by expression direction helpers", async () => {
+    // Given Authors whose ages tie and whose names distinguish their order
+    await insertAuthor({ first_name: "Alice", age: 20 });
+    await insertAuthor({ first_name: "Bob", age: 20 });
+    await insertAuthor({ first_name: "Charlie", age: 10 });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When sorting by age ascending and then name descending
+    const rows = await em.query({
+      from: a,
+      select: { name: a.firstName },
+      orderBy: [a.age.asc(), a.firstName.desc()],
+    });
+
+    // Then both expression directions determine the order of Authors
+    expect(rows).toEqual([{ name: "Charlie" }, { name: "Bob" }, { name: "Alice" }]);
+  });
 });

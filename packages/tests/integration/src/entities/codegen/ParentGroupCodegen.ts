@@ -62,7 +62,7 @@ export interface ParentGroupFields {
   requiredData: { kind: "primitive"; type: Object; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  embedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  lazyEmbedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
   eagerEmbedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
   childGroups: { kind: "o2m"; type: ChildGroup };
   parentItems: { kind: "o2m"; type: ParentItem };
@@ -82,7 +82,7 @@ export interface ParentGroupColumns {
   requiredData: { type: Object; fieldName: "requiredData"; nullable: false; insert: "required"; update: true };
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  embedding: { type: number[]; fieldName: "embedding"; nullable: true; insert: "optional"; update: true };
+  lazyEmbedding: { type: number[]; fieldName: "lazyEmbedding"; nullable: true; insert: "optional"; update: true };
   eagerEmbedding: { type: number[]; fieldName: "eagerEmbedding"; nullable: true; insert: "optional"; update: true };
 }
 
@@ -90,7 +90,7 @@ export interface ParentGroupOpts {
   name?: string | null;
   bulkData?: Object | null;
   requiredData: Object;
-  embedding?: number[] | null;
+  lazyEmbedding?: number[] | null;
   eagerEmbedding?: number[] | null;
   childGroups?: ChildGroup[];
   parentItems?: ParentItem[];
@@ -108,7 +108,7 @@ export interface ParentGroupFilter {
   requiredData?: ValueFilter<Object, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  embedding?: ValueFilter<number[], null>;
+  lazyEmbedding?: ValueFilter<number[], null>;
   eagerEmbedding?: ValueFilter<number[], null>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
@@ -121,7 +121,7 @@ export interface ParentGroupGraphQLFilter {
   requiredData?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  embedding?: ValueGraphQLFilter<number[]>;
+  lazyEmbedding?: ValueGraphQLFilter<number[]>;
   eagerEmbedding?: ValueGraphQLFilter<number[]>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
@@ -134,7 +134,7 @@ export interface ParentGroupOrder {
   requiredData?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  embedding?: OrderBy;
+  lazyEmbedding?: OrderBy;
   eagerEmbedding?: OrderBy;
 }
 
@@ -183,7 +183,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany();
   readonly bulkData: LazyField<ParentGroup, Object | undefined> = hasLazyField();
   readonly requiredData: LazyField<ParentGroup, Object> = hasLazyField();
-  readonly embedding: LazyField<ParentGroup, number[] | undefined> = hasLazyField();
+  readonly lazyEmbedding: LazyField<ParentGroup, number[] | undefined> = hasLazyField();
 
   get id(): ParentGroupId {
     return this.idMaybe || failNoIdYet("ParentGroup");

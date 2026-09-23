@@ -684,10 +684,10 @@ function singleExpressionOrderTypeAssertions(): void {
 
   // When a single expression sort mixes a projected key into the same entry
   // Then the keyed and expression sorts must still be separate entries
-  // @ts-expect-error: keyed and expression sorts must be separate entries
   newEntityManager().query({
     from: a,
     select: { name: a.firstName },
+    // @ts-expect-error: keyed and expression sorts must be separate entries
     orderBy: { sort: a.age, name: "ASC", order: "ASC" },
   });
 }

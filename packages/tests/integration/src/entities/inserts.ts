@@ -257,6 +257,7 @@ export function insertParentGroup(row: {
   name?: string | null;
   bulk_data?: object | null;
   required_data?: object;
+  embedding?: string | null;
 }) {
   return testDriver.insert("parent_groups", { required_data: {}, ...row });
 }

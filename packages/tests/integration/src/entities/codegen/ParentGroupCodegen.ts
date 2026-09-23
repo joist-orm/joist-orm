@@ -64,6 +64,7 @@ export interface ParentGroupFields {
   requiredData: { kind: "primitive"; type: Object; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  embedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
   childGroups: { kind: "o2m"; type: ChildGroup };
   comments: { kind: "o2m"; type: Comment };
   parentItems: { kind: "o2m"; type: ParentItem };
@@ -83,12 +84,14 @@ export interface ParentGroupColumns {
   requiredData: { type: Object; fieldName: "requiredData"; nullable: false; insert: "required"; update: true };
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  embedding: { type: number[]; fieldName: "embedding"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface ParentGroupOpts {
   name?: string | null;
   bulkData?: Object | null;
   requiredData: Object;
+  embedding?: number[] | null;
   childGroups?: ChildGroup[];
   comments?: Comment[];
   parentItems?: ParentItem[];
@@ -107,6 +110,7 @@ export interface ParentGroupFilter {
   requiredData?: ValueFilter<Object, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  embedding?: ValueFilter<number[], null>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
@@ -119,6 +123,7 @@ export interface ParentGroupGraphQLFilter {
   requiredData?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  embedding?: ValueGraphQLFilter<number[]>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
@@ -131,6 +136,7 @@ export interface ParentGroupOrder {
   requiredData?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  embedding?: OrderBy;
 }
 
 export interface ParentGroupFactoryExtras {
@@ -179,6 +185,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany();
   readonly bulkData: LazyField<ParentGroup, Object | undefined> = hasLazyField();
   readonly requiredData: LazyField<ParentGroup, Object> = hasLazyField();
+  readonly embedding: LazyField<ParentGroup, number[] | undefined> = hasLazyField();
 
   get id(): ParentGroupId {
     return this.idMaybe || failNoIdYet("ParentGroup");

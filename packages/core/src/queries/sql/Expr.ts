@@ -89,6 +89,11 @@ export interface Expr<R, Src extends string = string> {
   /** Prefixes this expression and a space to a raw predicate; write .is`IS NULL`, not .is`NULL`. */
   is(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition;
 
+  /** Orders by this expression in ascending order. */
+  asc(): ExpressionOrderBy;
+  /** Orders by this expression in descending order. */
+  desc(): ExpressionOrderBy;
+
   /** `count(x)::int`; `count(a.id)` is `count(*)` for the FROM table, and the matched-row count for a left-joined one. */
   count(): Expr<number, never>;
   countDistinct(): Expr<number, never>;
@@ -302,6 +307,16 @@ export abstract class BaseExpr {
   is(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
     const suffix = new TemplateExpr(strings, values);
     return deferredCondition((ctx) => joinFragments([this.toSql(ctx), suffix.toSql(ctx)], " "));
+  }
+
+  /** Orders by this expression in ascending order. */
+  asc(): ExpressionOrderBy {
+    return { sort: this, order: "ASC" };
+  }
+
+  /** Orders by this expression in descending order. */
+  desc(): ExpressionOrderBy {
+    return { sort: this, order: "DESC" };
   }
 
   count(): Expr<number, never> {

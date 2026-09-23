@@ -185,7 +185,7 @@ export interface RecursiveOptions {
   union?: "all" | "distinct";
 }
 
-/** An expression order-by entry. An undefined order prunes the complete entry. */
+/** An expression order-by entry, also returned by `expr.asc()` and `expr.desc()`. An undefined order prunes it. */
 export type ExpressionOrderBy = {
   readonly sort: ExprLike<unknown>;
   readonly order: "ASC" | "DESC" | undefined;
@@ -206,7 +206,7 @@ export type OrderByDirection =
  * The keys are the keys of a POJO/subquery `select` (rendered as SQL output-column names, so ordering
  * by an aggregate does not repeat its expression), or the entity's sortable fields in entity mode.
  * An `undefined` direction prunes the entry, like any other condition. For expressions that are not
- * in `select`, mix in `{ sort, order }` entries in the array form.
+ * in `select`, mix in `expr.asc()`/`expr.desc()` or `{ sort, order }` entries in the array form.
  */
 export type OrderByKeys<S> =
   // If S is an array select, allow ordering by each selected column's field name.

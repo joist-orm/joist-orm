@@ -24,7 +24,13 @@ import { installSkills } from "./installSkills.ts";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata.ts";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger.ts";
 import { scanEntityFiles } from "./scanEntityFiles.ts";
-import { isEntityTable, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils.ts";
+import {
+  isEntityTable,
+  isEnumTable,
+  isJoinTable,
+  mapSimpleDbTypeToTypescriptType,
+  shouldIncludeSchema,
+} from "./utils.ts";
 
 const { default: pgStructure } = pgStructureModule;
 
@@ -151,7 +157,13 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
   const otherTables = db.tables
-    .filter((t) => !isEntityTable(config, t) && !isEnumTable(config, t) && !isJoinTable(config, t))
+    .filter(
+      (t) =>
+        shouldIncludeSchema(config, t) &&
+        !isEntityTable(config, t) &&
+        !isEnumTable(config, t) &&
+        !isJoinTable(config, t),
+    )
     .map((t) => t.name);
   const entitiesByName = Object.fromEntries(entities.map((e) => [e.name, e]));
   return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables, otherTables };

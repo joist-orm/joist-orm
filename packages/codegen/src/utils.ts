@@ -208,6 +208,7 @@ function isIgnored(config: Config, t: Table): boolean {
   return (config.ignoredTables || ["migrations", "pgmigrations"]).includes(t.name) || !shouldIncludeSchema(config, t);
 }
 
-function shouldIncludeSchema(config: Config, t: Table): boolean {
+/** Uses the same schema selection for metadata and test database cleanup. */
+export function shouldIncludeSchema(config: Config, t: Table): boolean {
   return config.schemas ? config.schemas.includes(t.schema.name) : t.schema.name === "public";
 }

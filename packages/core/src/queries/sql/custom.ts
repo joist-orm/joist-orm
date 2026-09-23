@@ -79,11 +79,14 @@ export interface CustomTableMgmt extends TableSourceMgmt {
 export function customTable<const TableName extends string, const C extends CustomColumnInputs>(
   tableName: TableName,
   columns: C,
+  options: { schema?: string } = {},
 ): CustomTableDefinition<TableName, C> {
   const descriptors = Object.fromEntries(
     Object.entries(columns).map(([fieldName, input]) => [fieldName, customColumn(fieldName, input)]),
   );
-  return { [customTableDefinition]: { tableName, columns: descriptors } } as CustomTableDefinition<TableName, C>;
+  return {
+    [customTableDefinition]: { tableName, schema: options.schema, columns: descriptors },
+  } as CustomTableDefinition<TableName, C>;
 }
 
 /** Recognizes a declaration created by `customTable`. */
@@ -100,6 +103,7 @@ export function getCustomTableDefinition<TableName extends string, C extends Cus
 
 interface CustomTableDefinitionBrand<TableName extends string, C extends CustomColumnInputs> {
   readonly tableName: TableName;
+  readonly schema?: string;
   readonly __columns: C;
   readonly columns: ColumnDescriptors;
 }

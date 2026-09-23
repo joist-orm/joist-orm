@@ -2446,4 +2446,65 @@ describe("em.execute", () => {
     // Then the deleted raw scalar is returned
     expect(result).toEqual({ rowCount: 1, rows: ["Delete me"] });
   });
+
+  describe("custom tables in another schema", () => {
+    afterEach(async () => {
+      await knex.withSchema("archive").table("authors").delete();
+    });
+
+    it("inserts into a custom table in another schema", async () => {
+      // Given an archived Authors table outside the Joist domain model
+      const em = newEntityManager();
+      const authors = table(
+        customTable("authors", { id: { type: "int", hasDefault: true }, firstName: "text" }, { schema: "archive" }),
+      );
+
+      // When adding an archived Author
+      const result = await em.execute({
+        insert: authors,
+        values: [{ firstName: "Archived" }],
+        returning: authors.firstName,
+      });
+
+      // Then the archived table accepts the new Author
+      expect(result).toEqual({ rowCount: 1, rows: ["Archived"] });
+    });
+
+    it("updates a custom table in another schema", async () => {
+      // Given an archived Author outside the public Authors table
+      await knex.withSchema("archive").table("authors").insert({ first_name: "Before" });
+      // And a custom handle for the archived table
+      const em = newEntityManager();
+      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+
+      // When changing the archived Author's name
+      const result = await em.execute({
+        update: authors,
+        set: { firstName: "After" },
+        where: authors.firstName.eq("Before"),
+        returning: authors.firstName,
+      });
+
+      // Then the archived Author is updated
+      expect(result).toEqual({ rowCount: 1, rows: ["After"] });
+    });
+
+    it("deletes from a custom table in another schema", async () => {
+      // Given an archived Author outside the public Authors table
+      await knex.withSchema("archive").table("authors").insert({ first_name: "Delete me" });
+      // And a custom handle for the archived table
+      const em = newEntityManager();
+      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+
+      // When deleting the archived Author
+      const result = await em.execute({
+        delete: authors,
+        where: authors.firstName.eq("Delete me"),
+        returning: authors.firstName,
+      });
+
+      // Then the archived Author is removed
+      expect(result).toEqual({ rowCount: 1, rows: ["Delete me"] });
+    });
+  });
 });

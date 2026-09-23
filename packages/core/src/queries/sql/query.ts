@@ -62,6 +62,7 @@ import {
   m2mJoinTable,
   referenceJoinSource,
   tableMgmt,
+  tableSqlName,
 } from "src/queries/sql/Tables.ts";
 import type { TypeInfo } from "src/serde/TypeInfo.ts";
 import { fail } from "src/utils.ts";
@@ -1961,7 +1962,7 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
       return {
         handle,
         alias,
-        sql: `${kq(tableName)} AS ${kq(alias)}`,
+        sql: `${tableSqlName(mgmt)} AS ${kq(alias)}`,
         bindings: [],
         refs: [],
         entitySelects,

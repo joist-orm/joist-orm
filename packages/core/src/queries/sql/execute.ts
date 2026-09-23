@@ -50,6 +50,7 @@ import {
   isEntityTable,
   isTable,
   tableMgmt,
+  tableSqlName,
 } from "src/queries/sql/Tables.ts";
 import type { Column } from "src/serde/columns.ts";
 import type { ColumnsOf, TypeMapEntry } from "src/typeMap.ts";
@@ -256,7 +257,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
   ctx.register(mgmt, alias);
   const returning = statement.returning === undefined ? undefined : projectionToSql(statement.returning, ctx);
   if (returning) for (const select of returning.selects) refs.push(...select.refs);
-  let sql = `${operation === "delete" ? "DELETE FROM" : operation.toUpperCase() + (operation === "insert" ? " INTO" : "")} ${kq(mgmt.tableName)} AS ${kq(alias)}`;
+  let sql = `${operation === "delete" ? "DELETE FROM" : operation.toUpperCase() + (operation === "insert" ? " INTO" : "")} ${tableSqlName(mgmt)} AS ${kq(alias)}`;
   const bindings: unknown[] = [];
   if (operation === "insert") {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");

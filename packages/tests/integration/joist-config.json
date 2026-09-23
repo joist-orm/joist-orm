@@ -82,7 +82,7 @@
       "tag": "p"
     },
     "ParentGroup": {
-      "fields": { "bulkData": { "lazy": true }, "embedding": { "lazy": true }, "requiredData": { "lazy": true } },
+      "fields": { "bulkData": { "lazy": true }, "lazyEmbedding": { "lazy": true }, "requiredData": { "lazy": true } },
       "tag": "parentGroup"
     },
     "ParentItem": { "tag": "pi" },

@@ -485,11 +485,15 @@ describe("Author", () => {
   });
 
   it("has an index on the publisher_id foreign key", async () => {
-    // Ensures createEntityTable automatically creates indexes for foreign keys.
+    // Given the public Authors table also has an archived table with the same name
     const pgConfig = newPgConnectionConfig();
     const db = await pgStructure(pgConfig);
-    const t = db.tables.find((t) => t.name === "authors")!;
+
+    // When inspecting the public Authors table's publisher index
+    const t = db.tables.find((t) => t.name === "authors" && t.schema.name === "public")!;
     const i = t.indexes.find((i) => i.name === "authors_publisher_id_index")!;
+
+    // Then createEntityTable has indexed the publisher foreign key
     expect(i).toBeDefined();
   });
 

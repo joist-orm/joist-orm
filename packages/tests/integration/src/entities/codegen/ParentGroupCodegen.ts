@@ -65,6 +65,7 @@ export interface ParentGroupFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   embedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  eagerEmbedding: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
   childGroups: { kind: "o2m"; type: ChildGroup };
   comments: { kind: "o2m"; type: Comment };
   parentItems: { kind: "o2m"; type: ParentItem };
@@ -85,6 +86,7 @@ export interface ParentGroupColumns {
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
   embedding: { type: number[]; fieldName: "embedding"; nullable: true; insert: "optional"; update: true };
+  eagerEmbedding: { type: number[]; fieldName: "eagerEmbedding"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface ParentGroupOpts {
@@ -92,6 +94,7 @@ export interface ParentGroupOpts {
   bulkData?: Object | null;
   requiredData: Object;
   embedding?: number[] | null;
+  eagerEmbedding?: number[] | null;
   childGroups?: ChildGroup[];
   comments?: Comment[];
   parentItems?: ParentItem[];
@@ -111,6 +114,7 @@ export interface ParentGroupFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   embedding?: ValueFilter<number[], null>;
+  eagerEmbedding?: ValueFilter<number[], null>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
@@ -124,6 +128,7 @@ export interface ParentGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   embedding?: ValueGraphQLFilter<number[]>;
+  eagerEmbedding?: ValueGraphQLFilter<number[]>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
@@ -137,6 +142,7 @@ export interface ParentGroupOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   embedding?: OrderBy;
+  eagerEmbedding?: OrderBy;
 }
 
 export interface ParentGroupFactoryExtras {
@@ -217,6 +223,14 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get eagerEmbedding(): number[] | undefined {
+    return getField(this, "eagerEmbedding");
+  }
+
+  set eagerEmbedding(eagerEmbedding: number[] | undefined) {
+    setField(this, "eagerEmbedding", eagerEmbedding);
   }
 
   /**

@@ -570,7 +570,7 @@ Like `em.find`, filtering is skipped for CTI subtypes.
 
 ## Ordering and Paging
 
-For ordinary queries, `orderBy` accepts an array of keyed or expression entries, or a single keyed object:
+For ordinary queries, `orderBy` accepts an array of keyed or expression entries, or a single entry:
 
 The **keyed form** uses keys from the POJO `select` (or physical column keys in entity mode), each with `"ASC"` or `"DESC"`, optionally suffixed with `NULLS FIRST` / `NULLS LAST`. I.e. `select: a` uses `orderBy: { first_name: "ASC" }`, while `select: { firstName: a.first_name }` uses `orderBy: { firstName: "ASC" }`:
 
@@ -595,6 +595,8 @@ orderBy: [
   { sort: a.first_name, order: "ASC", nulls: "last" },
 ];
 ```
+
+For one expression, use `orderBy: a.first_name.asc()` or `orderBy: a.first_name.desc()` without an array.
 
 Keyed and expression entries can also be mixed:
 

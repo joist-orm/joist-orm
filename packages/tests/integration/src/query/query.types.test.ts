@@ -67,6 +67,12 @@ describe("em.query / types", () => {
     // The assertions in `typeAssertions` are checked by `tsc`; referencing the function keeps it from being flagged as unused
     expect(typeof typeAssertions).toBe("function");
   });
+  it("type-checks a single expression order", () => {
+    // Given an Author table with age outside the selected columns
+    // When the type checker validates direct and reusable queries with one expression order
+    // Then those queries retain their selected row type
+    expect(typeof singleExpressionOrderTypeAssertions).toBe("function");
+  });
 });
 
 /**
@@ -662,3 +668,26 @@ async function typeAssertions() {
 
 type ResultOf<E> = E extends { readonly [exprBrand]: ExprBrand<infer R, any> } ? R : never;
 type SourceOf<E> = E extends { readonly [exprBrand]: ExprBrand<any, infer Src> } ? Src : never;
+
+/** Checks single expression ordering through both read entry points. */
+function singleExpressionOrderTypeAssertions(): void {
+  // Given an Author table whose age is outside the selected name projection
+  const a = table(Author);
+
+  // When ordering direct and reusable reads by an age expression
+  const direct = newEntityManager().query({ from: a, select: { name: a.firstName }, orderBy: a.age.asc() });
+  const reusable = query({ from: a, select: { name: a.firstName }, orderBy: a.age.desc() });
+
+  // Then both reads retain the selected name type
+  expectTypeOf(direct).resolves.toEqualTypeOf<{ name: string }[]>();
+  expectTypeOf(reusable).toEqualTypeOf<Subquery<{ name: string }, "?">>();
+
+  // When a single expression sort mixes a projected key into the same entry
+  // Then the keyed and expression sorts must still be separate entries
+  newEntityManager().query({
+    from: a,
+    select: { name: a.firstName },
+    // @ts-expect-error: keyed and expression sorts must be separate entries
+    orderBy: { sort: a.age, name: "ASC", order: "ASC" },
+  });
+}

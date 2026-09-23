@@ -16,7 +16,7 @@ import {
   type SqlPredicate,
   type Subquery,
   alias,
-  customTable,
+  declareTable,
   expr,
   type exprBrand,
   getAliasMgmt,
@@ -248,7 +248,7 @@ async function typeAssertions() {
   const [a, b, p] = tables(Author, Book, Publisher);
 
   // === Custom tables expose declared columns and retain one-off column access
-  const customAuthorsTable = customTable("authors", {
+  const customAuthorsTable = declareTable("authors", {
     id: { type: "int", hasDefault: true },
     firstName: "text",
     age: { type: "int", nullable: true },

@@ -60,10 +60,10 @@ Relationship names remain join sugar: `b.author.as(a)` and `a.books.as(b)` still
 
 ### Custom tables
 
-Use `customTable` for tables intentionally omitted from Joist codegen. Declare the table once, then create reusable handles with `table`, including named handles for self-joins:
+Use `declareTable` for tables intentionally omitted from Joist codegen. Declare the table once, then create reusable handles with `table`, including named handles for self-joins:
 
 ```ts
-const auditEntries = customTable("audit_entries", {
+const auditEntries = declareTable("audit_entries", {
   id: { type: "int", hasDefault: true },
   actorName: "text",
   payload: { type: "jsonb", nullable: true },

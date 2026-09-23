@@ -78,7 +78,7 @@ export {
   type PolyReference,
 } from "src/queries/sql/Tables.ts";
 export {
-  customTable,
+  declareTable,
   type CustomColumnConfig,
   type CustomColumnInput,
   type CustomColumnInputs,

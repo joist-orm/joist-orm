@@ -718,7 +718,7 @@ function customAssignments(
   return defined;
 }
 
-/** Applies physical write restrictions declared by `customTable`. */
+/** Applies physical write restrictions declared by `declareTable`. */
 function customWritableField(table: CustomTableMgmt, key: string, operation: "insert" | "update"): Column {
   const column = Object.hasOwn(table.columns, key) ? table.columns[key] : undefined;
   if (!column) fail(`Unsupported SQL mutation field ${table.tableName}.${key}`);

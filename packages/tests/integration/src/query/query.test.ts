@@ -7,7 +7,7 @@ import {
   Query,
   type RawCondition,
   alias,
-  customTable,
+  declareTable,
   getAliasMgmt,
   getMetadata,
   query,
@@ -3890,7 +3890,7 @@ describe("em.query", () => {
     // Given an Author row in a physical table declared outside the Joist domain model
     await insertAuthor({ first_name: "Alice" });
     const em = newEntityManager();
-    const authorsTable = customTable("authors", { id: "int", firstName: "text" });
+    const authorsTable = declareTable("authors", { id: "int", firstName: "text" });
     const authors = table(authorsTable);
     // And a separately named handle for the same custom table
     const other = table(authorsTable, "other");
@@ -3942,7 +3942,7 @@ describe("em.query", () => {
       await knex.withSchema("archive").table("authors").insert({ first_name: "Archived" });
       // And an archived Authors declaration with no generated entity metadata
       const em = newEntityManager();
-      const authors = table(customTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
+      const authors = table(declareTable("authors", { id: "int", firstName: "text" }, { schema: "archive" }));
 
       // When selecting archived Authors through the custom table
       const rows = await em.query({ from: authors, select: authors.firstName });

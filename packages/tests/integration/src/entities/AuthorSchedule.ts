@@ -1,3 +1,5 @@
+import { table } from "joist-orm";
+
 import { AuthorScheduleCodegen, authorScheduleConfig as config } from "./entities";
 
 export class AuthorSchedule extends AuthorScheduleCodegen {
@@ -8,6 +10,11 @@ export class AuthorSchedule extends AuthorScheduleCodegen {
     commitRuleFoundSelf: false,
     /** Opt-in to have the regular rule attempt an (illegal) `em.find`, to exercise the guard. */
     tryFindInRegularRule: false,
+    /** Opt-in to check that regular rules cannot query unflushed schedules. */
+    tryQueryInRegularRule: false,
+    /** Opt-in to check that commit rules can query flushed schedules. */
+    tryQueryInCommitRule: false,
+    commitRuleQueryCount: -1,
   };
 }
 
@@ -16,6 +23,10 @@ export class AuthorSchedule extends AuthorScheduleCodegen {
 config.addRule((as) => {
   if (as.transientFields.tryFindInRegularRule) {
     return as.em.find(AuthorSchedule, {}).then(() => undefined);
+  }
+  if (as.transientFields.tryQueryInRegularRule) {
+    const schedules = table(AuthorSchedule);
+    return as.em.query({ from: schedules, select: schedules.id }).then(() => undefined);
   }
 });
 
@@ -28,6 +39,11 @@ config.addCommitRule("author", async (as) => {
   as.transientFields.commitRuleFindCount = found.length;
   // The found rows are hydrated back to the same in-memory instances (not duplicates).
   as.transientFields.commitRuleFoundSelf = found.includes(as.fullNonReactiveAccess);
+  if (as.transientFields.tryQueryInCommitRule) {
+    const schedules = table(AuthorSchedule);
+    const rows = await as.em.query({ from: schedules, select: schedules.id });
+    as.transientFields.commitRuleQueryCount = rows.length;
+  }
   if (found.length > 2) {
     return "An author cannot have more than 2 schedules";
   }

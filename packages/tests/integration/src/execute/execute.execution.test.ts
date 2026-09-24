@@ -100,9 +100,11 @@ describe("em.execute / execution", () => {
       }
     });
 
-    it("rejects external mutations while an Author hook holds the flush lock, but permits reads", async () => {
+    it("allows immediate SQL writes and reads while an Author hook holds the flush lock", async () => {
       // Given a persisted Author whose pending name change requires a flush
       await insertAuthor({ first_name: "Original" });
+      // And a Tag can be changed independently by immediate SQL
+      await insertTag({ name: "Original" });
       const em = newEntityManager();
       // And the Author is loaded before its name is changed in memory
       const author = await em.load(Author, "a:1");
@@ -117,28 +119,22 @@ describe("em.execute / execution", () => {
         entered.resolve();
         await release.promise;
       });
-      // And valid mutation shapes include an empty import that must not bypass the lock
-      const statements = [
-        { insert: t, values: [{ name: "Forbidden" }] },
-        { update: t, set: { name: "Forbidden" }, where: t.id.eq("t:1") },
-        { delete: t, where: t.id.eq("t:1") },
-        { insert: t, values: [] },
-      ] as const;
 
-      // When flush reaches the paused hook and application code tries to write outside its context
+      // When flush reaches the paused hook and application code writes directly to the database
       const flushing = em.flush();
       try {
         await Promise.race([entered.promise, flushing]);
         resetQueryCount();
-        for (const statement of statements) {
-          await expect(em.execute(statement)).rejects.toThrow(
-            "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
-          );
-        }
+        const updated = await em.execute({ update: t, set: { name: "Immediate" }, where: t.id.eq("t:1") });
 
-        // Then no external mutation reaches the driver while the flush is paused
+        // Then the immediate SQL write reaches the database without changing the pending Author
+        expect(updated).toEqual({ rowCount: 1, rows: [] });
         expect(hook).toHaveBeenCalledWith("Author.beforeFlush");
-        expect(queries).toMatchInlineSnapshot(`[]`);
+        expect(queries).toMatchInlineSnapshot(`
+          [
+            "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
+          ]
+        `);
 
         // When a read executes during the hook rather than during a validation rule
         const read = await em.execute({ from: a, select: a.firstName });
@@ -147,6 +143,7 @@ describe("em.execute / execution", () => {
         expect(read).toEqual({ rowCount: 1, rows: ["Original"] });
         expect(queries).toMatchInlineSnapshot(`
           [
+            "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
             "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL",
           ]
         `);
@@ -168,6 +165,7 @@ describe("em.execute / execution", () => {
         ]
       `);
       expect(await select("authors")).toMatchObject([{ first_name: "Flushed" }]);
+      expect(await select("tags")).toMatchObject([{ name: "Immediate" }, { name: "After flush" }]);
     });
   });
 

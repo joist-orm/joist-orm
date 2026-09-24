@@ -57,4 +57,34 @@ describe("AuthorSchedule commit rules", () => {
     expect(schedule.transientFields.commitRuleFindCount).toBe(3);
     expect(await select("author_schedules")).toMatchObject([{ id: 1 }, { id: 2 }]);
   });
+
+  it("rejects em.query from a regular AuthorSchedule rule", async () => {
+    // Given a new AuthorSchedule whose regular rule tries to read unflushed schedules
+    const em = newEntityManager();
+    const schedule = newAuthorSchedule(em);
+    schedule.transientFields.tryQueryInRegularRule = true;
+
+    // When regular validation runs before the schedule is inserted
+    const flushing = em.flush();
+
+    // Then em.query rejects the pre-flush read
+    await expect(flushing).rejects.toThrow(
+      "em.query cannot be called from a validation rule (added via config.addRule)",
+    );
+  });
+
+  it("allows em.query from a commit rule after AuthorSchedules are flushed", async () => {
+    // Given an Author with two new schedules, one configured to query in its commit rule
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const schedule = em.create(AuthorSchedule, { author });
+    em.create(AuthorSchedule, { author });
+    schedule.transientFields.tryQueryInCommitRule = true;
+
+    // When the schedules are flushed and their commit rules run
+    await em.flush();
+
+    // Then em.query sees both inserted schedules before commit
+    expect(schedule.transientFields.commitRuleQueryCount).toBe(2);
+  });
 });

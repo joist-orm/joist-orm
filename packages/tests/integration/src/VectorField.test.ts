@@ -1,3 +1,5 @@
+import { expectTypeOf } from "expect-type";
+import { tables } from "joist-orm";
 import { ParentGroup } from "src/entities";
 import { insertParentGroup, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
@@ -91,5 +93,36 @@ describe("VectorField", () => {
     expect(await select("parent_groups")).toMatchObject([{ eager_embedding: "[4,5,6]" }]);
     const em2 = newEntityManager();
     expect(await em2.load(ParentGroup, "parentGroup:1")).toMatchEntity({ eagerEmbedding: [4, 5, 6] });
+  });
+
+  it("can select, filter, and order by cosine distance", async () => {
+    // Given ParentGroups whose vectors are the same as, orthogonal to, and opposite to the search vector, or NULL
+    await insertParentGroup({ name: "same", lazy_embedding: "[1,0,0]" });
+    await insertParentGroup({ name: "opposite", lazy_embedding: "[-1,0,0]" });
+    await insertParentGroup({ name: "orthogonal", lazy_embedding: "[0,1,0]" });
+    await insertParentGroup({ name: "unembedded" });
+    const em = newEntityManager();
+    const [pg] = tables(ParentGroup);
+    const distance = pg.lazyEmbedding.cosineDistance([1, 0, 0]);
+    resetQueryCount();
+    // When we keep the ones within a distance of 1, nearest first
+    const rows = await em.query({
+      from: pg,
+      where: distance.lte(1),
+      orderBy: distance.asc(),
+      select: { name: pg.name, distance },
+    });
+    // Then the opposite vector is too far and the NULL vector has no distance
+    expect(rows).toEqual([
+      { name: "same", distance: 0 },
+      { name: "orthogonal", distance: 1 },
+    ]);
+    expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined; distance: number | undefined }[]>();
+    // And the vector was bound as pgvector's literal
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "SELECT pg.name AS name, (pg.lazy_embedding <=> $1::vector) AS distance FROM parent_groups AS pg WHERE (pg.lazy_embedding <=> $2::vector) <= $3 ORDER BY (pg.lazy_embedding <=> $4::vector) ASC",
+     ]
+    `);
   });
 });

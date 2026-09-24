@@ -623,7 +623,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const em = this;
     return (async function execute() {
       if (isMutation(statement)) {
-        em.__api.checkWritesAllowed();
+        if (em.mode === "read-only") throw new ReadOnlyError();
         if (em.mode === "in-memory-writes") fail("SQL mutations do not support in-memory-writes mode");
       } else {
         em.#assertFindAllowed("execute");

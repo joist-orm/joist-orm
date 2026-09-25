@@ -2,7 +2,7 @@ import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
 import { getInstanceData } from "src/BaseEntity.ts";
 import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
-import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
+import { loadBatchLoader, type loadOperation, refreshLoadOperation } from "src/batchloaders/loadBatchLoader.ts";
 import { type manyToManyLoadOperation } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { type oneToManyLoadOperation } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { type oneToOneLoadOperation } from "src/batchloaders/oneToOneBatchLoader.ts";
@@ -255,6 +255,7 @@ export type FindOperation =
   | typeof findIdsOperation
   | typeof lensOperation
   | typeof loadOperation
+  | typeof refreshLoadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
   | typeof enumCollectionLoadOperation
@@ -3717,19 +3718,22 @@ export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: 
   const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class } : {};
 
   for (const [field, column] of fieldMap[__class]) {
-    const value: any =
-      // Ideally, we could only go through the serde for data that has actually changed since the last time it was
-      // fetched from the db and just use the row value for everything else.  Unfortunately, we lose track of which
-      // fields are modified on flush. So we have to assume that anything present in `data` is a change and push it
-      // through the serde.
-      field.fieldName in originalData || field.fieldName in data
-        ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
-          // reflect what would come from the db if we queried it right now, so use originalData when present
-          column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data)
-        : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-          // be safe to pull the raw data out of the as-loaded RowData
-          rowData.get(rowIndex, column.columnName);
-    row[column.columnName] = value ?? null;
+    // Ideally, we could only go through the serde for data that has actually changed since the last time it was
+    // fetched from the db and just use the row value for everything else.  Unfortunately, we lose track of which
+    // fields are modified on flush. So we have to assume that anything present in `data` is a change and push it
+    // through the serde.
+    if (field.fieldName in originalData || field.fieldName in data) {
+      // If our field is in originalData, then the field has been changed since flush. Our `row` should
+      // reflect what would come from the db if we queried it right now, so use originalData when present
+      const value = column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data);
+      row[column.columnName] = value ?? null;
+    } else if (rowData.has(rowIndex, column.columnName)) {
+      // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
+      // be safe to pull the raw data out of the as-loaded RowData
+      row[column.columnName] = rowData.get(rowIndex, column.columnName) ?? null;
+    }
+    // Otherwise the query never selected this column (i.e. a lazy column or a plugin-narrowed select), so
+    // leave the key absent to keep the copied row partial instead of corrupting the value to null
   }
   return row;
 }

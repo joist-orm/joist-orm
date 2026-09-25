@@ -253,6 +253,12 @@ export {
   type WithSource,
 } from "src/queries/sql/query.ts";
 export {
+  ExactColumnsPlugin,
+  type ExactColumnsPluginOpts,
+  type ExactColumnsTrackOutcome,
+  MissingColumnError,
+} from "./plugins/ExactColumnsPlugin.ts";
+export {
   convertToLoadHint,
   isTypeOrSubType,
   type Reactable,

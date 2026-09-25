@@ -246,6 +246,23 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
+  ignoreUsedToBeUseful: { type: boolean; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreUsedToBeUsefulRequiredWithDefault: {
+    type: boolean;
+    fieldName: never;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  ignoreEnumFkId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreEnumFkRequiredWithDefaultId: {
+    type: number;
+    fieldName: never;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  tsSearch: { type: string; fieldName: never; nullable: true; insert: "never"; update: false };
 }
 
 export interface AuthorOpts {

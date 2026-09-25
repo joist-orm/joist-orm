@@ -1019,4 +1019,20 @@ async function typeAssertions(broadSource: NonNullable<SetQuery["union"]>[number
     // @ts-expect-error: same-key POJO RETURNING must validate both expression-source alternatives
     em.execute({ update: b, set: { title: "Revised" }, allowAll: true, returning: pojoReturning });
   }
+
+  // Given an ignored Author boolean and a generated PostgreSQL search column
+  // When using the physical columns through the table handle
+  // Then SQL mutations accept the writable column, decode both, and reject generated writes
+  expectTypeOf(
+    em.execute({
+      update: a,
+      set: { ignoreUsedToBeUseful: true },
+      allowAll: true,
+      returning: { ignored: a.ignoreUsedToBeUseful, search: a.tsSearch },
+    }),
+  ).resolves.toEqualTypeOf<ExecuteResult<{ ignored: boolean | undefined; search: string | undefined }>>();
+  // @ts-expect-error: the generated search column is omit-only
+  em.execute({ update: a, set: { tsSearch: "manual" }, allowAll: true });
+  // @ts-expect-error: an ignored physical column is not an Author entity field
+  void (await em.load(Author, "a:1")).ignoreUsedToBeUseful;
 }

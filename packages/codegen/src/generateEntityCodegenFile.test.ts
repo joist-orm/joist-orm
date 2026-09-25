@@ -71,6 +71,7 @@ function fakeMeta(name: string, primitives: PrimitiveField[]): any {
     primaryKey: { columnType: "int", notNull: true, columnNotNull: true, columnDefault: null, columnGenerated: false },
     subTypes: [],
     primitives,
+    ignoredColumns: [],
     enums: [],
     pgEnums: [],
     manyToOnes: [],

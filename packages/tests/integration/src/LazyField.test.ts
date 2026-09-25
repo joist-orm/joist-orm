@@ -38,7 +38,7 @@ describe("LazyField", () => {
     // The load lists columns explicitly and omits `bulk_data`
     expect(queries).toMatchInlineSnapshot(`
      [
-       "SELECT pg.id, pg.name, pg.created_at, pg.updated_at FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2",
+       "SELECT pg.id, pg.name, pg.created_at, pg.updated_at, pg.eager_embedding FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2",
      ]
     `);
   });

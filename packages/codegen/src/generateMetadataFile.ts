@@ -28,6 +28,7 @@ import {
   PrimitiveSerde,
   SimpleFieldSerde,
   SuperstructSerde,
+  VectorSerde,
   ZodSerde,
   ZonedDateTimeSerde,
   polymorphicField,
@@ -135,6 +136,8 @@ function generateFields(
       serde = isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
     } else if (columnType === "jsonb") {
       serde = code`new ${JsonSerde}()`;
+    } else if (columnType === "vector") {
+      serde = code`new ${VectorSerde}()`;
     } else if (p.rawFieldType === "bigint") {
       serde = isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
     } else {

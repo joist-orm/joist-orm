@@ -571,6 +571,44 @@ export class JsonSerde implements ScalarCodec {
   }
 }
 
+/**
+ * Maps pgvector `vector(N)` columns to `number[]`s.
+ *
+ * pgvector has no pg array OID, so text results are its `[1,2,3]` literal, which is also valid
+ * JSON (pgvector rejects NaN/Infinity elements). Writes send the same literal, which the batch
+ * `unnest(?::vector[])` casts, because node-pg would otherwise encode a JS array as `{1,2,3}`.
+ */
+export class VectorSerde implements ScalarCodec {
+  dbType = "vector";
+  isArray = false;
+
+  get outputType(): TypeInfo | undefined {
+    return this.constructor === VectorSerde ? { dbType: this.dbType, domain: VectorSerde } : undefined;
+  }
+
+  mapToDbValue(value: unknown): unknown {
+    return JSON.stringify(value);
+  }
+
+  mapToRow(value: any): any {
+    return JSON.stringify(value);
+  }
+
+  mapToDb(value: any) {
+    return value === null ? value : JSON.stringify(value);
+  }
+
+  /** Parses the text literal, and passes through arrays already decoded by the binary row path. */
+  mapFromDb(value: unknown): unknown {
+    return typeof value === "string" ? JSON.parse(value) : maybeNullToUndefined(value);
+  }
+
+  /** `to_json(vector)` falls back to the text literal, i.e. the same value as a driver row. */
+  mapFromJsonAgg(value: any): any {
+    return value;
+  }
+}
+
 /** Similar to SimpleSerde, but applies the zod's `parse` function when reading values from the db. */
 export class ZodSerde implements ScalarCodec {
   dbType = "jsonb";

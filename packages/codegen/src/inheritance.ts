@@ -212,6 +212,7 @@ function expandSingleTableInheritance(
           entity: makeEntity(subTypeName),
           tableName: entity.tableName,
           physicalMetadata: entity.physicalMetadata,
+          ignoredColumns: entity.ignoredColumns,
           primaryKey: entity.primaryKey,
           primitives: entity.primitives.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
           enums: entity.enums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),

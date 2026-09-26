@@ -638,6 +638,10 @@ function generateColumnsType(meta: EntityDbMetadata): Record<string, Code> {
       columns[field.columnName] = code`{ type: ${field.enumType}${array}; ${policy} }`;
     }
   }
+  for (const column of meta.ignoredColumns) {
+    columns[column.columnName] =
+      code`{ type: ${column.fieldType}; fieldName: never; ${columnPolicyType(meta, column)} }`;
+  }
   for (const field of meta.polymorphics) {
     for (const component of field.components) {
       columns[component.columnName] =

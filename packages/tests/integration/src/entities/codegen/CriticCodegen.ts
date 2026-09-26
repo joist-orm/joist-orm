@@ -96,6 +96,8 @@ export interface CriticColumns {
     insert: "optional";
     update: true;
   };
+  ignoreFavouriteBookId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreWorstBookId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
 }
 
 export interface CriticOpts {

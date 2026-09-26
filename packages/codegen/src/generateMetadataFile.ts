@@ -120,38 +120,9 @@ function generateFields(
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnType, superstruct, zodSchema, customSerde, isArray } = p;
+    const { fieldName, derived, columnType } = p;
     const column = columnArgs(p, dbMetadata);
-    let serde: Code;
-    if (customSerde) {
-      serde = isArray
-        ? code`new ${CustomSerdeAdapter}( "${columnType}[]", ${customSerde}, true)`
-        : code`new ${CustomSerdeAdapter}( "${columnType}", ${customSerde})`;
-    } else if (superstruct) {
-      serde = code`new ${SuperstructSerde}( ${superstruct})`;
-    } else if (zodSchema) {
-      serde = code`new ${ZodSerde}( ${zodSchema})`;
-    } else if (columnType === "numeric" || columnType === "decimal") {
-      serde = isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
-    } else if (columnType === "jsonb") {
-      serde = code`new ${JsonSerde}()`;
-    } else if (p.rawFieldType === "bigint") {
-      serde = isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
-    } else {
-      let serdeType: Import;
-      if (columnType === "date") {
-        serdeType = config.temporal ? PlainDateSerde : DateSerde;
-      } else if (columnType === "timestamp without time zone") {
-        serdeType = config.temporal ? PlainDateTimeSerde : DateSerde;
-      } else if (columnType === "timestamp with time zone") {
-        serdeType = config.temporal ? ZonedDateTimeSerde : DateSerde;
-      } else if (columnType === "time without time zone") {
-        serdeType = config.temporal ? PlainTimeSerde : PrimitiveSerde;
-      } else {
-        serdeType = PrimitiveSerde;
-      }
-      serde = isArray ? code`new ${serdeType}( "${columnType}[]", true)` : code`new ${serdeType}( "${columnType}")`;
-    }
+    const serde = primitiveColumnCodec(config, p);
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
       {
@@ -374,6 +345,11 @@ export function generateColumnDeclarations(config: Config, dbMeta: DbMetadata, m
     if (codec) columns[apiName] = code`new ${Column}(${q(columnName)}, ${args}, ${codec})`.asOneline();
     return code`${meta.entity.metaName}Columns[${q(apiName)}]`;
   });
+  for (const column of (meta.physicalMetadata ?? meta).ignoredColumns) {
+    const apiName = camelCase(column.columnName);
+    columns[apiName] =
+      code`new ${Column}(${q(column.columnName)}, ${columnArgs(column, meta)}, ${primitiveColumnCodec(config, column)})`.asOneline();
+  }
   return code`const ${meta.entity.metaName}Columns = ${columns} satisfies ${ColumnDescriptors};`;
 }
 
@@ -408,4 +384,37 @@ function maybeSanitize(
 
 function isString(config: Config, columnType: DatabaseColumnType): boolean {
   return mapSimpleDbTypeToTypescriptType(config, columnType) === "string";
+}
+
+/** Uses domain codecs for modeled fields and the same native conversions for unmodeled columns. */
+function primitiveColumnCodec(config: Config, column: PrimitiveField): Code {
+  const { columnType, customSerde, superstruct, zodSchema, isArray } = column;
+  if (customSerde) {
+    return isArray
+      ? code`new ${CustomSerdeAdapter}( "${columnType}[]", ${customSerde}, true)`
+      : code`new ${CustomSerdeAdapter}( "${columnType}", ${customSerde})`;
+  }
+  if (superstruct) return code`new ${SuperstructSerde}( ${superstruct})`;
+  if (zodSchema) return code`new ${ZodSerde}( ${zodSchema})`;
+  if (columnType === "numeric" || columnType === "decimal") {
+    return isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
+  }
+  if (columnType === "jsonb") return code`new ${JsonSerde}()`;
+  if (column.rawFieldType === "bigint") {
+    return isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
+  }
+
+  let serdeType: Import;
+  if (columnType === "date") {
+    serdeType = config.temporal ? PlainDateSerde : DateSerde;
+  } else if (columnType === "timestamp without time zone") {
+    serdeType = config.temporal ? PlainDateTimeSerde : DateSerde;
+  } else if (columnType === "timestamp with time zone") {
+    serdeType = config.temporal ? ZonedDateTimeSerde : DateSerde;
+  } else if (columnType === "time without time zone") {
+    serdeType = config.temporal ? PlainTimeSerde : PrimitiveSerde;
+  } else {
+    serdeType = PrimitiveSerde;
+  }
+  return isArray ? code`new ${serdeType}( "${columnType}[]", true)` : code`new ${serdeType}( "${columnType}")`;
 }

@@ -147,6 +147,11 @@ const authorMetaColumns = {
   "currentDraftBookId": new Column("current_draft_book_id", true, false, false, false, true, () => bookMeta, new KeySerde("b", "int")),
   "favoriteBookId": new Column("favorite_book_id", true, false, false, false, true, () => bookMeta, new KeySerde("b", "int")),
   "publisherId": new Column("publisher_id", true, false, false, false, true, () => publisherMeta, new KeySerde("p", "int")),
+  "ignoreUsedToBeUseful": new Column("ignore_used_to_be_useful", true, true, false, false, true, undefined, new PrimitiveSerde("boolean")),
+  "ignoreUsedToBeUsefulRequiredWithDefault": new Column("ignore_used_to_be_useful_required_with_default", false, true, false, false, true, undefined, new PrimitiveSerde("boolean")),
+  "ignoreEnumFkId": new Column("ignore_enum_fk_id", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
+  "ignoreEnumFkRequiredWithDefaultId": new Column("ignore_enum_fk_required_with_default_id", false, true, false, false, true, undefined, new PrimitiveSerde("int")),
+  "tsSearch": new Column("ts_search", true, false, true, false, true, undefined, new PrimitiveSerde("tsvector")),
 } satisfies ColumnDescriptors;
 const authorScheduleMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => authorScheduleMeta, new KeySerde("authorSchedule", "int")),
@@ -252,6 +257,8 @@ const criticMetaColumns = {
   "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "favoriteLargePublisherId": new Column("favorite_large_publisher_id", true, false, false, false, true, () => largePublisherMeta, new KeySerde("p", "int")),
   "groupId": new Column("group_id", true, false, false, false, true, () => publisherGroupMeta, new KeySerde("pg", "int")),
+  "ignoreFavouriteBookId": new Column("ignore_favourite_book_id", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
+  "ignoreWorstBookId": new Column("ignore_worst_book_id", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
 } satisfies ColumnDescriptors;
 const criticColumnMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => criticColumnMeta, new KeySerde("cc", "int")),

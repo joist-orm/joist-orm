@@ -344,6 +344,8 @@ export class EntityDbMetadata {
   supportsEmExecute?: boolean;
   /** Original table fields, captured before inheritance partitions or specializes them. */
   physicalMetadata?: EntityDbMetadata;
+  /** Physical columns ignored by entity fields, retained for direct SQL reads and writes. */
+  ignoredColumns: PrimitiveField[];
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -437,6 +439,18 @@ export class EntityDbMetadata {
       newPolymorphicField(config, table, this.entity, rc),
     );
 
+    const modeledColumns = new Set([
+      this.primaryKey.columnName,
+      ...this.primitives.map((field) => field.columnName),
+      ...this.enums.map((field) => field.columnName),
+      ...this.pgEnums.map((field) => field.columnName),
+      ...this.manyToOnes.map((field) => field.columnName),
+      ...this.polymorphics.flatMap((field) => field.components.map((component) => component.columnName)),
+    ]);
+    this.ignoredColumns = table.columns
+      .filter((column) => !modeledColumns.has(column.name))
+      .map((column) => newPhysicalColumn(config, this.entity, column));
+
     this.tableName = table.name;
     this.tagName = config.entities[this.entity.name]?.tag;
     this.abstract = config.entities[this.entity.name]?.abstract || false;
@@ -446,9 +460,7 @@ export class EntityDbMetadata {
     this.updatedAt = this.primitives.find((f) => updatedAtConf.names.includes(f.columnName));
     this.deletedAt = this.primitives.find((f) => deletedAtConf.names.includes(f.columnName));
     this.uniqueConstraints = inferUniqueConstraints(this, table);
-    const fields = [this.primaryKey, ...this.primitives, ...this.enums, ...this.pgEnums, ...this.manyToOnes];
-    const mapped = new Set(fields.map((field) => field.columnName));
-    // Composite keys and unmapped NOT NULL columns cannot be supplied through mutation field names.
+    // Composite keys and unsupported physical arrays still cannot be written through mutation field names.
     this.supportsEmExecute =
       table.primaryKey?.columns.length === 1 &&
       this.primaryKey.columnName === "id" &&
@@ -456,7 +468,7 @@ export class EntityDbMetadata {
       table.columns.every((column) => column.arrayDimension <= 1 && !(isArray(column) && isPgEnum(column))) &&
       // JSON/schema serdes encode one JSON value, not a SQL array. Date-mode serdes also encode one scalar.
       // Custom element mappers and Temporal array serdes have separate elementwise write paths.
-      !this.primitives.some(
+      ![...this.primitives, ...this.ignoredColumns].some(
         (field) =>
           field.isArray &&
           !field.customSerde &&
@@ -465,10 +477,6 @@ export class EntityDbMetadata {
               (field.columnType === "date" ||
                 field.columnType === "timestamp with time zone" ||
                 field.columnType === "timestamp without time zone"))),
-      ) &&
-      table.columns.every(
-        (column) =>
-          mapped.has(column.name) || !column.notNull || column.defaultWithTypeCast !== null || column.isGenerated,
       );
   }
 
@@ -610,6 +618,34 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     isArray: array,
     hasConfigDefault, // can be set to true by scanEntityFiles
     lazy: isLazyField(config, entity, fieldName),
+  };
+}
+
+/** Keeps an ignored column's database type without applying entity-only field configuration. */
+function newPhysicalColumn(config: Config, entity: Entity, column: Column): PrimitiveField {
+  const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
+  const rawFieldType = column.type instanceof EnumType ? "string" : mapSimpleDbTypeToTypescriptType(config, columnType);
+  const isArray = column.arrayDimension === 1;
+  return {
+    kind: "primitive",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
+    fieldName: primitiveFieldName(column.name),
+    columnName: column.name,
+    columnType,
+    fieldType: isArray ? code`${rawFieldType}[]` : rawFieldType,
+    rawFieldType,
+    notNull: column.notNull,
+    columnDefault: column.default,
+    columnGenerated: column.isGenerated,
+    derived: false,
+    protected: false,
+    unique: false,
+    superstruct: undefined,
+    zodSchema: undefined,
+    customSerde: undefined,
+    isArray,
+    hasConfigDefault: false,
   };
 }
 

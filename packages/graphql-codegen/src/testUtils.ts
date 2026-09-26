@@ -80,6 +80,7 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     entity: makeEntity(name),
     primaryKey: newPrimitiveField("id", { columnType: "int", fieldType: "number", rawFieldType: "number" }),
     primitives: [],
+    ignoredColumns: [],
     enums: [],
     pgEnums: [],
     manyToOnes: [],

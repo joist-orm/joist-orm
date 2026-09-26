@@ -1360,9 +1360,9 @@ describe("em.execute", () => {
       await expect(execute({ update: c, set: { parent: "a:1" }, allowAll: true })).rejects.toThrow(
         "Unsupported SQL mutation field Comment.parent",
       );
-      // And the generated SQL-only search vector must not become writable through a guessed domain name
+      // And the generated SQL-only search vector remains omit-only even though it is now a physical column
       await expect(execute({ update: a, set: { tsSearch: "text" }, allowAll: true })).rejects.toThrow(
-        "Unsupported SQL mutation field Author.tsSearch",
+        "Generated field Author.tsSearch is omit-only",
       );
       // Then neither excluded storage form reaches PostgreSQL
       expect(queries).toEqual([]);
@@ -2506,5 +2506,39 @@ describe("em.execute", () => {
       // Then the archived Author is removed
       expect(result).toEqual({ rowCount: 1, rows: ["Delete me"] });
     });
+  });
+
+  it("writes ignored Author columns without adding entity fields", async () => {
+    // Given an Author whose ignored boolean and generated search column are physical storage only
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When inserting and returning columns that the Author entity does not expose
+    const result = await em.execute({
+      insert: a,
+      values: [{ firstName: "Importer", numberOfBooks: 0, search: "catalog", ignoreUsedToBeUseful: true }],
+      returning: { ignored: a.ignoreUsedToBeUseful, search: a.tsSearch },
+    });
+
+    // Then the ignored column retains its stored value and PostgreSQL computes the search column
+    expect(result).toEqual({ rowCount: 1, rows: [{ ignored: true, search: "'catalog':1" }] });
+  });
+
+  it("updates an ignored Author column using its physical codec", async () => {
+    // Given an Author whose ignored boolean was omitted from its entity creation
+    await insertAuthor({ first_name: "Before" });
+    const em = newEntityManager();
+    const a = table(Author);
+
+    // When SQL assigns the physical column without setting an Author entity field
+    const result = await em.execute({
+      update: a,
+      set: { ignoreUsedToBeUseful: true },
+      where: a.id.eq("a:1"),
+      returning: a.ignoreUsedToBeUseful,
+    });
+
+    // Then the stored boolean decodes through the column expression
+    expect(result).toEqual({ rowCount: 1, rows: [true] });
   });
 });

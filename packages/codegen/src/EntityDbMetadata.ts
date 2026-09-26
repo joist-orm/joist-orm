@@ -1,16 +1,5 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
-import {
-  type Action,
-  type Column,
-  EnumType,
-  type Index,
-  type JSONData,
-  type M2MRelation,
-  M2ORelation,
-  type O2MRelation,
-  type Table,
-} from "pg-structure";
 import pluralize from "pluralize";
 import { type Code, Import, code, imp } from "ts-poet";
 
@@ -34,6 +23,17 @@ import {
   zodSchemaConfig,
 } from "./config.ts";
 import { type EnumMetadata, type EnumRow, type PgEnumMetadata } from "./loadMetadata.ts";
+import {
+  type Action,
+  type Column,
+  EnumType,
+  type Index,
+  type JSONData,
+  type M2MRelation,
+  M2ORelation,
+  type O2MRelation,
+  type Table,
+} from "./pgMetadata.ts";
 import { Zod } from "./symbols.ts";
 import {
   fail,

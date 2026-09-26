@@ -204,11 +204,11 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   readonly group: ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> = hasOne();
   declare readonly authors: Collection<SmallPublisher, Author>;
   declare readonly bookAdvances: Collection<SmallPublisher, BookAdvance>;
-  declare readonly comments: Collection<SmallPublisher, Comment>;
   declare readonly images: Collection<SmallPublisher, Image>;
+  declare readonly comments: Collection<SmallPublisher, Comment>;
   declare readonly spotlightAuthor: ManyToOneReference<SmallPublisher, Author, undefined>;
-  declare readonly tags: Collection<SmallPublisher, Tag>;
   declare readonly tasks: Collection<SmallPublisher, TaskOld>;
+  declare readonly tags: Collection<SmallPublisher, Tag>;
   declare readonly logoColors: EnumCollection<SmallPublisher, Color>;
 
   get id(): SmallPublisherId {

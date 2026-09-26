@@ -345,7 +345,8 @@ function sqlType(name: string): { name: string; shortName?: string } {
     case "time":
       return { name: "time without time zone" };
     default:
-      return { name };
+      // Foreign-key serdes need shortName even for types with no PostgreSQL alias, such as uuid.
+      return { name, shortName: name };
   }
 }
 

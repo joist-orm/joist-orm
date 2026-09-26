@@ -119,10 +119,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   declare readonly __type: { 0: "User"; 1: "AdminUser" };
 
-  declare readonly createdComments: Collection<AdminUser, Comment>;
   declare readonly directs: Collection<AdminUser, User>;
-  declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
+  declare readonly createdComments: Collection<AdminUser, Comment>;
   declare readonly authorManyToOne: ManyToOneReference<AdminUser, Author, undefined>;
+  declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
   declare readonly likedComments: Collection<AdminUser, Comment>;
   declare readonly parents: Collection<AdminUser, User>;
   declare readonly children: Collection<AdminUser, User>;

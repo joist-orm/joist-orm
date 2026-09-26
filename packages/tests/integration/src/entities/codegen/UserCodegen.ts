@@ -89,14 +89,14 @@ export interface UserFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   passwordHistory: { kind: "primitive"; type: PasswordValue[]; unique: false; nullable: undefined; derived: false };
-  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
   parents: { kind: "m2m"; type: User };
   children: { kind: "m2m"; type: User };
-  createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
+  createdComments: { kind: "o2m"; type: Comment };
 }
 
 export interface UserColumns {
@@ -117,7 +117,6 @@ export interface UserColumns {
     insert: "optional";
     update: true;
   };
-  managerId: { type: IdOf<User>; entity: User; fieldName: "manager"; nullable: true; insert: "optional"; update: true };
   authorId: {
     type: IdOf<Author>;
     entity: Author;
@@ -126,6 +125,7 @@ export interface UserColumns {
     insert: "optional";
     update: true;
   };
+  managerId: { type: IdOf<User>; entity: User; fieldName: "manager"; nullable: true; insert: "optional"; update: true };
   favoritePublisherLargeId: {
     fieldName: never;
     type: IdOf<LargePublisher>;
@@ -153,22 +153,22 @@ export interface UserOpts {
   originalEmail?: string;
   trialPeriod?: string | null;
   passwordHistory?: PasswordValue[] | null;
-  manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
+  manager?: User | UserId | null;
   favoritePublisher?: UserFavoritePublisher;
-  createdComments?: Comment[];
   directs?: User[];
+  createdComments?: Comment[];
   likedComments?: Comment[];
   parents?: User[];
   children?: User[];
 }
 
 export interface UserIdsOpts {
-  managerId?: UserId | null;
   authorManyToOneId?: AuthorId | null;
+  managerId?: UserId | null;
   favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
-  createdCommentIds?: CommentId[] | null;
   directIds?: UserId[] | null;
+  createdCommentIds?: CommentId[] | null;
   likedCommentIds?: CommentId[] | null;
   parentIds?: UserId[] | null;
   childIds?: UserId[] | null;
@@ -186,12 +186,12 @@ export interface UserFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   passwordHistory?: ValueFilter<PasswordValue[], null>;
+  authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
   managerAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
-  authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
-  createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
+  createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   parents?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   children?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
@@ -212,14 +212,14 @@ export interface UserGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   passwordHistory?: ValueGraphQLFilter<PasswordValue[]>;
+  authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
-  authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
-  createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
+  createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
@@ -251,8 +251,8 @@ export interface UserOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   passwordHistory?: OrderBy;
-  manager?: UserOrder;
   authorManyToOne?: AuthorOrder;
+  manager?: UserOrder;
 }
 
 export interface UserFactoryExtras {
@@ -300,10 +300,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "User" };
 
-  readonly createdComments: Collection<User, Comment> = hasMany();
   readonly directs: Collection<User, User> = hasMany();
-  readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
+  readonly createdComments: Collection<User, Comment> = hasMany();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
+  readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly parentsRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("parents", "childrenRecursive");
   readonly childrenRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("children", "parentsRecursive");
   readonly likedComments: Collection<User, Comment> = hasManyToMany(); // users_to_comments liked_by_user_id comment_id

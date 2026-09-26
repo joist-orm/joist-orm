@@ -309,7 +309,7 @@ export type FieldNameOverrides = {
   otherFieldName?: string;
 };
 
-/** Adapts the generally-great pg-structure metadata into our specific ORM types. */
+/** Adapts PostgreSQL catalog metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
   primaryKey: PrimitiveField;

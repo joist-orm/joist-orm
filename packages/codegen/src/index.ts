@@ -30,6 +30,7 @@ import {
   isJoinTable,
   mapSimpleDbTypeToTypescriptType,
   shouldIncludeSchema,
+  tableToEntityName,
 } from "./utils.ts";
 
 export {
@@ -147,9 +148,11 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
   const db = await loadPgMetadata(client);
   const enums = await loadEnumMetadata(db, client, config);
   const pgEnums = await loadPgEnumMetadata(db, client, config);
+  // The order also controls generated exports; sorting physical table names puts book_reviews
+  // before books and changes initialization order for entity modules with circular imports.
   const entities = db.tables
     .filter((t) => isEntityTable(config, t))
-    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    .sort((a, b) => tableToEntityName(config, a).localeCompare(tableToEntityName(config, b)))
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);

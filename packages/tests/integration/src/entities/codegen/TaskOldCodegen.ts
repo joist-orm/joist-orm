@@ -76,8 +76,8 @@ export interface TaskOldFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   publishers: { kind: "m2m"; type: Publisher };
   comments: { kind: "o2m"; type: Comment };
-  oldTaskTaskItems: { kind: "o2m"; type: TaskItem };
   tasks: { kind: "o2m"; type: TaskOld };
+  oldTaskTaskItems: { kind: "o2m"; type: TaskItem };
   copiedTo: { kind: "o2m"; type: TaskOld };
 }
 
@@ -90,8 +90,8 @@ export interface TaskOldOpts extends TaskOpts {
   sharedSubtypeField?: number | null;
   parentOldTask?: TaskOld | TaskOldId | null;
   comments?: Comment[];
-  oldTaskTaskItems?: TaskItem[];
   tasks?: TaskOld[];
+  oldTaskTaskItems?: TaskItem[];
   copiedTo?: TaskOld[];
   publishers?: Publisher[];
 }
@@ -100,8 +100,8 @@ export interface TaskOldIdsOpts extends TaskIdsOpts {
   parentOldTaskId?: TaskOldId | null;
   copiedFromId?: TaskOldId | null;
   commentIds?: CommentId[] | null;
-  oldTaskTaskItemIds?: TaskItemId[] | null;
   taskIds?: TaskOldId[] | null;
+  oldTaskTaskItemIds?: TaskItemId[] | null;
   copiedToIds?: TaskOldId[] | null;
   publisherIds?: PublisherId[] | null;
 }
@@ -113,8 +113,8 @@ export interface TaskOldFilter extends TaskFilter {
   parentOldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   copiedFrom?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
+  oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   copiedTo?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
@@ -128,8 +128,8 @@ export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   copiedFromId?: ValueGraphQLFilter<TaskOldId>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
-  oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
+  oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   copiedTo?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
@@ -187,8 +187,8 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   declare readonly __type: { 0: "Task"; 1: "TaskOld" };
 
   readonly comments: Collection<TaskOld, Comment> = hasMany();
-  readonly oldTaskTaskItems: Collection<TaskOld, TaskItem> = hasMany();
   readonly tasks: Collection<TaskOld, TaskOld> = hasMany();
+  readonly oldTaskTaskItems: Collection<TaskOld, TaskItem> = hasMany();
   readonly copiedTo: Collection<TaskOld, TaskOld> = hasMany();
   readonly parentOldTask: ManyToOneReference<TaskOld, TaskOld, undefined> = hasOne();
   readonly copiedFrom: ManyToOneReference<TaskOld, TaskOld, undefined> = hasOne();

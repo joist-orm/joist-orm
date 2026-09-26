@@ -61,8 +61,8 @@ export interface AuthorFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   books: { kind: "o2m"; type: Book };
-  bookReviews: { kind: "o2m"; type: BookReview };
   comments: { kind: "o2m"; type: Comment };
+  bookReviews: { kind: "o2m"; type: BookReview };
 }
 
 export interface AuthorColumns {
@@ -77,14 +77,14 @@ export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
   books?: Book[];
-  bookReviews?: BookReview[];
   comments?: Comment[];
+  bookReviews?: BookReview[];
 }
 
 export interface AuthorIdsOpts {
   bookIds?: BookId[] | null;
-  bookReviewIds?: BookReviewId[] | null;
   commentIds?: CommentId[] | null;
+  bookReviewIds?: BookReviewId[] | null;
 }
 
 export interface AuthorFilter {
@@ -94,8 +94,8 @@ export interface AuthorFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -105,8 +105,8 @@ export interface AuthorGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorOrder {
@@ -159,8 +159,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   declare readonly __type: { 0: "Author" };
 
   readonly books: Collection<Author, Book> = hasMany();
-  readonly bookReviews: Collection<Author, BookReview> = hasMany();
   readonly comments: Collection<Author, Comment> = hasMany();
+  readonly bookReviews: Collection<Author, BookReview> = hasMany();
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

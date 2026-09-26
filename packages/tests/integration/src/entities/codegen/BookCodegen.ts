@@ -83,17 +83,17 @@ export interface BookFields {
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
-  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
+  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   advances: { kind: "o2m"; type: BookAdvance };
   reviews: { kind: "o2m"; type: BookReview };
   comments: { kind: "o2m"; type: Comment };
-  sequel: { kind: "o2o"; type: Book };
   currentDraftAuthor: { kind: "o2o"; type: Author };
   favoriteAuthor: { kind: "o2o"; type: Author };
+  sequel: { kind: "o2o"; type: Book };
   image: { kind: "o2o"; type: Image };
 }
 
@@ -108,7 +108,6 @@ export interface BookColumns {
   deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
-  prequelId: { type: IdOf<Book>; entity: Book; fieldName: "prequel"; nullable: true; insert: "optional"; update: true };
   authorId: {
     type: IdOf<Author>;
     entity: Author;
@@ -117,18 +116,19 @@ export interface BookColumns {
     insert: "required";
     update: true;
   };
-  reviewerId: {
-    type: IdOf<Author>;
-    entity: Author;
-    fieldName: "reviewer";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
+  prequelId: { type: IdOf<Book>; entity: Book; fieldName: "prequel"; nullable: true; insert: "optional"; update: true };
   randomCommentId: {
     type: IdOf<Comment>;
     entity: Comment;
     fieldName: "randomComment";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  reviewerId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "reviewer";
     nullable: true;
     insert: "optional";
     update: true;
@@ -142,13 +142,13 @@ export interface BookOpts {
   acknowledgements?: string | null;
   authorsNickNames?: string | null;
   deletedAt?: Date | null;
-  prequel?: Book | BookId | null;
   author?: Author | AuthorId;
-  reviewer?: Author | AuthorId | null;
+  prequel?: Book | BookId | null;
   randomComment?: Comment | CommentId | null;
-  sequel?: Book | null;
+  reviewer?: Author | AuthorId | null;
   currentDraftAuthor?: Author | null;
   favoriteAuthor?: Author | null;
+  sequel?: Book | null;
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
@@ -157,13 +157,13 @@ export interface BookOpts {
 }
 
 export interface BookIdsOpts {
-  prequelId?: BookId | null;
   authorId?: AuthorId | null;
-  reviewerId?: AuthorId | null;
+  prequelId?: BookId | null;
   randomCommentId?: CommentId | null;
-  sequelId?: BookId | null;
+  reviewerId?: AuthorId | null;
   currentDraftAuthorId?: AuthorId | null;
   favoriteAuthorId?: AuthorId | null;
+  sequelId?: BookId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
@@ -182,13 +182,13 @@ export interface BookFilter {
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
-  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -207,17 +207,17 @@ export interface BookGraphQLFilter {
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
-  prequelId?: ValueGraphQLFilter<BookId>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   authorId?: ValueGraphQLFilter<AuthorId>;
-  reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  reviewerId?: ValueGraphQLFilter<AuthorId>;
+  prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  prequelId?: ValueGraphQLFilter<BookId>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
   randomCommentId?: ValueGraphQLFilter<CommentId>;
-  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  reviewerId?: ValueGraphQLFilter<AuthorId>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
@@ -236,10 +236,10 @@ export interface BookOrder {
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  prequel?: BookOrder;
   author?: AuthorOrder;
-  reviewer?: AuthorOrder;
+  prequel?: BookOrder;
   randomComment?: CommentOrder;
+  reviewer?: AuthorOrder;
 }
 
 export interface BookFactoryExtras {
@@ -292,15 +292,15 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   readonly advances: Collection<Book, BookAdvance> = hasMany();
   readonly reviews: Collection<Book, BookReview> = hasMany();
   readonly comments: Collection<Book, Comment> = hasMany();
-  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne();
   readonly author: ManyToOneReference<Book, Author, never> = hasOne();
-  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
+  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne();
   readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne();
+  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
   readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
   readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
-  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
   readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne();
   readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne();
+  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
   readonly image: OneToOneReference<Book, Image> = hasOneToOne();
   readonly tags: Collection<Book, Tag> = hasManyToMany(); // books_to_tags book_id tag_id
 

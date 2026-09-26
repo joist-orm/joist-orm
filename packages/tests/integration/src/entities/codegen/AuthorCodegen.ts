@@ -135,21 +135,21 @@ export interface AuthorFields {
   rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
-  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  rootMentor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
+  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  rootMentor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   mentorsClosure: { kind: "m2m"; type: Author };
   menteesClosure: { kind: "m2m"; type: Author };
   tags: { kind: "m2m"; type: Tag };
   bestReviews: { kind: "m2m"; type: BookReview };
+  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
-  schedules: { kind: "o2m"; type: AuthorSchedule };
   comments: { kind: "o2m"; type: Comment };
-  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
+  schedules: { kind: "o2m"; type: AuthorSchedule };
   tasks: { kind: "o2m"; type: TaskNew };
   image: { kind: "o2o"; type: Image };
   userOneToOne: { kind: "o2o"; type: User };
@@ -206,22 +206,6 @@ export interface AuthorColumns {
   rangeOfBooks: { type: BookRange; fieldName: "rangeOfBooks"; nullable: true; insert: "optional"; update: true };
   favoriteColors: { type: Color[]; fieldName: "favoriteColors"; nullable: true; insert: "optional"; update: true };
   favoriteShape: { type: FavoriteShape; fieldName: "favoriteShape"; nullable: true; insert: "optional"; update: true };
-  mentorId: {
-    type: IdOf<Author>;
-    entity: Author;
-    fieldName: "mentor";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  rootMentorId: {
-    type: IdOf<Author>;
-    entity: Author;
-    fieldName: "rootMentor";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
   currentDraftBookId: {
     type: IdOf<Book>;
     entity: Book;
@@ -238,10 +222,26 @@ export interface AuthorColumns {
     insert: "optional";
     update: true;
   };
+  mentorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "mentor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
   publisherId: {
     type: IdOf<Publisher>;
     entity: Publisher;
     fieldName: "publisher";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  rootMentorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "rootMentor";
     nullable: true;
     insert: "optional";
     update: true;
@@ -283,33 +283,33 @@ export interface AuthorOpts {
   certificate?: Uint8Array | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
-  mentor?: Author | AuthorId | null;
   currentDraftBook?: Book | BookId | null;
+  mentor?: Author | AuthorId | null;
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   userOneToOne?: User | null;
+  spotlightAuthorPublishers?: Publisher[];
   mentees?: Author[];
   books?: Book[];
   reviewerBooks?: Book[];
-  schedules?: AuthorSchedule[];
   comments?: Comment[];
-  spotlightAuthorPublishers?: Publisher[];
+  schedules?: AuthorSchedule[];
   tasks?: TaskNew[];
   tags?: Tag[];
 }
 
 export interface AuthorIdsOpts {
-  mentorId?: AuthorId | null;
   currentDraftBookId?: BookId | null;
+  mentorId?: AuthorId | null;
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
+  spotlightAuthorPublisherIds?: PublisherId[] | null;
   menteeIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   reviewerBookIds?: BookId[] | null;
-  scheduleIds?: AuthorScheduleId[] | null;
   commentIds?: CommentId[] | null;
-  spotlightAuthorPublisherIds?: PublisherId[] | null;
+  scheduleIds?: AuthorScheduleId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
 }
@@ -347,20 +347,15 @@ export interface AuthorFilter {
   rangeOfBooks?: ValueFilter<BookRange, null>;
   favoriteColors?: ValueFilter<Color[], null>;
   favoriteShape?: ValueFilter<FavoriteShape, null>;
-  mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
-  rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   favoriteBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
+  mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
   publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
-  mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
-  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   spotlightAuthorPublishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityFilter<
     LargePublisher,
@@ -374,6 +369,11 @@ export interface AuthorFilter {
     FilterOf<SmallPublisher>,
     null
   >;
+  mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   menteesClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -414,14 +414,12 @@ export interface AuthorGraphQLFilter {
   rangeOfBooks?: ValueGraphQLFilter<BookRange>;
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
-  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  mentorId?: ValueGraphQLFilter<AuthorId>;
-  rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  rootMentorId?: ValueGraphQLFilter<AuthorId>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   currentDraftBookId?: ValueGraphQLFilter<BookId>;
   favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   favoriteBookId?: ValueGraphQLFilter<BookId>;
+  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  mentorId?: ValueGraphQLFilter<AuthorId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
   publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
@@ -436,13 +434,10 @@ export interface AuthorGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
+  rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  rootMentorId?: ValueGraphQLFilter<AuthorId>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
-  mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   spotlightAuthorPublishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
@@ -456,6 +451,11 @@ export interface AuthorGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
+  mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   menteesClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -496,11 +496,11 @@ export interface AuthorOrder {
   rangeOfBooks?: OrderBy;
   favoriteColors?: OrderBy;
   favoriteShape?: OrderBy;
-  mentor?: AuthorOrder;
-  rootMentor?: AuthorOrder;
   currentDraftBook?: BookOrder;
   favoriteBook?: BookOrder;
+  mentor?: AuthorOrder;
   publisher?: PublisherOrder;
+  rootMentor?: AuthorOrder;
 }
 
 export interface AuthorFactoryExtras {
@@ -572,8 +572,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Author" };
 
-  abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   /**
    * Example of a closure table.
    * @generated Author.md
@@ -586,15 +586,15 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
    */
   abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
 
+  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly mentees: Collection<Author, Author> = hasMany();
   readonly books: Collection<Author, Book> = hasMany();
   readonly reviewerBooks: Collection<Author, Book> = hasMany();
-  readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
   readonly comments: Collection<Author, Comment> = hasMany();
-  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
+  readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
   readonly tasks: Collection<Author, TaskNew> = hasMany();
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
   /**
    * The publisher this author writes for.
    * @generated Author.md

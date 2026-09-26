@@ -1,9 +1,9 @@
-import { type Table } from "pg-structure";
 import { type Code, code } from "ts-poet";
 
 import { type Config } from "./config.ts";
 import { type EntityDbMetadata } from "./EntityDbMetadata.ts";
 import { type PgEnumData } from "./index.ts";
+import { type Table } from "./pgMetadata.ts";
 import { tableToEntityName } from "./utils.ts";
 
 export function generateEntitiesFile(

@@ -30,6 +30,16 @@
         "default": "./build/index.cjs"
       },
       "default": "./build/index.js"
+    },
+    "./pgMetadata": {
+      "import": {
+        "types": "./build/pgMetadata.d.mts",
+        "default": "./build/pgMetadata.js"
+      },
+      "require": {
+        "types": "./build/pgMetadata.d.cts",
+        "default": "./build/pgMetadata.cjs"
+      }
     }
   },
   "bin": "build/index.cjs",
@@ -52,7 +62,6 @@
     "fast-glob": "^3.3.3",
     "jscodeshift": "^17.4.0",
     "jsonc-parser": "^3.3.1",
-    "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0",
     "prettier": "^3.9.6",
     "ts-poet": "^6.12.0",

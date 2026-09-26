@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import process from "node:process";
 
 import { type ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
-import pgStructureModule from "pg-structure";
 import { saveFiles } from "ts-poet";
 
 import { assignTags } from "./assignTags.ts";
@@ -23,6 +23,7 @@ import { applyInheritanceUpdates } from "./inheritance.ts";
 import { installSkills } from "./installSkills.ts";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata.ts";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger.ts";
+import { loadPgMetadata } from "./pgMetadata.ts";
 import { scanEntityFiles } from "./scanEntityFiles.ts";
 import {
   isEntityTable,
@@ -30,9 +31,8 @@ import {
   isJoinTable,
   mapSimpleDbTypeToTypescriptType,
   shouldIncludeSchema,
+  tableToEntityName,
 } from "./utils.ts";
-
-const { default: pgStructure } = pgStructureModule;
 
 export {
   type DbMetadata,
@@ -51,6 +51,9 @@ export { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from ".
 export { type Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export async function joistCodegen() {
+  // pg-structure used to load .env on import; keep that behavior for fixtures and apps
+  // that provide DATABASE_URL in a local .env without a separate dotenv bootstrap.
+  if (existsSync(".env")) process.loadEnvFile();
   const config = await loadConfig();
 
   maybeSetDatabaseUrl(config);
@@ -144,15 +147,16 @@ async function maybeGenerateFlushFunctions(config: Config, client: Client, pgCon
 }
 
 async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMetadata> {
-  // Here we load all schemas, to avoid pg-structure failing on cross-schema foreign keys
-  // like our cyanaudit triggers (https://github.com/ozum/pg-structure/issues/85), and then
-  // later filter them non-public schema tables out.
-  const db = await pgStructure(client);
+  // Load all user schemas so cross-schema foreign keys can be resolved. Codegen filters
+  // non-public tables below; trigger functions in other schemas do not affect entities.
+  const db = await loadPgMetadata(client);
   const enums = await loadEnumMetadata(db, client, config);
   const pgEnums = await loadPgEnumMetadata(db, client, config);
+  // The order also controls generated exports; sorting physical table names puts book_reviews
+  // before books and changes initialization order for entity modules with circular imports.
   const entities = db.tables
     .filter((t) => isEntityTable(config, t))
-    .sortBy("name")
+    .sort((a, b) => tableToEntityName(config, a).localeCompare(tableToEntityName(config, b)))
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);

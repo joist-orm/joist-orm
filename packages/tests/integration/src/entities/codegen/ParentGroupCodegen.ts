@@ -62,8 +62,8 @@ export interface ParentGroupFields {
   requiredData: { kind: "primitive"; type: Object; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroups: { kind: "o2m"; type: ChildGroup };
   parentItems: { kind: "o2m"; type: ParentItem };
+  childGroups: { kind: "o2m"; type: ChildGroup };
 }
 
 export interface ParentGroupColumns {
@@ -86,13 +86,13 @@ export interface ParentGroupOpts {
   name?: string | null;
   bulkData?: Object | null;
   requiredData: Object;
-  childGroups?: ChildGroup[];
   parentItems?: ParentItem[];
+  childGroups?: ChildGroup[];
 }
 
 export interface ParentGroupIdsOpts {
-  childGroupIds?: ChildGroupId[] | null;
   parentItemIds?: ParentItemId[] | null;
+  childGroupIds?: ChildGroupId[] | null;
 }
 
 export interface ParentGroupFilter {
@@ -102,8 +102,8 @@ export interface ParentGroupFilter {
   requiredData?: ValueFilter<Object, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
+  childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
 }
 
 export interface ParentGroupGraphQLFilter {
@@ -113,8 +113,8 @@ export interface ParentGroupGraphQLFilter {
   requiredData?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
+  childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
 }
 
 export interface ParentGroupOrder {
@@ -167,8 +167,8 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   declare readonly __type: { 0: "ParentGroup" };
 
-  readonly childGroups: Collection<ParentGroup, ChildGroup> = hasMany();
   readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany();
+  readonly childGroups: Collection<ParentGroup, ChildGroup> = hasMany();
   readonly bulkData: LazyField<ParentGroup, Object | undefined> = hasLazyField();
   readonly requiredData: LazyField<ParentGroup, Object> = hasLazyField();
 

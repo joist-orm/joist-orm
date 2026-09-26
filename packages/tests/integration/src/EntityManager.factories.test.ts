@@ -261,8 +261,8 @@ describe("EntityManager.factories", () => {
        "Creating new Book at jestAdapterInit.js:1561↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
-       "  reviewer = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
+       "  reviewer = Author#1 from em↩",
        "  created Book#1 added to scope↩",
        "  comments[0] = Comment#2 from opt↩",
      ]

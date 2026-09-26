@@ -182,11 +182,11 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   readonly spotlightAuthor: ManyToOneReference<LargePublisher, Author, never> = hasOne();
   declare readonly authors: Collection<LargePublisher, Author>;
   declare readonly bookAdvances: Collection<LargePublisher, BookAdvance>;
-  declare readonly comments: Collection<LargePublisher, Comment>;
   declare readonly images: Collection<LargePublisher, Image>;
+  declare readonly comments: Collection<LargePublisher, Comment>;
   declare readonly group: ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
-  declare readonly tags: Collection<LargePublisher, Tag>;
   declare readonly tasks: Collection<LargePublisher, TaskOld>;
+  declare readonly tags: Collection<LargePublisher, Tag>;
   declare readonly logoColors: EnumCollection<LargePublisher, Color>;
 
   get id(): LargePublisherId {

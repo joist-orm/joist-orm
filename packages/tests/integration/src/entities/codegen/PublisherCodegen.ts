@@ -107,13 +107,13 @@ export interface PublisherFields {
   favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  tags: { kind: "m2m"; type: Tag };
   tasks: { kind: "m2m"; type: TaskOld };
+  tags: { kind: "m2m"; type: Tag };
   logoColors: { kind: "m2mEnum"; type: Color };
   authors: { kind: "o2m"; type: Author };
   bookAdvances: { kind: "o2m"; type: BookAdvance };
-  comments: { kind: "o2m"; type: Comment };
   images: { kind: "o2m"; type: Image };
+  comments: { kind: "o2m"; type: Comment };
 }
 
 export interface PublisherColumns {
@@ -206,10 +206,10 @@ export interface PublisherOpts {
   spotlightAuthor?: Author | AuthorId | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
-  comments?: Comment[];
   images?: Image[];
-  tags?: Tag[];
+  comments?: Comment[];
   tasks?: TaskOld[];
+  tags?: Tag[];
   logoColors?: Color[];
 }
 
@@ -218,10 +218,10 @@ export interface PublisherIdsOpts {
   spotlightAuthorId?: AuthorId | null;
   authorIds?: AuthorId[] | null;
   bookAdvanceIds?: BookAdvanceId[] | null;
-  commentIds?: CommentId[] | null;
   imageIds?: ImageId[] | null;
-  tagIds?: TagId[] | null;
+  commentIds?: CommentId[] | null;
   taskIds?: TaskOldId[] | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface PublisherFilter {
@@ -254,10 +254,10 @@ export interface PublisherFilter {
   spotlightAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
-  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
-  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
   logoColors?: ValueFilter<Color, null | undefined>;
 }
 
@@ -294,10 +294,10 @@ export interface PublisherGraphQLFilter {
   spotlightAuthorId?: ValueGraphQLFilter<AuthorId>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
-  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
   logoColors?: ValueGraphQLFilter<Color>;
 }
 
@@ -384,12 +384,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
   readonly authors: Collection<Publisher, Author> = hasMany();
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany();
-  readonly comments: Collection<Publisher, Comment> = hasMany();
   readonly images: Collection<Publisher, Image> = hasMany();
+  readonly comments: Collection<Publisher, Comment> = hasMany();
   readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne();
   readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne();
-  readonly tags: Collection<Publisher, Tag> = hasManyToMany(); // publishers_to_tags publisher_id tag_id
   readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(); // tasks_to_publishers publisher_id task_id
+  readonly tags: Collection<Publisher, Tag> = hasManyToMany(); // publishers_to_tags publisher_id tag_id
   readonly logoColors: EnumCollection<Publisher, Color> = hasEnumCollection(); // publisher_logo_colors publisher_id logo_color_id
 
   get id(): PublisherId {

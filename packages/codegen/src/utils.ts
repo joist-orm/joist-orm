@@ -1,11 +1,11 @@
 import { pascalCase } from "change-case";
 import { isPlainObject } from "joist-utils";
-import { type Table } from "pg-structure";
 import pluralize from "pluralize";
 import { code, imp } from "ts-poet";
 
 import { type Config, getTimestampConfig } from "./config.ts";
 import { type DatabaseColumnType, type PrimitiveTypescriptType } from "./EntityDbMetadata.ts";
+import { type Table } from "./pgMetadata.ts";
 
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);

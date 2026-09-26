@@ -63,11 +63,11 @@ export interface TagFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  authors: { kind: "m2m"; type: Author };
   books: { kind: "m2m"; type: Book };
+  authors: { kind: "m2m"; type: Author };
   bookReviews: { kind: "m2m"; type: BookReview };
-  publishers: { kind: "m2m"; type: Publisher };
   tasks: { kind: "m2m"; type: Task };
+  publishers: { kind: "m2m"; type: Publisher };
 }
 
 export interface TagColumns {
@@ -79,19 +79,19 @@ export interface TagColumns {
 
 export interface TagOpts {
   name: string;
-  authors?: Author[];
   books?: Book[];
+  authors?: Author[];
   bookReviews?: BookReview[];
-  publishers?: Publisher[];
   tasks?: Task[];
+  publishers?: Publisher[];
 }
 
 export interface TagIdsOpts {
-  authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
+  authorIds?: AuthorId[] | null;
   bookReviewIds?: BookReviewId[] | null;
-  publisherIds?: PublisherId[] | null;
   taskIds?: TaskId[] | null;
+  publisherIds?: PublisherId[] | null;
 }
 
 export interface TagFilter {
@@ -99,11 +99,11 @@ export interface TagFilter {
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
-  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   tasks?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
+  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TagGraphQLFilter {
@@ -111,11 +111,11 @@ export interface TagGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
-  publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   tasks?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
+  publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface TagOrder {
@@ -166,11 +166,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   declare readonly __type: { 0: "Tag" };
 
-  readonly authors: Collection<Tag, Author> = hasManyToMany(); // authors_to_tags tag_id author_id
   readonly books: Collection<Tag, Book> = hasManyToMany(); // books_to_tags tag_id book_id
+  readonly authors: Collection<Tag, Author> = hasManyToMany(); // authors_to_tags tag_id author_id
   readonly bookReviews: Collection<Tag, BookReview> = hasManyToMany(); // book_reviews_to_tags tag_id book_review_id
-  readonly publishers: Collection<Tag, Publisher> = hasManyToMany(); // publishers_to_tags tag_id publisher_id
   readonly tasks: Collection<Tag, Task> = hasManyToMany(); // task_to_tags tag_id task_id
+  readonly publishers: Collection<Tag, Publisher> = hasManyToMany(); // publishers_to_tags tag_id publisher_id
 
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");

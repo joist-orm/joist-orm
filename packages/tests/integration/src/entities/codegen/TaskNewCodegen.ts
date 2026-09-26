@@ -71,8 +71,8 @@ export interface TaskNewFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  newTaskTaskItems: { kind: "o2m"; type: TaskItem };
   selfReferentialTasks: { kind: "o2m"; type: TaskNew };
+  newTaskTaskItems: { kind: "o2m"; type: TaskItem };
   copiedTo: { kind: "o2m"; type: TaskNew };
 }
 
@@ -84,8 +84,8 @@ export interface TaskNewOpts extends TaskOpts {
   sharedSubtypeField?: number | null;
   selfReferential?: TaskNew | TaskNewId | null;
   specialNewAuthor?: Author | AuthorId | null;
-  newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
+  newTaskTaskItems?: TaskItem[];
   copiedTo?: TaskNew[];
 }
 
@@ -93,8 +93,8 @@ export interface TaskNewIdsOpts extends TaskIdsOpts {
   selfReferentialId?: TaskNewId | null;
   specialNewAuthorId?: AuthorId | null;
   copiedFromId?: TaskNewId | null;
-  newTaskTaskItemIds?: TaskItemId[] | null;
   selfReferentialTaskIds?: TaskNewId[] | null;
+  newTaskTaskItemIds?: TaskItemId[] | null;
   copiedToIds?: TaskNewId[] | null;
 }
 
@@ -104,8 +104,8 @@ export interface TaskNewFilter extends TaskFilter {
   selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
-  newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
+  newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   copiedTo?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
 }
 
@@ -118,8 +118,8 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewAuthorId?: ValueGraphQLFilter<AuthorId>;
   copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromId?: ValueGraphQLFilter<TaskNewId>;
-  newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
+  newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   copiedTo?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
 }
 
@@ -172,8 +172,8 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   declare readonly __type: { 0: "Task"; 1: "TaskNew" };
 
-  readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany();
   readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany();
+  readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany();
   readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany();
   readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne();

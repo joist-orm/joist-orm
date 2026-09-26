@@ -5,7 +5,7 @@ sidebar:
   order: 3.3
 ---
 
-You should nearly always prefer updating your application's data by mutating entities & calling `em.flush()`, so that all of your application's validation rules, reactivity fields, and reactivity run.
+You should nearly always prefer updating your application's data by mutating entities and calling `em.flush()`, so that all of your application's validation rules, reactive fields, and reactions run.
 
 That said, when you really need to issue bulk SQL updates, Joist provides an `em.execute` API that can issue arbitrary `INSERT`, `UPDATE`, and `DELETE` statements.
 
@@ -24,16 +24,16 @@ With insert, you can use either:
     values: [
       { title: "Book 1", authorId: "a:1", notes: "some notes" },
       { title: "Book 2", authorId: "a:1", notes: "some notes" },
-    }],
+    ],
     returning: { id: b.id, title: b.title },
   });
   // inserted.rows: { id: BookId; title: string }[]
   ```
   
   - The values should be the same domain values as entity fields
-  - Missing or `undefined` values become SQL `NULl`
+  - Missing or `undefined` values use SQL defaults
   - Explicit `null` also means SQL `NULL` (only allowed if the column is nullable)
-  - `NOT NULL` columns are required
+  - Columns marked `insert: "required"` must be supplied in every row; nullable or defaulted columns may be omitted
 
 - `from` to insert the results of another `SELECT`:
   
@@ -44,7 +44,7 @@ With insert, you can use either:
     from: {
       from: source,
       where: source.id.eq("b:1"),
-      select: [source.title, source.authorId, source.notes],
+      select: { title: source.title, authorId: source.authorId, notes: source.notes },
     },
     returning: { id: b.id },
   });
@@ -79,4 +79,6 @@ Mutations do not run entity hooks, validation rules, configuration defaults, rea
 
 They also do not flush pending entities.
 
-Note that database triggers still run and may change `updated_at` timestamps in the database, which if you do have entities loaded into memory (with the prior `updated_at` values), might cause an self-oplock failure.
+Already-loaded entities and collections are not refreshed after a mutation. A later `em.flush()` can overwrite the SQL changes with pending entity edits; database triggers may also change `updated_at` and cause optimistic locking to fail for loaded entities with an older timestamp.
+
+:::

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import process from "node:process";
 
 import { type ConnectionConfig, newPgConnectionConfig } from "joist-utils";
@@ -50,6 +51,9 @@ export { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from ".
 export { type Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export async function joistCodegen() {
+  // pg-structure used to load .env on import; keep that behavior for fixtures and apps
+  // that provide DATABASE_URL in a local .env without a separate dotenv bootstrap.
+  if (existsSync(".env")) process.loadEnvFile();
   const config = await loadConfig();
 
   maybeSetDatabaseUrl(config);

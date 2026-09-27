@@ -6879,6 +6879,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"check-skills@npm:0.0.10":
+  version: 0.0.10
+  resolution: "check-skills@npm:0.0.10"
+  dependencies:
+    citty: "npm:^0.2.2"
+    yaml: "npm:^2.9.0"
+  bin:
+    check-skills: ./dist/index.js
+  checksum: 10/a96983f12eac31a7445884198168043b2a246017d7a214f2afce1b1bf98495cb92c1c23a56ef8ebcc27d655334b12c54a3ddb8b01ae275aa7b458651d0cb6bde
+  languageName: node
+  linkType: hard
+
 "chokidar@npm:^5.0.0":
   version: 5.0.0
   resolution: "chokidar@npm:5.0.0"
@@ -6913,6 +6925,13 @@ __metadata:
   version: 5.0.5
   resolution: "cidr-regex@npm:5.0.5"
   checksum: 10/52eddf0432edba5e11cda988526898ac509b979ba209c289e9701494627a055883e9116352290c5c4138482588b77c32db919b6f07901140d30795315cffb60e
+  languageName: node
+  linkType: hard
+
+"citty@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "citty@npm:0.2.2"
+  checksum: 10/5e17b66ddb65274170e1ab83baec49ef70a07074b4323e29595063d06dfb7710527f3f403b2647acef06eb66871c8ba81d361d24c7166540f78815572da15221
   languageName: node
   linkType: hard
 
@@ -11064,6 +11083,7 @@ __metadata:
     "@semantic-release/github": "npm:^12.0.9"
     "@semantic-release/release-notes-generator": "npm:^14.1.1"
     "@tsconfig/node20": "npm:^20.1.10"
+    check-skills: "npm:0.0.10"
     env-cmd: "npm:^11.0.0"
     expect-type: "npm:^1.4.0"
     mprocs: "npm:^0.9.6"
@@ -18101,6 +18121,15 @@ __metadata:
   bin:
     yaml: bin.mjs
   checksum: 10/9a95e8e08651c3d292ab6a5befeb5f57b76801caa097c75bb45c9a70ce19c1b11f57e87a6ef84a579ea070ed2c2c8ac541c88c0ae684d544d5f42c7e77d11b7b
+  languageName: node
+  linkType: hard
+
+"yaml@npm:^2.9.0":
+  version: 2.9.1
+  resolution: "yaml@npm:2.9.1"
+  bin:
+    yaml: bin.mjs
+  checksum: 10/123c5e56a26f4962d3d5954971b2071a533d17041e00ae9ff6a5e634aed2503639bbdeea143b1610eac29613aad95a3a1d10f5fbda87b92203c039ce63934295
   languageName: node
   linkType: hard
 

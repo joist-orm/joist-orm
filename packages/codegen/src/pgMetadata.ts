@@ -1,4 +1,5 @@
 import type { Client } from "pg";
+import pluralize from "pluralize";
 
 /** The small part of PostgreSQL's catalog model used by Joist codegen. */
 export class Items<T extends { name: string }> extends Array<T> {
@@ -95,6 +96,17 @@ export class M2ORelation {
   get targetTable(): Table {
     return this.foreignKey.referencedTable;
   }
+
+  /** Uses the old short relation name so M2O metadata keeps its factory evaluation order. */
+  get name(): string {
+    const { foreignKey, sourceTable, targetTable } = this;
+    // I.e. books.author_id and books.reviewer_id both target authors, so sort them as author and reviewer.
+    const hasOtherIncomingFKs = sourceTable.foreignKeys.some(
+      (fk) => fk !== foreignKey && fk.referencedTable === targetTable,
+    );
+
+    return pluralize.singular(hasOtherIncomingFKs ? foreignKey.columns[0].name.replace(/_id$/, "") : targetTable.name);
+  }
 }
 
 export class O2MRelation {
@@ -108,6 +120,23 @@ export class O2MRelation {
 
   get targetTable(): Table {
     return this.foreignKey.table;
+  }
+
+  /** Keeps inverse relations in the same short-name order as pg-structure. */
+  get name(): string {
+    const { foreignKey, sourceTable, targetTable } = this;
+    // I.e. books.author_id and books.reviewer_id are both incoming FKs to authors.
+    const hasOtherIncomingFKs = targetTable.foreignKeys.some(
+      (fk) => fk !== foreignKey && fk.referencedTable === sourceTable,
+    );
+    if (!hasOtherIncomingFKs) return pluralize.plural(targetTable.name);
+
+    const columnName = foreignKey.columns[0].name.replace(/_id$/, "");
+    const sourceName = pluralize.singular(sourceTable.name);
+    const adjective = columnName.endsWith(`_${sourceName}`) ? columnName.slice(0, -sourceName.length - 1) : "";
+
+    if (sourceTable === targetTable) return pluralize.plural(adjective || targetTable.name);
+    return pluralize.plural(`${adjective || sourceTable.name}_${targetTable.name}`);
   }
 }
 
@@ -130,6 +159,25 @@ export class M2MRelation {
   get joinTable(): Table {
     return this.foreignKey.table;
   }
+
+  /** Adds the join-table qualifier when more than one join path reaches the same target. */
+  get name(): string {
+    const { sourceTable, joinTable, targetTable } = this;
+    const joinTables = new Set(
+      sourceTable.foreignKeysToThis
+        .filter((fk) => fk.table.foreignKeys.some((other) => other !== fk && other.referencedTable === targetTable))
+        .map((fk) => fk.table),
+    );
+
+    const targetName = pluralize.plural(targetTable.name);
+    if (joinTables.size < 2) return targetName;
+
+    const qualifier = joinTable.name
+      .replace(sourceTable.name, "")
+      .replace(targetTable.name, "")
+      .replace(/^_+|_+$/g, "");
+    return `${qualifier}_${targetName}`;
+  }
 }
 
 export class Table {
@@ -146,17 +194,19 @@ export class Table {
   ) {}
 
   get m2oRelations(): M2ORelation[] {
-    return this.foreignKeys.map((fk) => new M2ORelation(fk));
+    return this.foreignKeys.map((fk) => new M2ORelation(fk)).sort((a, b) => compareNames(a.name, b.name));
   }
 
   get o2mRelations(): O2MRelation[] {
-    return this.foreignKeysToThis.map((fk) => new O2MRelation(fk));
+    return this.foreignKeysToThis
+      .map((fk) => new O2MRelation(fk))
+      .sort((a, b) => compareNames(a.name.toUpperCase(), b.name.toUpperCase()));
   }
 
   get m2mRelations(): M2MRelation[] {
-    return this.foreignKeysToThis.flatMap((fk) =>
-      fk.table.foreignKeys.filter((other) => other !== fk).map((other) => new M2MRelation(fk, other)),
-    );
+    return this.foreignKeysToThis
+      .flatMap((fk) => fk.table.foreignKeys.filter((other) => other !== fk).map((other) => new M2MRelation(fk, other)))
+      .sort((a, b) => compareNames(a.name.toUpperCase(), b.name.toUpperCase()));
   }
 }
 
@@ -366,4 +416,9 @@ function deleteAction(code: string): Action {
     default:
       throw new Error(`Unknown PostgreSQL delete action: ${code}`);
   }
+}
+
+/** Compares PostgreSQL relation names by code point, independent of the host locale. */
+function compareNames(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }

@@ -95,8 +95,8 @@ export interface UserFields {
   likedComments: { kind: "m2m"; type: Comment };
   parents: { kind: "m2m"; type: User };
   children: { kind: "m2m"; type: User };
-  directs: { kind: "o2m"; type: User };
   createdComments: { kind: "o2m"; type: Comment };
+  directs: { kind: "o2m"; type: User };
 }
 
 export interface UserColumns {
@@ -156,8 +156,8 @@ export interface UserOpts {
   authorManyToOne?: Author | AuthorId | null;
   manager?: User | UserId | null;
   favoritePublisher?: UserFavoritePublisher;
-  directs?: User[];
   createdComments?: Comment[];
+  directs?: User[];
   likedComments?: Comment[];
   parents?: User[];
   children?: User[];
@@ -167,8 +167,8 @@ export interface UserIdsOpts {
   authorManyToOneId?: AuthorId | null;
   managerId?: UserId | null;
   favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
-  directIds?: UserId[] | null;
   createdCommentIds?: CommentId[] | null;
+  directIds?: UserId[] | null;
   likedCommentIds?: CommentId[] | null;
   parentIds?: UserId[] | null;
   childIds?: UserId[] | null;
@@ -189,9 +189,9 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
   managerAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
+  createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
-  createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   parents?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   children?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
@@ -217,9 +217,9 @@ export interface UserGraphQLFilter {
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
+  createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
-  createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
@@ -300,8 +300,8 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "User" };
 
-  readonly directs: Collection<User, User> = hasMany();
   readonly createdComments: Collection<User, Comment> = hasMany();
+  readonly directs: Collection<User, User> = hasMany();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
   readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly parentsRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("parents", "childrenRecursive");

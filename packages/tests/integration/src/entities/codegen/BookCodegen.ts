@@ -91,9 +91,9 @@ export interface BookFields {
   advances: { kind: "o2m"; type: BookAdvance };
   reviews: { kind: "o2m"; type: BookReview };
   comments: { kind: "o2m"; type: Comment };
+  sequel: { kind: "o2o"; type: Book };
   currentDraftAuthor: { kind: "o2o"; type: Author };
   favoriteAuthor: { kind: "o2o"; type: Author };
-  sequel: { kind: "o2o"; type: Book };
   image: { kind: "o2o"; type: Image };
 }
 
@@ -146,9 +146,9 @@ export interface BookOpts {
   prequel?: Book | BookId | null;
   randomComment?: Comment | CommentId | null;
   reviewer?: Author | AuthorId | null;
+  sequel?: Book | null;
   currentDraftAuthor?: Author | null;
   favoriteAuthor?: Author | null;
-  sequel?: Book | null;
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
@@ -161,9 +161,9 @@ export interface BookIdsOpts {
   prequelId?: BookId | null;
   randomCommentId?: CommentId | null;
   reviewerId?: AuthorId | null;
+  sequelId?: BookId | null;
   currentDraftAuthorId?: AuthorId | null;
   favoriteAuthorId?: AuthorId | null;
-  sequelId?: BookId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
@@ -186,9 +186,9 @@ export interface BookFilter {
   prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
   reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -215,9 +215,9 @@ export interface BookGraphQLFilter {
   randomCommentId?: ValueGraphQLFilter<CommentId>;
   reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   reviewerId?: ValueGraphQLFilter<AuthorId>;
+  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
@@ -298,9 +298,9 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
   readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
   readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
+  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
   readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne();
   readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne();
-  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
   readonly image: OneToOneReference<Book, Image> = hasOneToOne();
   readonly tags: Collection<Book, Tag> = hasManyToMany(); // books_to_tags book_id tag_id
 

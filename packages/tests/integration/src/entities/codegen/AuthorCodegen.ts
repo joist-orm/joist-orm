@@ -144,12 +144,12 @@ export interface AuthorFields {
   menteesClosure: { kind: "m2m"; type: Author };
   tags: { kind: "m2m"; type: Tag };
   bestReviews: { kind: "m2m"; type: BookReview };
-  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
-  comments: { kind: "o2m"; type: Comment };
   schedules: { kind: "o2m"; type: AuthorSchedule };
+  comments: { kind: "o2m"; type: Comment };
+  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   tasks: { kind: "o2m"; type: TaskNew };
   image: { kind: "o2o"; type: Image };
   userOneToOne: { kind: "o2o"; type: User };
@@ -288,12 +288,12 @@ export interface AuthorOpts {
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   userOneToOne?: User | null;
-  spotlightAuthorPublishers?: Publisher[];
   mentees?: Author[];
   books?: Book[];
   reviewerBooks?: Book[];
-  comments?: Comment[];
   schedules?: AuthorSchedule[];
+  comments?: Comment[];
+  spotlightAuthorPublishers?: Publisher[];
   tasks?: TaskNew[];
   tags?: Tag[];
 }
@@ -304,12 +304,12 @@ export interface AuthorIdsOpts {
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
-  spotlightAuthorPublisherIds?: PublisherId[] | null;
   menteeIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   reviewerBookIds?: BookId[] | null;
-  commentIds?: CommentId[] | null;
   scheduleIds?: AuthorScheduleId[] | null;
+  commentIds?: CommentId[] | null;
+  spotlightAuthorPublisherIds?: PublisherId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
 }
@@ -356,6 +356,11 @@ export interface AuthorFilter {
   rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   spotlightAuthorPublishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityFilter<
     LargePublisher,
@@ -369,11 +374,6 @@ export interface AuthorFilter {
     FilterOf<SmallPublisher>,
     null
   >;
-  mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   menteesClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -438,6 +438,11 @@ export interface AuthorGraphQLFilter {
   rootMentorId?: ValueGraphQLFilter<AuthorId>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   spotlightAuthorPublishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
@@ -451,11 +456,6 @@ export interface AuthorGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
-  mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
-  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   menteesClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -586,12 +586,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
    */
   abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
 
-  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly mentees: Collection<Author, Author> = hasMany();
   readonly books: Collection<Author, Book> = hasMany();
   readonly reviewerBooks: Collection<Author, Book> = hasMany();
-  readonly comments: Collection<Author, Comment> = hasMany();
   readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
+  readonly comments: Collection<Author, Comment> = hasMany();
+  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly tasks: Collection<Author, TaskNew> = hasMany();
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();

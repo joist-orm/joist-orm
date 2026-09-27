@@ -119,6 +119,14 @@ export interface TaskColumns {
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
   typeId: { type: TaskType; fieldName: "type"; nullable: true; insert: "optional"; update: true };
+  specialNewAuthorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "specialNewAuthor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
   copiedFromId: {
     type: IdOf<Task>;
     entity: Task;
@@ -139,14 +147,6 @@ export interface TaskColumns {
     type: IdOf<Task>;
     entity: Task;
     fieldName: "selfReferential";
-    nullable: true;
-    insert: "optional";
-    update: true;
-  };
-  specialNewAuthorId: {
-    type: IdOf<Author>;
-    entity: Author;
-    fieldName: "specialNewAuthor";
     nullable: true;
     insert: "optional";
     update: true;

@@ -72,8 +72,8 @@ const one = await em.findOrCreate(Author, { email: "a@b.com" });
 `undefined` values are pruned (the condition and any now-unused join are
 dropped), so filters compose cleanly. To filter for null, pass `null`
 explicitly, e.g. `{ firstName: null }`. For `OR` / nested boolean logic, use
-`alias`/`aliases` with a `conditions` argument. For aggregates or group-bys,
-drop down to Knex/Kysely — Joist's `find` only returns whole entities.
+`alias`/`aliases` with a `conditions` argument. See `joist-em-find` for more;
+for aggregates or group-bys, use `joist-em-query` instead.
 
 ## Mutating
 

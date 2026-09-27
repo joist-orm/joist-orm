@@ -1,5 +1,5 @@
 ---
-name: entity-docs
+name: joist-docs
 description: Read the `src/entities/<Entity>.md` business-docs when working on an entity, its resolvers, jobs, or tests. Add only durable, non-obvious domain knowledge that helps readers understand a business rule or avoid a likely mistake; prioritize succinctness, clarity, and discretion. Also covers how `## Overview` and `## Fields`/`### fieldName` sections sync to JSDocs via `yarn joist-codegen`.
 ---
 

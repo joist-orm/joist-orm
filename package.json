@@ -1,5 +1,5 @@
 {
-  "version": "2.3.0",
+  "version": "2.4.0",
   "name": "joist",
   "scripts": {
     "build": "yarn clean && tsdown && yarn typecheck:packages && yarn typecheck:consumers && node scripts/test-module-sync.mjs",

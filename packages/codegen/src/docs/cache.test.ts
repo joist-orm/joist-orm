@@ -1,7 +1,8 @@
 import { promises as fs } from "fs";
-import { join } from "path";
 import { tmpdir } from "os";
-import { DocsCache, getMtime } from "./cache";
+import { join } from "path";
+
+import { DocsCache, getMtime } from "./cache.ts";
 
 describe("DocsCache", () => {
   it("returns not up-to-date for unknown entities", async () => {

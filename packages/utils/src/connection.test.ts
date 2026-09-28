@@ -1,4 +1,4 @@
-import { newPgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "./connection.ts";
 
 describe("connection", () => {
   it("should parse single DATABASE_URL", () => {
@@ -10,6 +10,7 @@ describe("connection", () => {
       port: 5432,
       user: "joist",
       ssl: false,
+      pipeline: true,
     });
   });
 
@@ -29,6 +30,7 @@ describe("connection", () => {
       port: 5432,
       ssl: true,
       user: "joist",
+      pipeline: true,
     });
   });
 
@@ -41,6 +43,7 @@ describe("connection", () => {
       port: 5432,
       user: "joist",
       ssl: true,
+      pipeline: true,
     });
   });
 });

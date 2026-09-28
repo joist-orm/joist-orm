@@ -1,5 +1,5 @@
-import { newAuthor } from "@src/entities";
-import { newEntityManager, queries, resetQueryCount } from "@src/setupDbTests";
+import { newAuthor } from "src/entities";
+import { newEntityManager, queries, resetQueryCount } from "src/setupDbTests";
 
 describe("Author", () => {
   it.withCtx("can save", async () => {

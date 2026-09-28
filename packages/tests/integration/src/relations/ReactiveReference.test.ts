@@ -1,9 +1,9 @@
-import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { getEmInternalApi } from "joist-core";
 import { ReactionLogger, setReactionLogging } from "joist-orm";
 import { stripAnsi } from "joist-utils";
+import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "src/entities";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 let reactionOutput: string[] = [];
 
@@ -289,13 +289,13 @@ describe("ReactiveReference", () => {
        "    Author.rf -> [ a:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
        "Validating from 3 changed entities... (em.entities=3)↩",
-       "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:133) to validate↩",
+       "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:134) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:491) to validate↩",
+       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:500) to validate↩",
        "    [ b:1 ] -> [ a:1 ]↩",
-       "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:85) to validate↩",
+       "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:86) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:210) to validate↩",
+       "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:211) to validate↩",
        "    [ b:1 ] -> [ p:1 ]↩",
      ]
     `);

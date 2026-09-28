@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,6 +57,28 @@ export interface CriticColumnFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
+}
+
+export interface CriticColumnColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<CriticColumn>;
+    entity: CriticColumn;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  criticId: {
+    type: IdOf<Critic>;
+    entity: Critic;
+    fieldName: "critic";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface CriticColumnOpts {
@@ -118,6 +141,9 @@ declare module "joist-core" {
       orderType: CriticColumnOrder;
       optsType: CriticColumnOpts;
       fieldsType: CriticColumnFields;
+      columnsType: CriticColumnColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: CriticColumnIdsOpts;
       factoryExtrasType: CriticColumnFactoryExtras;
       factoryOptsType: Parameters<typeof newCriticColumn>[1];

@@ -1,12 +1,12 @@
 import {
-  AsyncQueryProperty,
+  type AsyncQueryProperty,
+  type ReactiveField,
   hasAsyncQueryProperty,
   hasReactiveQueryField,
   isAsyncQueryProperty,
   isLoadedAsyncQueryProperty,
   isLoadedReactiveQueryField,
   isReactiveQueryField,
-  ReactiveField,
 } from "joist-orm";
 import { AsyncQueryPropertyImpl } from "joist-orm/build/relations/hasAsyncQueryProperty";
 import { ReactiveQueryFieldImpl } from "joist-orm/build/relations/ReactiveQueryField";

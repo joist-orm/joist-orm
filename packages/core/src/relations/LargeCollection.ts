@@ -1,6 +1,6 @@
-import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
-import { Relation } from "./Relation";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf } from "src/EntityManager.ts";
+import { type Relation } from "src/relations/Relation.ts";
 
 /**
  * A large collection of `U` within `T`, where the parent has so many children

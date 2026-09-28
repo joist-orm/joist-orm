@@ -26,3 +26,7 @@ junit*.xml
 .idea/copilot*.xml
 
 **/.claude/settings.local.json
+
+# Joist skills are auto-installed into the test repos by codegen; don't track the copies.
+packages/**/.claude/skills/
+packages/**/.agents/skills/

@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -65,6 +66,36 @@ export interface ChildGroupFields {
   childGroup: { kind: "m2o"; type: Child; nullable: never; derived: false };
   parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
   childItems: { kind: "o2m"; type: ChildItem };
+}
+
+export interface ChildGroupColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<ChildGroup>;
+    entity: ChildGroup;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  childGroupId: {
+    type: IdOf<Child>;
+    entity: Child;
+    fieldName: "childGroup";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  parentGroupId: {
+    type: IdOf<ParentGroup>;
+    entity: ParentGroup;
+    fieldName: "parentGroup";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface ChildGroupOpts {
@@ -137,6 +168,9 @@ declare module "joist-core" {
       orderType: ChildGroupOrder;
       optsType: ChildGroupOpts;
       fieldsType: ChildGroupFields;
+      columnsType: ChildGroupColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: ChildGroupIdsOpts;
       factoryExtrasType: ChildGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newChildGroup>[1];

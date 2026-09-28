@@ -1,6 +1,6 @@
 import { DeepNew, FactoryOpts, maybeBranchValue, newTestInstance } from "joist-orm";
-import type { EntityManager } from "../entities";
-import { ParentItem } from "../entities";
+
+import { type EntityManager, ParentItem } from "../entities";
 
 export const parentGroupBranchValue = [true];
 

@@ -14,6 +14,14 @@ Authors can have mentors (other authors) forming a recursive tree.
 
 ## Fields
 
+### firstName
+
+The author's first name.
+
+### publisher
+
+The publisher this author writes for.
+
 ### numberOfBooks
 
 Example of a derived async property that can be calculated via a populate hint.
@@ -93,6 +101,10 @@ All reviews across all of this author's books.
 ### imageFileName
 
 Example of a ReactiveField that watches through an o2o relation.
+
+### nameWithMentor
+
+Example of a Property that recursively loads the same property from its mentor.
 
 ## Notes
 

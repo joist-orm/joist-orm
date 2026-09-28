@@ -1,5 +1,5 @@
-import { Book, newAuthor, newBook } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { Book, newAuthor, newBook } from "src/entities";
+import { newEntityManager } from "src/setupDbTests";
 
 describe("Book", () => {
   it("can save a book", async () => {

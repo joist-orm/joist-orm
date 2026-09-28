@@ -1,22 +1,23 @@
 import {
-  cannotBeUpdated,
   ConfigApi,
-  hasReactiveField,
-  hasReactiveProperty,
-  hasReactiveReference,
   ManyToOneReference,
   Property,
   ReactiveField,
   ReactiveReference,
+  cannotBeUpdated,
+  hasReactiveField,
+  hasReactiveProperty,
+  hasReactiveReference,
 } from "joist-orm";
 import { Context } from "src/context";
+
 import {
   Author,
-  smallPublisherConfig as config,
   Entity,
   PublisherGroup,
-  publisherTransientFields,
   SmallPublisherCodegen,
+  smallPublisherConfig as config,
+  publisherTransientFields,
 } from "./entities";
 
 // For testing an interface that is used on a subtype, with a relation from the base type

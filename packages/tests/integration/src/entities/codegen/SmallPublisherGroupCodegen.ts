@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -53,10 +54,22 @@ import {
 
 export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
 
-export interface SmallPublisherGroupFields extends PublisherGroupFields {
+export interface SmallPublisherGroupFields extends Omit<PublisherGroupFields, "id"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   publishers: { kind: "o2m"; type: SmallPublisher };
+}
+
+export interface SmallPublisherGroupColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<SmallPublisherGroup>;
+    entity: SmallPublisherGroup;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  smallName: { type: string; fieldName: "smallName"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {
@@ -105,6 +118,9 @@ declare module "joist-core" {
       orderType: SmallPublisherGroupOrder;
       optsType: SmallPublisherGroupOpts;
       fieldsType: SmallPublisherGroupFields;
+      columnsType: SmallPublisherGroupColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: SmallPublisherGroupIdsOpts;
       factoryExtrasType: SmallPublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];

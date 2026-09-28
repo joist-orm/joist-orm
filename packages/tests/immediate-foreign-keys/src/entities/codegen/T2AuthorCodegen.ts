@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -57,6 +58,19 @@ export interface T2AuthorFields {
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   favoriteBook: { kind: "m2o"; type: T2Book; nullable: undefined; derived: false };
   t2Books: { kind: "o2m"; type: T2Book };
+}
+
+export interface T2AuthorColumns {
+  id: { fieldName: "id"; type: IdOf<T2Author>; entity: T2Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  favoriteBookId: {
+    type: IdOf<T2Book>;
+    entity: T2Book;
+    fieldName: "favoriteBook";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface T2AuthorOpts {
@@ -114,6 +128,9 @@ declare module "joist-core" {
       orderType: T2AuthorOrder;
       optsType: T2AuthorOpts;
       fieldsType: T2AuthorFields;
+      columnsType: T2AuthorColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: T2AuthorIdsOpts;
       factoryExtrasType: T2AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT2Author>[1];

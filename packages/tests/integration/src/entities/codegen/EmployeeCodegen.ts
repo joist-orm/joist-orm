@@ -17,6 +17,7 @@ import {
   hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -58,6 +59,21 @@ export interface EmployeeFields {
   managersClosure: { kind: "m2m"; type: Employee };
   managerOfClosure: { kind: "m2m"; type: Employee };
   reports: { kind: "o2m"; type: Employee };
+}
+
+export interface EmployeeColumns {
+  id: { fieldName: "id"; type: IdOf<Employee>; entity: Employee; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  managerId: {
+    type: IdOf<Employee>;
+    entity: Employee;
+    fieldName: "manager";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface EmployeeOpts {
@@ -127,6 +143,9 @@ declare module "joist-core" {
       orderType: EmployeeOrder;
       optsType: EmployeeOpts;
       fieldsType: EmployeeFields;
+      columnsType: EmployeeColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: EmployeeIdsOpts;
       factoryExtrasType: EmployeeFactoryExtras;
       factoryOptsType: Parameters<typeof newEmployee>[1];
@@ -140,6 +159,10 @@ export abstract class EmployeeCodegen extends BaseEntity<EntityManager, string> 
 
   declare readonly __type: { 0: "Employee" };
 
+  /**
+   * Tracks self and all recursive managers for the closure-table blog scenario.
+   * @generated Employee.md
+   */
   abstract readonly managersClosure: ReactiveManyToMany<Employee, Employee>; // employee_to_managers_closure employee_id manager_id
 
   readonly reports: Collection<Employee, Employee> = hasMany();

@@ -1,9 +1,9 @@
-import { baseEntityCstr } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { EntityConstructor, EntityManager } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getLazyFields } from "./getProperties";
-import { fail } from "./utils";
+import { baseEntityCstr } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityConstructor, type EntityManager } from "src/EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { getLazyFields } from "src/getProperties.ts";
+import { fail, hasAnyKey } from "src/utils.ts";
 
 // Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");
@@ -35,10 +35,10 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
   let transientFieldsValue: any = {};
   for (const [fieldName, value] of getLazyFields(getMetadata(cstr))) {
-    if (value instanceof LazyField) {
+    if (value instanceof LazyRelation) {
       Object.defineProperty(cstr.prototype, fieldName, {
         get(this: any) {
-          return (this.__data.relations[fieldName] ??= value.create(this, fieldName));
+          return ((this.__data.relations ??= {})[fieldName] ??= value.create(this, fieldName));
         },
       });
     } else if (fieldName === "transientFields") {
@@ -46,6 +46,8 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
       transientFieldsValue = value;
     }
   }
+  // Most entities have no transientFields, so skip the structuredClone for the empty default
+  const needsClone = hasAnyKey(transientFieldsValue);
   Object.defineProperty(cstr.prototype, "transientFields", {
     get(this: any) {
       // This prototype-level `get` will only ever be called once per instance, b/c when we're
@@ -54,7 +56,7 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
       //
       // This has the pleasant upshot of making the instance-level `transientFields` lazy, and
       // they will not be created on an instance until they're actually asked for.
-      const copy = structuredClone(transientFieldsValue);
+      const copy = needsClone ? structuredClone(transientFieldsValue) : {};
       Object.defineProperty(this, "transientFields", { value: copy });
       return copy;
     },
@@ -67,11 +69,11 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
  * We need TypeScript to still see `books = hasMany(...)` as being typed as `Many<Book>`,
  * so this method's return type is `R` i.e. the `Many<Book>` relation type.
  *
- * But at runtime we actually want this to be a `LazyField` that can be rewritten
+ * But at runtime we actually want this to be a `LazyRelation` that can be rewritten
  * into a getter, and only invoked when the relation is actually accessed.
  */
 export function lazyField<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
-  return new LazyField(fn) as R;
+  return new LazyRelation(fn) as R;
 }
 
 /**
@@ -94,7 +96,7 @@ export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetad
 }
 
 /** Wraps `has...` relation constructors in an easily-identifiable container. */
-export class LazyField<T extends Entity> {
+export class LazyRelation<T extends Entity> {
   #fn: (entity: T, fieldName: string) => any;
   constructor(fn: (entity: T, fieldName: string) => any) {
     this.#fn = fn;

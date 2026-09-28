@@ -1,12 +1,18 @@
-import { Entity } from "../Entity";
-import { getMetadata } from "../EntityMetadata";
-import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { lazyField } from "../newEntity";
-import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { tryResolve } from "../utils";
-import { RecursiveCycleError } from "./RecursiveCycleError";
+import { type Entity } from "src/Entity.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import { type LoadHint, type Loaded, isLoaded } from "src/loading/loadHints.ts";
+import { lazyField } from "src/newEntity.ts";
+import {
+  type MaybeReactedPropertyEntity,
+  type Reacted,
+  type ReactiveHint,
+  convertToLoadHint,
+} from "src/reactivity/reactiveHints.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
+import { RecursiveCycleError } from "src/relations/RecursiveCycleError.ts";
+import { tryResolve } from "src/utils.ts";
 
-export const PropertyT = Symbol();
+export { PropertyT };
 
 export interface Property<T extends Entity, V> {
   // Differentiate from AsyncMethod
@@ -125,8 +131,6 @@ export function isProperty(maybeProperty: any): maybeProperty is Property<any, a
 }
 
 /** Type guard utility for determining if an entity field is a loaded Property. */
-export function isLoadedProperty(
-  maybeProperty: any,
-): maybeProperty is Property<any, any> & LoadedProperty<any, any> {
+export function isLoadedProperty(maybeProperty: any): maybeProperty is Property<any, any> & LoadedProperty<any, any> {
   return isProperty(maybeProperty) && maybeProperty.isLoaded;
 }

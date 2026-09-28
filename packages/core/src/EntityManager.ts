@@ -1,106 +1,158 @@
-import DataLoader, { BatchLoadFn, Options } from "dataloader";
-import { getInstanceData } from "./BaseEntity";
-import { BatchLoader } from "./batchloaders/BatchLoader";
-import { enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader";
-import { loadOperation } from "./batchloaders/loadBatchLoader";
-import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
-import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
-import { oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader";
-import { setAsyncDefaults, setSyncDefaults } from "./defaults";
-import { getField, setField } from "./fields";
-import { IndexManager } from "./IndexManager";
-// We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
-import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
-import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
-import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
-import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { constraintNameToValidationError, type ReactiveRule } from "./config";
-import { getConstructorFromTag, getMetadataForType } from "./configure";
-import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
-import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
-import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
-import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
-import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
-import { findPaginatedDataLoader } from "./dataloaders/findPaginatedDataLoader";
-import { lensOperation } from "./dataloaders/lensDataLoader";
-import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
-import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
-import { Driver } from "./drivers";
-import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
-import { FlushLock } from "./FlushLock";
+import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
+import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
+import { type manyToManyLoadOperation } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { type oneToManyLoadOperation } from "src/batchloaders/oneToManyBatchLoader.ts";
+import { type oneToOneLoadOperation } from "src/batchloaders/oneToOneBatchLoader.ts";
+import { populateBatchLoader, type populateOperation } from "src/batchloaders/populateBatchLoader.ts";
+import { type recursiveChildrenOperation } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
+import { type recursiveM2mOperation } from "src/batchloaders/recursiveM2mBatchLoader.ts";
+import { type recursiveParentsOperation } from "src/batchloaders/recursiveParentsBatchLoader.ts";
+import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
+import { getConstructorFromTag, getMetadataForType } from "src/configure.ts";
+import { findByUniqueDataLoader, type findByUniqueOperation } from "src/dataloaders/findByUniqueDataLoader.ts";
 import {
-  asConcreteCstr,
-  assertLoaded,
-  Column,
+  findCountDataLoader,
+  type findCountOperation,
+  mergeCountOptions,
+} from "src/dataloaders/findCountDataLoader.ts";
+import { findDataLoader, type findOperation } from "src/dataloaders/findDataLoader.ts";
+import { findIdsDataLoader, type findIdsOperation } from "src/dataloaders/findIdsDataLoader.ts";
+import { entityMatches, findOrCreateDataLoader } from "src/dataloaders/findOrCreateDataLoader.ts";
+import { findPaginatedDataLoader } from "src/dataloaders/findPaginatedDataLoader.ts";
+import { type lensOperation } from "src/dataloaders/lensDataLoader.ts";
+import type { manyToManyFindOperation } from "src/dataloaders/manyToManyFindDataLoader.ts";
+import type { oneToManyFindOperation } from "src/dataloaders/oneToManyFindDataLoader.ts";
+import { setAsyncDefaults, setSyncDefaults } from "src/defaults.ts";
+import { type Driver } from "src/drivers/index.ts";
+// We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
+import { type Entity, type Entity as EntityW, type IdType, isEntity } from "src/Entity.ts";
+import { getField, setField } from "src/fields.ts";
+import { FlushLock } from "src/flush/FlushLock.ts";
+import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
+import type { PendingChange } from "src/flush/PendingChanges.ts";
+import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "src/flush/Todo.ts";
+import {
   CustomCollection,
   CustomReference,
-  deepNormalizeHint,
-  DeepPartialOrNull,
-  EntityHook,
-  EntityMetadata,
-  EnumField,
-  ExpressionFilter,
-  Field,
+  type DeepPartialOrNull,
+  type EntityHook,
+  type EntityMetadata,
+  type EnumField,
+  type ExpressionFilter,
+  type Field,
+  type FieldColumn,
   FieldLogger,
-  FieldLoggerWatch,
-  FindFilter,
+  type FieldLoggerWatch,
+  type FindFilter,
+  type GraphQLFilterOf,
+  type GraphQLFilterWithAlias,
+  type InstanceData,
+  type Lens,
+  NoIdError,
+  OneToManyCollection,
+  type ParsedFindQuery,
+  type PartialOrNull,
+  type Plugin,
+  PolymorphicReferenceImpl,
+  ReactionLogger,
+  type ReactiveHint,
+  type Reference,
+  type TimestampSerde,
+  type UniqueFilter,
+  type ValidationError,
+  ValidationErrors,
+  type ValidationRule,
+  type ValidationRuleInternal,
+  type ValidationRuleResult,
+  asConcreteCstr,
+  assertLoaded,
+  deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
+  getBaseSelfAndSubMetas,
   getConstructorFromTaggedId,
   getMetadata,
   getRelationEntries,
   getRelations,
-  GraphQLFilterOf,
-  GraphQLFilterWithAlias,
-  InstanceData,
   isLoadedReference,
   keyToNumber,
-  Lens,
+  keyToTaggedId,
   loadLens,
   mergeFindOptions,
-  OneToManyCollection,
   optimizeCollectionJoins,
-  ParsedFindQuery,
-  PartialOrNull,
-  Plugin,
-  PolymorphicReferenceImpl,
-  ReactionLogger,
-  ReactiveHint,
-  Reference,
   setOpts,
   tagId,
-  TimestampSerde,
   toTaggedId,
-  UniqueFilter,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
-} from "./index";
-import { IsLoadedCache } from "./IsLoadedCache";
-import { JoinRows, ManyToManyLike } from "./JoinRows";
-import { isLoadedForPopulate, Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
-import { WriteFn } from "./logging/FactoryLogger";
-import { newEntity } from "./newEntity";
-import { resetFactoryCreated } from "./newTestInstance";
-import { PendingChange } from "./PendingChanges";
-import { PluginManager } from "./PluginManager";
-import { PreloadPlugin } from "./plugins/PreloadPlugin";
-import { ReactionsManager } from "./ReactionsManager";
-import { followReverseHint } from "./reactiveHints";
-import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncPropertyImpl } from "./relations/AsyncProperty";
-import { Collection } from "./relations/Collection";
-import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { RecursiveCycleError } from "./relations/RecursiveCollection";
-import { isSelectAllFilter } from "./scopes";
-import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
-import { runInTrustedContext } from "./trusted";
-import { OptsOf, OrderOf } from "./typeMap";
-import { upsert } from "./upsert";
-import { assertNever, fail, failIfAnyRejected, getOrSet, groupBy, MaybePromise, partition, toArray } from "./utils";
+} from "src/index.ts";
+import { IndexManager } from "src/IndexManager.ts";
+import { IsLoadedCache } from "src/loading/IsLoadedCache.ts";
+import {
+  type LoadHint,
+  type Loaded,
+  type NestedLoadHint,
+  type New,
+  type RelationsIn,
+  isLoadedForPopulate,
+} from "src/loading/loadHints.ts";
+import { type WriteFn } from "src/logging/FactoryLogger.ts";
+import { noopFieldLogger } from "src/logging/FieldLogger.ts";
+import { type ReactionWalk } from "src/logging/ReactionLogger.ts";
+import { newEntity } from "src/newEntity.ts";
+import { resetFactoryCreated } from "src/newTestInstance.ts";
+import { PluginManager } from "src/PluginManager.ts";
+import { type PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
+import { isSelectAllFilter } from "src/queries/find/scopes.ts";
+import {
+  type CheckMutation,
+  type ExecuteResult,
+  type MutationInput,
+  type MutationRow,
+  decodeStatementResult,
+  isMutation,
+  parseStatement,
+} from "src/queries/sql/execute.ts";
+import {
+  type CheckSetQuery,
+  type EntityQuery,
+  type QueryArg,
+  type QueryJoinInput,
+  type QueryRow,
+  type QuerySelect,
+  type QuerySource,
+  type ResolvedJoins,
+  type SetOperand,
+  type SetQuery,
+  type SetQueryRow,
+  type Subquery,
+  parseUserQuery,
+} from "src/queries/sql/query.ts";
+import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
+import { followReverseHint } from "src/reactivity/reactiveHints.ts";
+import { type AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { AsyncPropertyImpl } from "src/relations/AsyncProperty.ts";
+import { type Collection } from "src/relations/Collection.ts";
+import { AsyncMethodPopulateSecret } from "src/relations/hasAsyncMethod.ts";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "src/relations/index.ts";
+import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
+import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
+import { PojoRowData, type RowData } from "src/RowData.ts";
+import { runInTrustedContext } from "src/trusted.ts";
+import { type OptsOf, type OrderOf } from "src/typeMap.ts";
+import { upsert } from "src/upsert.ts";
+import {
+  type MaybePromise,
+  assertNever,
+  fail,
+  failIfAnyRejected,
+  getOrSet,
+  groupBy,
+  hasAnyKey,
+  partition,
+  toArray,
+} from "src/utils.ts";
 
 // polyfill
 (Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");
@@ -212,7 +264,8 @@ export type FindOperation =
   | typeof populateOperation
   | typeof recursiveChildrenOperation
   | typeof recursiveM2mOperation
-  | typeof recursiveParentsOperation;
+  | typeof recursiveParentsOperation
+  | typeof lazyColumnLoadOperation;
 
 /**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
@@ -250,6 +303,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
+  // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
+  #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
@@ -276,7 +331,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     afterCommit: [],
   };
   readonly #preloader: PreloadPlugin | undefined;
-  #fieldLogger: FieldLogger | undefined;
+  #fieldLogger: FieldLogger = noopFieldLogger;
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
   /** Track `a#1`, `a#2`, etc indexes for `em.create`-d entities. */
@@ -468,6 +523,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
+    this.#assertFindAllowed("find");
     const { populate, ...rest } = options || {};
     const normalized = mergeFindOptions(where, rest);
     const settings = { where: normalized.where, ...normalized.options };
@@ -482,6 +538,114 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  /**
+   * Runs a SQL-shaped query written as an object literal, and returns typed rows.
+   *
+   * ```ts
+   * const [a, b] = tables(Author, Book);
+   * const rows = await em.query({
+   *   from: a,
+   *   join: [{ left: b, on: b.author_id.eq(a.id) }],
+   *   where: { and: [a.age.gte(minAge)] },
+   *   groupBy: [a.first_name],
+   *   select: { name: a.first_name, bookCount: b.id.count() },
+   *   orderBy: { bookCount: "DESC" },
+   * });
+   * // → { name: string; bookCount: number }[]
+   * ```
+   *
+   * `select` decides the row type: a bare table (`select: a`) returns entities through the identity
+   * map, an array of columns or a `{ key: expr }` object returns typed POJOs, and a `query(...)` value
+   * returns its rows. Joins are pruned like `em.find`: an `undefined` condition drops out, and a join
+   * nothing references anymore drops with it. See `query.ts` for the full DSL, and `query()` for
+   * composing subqueries.
+   *
+   * Entity selections accept a second argument, `{ populate: hint }`, and return `Loaded` entities.
+   * Population runs after the query, using the same relation loaders as `em.populate`.
+   * This method is not batched: these are custom queries, too unique to batch.
+   */
+  public query<R>(q: Subquery<R, any>): Promise<R[]>;
+  public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
+  public query<T extends Entity, const H extends LoadHint<T>>(
+    q: EntityQuery<T>,
+    options: { populate: H },
+  ): Promise<Loaded<T, H>[]>;
+  public query<const Q extends SetQuery<readonly SetOperand[]>>(q: Q & CheckSetQuery<Q>): Promise<SetQueryRow<Q>[]>;
+  public query<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoinInput = []>(
+    q: QueryArg<F, S, J, never>,
+  ): Promise<QueryRow<S, ResolvedJoins<F, J>>[]>;
+  public query<
+    F extends QuerySource,
+    const S extends QuerySelect,
+    const H extends LoadHint<Extract<QueryRow<S, ResolvedJoins<F, J>>, EntityW>>,
+    J extends QueryJoinInput = [],
+  >(
+    q: QueryArg<F, S, J, never>,
+    options: QueryRow<S, ResolvedJoins<F, J>> extends EntityW ? { populate: H } : never,
+  ): Promise<Loaded<Extract<QueryRow<S, ResolvedJoins<F, J>>, EntityW>, H>[]>;
+  public query(q: unknown, options?: { populate: LoadHint<EntityW> }): Promise<any[]> {
+    this.#assertFindAllowed("query");
+    const em = this;
+    return (async function query() {
+      const plan = parseUserQuery(q);
+      if (options?.populate && plan.output.kind !== "entity") {
+        fail("em.query populate requires an entity selection");
+      }
+      const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      const result = plan.decodeRows(em, rows);
+      if (options?.populate) {
+        await em.populate(result, options.populate);
+      }
+      return result;
+    })().catch(function query(err) {
+      throw appendStack(err, new Error());
+    });
+  }
+
+  /**
+   * Executes immediate SQL with a native command count. Mutations bypass the entity unit of work;
+   * reads retain query's decoding and permissions. Neither path flushes or repairs cached entities.
+   */
+  public execute<const M extends MutationInput>(
+    statement: M & CheckMutation<M>,
+  ): Promise<ExecuteResult<MutationRow<M>>>;
+  public execute<R>(statement: Subquery<R, any>): Promise<ExecuteResult<R>>;
+  public execute<T extends Entity>(statement: EntityQuery<T>): Promise<ExecuteResult<T>>;
+  public execute<const Q extends SetQuery<readonly SetOperand[]>>(
+    statement: Q & CheckSetQuery<Q>,
+  ): Promise<ExecuteResult<SetQueryRow<Q>>>;
+  public execute<F extends QuerySource, const S extends QuerySelect = never, J extends QueryJoinInput = []>(
+    statement: QueryArg<F, S, J, never>,
+  ): Promise<ExecuteResult<QueryRow<S, ResolvedJoins<F, J>>>>;
+  public execute(statement: unknown): Promise<ExecuteResult<unknown>> {
+    const em = this;
+    return (async function execute() {
+      if (isMutation(statement)) {
+        if (em.mode === "read-only") throw new ReadOnlyError();
+        if (em.mode === "in-memory-writes") fail("SQL mutations do not support in-memory-writes mode");
+      } else {
+        em.#assertFindAllowed("execute");
+      }
+      const plan = parseStatement(statement);
+      if (!plan) return { rowCount: 0, rows: [] };
+      const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      return decodeStatementResult(em, plan, result);
+    })().catch(function execute(err) {
+      throw appendStack(err, new Error());
+    });
+  }
+
+  /** Fails fast if `em.${method}` is called from a regular validation rule, i.e. steers to `config.addCommitRule`. */
+  #assertFindAllowed(method: string): void {
+    if (this.#findRestricted) {
+      throw new Error(
+        `em.${method} cannot be called from a validation rule (added via config.addRule), because rules run ` +
+          `before the flush and would query stale, pre-flush data. Use config.addCommitRule instead, which runs ` +
+          `after the INSERT/UPDATE/DELETEs are flushed (within the same transaction) and so sees the changed state.`,
+      );
+    }
   }
 
   /** Runs the post-parse find pipeline: plugins mutate the logical AST, then Joist optimizes/prunes before SQL. */
@@ -501,6 +665,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ) {
     const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
     return this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit);
+  }
+
+  /** Like {@link executeFind}, but returns a {@link RowData}; see {@link executePreparedFindRowData}. */
+  private async executeFindRowData(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    settings: {
+      limit?: number;
+      offset?: number;
+      checkLimit?: boolean;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+  ): Promise<RowData> {
+    const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
+    return this.executePreparedFindRowData(meta, operation, parsed, findSettings, checkLimit);
   }
 
   /** Executes a query that has already had find hooks and optimizations applied. */
@@ -525,8 +708,46 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (shouldCheck && rows.length >= this.entityLimit) {
       throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
     }
-    pluginManager.afterFind(meta, operation, rows);
+    if (pluginManager.hasHook("afterFind")) {
+      pluginManager.afterFind(meta, operation, new PojoRowData(rows));
+    }
     return rows;
+  }
+
+  /**
+   * Like {@link executePreparedFind}, but returns a {@link RowData}: lazy wire rows when the
+   * driver has `lazyRows` enabled, else classic POJO rows wrapped in a `PojoRowData` — so
+   * loaders can hydrate from one shape without caring which the driver provides.
+   */
+  private async executePreparedFindRowData(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    findSettings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+    checkLimit: boolean | undefined,
+  ): Promise<RowData> {
+    const { executeFindRowData } = this.driver;
+    if (executeFindRowData === undefined) {
+      return new PojoRowData(await this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit));
+    }
+    const { pluginManager } = getEmInternalApi(this);
+    const rowData = await executeFindRowData.call(this.driver, this, parsed, findSettings);
+    // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
+    const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);
+    if (shouldCheck && rowData.rowCount >= this.entityLimit) {
+      throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
+    }
+    // The hook receives the lazy RowData view directly, so observe-only hooks (i.e. metrics
+    // reading `rowCount`) never materialize cells; hooks call `toRows()` if they want POJOs
+    pluginManager.afterFind(meta, operation, rowData);
+    return rowData;
   }
 
   /**
@@ -652,6 +873,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: UniqueFilter<T>,
     options: { populate?: any; softDeletes?: "include" | "exclude" } = {},
   ): Promise<T | undefined> {
+    this.#assertFindAllowed("findByUnique");
     const { populate, softDeletes = "exclude" } = options;
     const entries = Object.entries(where);
     if (entries.length !== 1) {
@@ -691,6 +913,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
+    this.#assertFindAllowed("findCount");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
@@ -729,6 +952,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
+    this.#assertFindAllowed("findIds");
     const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options };
     return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
@@ -978,6 +1202,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
 
     // 2. Clone each found entity
+    const deferredRelations: [Entity, string, Entity][] = [];
     const clones = [...todo].map((entity) => {
       const skip = skipMap.get(entity) ?? [];
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
@@ -995,15 +1220,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                 } else {
                   return undefined;
                 }
-              case "m2o":
               case "enum":
                 if (f.derived) {
                   return undefined;
                 } else {
                   return [f.fieldName, getField(entity, f.fieldName)];
                 }
-              case "poly":
-                return [f.fieldName, getField(entity, f.fieldName)];
+              case "m2o":
+              case "poly": {
+                if (f.kind === "m2o" && f.derived) return undefined;
+                const existingIdOrEntity = getField(entity, f.fieldName);
+                const target = (
+                  isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
+                ) as Entity | undefined;
+                // Defer relations within the cloned subgraph because setting a clone field before remapping can update
+                // its other side, and that update is not fixed up later.
+                if (target && todo.has(target)) {
+                  deferredRelations.push([entity, f.fieldName, target]);
+                  return [f.fieldName, undefined];
+                } else {
+                  return [f.fieldName, existingIdOrEntity];
+                }
+              }
               case "primaryKey":
               case "o2m":
               case "m2m":
@@ -1046,6 +1284,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
         }
       });
+    });
+
+    deferredRelations.forEach(([source, fieldName, target]) => {
+      const clone = entityToClone.get(source)!;
+      ((clone as any)[fieldName] as any).set(entityToClone.get(target)!);
     });
 
     if (postClone) {
@@ -1233,15 +1476,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
 
-    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
-    const ids = new Array<string>(_ids.length);
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot;
+    // misses remember their tagged id + position so the all-hit path skips the `ids` copy entirely
     const entities = new Array<T | undefined>(_ids.length);
     let idsToLoad: string[] | undefined;
     let positionsToLoad: number[] | undefined;
 
     for (let i = 0; i < _ids.length; i++) {
       const id = tagId(meta, _ids[i]);
-      ids[i] = id;
       const entity = this.findExistingInstance<T>(id);
       if (entity) {
         entities[i] = entity;
@@ -1251,25 +1493,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       }
     }
 
-    if (idsToLoad && idsToLoad.length > 0) {
+    if (idsToLoad) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAll(err) {
           throw appendStack(err, new Error());
         });
-      for (const i of positionsToLoad!) {
-        entities[i] = this.findExistingInstance<T>(ids[i]);
+      let idsNotFound: string[] | undefined;
+      for (let j = 0; j < positionsToLoad!.length; j++) {
+        const entity = this.findExistingInstance<T>(idsToLoad[j]);
+        entities[positionsToLoad![j]] = entity;
+        if (entity === undefined) (idsNotFound ??= []).push(idsToLoad[j]);
       }
-    }
-
-    let idsNotFound: string[] | undefined;
-    for (let i = 0; i < entities.length; i++) {
-      if (entities[i] === undefined) {
-        (idsNotFound ??= []).push(ids[i]);
+      if (idsNotFound) {
+        throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
       }
-    }
-    if (idsNotFound) {
-      throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
     const loadedEntities = entities as T[];
     if (hint) {
@@ -1301,35 +1539,41 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
 
-    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
-    const ids = new Array<string>(_ids.length);
-    const entities: T[] = [];
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot;
+    // the all-hit path returns the single pre-sized array without any id copies or rebuilds
+    const maybeEntities = new Array<T | undefined>(_ids.length);
     let idsToLoad: string[] | undefined;
+    let positionsToLoad: number[] | undefined;
 
     // Ensure the ids are tagged, and find any not-yet-loaded
     for (let i = 0; i < _ids.length; i++) {
       const id = tagId(meta, _ids[i]);
-      ids[i] = id;
       const entity = this.findExistingInstance<T>(id);
       if (entity) {
-        entities.push(entity);
+        maybeEntities[i] = entity;
       } else {
         (idsToLoad ??= []).push(id);
+        (positionsToLoad ??= []).push(i);
       }
     }
 
-    if (idsToLoad && idsToLoad.length > 0) {
+    let entities: T[];
+    if (idsToLoad) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAllIfExists(err) {
           throw appendStack(err, new Error());
         });
-      // Now that everything is loaded, recalc `entities`
-      entities.length = 0;
-      for (const id of ids) {
-        const entity = this.findExistingInstance<T>(id);
-        if (entity) entities.push(entity);
+      // Fill in whichever missed ids actually exist, then compact out the not-founds
+      for (let j = 0; j < positionsToLoad!.length; j++) {
+        maybeEntities[positionsToLoad![j]] = this.findExistingInstance<T>(idsToLoad[j]);
       }
+      entities = [];
+      for (const entity of maybeEntities) {
+        if (entity !== undefined) entities.push(entity);
+      }
+    } else {
+      entities = maybeEntities as T[];
     }
     if (hint) {
       await this.populate(entities, hint);
@@ -1679,13 +1923,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // each time, so that for an INSERT-then-UPDATE the triggers don't think the
         // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
         if (alreadyRanHooks.size > 0) {
-          maybeBumpUpdatedAt(this.#rm, createTodos([...alreadyRanHooks]), now);
+          maybeBumpUpdatedAt(this.#rm, createTodos(alreadyRanHooks), now);
         }
 
         // Run hooks in a series of loops until things "settle down"
         while (pendingHooks.size > 0) {
           await this.#fl.allowWrites(async () => {
-            let todos = createTodos([...pendingHooks]);
+            let todos = createTodos(pendingHooks);
 
             await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
             maybeBumpUpdatedAt(this.#rm, todos, now);
@@ -1756,15 +2000,23 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           this.#isValidating = true;
           await pluginManager.beforeValidate(changedEntities);
           if (validate) {
-            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-            // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
-            await validateSimpleRules(entityTodos);
-            // After we've let any "author is not set" simple rules fail before prematurely throwing
-            // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-            // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
-            // that the user should see.
-            if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            // Regular rules run pre-flush, so `em.find*` would query stale data; block it and steer
+            // users to `config.addCommitRule` (which runs post-flush). Only rules are restricted —
+            // `afterValidation` hooks & plugins below are left free to query.
+            this.#findRestricted = true;
+            try {
+              // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+              // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
+              await validateSimpleRules(entityTodos);
+              // After we've let any "author is not set" simple rules fail before prematurely throwing
+              // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+              // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+              // that the user should see.
+              if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+              await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            } finally {
+              this.#findRestricted = false;
+            }
             await afterValidation(this.ctx, entityTodos);
           }
           await pluginManager.afterValidate(changedEntities);
@@ -1772,6 +2024,71 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           this.#isValidating = false;
         }
       };
+
+      // Runs `addCommitRule`s, which look exactly like regular validation rules but fire here,
+      // after the INSERT/UPDATE/DELETEs have hit the db (but before COMMIT), so that any
+      // `em.find`s they make query the just-flushed/changed state within the transaction.
+      const runCommitValidation = async (
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ) => {
+        // Drop the pre-flush find/query caches so commit rules' `em.find`s re-query and see the
+        // just-flushed rows, instead of stale results cached earlier in this same flush.
+        this.#dataloaders = {};
+        this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
+        try {
+          // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
+          this.#isValidating = true;
+          await validateSimpleRules(entityTodos, (config) => config.commitRules);
+          await validateReactiveRules(
+            this,
+            this.#rm.logger,
+            entityTodos,
+            joinRowTodos,
+            (meta) => meta.reactiveCommitRules!,
+          );
+        } finally {
+          this.#isValidating = false;
+        }
+      };
+
+      // Commit rules run once, at the end, over just the flushed entities/join-rows whose type has
+      // commit rules (see `meta.hasCommitRules`). We accumulate that subset here as we flush — deduping
+      // across the RQF loop below (which resets entity dirty-state) — so we neither keep every todo
+      // nor re-scan/merge them afterwards; apps without commit rules leave these empty and pay ~nothing.
+      const commitRuleTodos: Record<string, Todo> = {};
+      const commitRuleJoinRowTodos: Record<string, JoinRowTodo> = {};
+      const commitRuleSeen = new Set<unknown>();
+      function collectCommitRuleTodos(
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+      ): void {
+        if (skipValidation) return;
+        for (const todo of Object.values(entityTodos)) {
+          if (!todo.metadata.hasCommitRules) continue;
+          for (const key of ["inserts", "updates", "deletes"] as const) {
+            for (const e of todo[key]) {
+              if (!commitRuleSeen.has(e)) {
+                commitRuleSeen.add(e);
+                getTodo(commitRuleTodos, e)[key].push(e);
+              }
+            }
+          }
+        }
+        for (const [table, todo] of Object.entries(joinRowTodos)) {
+          if (!todo.m2m.meta.hasCommitRules && !todo.m2m.otherMeta?.hasCommitRules) continue;
+          const into = (commitRuleJoinRowTodos[table] ??= { ...todo, newRows: [], deletedRows: [] });
+          for (const key of ["newRows", "deletedRows"] as const) {
+            for (const r of todo[key]) {
+              if (!commitRuleSeen.has(r)) {
+                commitRuleSeen.add(r);
+                into[key].push(r);
+              }
+            }
+          }
+        }
+      }
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
@@ -1792,6 +2109,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           do {
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
+              // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
+              collectCommitRuleTodos(entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1824,6 +2143,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               entityTodos = {};
             }
           } while (Object.keys(entityTodos).length > 0);
+          // Now that all SQL has hit the db (but before COMMIT), run any `addCommitRule`s so their
+          // `em.find`s see the changed state. `commitRuleTodos` is only non-empty if a flushed entity
+          // actually has commit rules, so apps without them skip this (and its logging) entirely.
+          if (Object.keys(commitRuleTodos).length > 0 || Object.keys(commitRuleJoinRowTodos).length > 0) {
+            // Make just-inserted entities findable by id (like the RQF loop does) so commit rules'
+            // `em.find`s return these same instances rather than hydrating duplicate ones.
+            for (const e of allFlushedEntities) {
+              if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
+            }
+            await runCommitValidation(commitRuleTodos, commitRuleJoinRowTodos);
+          }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
           if (this.mode === "in-memory-writes") {
@@ -1837,11 +2167,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
         // Update the `#orm` field to reflect the new state
         for (const e of allFlushedEntities) {
+          const instanceData = getInstanceData(e);
           if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
-          getInstanceData(e).resetAfterFlushed();
-          // Reset AsyncQueryProperties since DB state may have changed
-          for (const rel of Object.values(getInstanceData(e).relations)) {
-            if (rel instanceof AsyncPropertyImpl) rel.resetAfterFlush();
+          instanceData.resetAfterFlushed();
+          // Reset AsyncQueryProperties & LazyFields since DB state may have changed
+          const { relations } = instanceData;
+          if (relations) {
+            for (const rel of Object.values(relations)) {
+              if (rel instanceof AsyncPropertyImpl || rel instanceof LazyFieldImpl) rel.resetAfterFlush();
+            }
           }
         }
         // Update the joinRows refs to reflect the new state
@@ -1881,15 +2215,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
         }
       }
+      // node-pg keeps the DETAIL line (i.e. "Key (identity_id, final_id)=(102591, null) already exists")
+      // on a separate `detail` field, so keep it to suffix onto messages to help debugging.
+      const detail = e && typeof e === "object" && "detail" in e && typeof e.detail === "string" ? e.detail : undefined;
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];
         if (message) {
-          throw new ValidationErrors(message);
+          const errors = new ValidationErrors(message);
+          // Keep the user-facing `errors[].message` pretty, but suffix the DETAIL onto the top-level
+          // `message` so the debugging context survives into logs/stack traces.
+          if (detail) errors.message = `${message} — ${detail}`;
+          throw errors;
         }
       }
       if (e instanceof InMemoryRollbackError) {
         return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
+      }
+      // For raw (non-pretty) pg errors, fold the DETAIL into `message` so it survives into logs.
+      if (detail && e instanceof Error) {
+        e.message = `${e.message} — ${detail}`;
       }
       throw e;
     } finally {
@@ -2031,55 +2376,101 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     rows: readonly any[],
     options?: { overwriteExisting?: boolean },
   ): T[] {
+    return this.hydrateFromRowData(type, new PojoRowData(rows), options);
+  }
+
+  /**
+   * Hydrates a query's `RowData`, running any sidecar reads, and always `finalize`s the result.
+   *
+   * This is the internal API for Joist's find/load loaders: `sidecars` is where reads of
+   * non-entity columns (preload aggregates, `_tags`, found-id checks) belong — they must run
+   * before `finalize`, because compaction drops unretained rows — and the `try/finally`
+   * guarantees a failed hydration or sidecar read still releases the result's unretained
+   * buffers instead of pinning them.
+   */
+  private hydrateAndFinalize<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rowData: RowData,
+    opts?: { overwriteExisting?: boolean; sidecars?: (entities: T[]) => void },
+  ): T[] {
+    try {
+      const entities = this.hydrateFromRowData(type, rowData, opts);
+      opts?.sidecars?.(entities);
+      return entities;
+    } finally {
+      rowData.finalize?.();
+    }
+  }
+
+  /**
+   * Like {@link hydrate}, but reads rows from a {@link RowData}, i.e. a driver-produced
+   * lazy query result, instead of an array of POJO rows.
+   *
+   * This is an internal API used by Joist's own find loaders (usually via
+   * {@link hydrateAndFinalize}); rows whose entities are kept (newly created or
+   * overwrite-refreshed) are `retain`-ed on the `RowData` so the caller can later `finalize`
+   * (trim/compact) the result.
+   */
+  public hydrateFromRowData<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rowData: RowData,
+    options?: { overwriteExisting?: boolean },
+  ): T[] {
     const maybeBaseMeta = getMetadata(type);
-    const taggedIdPrefix = `${maybeBaseMeta.tagName}:`;
     const overwriteExisting = options?.overwriteExisting === true;
 
-    let i = 0;
-    const entities = new Array(rows.length);
-    for (const row of rows) {
-      const id = row["id"];
-      const taggedId = id === undefined || id === null ? fail("No id column was available") : `${taggedIdPrefix}${id}`;
+    const count = rowData.rowCount;
+    const entities = new Array(count);
+    for (let i = 0; i < count; i++) {
+      const id = rowData.get(i, "id");
+      const taggedId =
+        id === undefined || id === null ? fail("No id column was available") : keyToTaggedId(maybeBaseMeta, id)!;
       // See if this is already in our UoW
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
-        const meta = findConcreteMeta(maybeBaseMeta, row);
+        const meta = findConcreteMeta(maybeBaseMeta, rowData, i);
         // Pass id as a hint that we're in hydrate mode
         entity = newEntity(this, asConcreteCstr(meta.cstr), false) as T;
-        getInstanceData(entity).row = row;
+        const instanceData = getInstanceData(entity);
+        instanceData.rowData = rowData;
+        instanceData.rowIndex = i;
+        rowData.retain?.(i);
+        // Seed the id to share the identity-map key string and skip the id serde on first read
+        instanceData.data["id"] = taggedId;
         this.#doRegister(entity as any, taggedId, meta, true);
       } else if (overwriteExisting) {
         // Usually if the entity already exists, we don't write over it, but in this case we assume that
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
         // First swap out the old row with the new row
         const instanceData = getInstanceData(entity);
-        instanceData.row = row;
+        instanceData.rowData = rowData;
+        instanceData.rowIndex = i;
+        rowData.retain?.(i);
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
         const { data } = instanceData;
         const dataKeys = Object.keys(data);
-        if (dataKeys.length > 0) {
+        // `id` is seeded at hydrate and can never change, so it never needs refreshing
+        if (dataKeys.length > ("id" in data ? 1 : 0)) {
           const allFields = getMetadata(entity).allFields;
-          const changedFields = (entity as any).changes.fieldsWithoutRelations;
-          if (changedFields.length === 0) {
-            for (const fieldName of dataKeys) {
-              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, row);
-            }
-          } else {
-            for (const fieldName of dataKeys) {
-              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-              serde.setOnEntity(data, row);
-              // Make the field look not-dirty
-              if (changedFields.includes(fieldName)) {
-                instanceData.markFieldClean(fieldName);
-              }
+          // For existing entities this is exactly `changes.fieldsWithoutRelations`, minus the proxy allocation
+          const changedFields: string[] = instanceData.isNewEntity
+            ? (entity as any).changes.fieldsWithoutRelations
+            : Object.keys(instanceData.originalData);
+          for (const fieldName of dataKeys) {
+            if (fieldName === "id") continue;
+            const field = allFields[fieldName];
+            const serde = field.serde ?? fail(`Missing serde for ${fieldName}`);
+            data[fieldName] = serde.fromRow(rowData, i);
+            // Make the field look not-dirty
+            if (changedFields.includes(fieldName)) {
+              instanceData.markFieldClean(fieldName);
             }
           }
         }
       }
-      entities[i++] = entity;
+      entities[i] = entity;
     }
 
     return entities;
@@ -2102,7 +2493,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Recalculates the reactive fields for an entity, and any downstream reactive fields or reactions that depend on them.
+   * Recalculates an entity's reactive fields or explicitly runs a named reaction.
    *
    * You shouldn't need to call this unless the derived fields have drifted from the underlying data, which
    * should only happen if:
@@ -2110,24 +2501,68 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * - The underlying data was changed by a raw SQL query, or
    * - You've changed the field's business logic and want to update the database to the latest value.
    *
-   * You can also trigger a recalc for specific fields by calling `.load()` on the property, i.e.
+   * Pass `reactionName` to run only that named reaction on each entity. You can also trigger a recalc for
+   * specific fields by calling `.load()` on the property, i.e.
    * `author.numberOfBooks.load()`. This `recalc` method is just a helper method to call `load` for
    * all derived fields on the given entity/entities.
    */
   public recalc(entity: EntityW): Promise<void>;
   public recalc(entities: EntityW[]): Promise<void>;
-  public async recalc(entityOrEntities: EntityW | EntityW[]): Promise<void> {
+  public recalc(entity: EntityW, reactionName: string): Promise<void>;
+  public recalc(entities: EntityW[], reactionName: string): Promise<void>;
+  public async recalc(entityOrEntities: EntityW | EntityW[], reactionName?: string): Promise<void> {
+    const entities = toArray(entityOrEntities).filter((entity) => !entity.isDeletedEntity);
+    if (reactionName !== undefined) {
+      // Resolve every reaction before invoking any of them so a mixed list cannot partially run.
+      const reactions = entities.map((entity) => {
+        const reaction = getBaseAndSelfMetas(getMetadata(entity))
+          .flatMap((meta) => meta.config.__data.reactions)
+          .find((reaction) => reaction.name === reactionName);
+        return reaction ?? fail(`Reaction '${reactionName}' not found on ${getMetadata(entity).type}`);
+      });
+      await runInTrustedContext(() =>
+        Promise.allSettled(reactions.map((reaction, i) => reaction.fn(entities[i], this.ctx))).then(failIfAnyRejected),
+      );
+      await this.#rm.recalcPendingReactables("reactables");
+      return;
+    }
+
     // Look for async reactive fields
-    const relations = toArray(entityOrEntities).flatMap((entity) =>
+    const relations = entities.flatMap((entity) =>
       Object.values(getMetadata(entity).allFields)
         .filter((f) => "derived" in f && f.derived === "async")
         .map((field) => (entity as any)[field.fieldName]),
     );
     // Use forceReload: true to tell ReactiveReferences to recalc against their full graph
-    await Promise.all(relations.map((r: any) => r.load({ forceReload: true })));
+    // This intentionally mirrors ReactionsManager.recalcPendingReactables's NoIdError retry. These direct relations
+    // are not ReactiveActions, and all failures except NoIdError are returned directly to the caller.
+    const results = await Promise.allSettled(relations.map((r: any) => r.load({ forceReload: true })));
+    const relationsPendingAssignedIds: any[] = [];
+    const failures: any[] = [];
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        if (result.reason instanceof NoIdError) {
+          relationsPendingAssignedIds.push(relations[i]);
+        } else {
+          failures.push(result.reason);
+        }
+      }
+    });
+    if (relationsPendingAssignedIds.length > 0) {
+      await this.assignNewIds();
+      const retryResults = await Promise.allSettled(
+        relationsPendingAssignedIds.map((r: any) => r.load({ forceReload: true })),
+      );
+      retryResults.forEach((result) => {
+        if (result.status === "rejected") {
+          failures.push(result.reason);
+        }
+      });
+    }
+    if (failures.length > 0) throw failures[0];
 
     // And also sync reactive fields
-    toArray(entityOrEntities).flatMap((entity) =>
+    entities.flatMap((entity) =>
       Object.values(getMetadata(entity).allFields)
         .filter((f) => "derived" in f && f.derived === "sync")
         .forEach((field) => {
@@ -2246,7 +2681,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     const writeFn = getDefaultWriteFn(this.ctx);
     if (typeof arg === "boolean") {
-      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;
+      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : noopFieldLogger;
     } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
@@ -2281,17 +2716,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
     // Don't bother filtering if there's no where clause (particularly b/c IndexManager.findMatching
     // really expects there to be at least 1 condition)
-    if (Object.entries(where).length === 0) {
+    if (!hasAnyKey(where)) {
       return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
     if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities, where);
-      return (
-        this.#indexManager
-          .findMatching(meta, entities, where)
-          // Still filter by `instanceof cstr` to handle subtyping
-          .filter((e) => e instanceof cstr && !e.isDeletedEntity)
-      );
+      // Build the final array in one pass, still filtering `instanceof cstr` to handle subtyping
+      const result: T[] = [];
+      for (const e of this.#indexManager.findMatching(meta, entities, where)) {
+        if (e instanceof cstr && !e.isDeletedEntity) result.push(e);
+      }
+      return result;
     } else {
       return (
         entities
@@ -2412,6 +2847,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       }
 
       const { relations } = (oldEntity as any).__data as InstanceData;
+      if (!relations) continue;
       for (const [field, relation] of Object.entries(relations)) {
         // With lazyRelation, custom relations are inserted into the `relations` map. Custom relations don't
         // store any data, so we can ignore them by checking if the relation implements `import`
@@ -2565,7 +3001,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // api will be undefined during getFakeInstance
     const api = getEmInternalApi(this);
-    api?.fieldLogger?.logCreate(entity);
+    api?.fieldLogger.logCreate(entity);
 
     setOpts(entity, opts, { partial, calledFromConstructor: true });
 
@@ -2649,7 +3085,7 @@ export interface EntityManagerInternalApi {
   isValidating: boolean;
   checkWritesAllowed: () => void;
   isMerging: (entity: Entity) => boolean;
-  get fieldLogger(): FieldLogger | undefined;
+  get fieldLogger(): FieldLogger;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
   clearDataloaders(): void;
@@ -2724,15 +3160,19 @@ export class TooManyError extends Error {
  */
 async function validateReactiveRules(
   em: EntityManager,
-  logger: ReactionLogger | undefined,
+  logger: ReactionLogger,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
+  // Which list of reactive rules to run, i.e. the pre-flush `reactiveRules` or the post-flush `reactiveCommitRules`
+  getRules: (meta: EntityMetadata) => ReactiveRule[] = (meta) => meta.reactiveRules!,
 ): Promise<void> {
-  logger?.logStartingValidate(em, todos);
+  logger.logStartingValidate(em, todos);
 
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
   const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
+  // Concurrent walks finish in query-timing order, so the logger sorts them before writing deterministic output.
+  const walks: ReactionWalk[] = [];
 
   // From the given triggered entities, follow the entity's ReactiveRule back
   // to the reactive rules that need ran, and queue them in the `fn` map
@@ -2746,16 +3186,18 @@ async function validateReactiveRules(
       entities = new Set();
       fns.set(rule.fn, entities);
     }
-    logger?.logWalked(triggered, rule, found, "validate");
+    walks.push({ todo: triggered, r: rule, entities: found });
     found.forEach((entity) => {
       entities.add(entity);
     });
   }
 
   const p1 = Object.values(todos).flatMap((todo) => {
-    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = todo.metadata.reactiveRules!;
+    const rules = getRules(todo.metadata);
+    // Skip the entities spread for rule-less types
+    if (rules.length === 0) return [];
+    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter((e) => {
@@ -2763,10 +3205,12 @@ async function validateReactiveRules(
         if (!(e instanceof rule.source)) return false;
         // Any new-or-deleted entity fires every rule (reactiveRules has already filtered out read-only)
         if (e.isNewEntity || e.isDeletedEntity) return true;
-        // Otherwise see if the changed fields overlaps with the rule's fields
-        const changedFields = (e as any).changes.fieldsWithoutRelations as string[];
-        for (const field of changedFields) {
-          if (rule.fields.includes(field)) return true;
+        // Otherwise see if the changed fields overlap with the rule's fields; for existing entities
+        // `changes.fieldsWithoutRelations` is exactly `Object.keys(originalData)`, so probe originalData
+        // directly instead of allocating a proxy + keys array per entity per rule.
+        const { originalData } = getInstanceData(e);
+        for (const field of rule.fields) {
+          if (field in originalData) return true;
         }
         return false;
       });
@@ -2779,8 +3223,8 @@ async function validateReactiveRules(
     // For enum m2ms the columns include the enum's numeric id, so keep only the entity values.
     const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns)).filter(isEntity);
     // The owning-entity side (applies to both entity-to-entity and entity-to-enum m2ms).
-    const a = todo.m2m.meta
-      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+    const a = getRules(todo.m2m.meta)
+      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
@@ -2788,8 +3232,8 @@ async function validateReactiveRules(
     // The "other" side only exists for entity-to-entity m2ms; enums have no reverse field.
     const { otherMeta, otherFieldName } = todo.m2m;
     const b = otherMeta
-      ? otherMeta
-          .reactiveRules!.filter((rule) => rule.fields.includes(otherFieldName!))
+      ? getRules(otherMeta)
+          .filter((rule) => rule.fields.includes(otherFieldName!))
           .map((rule) => {
             const triggered = entities.filter((e) => e instanceof otherMeta.cstr);
             return followAndQueue(triggered, rule);
@@ -2799,6 +3243,7 @@ async function validateReactiveRules(
   });
 
   failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
+  logger.logWalks(walks, "validate");
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>
@@ -2813,21 +3258,39 @@ async function validateReactiveRules(
 // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
 // because even for reactive validations on mutated entities, we defer to addReactiveValidations
 // to mark only the rules that need to run.
-async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ inserts, updates }) => {
-    return [...inserts, ...updates]
-      .filter((e) => !e.isDeletedEntity)
-      .flatMap((entity) => {
-        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
-        return rules
-          .filter((rule) => rule.hint === undefined)
-          .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
-      });
-  });
+async function validateSimpleRules(
+  todos: Record<string, Todo>,
+  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `commitRules`
+  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
+): Promise<void> {
+  let p: Promise<ValidationError[]>[] | undefined = undefined;
+  for (const todoKey in todos) {
+    const { inserts, updates } = todos[todoKey];
+    for (const entities of [inserts, updates]) {
+      for (const entity of entities) {
+        if (entity.isDeletedEntity) continue;
+        for (const m of getBaseAndSelfMetas(getMetadata(entity))) {
+          for (const rule of getRules(m.config.__data)) {
+            if (rule.hint !== undefined) continue;
+            (p ??= []).push(invokeRule(entity, rule.fn));
+          }
+        }
+      }
+    }
+  }
+  if (!p) return;
   const errors = failIfAnyRejected(await Promise.allSettled(p)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }
+}
+
+/** Invokes a single validation rule, coercing its result/sync throws into a promise. */
+async function invokeRule(
+  entity: Entity,
+  fn: (entity: any) => MaybePromise<ValidationRuleResult>,
+): Promise<ValidationError[]> {
+  return coerceError(entity, await fn(entity));
 }
 
 export function driverBeforeBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
@@ -2852,23 +3315,51 @@ async function runHookOnTodos(
   todos: Record<string, Todo>,
   keys: ("inserts" | "deletes" | "updates")[],
 ): Promise<void> {
-  const entities = Object.values(todos).flatMap((todo) => {
-    return keys.flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity));
-  });
-  return runHook(ctx, hook, entities);
+  // Only collect entities for todos whose type hierarchy actually has this hook, so that
+  // hook-less bulk flushes skip the per-entity array building entirely.
+  let entities: EntityW[] | undefined = undefined;
+  for (const todoKey in todos) {
+    const todo = todos[todoKey];
+    if (!metaHasHook(todo.metadata, hook)) continue;
+    for (const k of keys) {
+      for (const e of todo[k]) {
+        if (k !== "deletes" && e.isDeletedEntity) continue;
+        (entities ??= []).push(e);
+      }
+    }
+  }
+  if (entities) return runHook(ctx, hook, entities);
+}
+
+/** Returns whether `meta`'s base/self/sub hierarchy has any `hook` functions registered. */
+function metaHasHook(meta: EntityMetadata, hook: EntityHook): boolean {
+  for (const m of getBaseSelfAndSubMetas(meta)) {
+    if (m.config.__data.hooks[hook].length > 0) return true;
+  }
+  return false;
 }
 
 async function runHook(ctx: unknown, hook: EntityHook, entities: EntityW[]): Promise<void> {
-  const p = entities.flatMap((entity) => {
-    const hookFns = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
-    // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
-    // hook blowing up doesn't orphan the others .
-    return hookFns.map(async (fn) => fn(entity, ctx as any));
-  });
+  let p: Promise<unknown>[] | undefined = undefined;
+  for (const entity of entities) {
+    for (const m of getBaseAndSelfMetas(getMetadata(entity))) {
+      for (const fn of m.config.__data.hooks[hook]) {
+        // Use an explicit `async` invoke to ensure all hooks are promises, i.e. so that a
+        // non-promise hook blowing up doesn't orphan the others.
+        (p ??= []).push(invokeHook(fn, entity, ctx));
+      }
+    }
+  }
+  if (!p) return;
   // Use `allSettled` so that even if 1 hook blows up, we don't orphan other hooks mid-flush
   // (causes weird errors when/if they try to access the EntityManager that has "moved on")
   const results = await Promise.allSettled(p);
   failIfAnyRejected(results);
+}
+
+/** Invokes a single hook fn, coercing sync throws into rejections. */
+async function invokeHook(fn: (entity: any, ctx: any) => unknown, entity: EntityW, ctx: unknown): Promise<unknown> {
+  return fn(entity, ctx);
 }
 
 function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
@@ -2898,15 +3389,19 @@ function entitiesFromTodos(
 ): readonly Entity[] {
   const entities = new Set<Entity>();
   for (const todo of Object.values(entityTodos)) {
-    [...todo.inserts, ...todo.updates, ...todo.deletes].forEach((entity) => entities.add(entity));
+    for (const list of [todo.inserts, todo.updates, todo.deletes]) {
+      for (const entity of list) entities.add(entity);
+    }
   }
   for (const todo of Object.values(joinRowTodos)) {
-    [...todo.newRows, ...todo.deletedRows].forEach((row) => {
-      // For enum m2ms, a column value is the enum's numeric id rather than an entity.
-      Object.values(row.columns).forEach((value) => {
-        if (isEntity(value)) entities.add(value);
-      });
-    });
+    for (const rows of [todo.newRows, todo.deletedRows]) {
+      for (const row of rows) {
+        // For enum m2ms, a column value is the enum's numeric id rather than an entity.
+        for (const value of Object.values(row.columns)) {
+          if (isEntity(value)) entities.add(value);
+        }
+      }
+    }
   }
   return [...entities];
 }
@@ -2940,26 +3435,18 @@ function coerceError(entity: Entity, maybeError: ValidationRuleResult): Validati
 
 /** Evaluates each (non-async) derived field to see if it's value has changed. */
 function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
-  const entities = Object.values(todos)
-    .flatMap((todo) => [...todo.inserts, ...todo.updates])
-    .filter((e) => !e.isDeletedEntity);
-  const derivedFieldsByMeta = new Map(
-    [...new Set(entities.map(getMetadata))].map((m) => {
-      return [
-        m,
-        Object.values(m.allFields)
-          .filter((f) => (f.kind === "primitive" || f.kind === "enum") && f.derived === "sync")
-          .map((f) => f.fieldName),
-      ];
-    }),
-  );
-
-  for (const entity of entities) {
-    const derivedFields = derivedFieldsByMeta.get(getMetadata(entity)) || [];
-    derivedFields.forEach((fieldName) => {
-      // setField will intelligently mark/not mark the field as dirty.
-      setField(entity, fieldName as any, (entity as any)[fieldName]);
-    });
+  for (const todoKey in todos) {
+    const todo = todos[todoKey];
+    for (const entities of [todo.inserts, todo.updates]) {
+      for (const entity of entities) {
+        if (entity.isDeletedEntity) continue;
+        // Use the per-meta cached field list instead of rebuilding a map per hook loop
+        for (const fieldName of getMetadata(entity).syncDerivedFields!) {
+          // setField will intelligently mark/not mark the field as dirty.
+          setField(entity, fieldName as any, (entity as any)[fieldName]);
+        }
+      }
+    }
   }
 }
 
@@ -3093,21 +3580,27 @@ function getNow(): Date {
 }
 
 /** Given a `row` from the db, resolves the CTI/STI subtype, if applicable. */
-function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetadata {
-  // Common case of no CTI or STI inheritance
-  if (!row.__class && maybeBaseMeta.inheritanceType !== "sti") {
+function findConcreteMeta(maybeBaseMeta: EntityMetadata, rowData: RowData, rowIndex: number): EntityMetadata {
+  // Common case of no CTI or STI inheritance; only probe __class for CTI metas so that
+  // lazy/columnar stores don't pay a missing-column lookup per row for regular entities
+  if (maybeBaseMeta.inheritanceType === undefined) {
     return maybeBaseMeta;
   }
-  if (row.__class) {
-    if (row.__class === "_" && maybeBaseMeta.ctiAbstract) {
-      throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, row.id)} must be instantiated via a subtype`);
+  const __class = rowData.get(rowIndex, "__class");
+  if (!__class && maybeBaseMeta.inheritanceType !== "sti") {
+    return maybeBaseMeta;
+  }
+  if (__class) {
+    if (__class === "_" && maybeBaseMeta.ctiAbstract) {
+      const id = rowData.get(rowIndex, "id");
+      throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, id)} must be instantiated via a subtype`);
     }
     // Look for the CTI __class from the driver telling us which subtype to instantiate
-    return maybeBaseMeta.subTypesByType!.get(row.__class) ?? maybeBaseMeta;
+    return maybeBaseMeta.subTypesByType!.get(__class) ?? maybeBaseMeta;
   } else if (maybeBaseMeta.inheritanceType === "sti") {
     // Look for the STI discriminator value
     const baseMeta = getBaseMeta(maybeBaseMeta);
-    const value = row[baseMeta.stiDiscriminatorColumnName!];
+    const value = rowData.get(rowIndex, baseMeta.stiDiscriminatorColumnName!);
     return baseMeta.subTypesByStiValue!.get(value) ?? baseMeta;
   } else {
     throw new Error("Unknown inheritance type");
@@ -3204,11 +3697,11 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
     : console.log;
 }
 
-const fieldMap: Record<string, [Field, Column][]> = {};
+const fieldMap: Record<string, [Field, FieldColumn][]> = {};
 // Generates what a row from the db would look like for a given entity
 export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: boolean } = {}) {
   const { preferOriginalData = true } = opts;
-  const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
+  const { rowData, rowIndex, data, originalData } = (e as any).__data as InstanceData;
   const __class = e.constructor.name;
   const { metadata: meta } = (e as any).__data as InstanceData;
   if (!fieldMap[__class]) {
@@ -3234,8 +3727,8 @@ export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: 
           // reflect what would come from the db if we queried it right now, so use originalData when present
           column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data)
         : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-          // be safe to pull the raw data out of `row`
-          oldRow[column.columnName];
+          // be safe to pull the raw data out of the as-loaded RowData
+          rowData.get(rowIndex, column.columnName);
     row[column.columnName] = value ?? null;
   }
   return row;

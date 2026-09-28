@@ -88,14 +88,60 @@ export interface UserFields {
   trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
+  passwordHistory: { kind: "primitive"; type: PasswordValue[]; unique: false; nullable: undefined; derived: false };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
   parents: { kind: "m2m"; type: User };
   children: { kind: "m2m"; type: User };
   createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
+}
+
+export interface UserColumns {
+  id: { fieldName: "id"; type: IdOf<User>; entity: User; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  email: { type: string; fieldName: "email"; nullable: false; insert: "required"; update: true };
+  ipAddress: { type: IpAddress; fieldName: "ipAddress"; nullable: true; insert: "optional"; update: true };
+  password: { type: PasswordValue; fieldName: "password"; nullable: true; insert: "optional"; update: true };
+  bio: { type: string; fieldName: "bio"; nullable: false; insert: "optional"; update: true };
+  originalEmail: { type: string; fieldName: "originalEmail"; nullable: false; insert: "required"; update: true };
+  trialPeriod: { type: string; fieldName: "trialPeriod"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  passwordHistory: {
+    type: PasswordValue[];
+    fieldName: "passwordHistory";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  authorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "authorManyToOne";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  managerId: { type: IdOf<User>; entity: User; fieldName: "manager"; nullable: true; insert: "optional"; update: true };
+  favoritePublisherLargeId: {
+    fieldName: never;
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  favoritePublisherSmallId: {
+    fieldName: never;
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
 }
 
 export interface UserOpts {
@@ -106,8 +152,9 @@ export interface UserOpts {
   bio?: string;
   originalEmail?: string;
   trialPeriod?: string | null;
-  manager?: User | UserId | null;
+  passwordHistory?: PasswordValue[] | null;
   authorManyToOne?: Author | AuthorId | null;
+  manager?: User | UserId | null;
   favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
   directs?: User[];
@@ -117,8 +164,8 @@ export interface UserOpts {
 }
 
 export interface UserIdsOpts {
-  managerId?: UserId | null;
   authorManyToOneId?: AuthorId | null;
+  managerId?: UserId | null;
   favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
   createdCommentIds?: CommentId[] | null;
   directIds?: UserId[] | null;
@@ -138,9 +185,10 @@ export interface UserFilter {
   trialPeriod?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  passwordHistory?: ValueFilter<PasswordValue[], null>;
+  authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
   managerAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
-  authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
@@ -163,11 +211,12 @@ export interface UserGraphQLFilter {
   trialPeriod?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  passwordHistory?: ValueGraphQLFilter<PasswordValue[]>;
+  authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
-  authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -201,8 +250,9 @@ export interface UserOrder {
   trialPeriod?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  manager?: UserOrder;
+  passwordHistory?: OrderBy;
   authorManyToOne?: AuthorOrder;
+  manager?: UserOrder;
 }
 
 export interface UserFactoryExtras {
@@ -234,6 +284,9 @@ declare module "joist-core" {
       orderType: UserOrder;
       optsType: UserOpts;
       fieldsType: UserFields;
+      columnsType: UserColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: UserIdsOpts;
       factoryExtrasType: UserFactoryExtras;
       factoryOptsType: Parameters<typeof newUser>[1];
@@ -249,8 +302,8 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   readonly createdComments: Collection<User, Comment> = hasMany();
   readonly directs: Collection<User, User> = hasMany();
-  readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
+  readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly parentsRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("parents", "childrenRecursive");
   readonly childrenRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("children", "parentsRecursive");
   readonly likedComments: Collection<User, Comment> = hasManyToMany(); // users_to_comments liked_by_user_id comment_id
@@ -336,6 +389,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get passwordHistory(): PasswordValue[] | undefined {
+    return getField(this, "passwordHistory");
+  }
+
+  set passwordHistory(passwordHistory: PasswordValue[] | undefined) {
+    setField(this, "passwordHistory", passwordHistory);
   }
 
   /**

@@ -1,8 +1,9 @@
 import { pascalCase } from "change-case";
-import { Client } from "pg";
-import { Db, EnumType, Table } from "pg-structure";
-import { Config, EntityDbMetadata, PrimitiveField } from "./index";
-import { isEnumTable } from "./utils";
+import { type Client } from "pg";
+
+import { type Config, EntityDbMetadata, type PrimitiveField } from "./index.ts";
+import { type Db, EnumType, type Table } from "./pgMetadata.ts";
+import { isEnumTable } from "./utils.ts";
 
 /** A map from Enum table name to the rows currently in the table. */
 export type EnumTableData = {
@@ -27,7 +28,7 @@ export type EnumRow = { id: number; code: string; name: string; [key: string]: a
 export async function loadEnumMetadata(db: Db, client: Client, config: Config): Promise<EnumMetadata> {
   const promises = db.tables
     .filter((t) => isEnumTable(config, t))
-    .mapToArray(async (table) => {
+    .map(async (table) => {
       const result = await client.query(`SELECT * FROM ${table.name} ORDER BY id`);
       const rows = result.rows.map((row) => row as EnumRow);
       // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering

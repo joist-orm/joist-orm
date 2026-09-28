@@ -1,17 +1,24 @@
-import { AliasAssigner } from "../AliasAssigner";
-import { ConditionBuilder } from "../ConditionBuilder";
-import { Entity } from "../Entity";
-import { getEmInternalApi } from "../EntityManager";
-import { EntityMetadata, getMetadata, getMetadataForField, ManyToManyEnumField } from "../EntityMetadata";
-import { EntityOrId, HintNode } from "../HintTree";
-import { ManyToManyLike } from "../JoinRows";
-import { keyToNumber, keyToTaggedId } from "../keys";
-import { kq, kqDot } from "../keywords";
-import { LoadHint, NestedLoadHint } from "../loadHints";
-import { JoinResult, PreloadHydrator, PreloadPlugin } from "../plugins/PreloadPlugin";
-import { getTables, JoinTable, LateralJoinTable, ParsedFindQuery } from "../QueryParser";
-import { canPreload } from "./canPreload";
-import { partitionHint } from "./partitionHint";
+import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { type EntityMetadata, type ManyToManyEnumField, getMetadata, getMetadataForField } from "src/EntityMetadata.ts";
+import type { ManyToManyLike } from "src/flush/JoinRows.ts";
+import { keyToNumber, keyToTaggedId } from "src/keys.ts";
+import type { EntityOrId, HintNode } from "src/loading/HintTree.ts";
+import type { LoadHint, NestedLoadHint } from "src/loading/loadHints.ts";
+import { type JoinResult, type PreloadHydrator, type PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
+import { canPreload } from "src/preloading/canPreload.ts";
+import { partitionHint } from "src/preloading/partitionHint.ts";
+import { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
+import {
+  type JoinTable,
+  type LateralJoinTable,
+  type ParsedFindQuery,
+  getTables,
+} from "src/queries/find/QueryParser.ts";
+import { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
+import { kq, kqDot } from "src/queries/sql/keywords.ts";
+import { type RowData } from "src/RowData.ts";
+import { fail } from "src/utils.ts";
 
 /**
  * A PreloadPlugin implementation that uses `CROSS LATERAL JOIN` and `json_aggregate`
@@ -49,12 +56,12 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     }
 
     return (rows, entities) => {
-      rows.forEach((row, i) => {
+      for (let i = 0; i < entities.length; i++) {
         const parent = entities[i];
         for (const { relationAlias, hydrator } of joins) {
-          hydrator(parent, parent, row[relationAlias] ?? []);
+          hydrator(parent, parent, readRowValue(rows, i, relationAlias) ?? []);
         }
-      });
+      }
     };
   }
 
@@ -72,10 +79,10 @@ export class JsonAggregatePreloader implements PreloadPlugin {
         selects: [{ value: kqDot(join.alias, "_"), as: join.relationAlias }],
         join: join.join,
         hydrator: (rows, entities) => {
-          rows.forEach((row, i) => {
+          for (let i = 0; i < entities.length; i++) {
             const parent = entities[i];
-            join.hydrator(parent, parent, row[join.relationAlias] ?? []);
-          });
+            join.hydrator(parent, parent, readRowValue(rows, i, join.relationAlias) ?? []);
+          }
         },
       };
     });
@@ -132,9 +139,9 @@ function calcLateralJoins<I extends EntityOrId>(
       // Do the recursion up-front, so we can work it into our own join/hydrator
       const subJoins = calcLateralJoins(assigner, root, subTree, otherAlias, otherMeta, `${pathPrefix}${pathKey}_`);
 
-      // Get all fields with serdes and flatten out the columns
+      // Get all fields with serdes and flatten out the columns, skipping `lazy` columns (fetched on-demand)
       const columns = Object.values(otherMeta.allFields)
-        .filter((f) => f.serde)
+        .filter((f) => f.serde && !(f.kind === "primitive" && f.lazy))
         .flatMap((f) => f.serde!.columns);
       const selects = [
         ...columns.map((c) => kqDot(otherAlias, c.columnName)),
@@ -387,3 +394,8 @@ type AggregateJoinResult = {
   /** The hydrator for this child's lateral join, which itself might recursively hydrator subjoins. */
   hydrator: AggregateJsonHydrator;
 };
+
+/** Reads one column from either classic POJO rows or a lazy `RowData` result. */
+function readRowValue(rows: any[] | RowData, rowIndex: number, columnName: string): any {
+  return Array.isArray(rows) ? rows[rowIndex][columnName] : rows.get(rowIndex, columnName);
+}

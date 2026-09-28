@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasManyToMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -53,6 +54,18 @@ export interface DatabaseOwnerFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   tags: { kind: "m2m"; type: Tag };
+}
+
+export interface DatabaseOwnerColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<DatabaseOwner>;
+    entity: DatabaseOwner;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
 }
 
 export interface DatabaseOwnerOpts {
@@ -104,6 +117,9 @@ declare module "joist-core" {
       orderType: DatabaseOwnerOrder;
       optsType: DatabaseOwnerOpts;
       fieldsType: DatabaseOwnerFields;
+      columnsType: DatabaseOwnerColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: DatabaseOwnerIdsOpts;
       factoryExtrasType: DatabaseOwnerFactoryExtras;
       factoryOptsType: Parameters<typeof newDatabaseOwner>[1];

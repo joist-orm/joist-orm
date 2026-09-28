@@ -67,6 +67,7 @@ type PublisherTypeDetail {
 enum TaskType {
   OLD
   NEW
+  THIRD
 }
 
 type TaskTypeDetail {

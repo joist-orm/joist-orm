@@ -1,14 +1,17 @@
 import {
-  Entity,
-  FilterAndSettings,
+  type Entity,
+  type FilterAndSettings,
+  type MaybeAbstractEntityConstructor,
   getMetadata,
-  MaybeAbstractEntityConstructor,
   optimizeCollectionJoins,
   parseFindQuery,
 } from "joist-core";
-import { knex as baseCreateKnex, Knex } from "knex";
+import knex, { type Knex } from "knex";
 import pg from "pg";
-import { buildKnexQuery } from "./buildKnexQuery";
+
+import { buildKnexQuery } from "./buildKnexQuery.ts";
+
+const { knex: baseCreateKnex } = knex;
 
 /**
  * Builds the Knex queries from `em.find`-style parameters.

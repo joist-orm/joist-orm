@@ -1,13 +1,13 @@
-import { SelectionSetNode } from "graphql/language";
+import { type SelectionSetNode } from "graphql/language";
 import {
   GraphQLList,
   GraphQLNonNull,
-  GraphQLObjectType,
-  GraphQLOutputType,
-  GraphQLResolveInfo,
+  type GraphQLObjectType,
+  type GraphQLOutputType,
+  type GraphQLResolveInfo,
   isObjectType,
 } from "graphql/type";
-import { Entity, EntityMetadata, LoadHint } from "joist-core";
+import { type Entity, type EntityMetadata, type LoadHint } from "joist-core";
 
 /** Returns a load hint for the given `meta` entity at the `info` node.populate`. */
 export function convertInfoToLoadHint<T extends Entity>(

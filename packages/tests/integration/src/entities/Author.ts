@@ -23,6 +23,7 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
+
 import {
   AuthorCodegen,
   Book,
@@ -311,6 +312,14 @@ export class Author extends AuthorCodegen {
 
   readonly reputationScore: Property<Author, number> = hasProperty({ mentor: "reputationScore" }, (a) => {
     return a.mentor.get?.reputationScore.get ?? 0;
+  });
+
+  /**
+   * Example of a Property that recursively loads the same property from its mentor.
+   * @generated Author.md
+   */
+  readonly nameWithMentor: Property<Author, string> = hasProperty({ mentor: "nameWithMentor" }, (a) => {
+    return a.mentor.get ? `${a.mentor.get.nameWithMentor.get}${a.firstName}` : a.firstName;
   });
 
   /**

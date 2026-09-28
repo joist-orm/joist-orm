@@ -7,6 +7,7 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -50,9 +51,14 @@ import {
 
 export type AdminUserId = Flavor<string, "User">;
 
-export interface AdminUserFields extends UserFields {
+export interface AdminUserFields extends Omit<UserFields, "id"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+}
+
+export interface AdminUserColumns {
+  id: { fieldName: "id"; type: IdOf<AdminUser>; entity: AdminUser; nullable: false; insert: "optional"; update: false };
+  role: { type: string; fieldName: "role"; nullable: false; insert: "required"; update: true };
 }
 
 export interface AdminUserOpts extends UserOpts {
@@ -97,6 +103,9 @@ declare module "joist-core" {
       orderType: AdminUserOrder;
       optsType: AdminUserOpts;
       fieldsType: AdminUserFields;
+      columnsType: AdminUserColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: AdminUserIdsOpts;
       factoryExtrasType: AdminUserFactoryExtras;
       factoryOptsType: Parameters<typeof newAdminUser>[1];
@@ -112,8 +121,8 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   declare readonly createdComments: Collection<AdminUser, Comment>;
   declare readonly directs: Collection<AdminUser, User>;
-  declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
   declare readonly authorManyToOne: ManyToOneReference<AdminUser, Author, undefined>;
+  declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
   declare readonly likedComments: Collection<AdminUser, Comment>;
   declare readonly parents: Collection<AdminUser, User>;
   declare readonly children: Collection<AdminUser, User>;

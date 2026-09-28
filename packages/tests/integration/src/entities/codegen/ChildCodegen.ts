@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -55,6 +56,13 @@ export interface ChildFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   groups: { kind: "o2m"; type: ChildGroup };
+}
+
+export interface ChildColumns {
+  id: { fieldName: "id"; type: IdOf<Child>; entity: Child; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface ChildOpts {
@@ -113,6 +121,9 @@ declare module "joist-core" {
       orderType: ChildOrder;
       optsType: ChildOpts;
       fieldsType: ChildFields;
+      columnsType: ChildColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: ChildIdsOpts;
       factoryExtrasType: ChildFactoryExtras;
       factoryOptsType: Parameters<typeof newChild>[1];

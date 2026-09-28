@@ -37,9 +37,9 @@ export class MyPlugin extends Plugin {
     console.log(`Finding ${meta.type} with operation ${operation}`);
   }
 
-  afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]): void {
-    // Called after a find operation with the raw database rows
-    console.log(`Found ${rows.length} ${meta.type} rows`);
+  afterFind(meta: EntityMetadata, operation: FindOperation, rows: RowData): void {
+    // Called after a find operation with a read-only view of the raw database rows
+    console.log(`Found ${rows.rowCount} ${meta.type} rows`);
   }
 }
 ```
@@ -90,12 +90,20 @@ beforeFind(
 
 ### afterFind
 
-Called after a find operation has been executed with the raw database rows. This is useful for post-processing results or collecting metrics.
+Called after a find operation has been executed with a read-only `RowData` view of the raw
+database rows. This is useful for observing results, collecting metrics, or tracing query
+behavior.
+
+The view is deliberately lazy-friendly: with `lazyRows` enabled, rows are undecoded wire bytes,
+so a hook that only reads `rows.rowCount` costs nothing, `rows.get(rowIndex, columnName)`
+decodes just that cell, and `rows.toRows()` materializes classic POJO rows (decoding every cell
+of every row — only call it when you actually need the objects). Mutating materialized rows is
+unsupported and is not guaranteed to affect entity hydration.
 
 ```typescript
-afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]): void {
-  // Track query metrics
-  this.metrics.recordQuery(meta.type, operation, rows.length);
+afterFind(meta: EntityMetadata, operation: FindOperation, rows: RowData): void {
+  // Track query metrics; reading only rowCount never decodes any cells
+  this.metrics.recordQuery(meta.type, operation, rows.rowCount);
 }
 ```
 

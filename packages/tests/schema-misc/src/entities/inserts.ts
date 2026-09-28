@@ -1,4 +1,4 @@
-import { knex } from "@src/setupDbTests";
+import { knex } from "src/setupDbTests";
 
 // Note this test infrastructure exists solely to test Joist itself, i.e. to use raw SQL to
 // set up and assert against data without going through the EntityManager. Downstream

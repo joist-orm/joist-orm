@@ -1,13 +1,13 @@
-import { Entity } from "../Entity";
-import { getEmInternalApi } from "../EntityManager";
-import { getMetadata, PrimitiveField } from "../EntityMetadata";
-import { getField, isFieldSet, setField } from "../fields";
-import { isLoaded } from "../index";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { PropertyT } from "./hasProperty";
+import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { type PrimitiveField, getMetadata } from "src/EntityMetadata.ts";
+import { getField, isFieldSet, setField } from "src/fields.ts";
+import { isLoaded } from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
 
 /**
  * A `ReactiveField` is a value that is derived from other entities/values,

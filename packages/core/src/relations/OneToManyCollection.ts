@@ -1,26 +1,27 @@
-import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader";
-import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
+import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
+import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
 import {
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type IdOf,
+  type OneToManyField,
   appendStack,
-  Collection,
   ensureNotDeleted,
-  Entity,
-  EntityMetadata,
   getEmInternalApi,
   getInstanceData,
-  getMetadataForField,
   getMetadata,
-  IdOf,
+  getMetadataForField,
   maybeResolveReferenceToId,
-  OneToManyField,
   sameEntity,
-} from "../index";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { compareValues } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { ManyToOneReferenceImpl } from "./ManyToOneReference";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { type ManyToOneReferenceImpl } from "src/relations/ManyToOneReference.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { compareValues } from "src/utils.ts";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> {
@@ -270,10 +271,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
+    const includeSoftDeleted = this.#field.softDeletes === "include";
     const list =
       opts?.withDeleted === true
         ? [...entities]
-        : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
     if (this.#field.orderBy) {
       const { field, direction } = this.#field.orderBy;
       list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
@@ -464,7 +467,7 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
     // Push added entities on the end to better match the db order of "newer things come last"
-    const loaded = new Set([...dbEntities]);
+    const loaded = new Set(dbEntities);
     for (const e of this.#added) loaded.add(e);
     for (const e of this.#removed) loaded.delete(e);
     return new O2MLoadedState<T, U>(this.#o2m, [...loaded], false, [...this.#added], [...this.#removed]);

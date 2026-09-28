@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -67,6 +68,29 @@ export interface BookAdvanceFields {
   status: { kind: "enum"; type: AdvanceStatus; nullable: never };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
+}
+
+export interface BookAdvanceColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<BookAdvance>;
+    entity: BookAdvance;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  statusId: { type: AdvanceStatus; fieldName: "status"; nullable: false; insert: "required"; update: true };
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
+  publisherId: {
+    type: IdOf<Publisher>;
+    entity: Publisher;
+    fieldName: "publisher";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface BookAdvanceOpts {
@@ -150,6 +174,9 @@ declare module "joist-core" {
       orderType: BookAdvanceOrder;
       optsType: BookAdvanceOpts;
       fieldsType: BookAdvanceFields;
+      columnsType: BookAdvanceColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: BookAdvanceIdsOpts;
       factoryExtrasType: BookAdvanceFactoryExtras;
       factoryOptsType: Parameters<typeof newBookAdvance>[1];

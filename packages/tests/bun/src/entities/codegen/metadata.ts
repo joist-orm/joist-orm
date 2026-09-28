@@ -1,4 +1,4 @@
-import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
+import { Column, type ColumnDescriptors, configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig, SimpleFieldSerde } from "joist-orm";
 import type { Context } from "../../context.js";
 import { Author } from "../Author.js";
 import { Book } from "../Book.js";
@@ -13,6 +13,16 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
+const authorMetaColumns = {
+  "id": new Column("id", false, true, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+  "firstName": new Column("firstName", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "lastName": new Column("lastName", true, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
+  "delete": new Column("delete", true, false, false, false, true, undefined, new PrimitiveSerde("boolean")),
+  "createdAt": new Column("createdAt", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "updatedAt": new Column("updatedAt", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+} satisfies ColumnDescriptors;
+const bookMetaColumns = { "id": new Column("id", false, true, false, false, true, () => bookMeta, new KeySerde("b", "int")), "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")), "authorId": new Column("authorId", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")) } satisfies ColumnDescriptors;
+
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
@@ -21,15 +31,17 @@ export const authorMeta: EntityMetadata<Author> = {
   idDbType: "int",
   tagName: "a",
   tableName: "authors",
+  supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int"), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "firstName", "character varying"), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "lastName", "character varying"), immutable: false },
-    "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("delete", "delete", "boolean"), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp with time zone"), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp with time zone"), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", authorMetaColumns["id"]), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("firstName", authorMetaColumns["firstName"]), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("lastName", authorMetaColumns["lastName"]), immutable: false },
+    "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new SimpleFieldSerde("delete", authorMetaColumns["delete"]), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["createdAt"]), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updatedAt"]), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
   },
+  columns: authorMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
@@ -49,11 +61,13 @@ export const bookMeta: EntityMetadata<Book> = {
   idDbType: "int",
   tagName: "b",
   tableName: "book",
+  supportsEmExecute: true,
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int"), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int"), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new SimpleFieldSerde("id", bookMetaColumns["id"]), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["authorId"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["authorId"]), immutable: false },
   },
+  columns: bookMetaColumns,
   allFields: {},
   orderBy: undefined,
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },

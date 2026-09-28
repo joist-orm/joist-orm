@@ -1,22 +1,22 @@
-import { getMetadataForType } from "../configure";
-import { Entity } from "../Entity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { getMetadataForType } from "src/configure.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
 import {
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
+  deTagIds,
   getField,
   isLoadedCollection,
   isLoadedOneToOneReference,
   kq,
-  ManyToOneField,
   maybeResolveReferenceToId,
-  OneToManyField,
-  OneToOneField,
-  ParsedFindQuery,
-  unsafeDeTagIds,
-} from "../index";
-import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
-import { abbreviation, groupBy } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+} from "src/index.ts";
+import { type RecursiveChildrenCollectionImpl } from "src/relations/RecursiveCollection.ts";
+import { abbreviation, groupBy } from "src/utils.ts";
 
 export const recursiveChildrenOperation = "o2m-recursive";
 
@@ -59,7 +59,12 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
             `,
             // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
-            bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
+            bindings: [
+              deTagIds(
+                meta,
+                parents.map((e) => e.idTagged),
+              ),
+            ],
           },
           recursive: true,
         },
@@ -68,8 +73,8 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
-    const rows = await em["executeFind"](meta, recursiveChildrenOperation, query, {});
-    const entities = em.hydrate(meta.cstr, rows);
+    const rowData = await em["executeFindRowData"](meta, recursiveChildrenOperation, query, {});
+    const entities = em["hydrateAndFinalize"](meta.cstr, rowData);
 
     // For all the entities we found, group them by their parent (or the root node, which has no parent)
     const entitiesById = groupBy(entities, (entity) => {

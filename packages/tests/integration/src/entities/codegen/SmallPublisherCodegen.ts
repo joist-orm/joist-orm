@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -71,7 +72,7 @@ import {
 
 export type SmallPublisherId = Flavor<string, "Publisher">;
 
-export interface SmallPublisherFields extends PublisherFields {
+export interface SmallPublisherFields extends Omit<PublisherFields, "id" | "group"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
@@ -80,6 +81,28 @@ export interface SmallPublisherFields extends PublisherFields {
   group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
   smallPublishers: { kind: "o2m"; type: SmallPublisher };
   users: { kind: "o2m"; type: User };
+}
+
+export interface SmallPublisherColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  city: { type: string; fieldName: "city"; nullable: false; insert: "required"; update: true };
+  sharedColumn: { type: string; fieldName: "sharedColumn"; nullable: true; insert: "optional"; update: true };
+  allAuthorNames: { type: string; fieldName: "allAuthorNames"; nullable: true; insert: "optional"; update: true };
+  selfReferentialId: {
+    type: IdOf<SmallPublisher>;
+    entity: SmallPublisher;
+    fieldName: "selfReferential";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
@@ -159,6 +182,9 @@ declare module "joist-core" {
       orderType: SmallPublisherOrder;
       optsType: SmallPublisherOpts;
       fieldsType: SmallPublisherFields;
+      columnsType: SmallPublisherColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: SmallPublisherIdsOpts;
       factoryExtrasType: SmallPublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisher>[1];

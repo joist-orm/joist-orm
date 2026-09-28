@@ -1,6 +1,4 @@
-import { BookReviewCodegen } from "./entities";
-
-import { bookReviewConfig as config } from "./entities";
+import { BookReviewCodegen, bookReviewConfig as config } from "./entities";
 
 export class BookReview extends BookReviewCodegen {}
 

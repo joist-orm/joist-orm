@@ -15,6 +15,7 @@ import {
   hasMany,
   hasOne,
   hasOneToOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -71,6 +72,32 @@ export interface CriticFields {
   favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
   bookReviews: { kind: "o2m"; type: BookReview };
+  criticColumn: { kind: "o2o"; type: CriticColumn };
+}
+
+export interface CriticColumns {
+  id: { fieldName: "id"; type: IdOf<Critic>; entity: Critic; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  favoriteLargePublisherId: {
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
+    fieldName: "favoriteLargePublisher";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  groupId: {
+    type: IdOf<PublisherGroup>;
+    entity: PublisherGroup;
+    fieldName: "group";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  ignoreFavouriteBookId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreWorstBookId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
 }
 
 export interface CriticOpts {
@@ -158,6 +185,9 @@ declare module "joist-core" {
       orderType: CriticOrder;
       optsType: CriticOpts;
       fieldsType: CriticFields;
+      columnsType: CriticColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: CriticIdsOpts;
       factoryExtrasType: CriticFactoryExtras;
       factoryOptsType: Parameters<typeof newCritic>[1];

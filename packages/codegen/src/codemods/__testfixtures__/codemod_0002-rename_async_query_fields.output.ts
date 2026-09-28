@@ -1,12 +1,12 @@
 import {
-  Property,
+  type Property,
+  type ReactiveField,
   hasAsyncProperty,
   hasAsyncReactiveField,
   isAsyncProperty,
   isLoadedAsyncProperty,
   isLoadedAsyncReactiveField,
   isAsyncReactiveField,
-  ReactiveField,
 } from "joist-orm";
 import { AsyncPropertyImpl } from "joist-orm/build/relations/AsyncProperty";
 import { AsyncReactiveFieldImpl } from "joist-orm/build/relations/AsyncReactiveField";

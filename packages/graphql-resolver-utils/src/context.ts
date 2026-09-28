@@ -1,4 +1,4 @@
-import { GraphQLResolveInfo } from "graphql/type";
+import { type GraphQLResolveInfo } from "graphql/type";
 
 export type MaybePromise<T> = T | Promise<T>;
 

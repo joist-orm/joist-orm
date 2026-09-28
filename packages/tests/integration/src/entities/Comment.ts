@@ -1,4 +1,5 @@
-import { hasReactiveField, ReactiveField } from "joist-orm";
+import { ReactiveField, hasReactiveField } from "joist-orm";
+
 import { CommentCodegen } from "./entities";
 
 export class Comment extends CommentCodegen {
@@ -7,7 +8,7 @@ export class Comment extends CommentCodegen {
     (c) => {
       return (
         // Use `|| "-"` because the db field is required, and empty string will be coerced to null
-        ([c.parent.get?.commentParentInfo.get, ...(c.parent.get?.tags.get.map((t) => t.name) ?? [])].join("-") || "-")
+        [c.parent.get?.commentParentInfo.get, ...(c.parent.get?.tags.get.map((t) => t.name) ?? [])].join("-") || "-"
       );
     },
   );

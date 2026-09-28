@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -60,6 +61,29 @@ export interface ChildItemFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   childGroup: { kind: "m2o"; type: ChildGroup; nullable: never; derived: false };
   parentItem: { kind: "m2o"; type: ParentItem; nullable: never; derived: false };
+}
+
+export interface ChildItemColumns {
+  id: { fieldName: "id"; type: IdOf<ChildItem>; entity: ChildItem; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  childGroupId: {
+    type: IdOf<ChildGroup>;
+    entity: ChildGroup;
+    fieldName: "childGroup";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  parentItemId: {
+    type: IdOf<ParentItem>;
+    entity: ParentItem;
+    fieldName: "parentItem";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface ChildItemOpts {
@@ -128,6 +152,9 @@ declare module "joist-core" {
       orderType: ChildItemOrder;
       optsType: ChildItemOpts;
       fieldsType: ChildItemFields;
+      columnsType: ChildItemColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: ChildItemIdsOpts;
       factoryExtrasType: ChildItemFactoryExtras;
       factoryOptsType: Parameters<typeof newChildItem>[1];

@@ -1,4 +1,5 @@
 import { maxValueRule, minValueRule, rangeValueRule } from "joist-orm";
+
 import { AuthorStatCodegen, authorStatConfig as config } from "./entities";
 
 export class AuthorStat extends AuthorStatCodegen {}

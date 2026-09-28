@@ -1,10 +1,10 @@
-import { Entity } from "../Entity";
-import { getEmInternalApi, IdOf, TaggedId } from "../EntityManager";
-import { ensureNotDeleted, fail, getMetadata, getProperties, LoadHint, Reference } from "../index";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf, type TaggedId, getEmInternalApi } from "src/EntityManager.ts";
+import { type LoadHint, type Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 /** An alias for creating `CustomReference`s. */
 export function hasCustomReference<T extends Entity, U extends Entity, N extends never | undefined>(

@@ -1,18 +1,23 @@
 import { readdir } from "fs/promises";
-import { code, CodegenFile, def, imp } from "ts-poet";
-import { generateEntitiesFile } from "./generateEntitiesFile";
-import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
-import { generateEntityFile } from "./generateEntityFile";
-import { generateEntityTestFile } from "./generateEntityTestFile";
-import { generateEnumFile } from "./generateEnumFile";
-import { generateFactoriesFiles } from "./generateFactoriesFiles";
-import { findAllEntityScopes } from "./findEntityScopes";
-import { generateMetadataFile } from "./generateMetadataFile";
-import { generatePgEnumFile } from "./generatePgEnumFile";
-import { Config, DbMetadata } from "./index";
-import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
-import { merge, tableToEntityName } from "./utils";
-import { generateMetadataDocsFile, syncDocs } from "./docs";
+import { createRequire } from "node:module";
+
+import { type CodegenFile, code, def, imp } from "ts-poet";
+
+import { generateMetadataDocsFile, loadEntityDocs, syncDocs } from "./docs/index.ts";
+import { findAllEntityScopes } from "./findEntityScopes.ts";
+import { generateEntitiesFile } from "./generateEntitiesFile.ts";
+import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile.ts";
+import { generateEntityFile } from "./generateEntityFile.ts";
+import { generateEntityTestFile } from "./generateEntityTestFile.ts";
+import { generateEnumFile } from "./generateEnumFile.ts";
+import { generateFactoriesFiles } from "./generateFactoriesFiles.ts";
+import { generateColumnDeclarations, generateMetadataFile } from "./generateMetadataFile.ts";
+import { generatePgEnumFile } from "./generatePgEnumFile.ts";
+import { type Config, type DbMetadata } from "./index.ts";
+import { Entity, JoistEntityManager, configureMetadata, setRuntimeConfig } from "./symbols.ts";
+import { merge, tableToEntityName } from "./utils.ts";
+
+const runtimeRequire = createRequire(import.meta.url);
 
 export type DPrintOptions = Record<string, unknown>;
 
@@ -38,6 +43,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     await syncDocs(config.entitiesDirectory, entityNames);
   }
 
+  // Load the .md docs once (post-sync) to inject into codegen JSDocs and the runtime metadata-docs.ts
+  const entityDocs =
+    config.docs || config.outputDocs ? await loadEntityDocs(config.entitiesDirectory, entityNames) : {};
+
   const scopeMembersByEntity = await findAllEntityScopes(
     config,
     entities.map((meta) => meta.entity),
@@ -50,7 +59,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       return [
         {
           name: `./codegen/${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, dbMeta, meta, scopeMembersByEntity[entityName] ?? []),
+          contents: generateEntityCodegenFile(
+            config,
+            dbMeta,
+            meta,
+            scopeMembersByEntity[entityName] ?? [],
+            config.docs ? entityDocs[entityName] : undefined,
+          ),
           overwrite: true,
         },
         ...(hasEntityFile
@@ -89,12 +104,17 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
   const txnType = config.transactionType ? imp(`t:${config.transactionType}`) : "unknown";
+  const maybeTagDelimiter =
+    config.tagDelimiter === undefined
+      ? code``
+      : code`tagDelimiter: ${config.tagDelimiter === "" ? "undefined" : JSON.stringify(config.tagDelimiter)},`;
 
   const metadataFile: CodegenFile = {
     name: "./codegen/metadata.ts",
     contents: code`
       ${setRuntimeConfig}({
         temporal: ${config.temporal ? { timeZone: typeof config.temporal === "boolean" ? "UTC" : config.temporal.timeZone } : "false"},
+        ${maybeTagDelimiter}
       });
       
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity, ${txnType}> {}
@@ -104,6 +124,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         em: EntityManager;
       }
 
+      ${entities.map((meta) => generateColumnDeclarations(config, dbMeta, meta))}
       ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}
 
       export const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
@@ -137,14 +158,14 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const pluginFiles: CodegenFile[] = (
     await Promise.all(
       (config.codegenPlugins ?? []).map((p) => {
-        const plugin = require(p) as CodegenPlugin;
+        const plugin = runtimeRequire(p) as CodegenPlugin;
         return plugin.run(config, dbMeta);
       }),
     )
   ).flat();
 
   // Generate metadata-docs.ts if enabled
-  const docsFile = config.outputDocs ? await generateMetadataDocsFile(config, dbMeta) : undefined;
+  const docsFile = config.outputDocs ? generateMetadataDocsFile(dbMeta, entityDocs) : undefined;
 
   return [
     ...entityFiles,

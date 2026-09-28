@@ -1,4 +1,4 @@
-import { applyEdits, buildJSDocEdit, parseEntityJSDocs } from "./parsing";
+import { applyEdits, buildJSDocEdit, parseEntityJSDocs } from "./parsing.ts";
 
 describe("parsing", () => {
   describe("parseEntityJSDocs", () => {

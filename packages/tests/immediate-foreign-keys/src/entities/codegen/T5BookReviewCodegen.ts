@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -54,6 +55,19 @@ export interface T5BookReviewFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   book: { kind: "m2o"; type: T5Book; nullable: undefined; derived: false };
+}
+
+export interface T5BookReviewColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<T5BookReview>;
+    entity: T5BookReview;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  bookId: { type: IdOf<T5Book>; entity: T5Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface T5BookReviewOpts {
@@ -107,6 +121,9 @@ declare module "joist-core" {
       orderType: T5BookReviewOrder;
       optsType: T5BookReviewOpts;
       fieldsType: T5BookReviewFields;
+      columnsType: T5BookReviewColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: T5BookReviewIdsOpts;
       factoryExtrasType: T5BookReviewFactoryExtras;
       factoryOptsType: Parameters<typeof newT5BookReview>[1];

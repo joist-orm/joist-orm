@@ -19,6 +19,7 @@ import {
   hasOne,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -29,6 +30,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -48,6 +50,7 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
+  type Author,
   type Entity,
   EntityManager,
   newTask,
@@ -61,6 +64,8 @@ import {
   type TaskNewId,
   type TaskOld,
   type TaskOldId,
+  type TaskThird,
+  type TaskThirdId,
   TaskType,
   TaskTypeDetails,
   TaskTypes,
@@ -84,6 +89,68 @@ export interface TaskFields {
   tags: { kind: "m2m"; type: Tag };
   copiedTo: { kind: "o2m"; type: Task };
   taskTaskItems: { kind: "o2m"; type: TaskItem };
+}
+
+export interface TaskColumns {
+  id: { fieldName: "id"; type: IdOf<Task>; entity: Task; nullable: false; insert: "optional"; update: false };
+  durationInDays: { type: number; fieldName: "durationInDays"; nullable: false; insert: "required"; update: true };
+  specialNewField: { type: number; fieldName: "specialNewField"; nullable: true; insert: "optional"; update: true };
+  specialOldField: { type: number; fieldName: "specialOldField"; nullable: true; insert: "optional"; update: true };
+  specialOldFieldWithDefault: {
+    type: number;
+    fieldName: "specialOldFieldWithDefault";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  sharedSubtypeField: {
+    type: number;
+    fieldName: "sharedSubtypeField";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  syncDefault: { type: string; fieldName: "syncDefault"; nullable: true; insert: "optional"; update: true };
+  asyncDefault_1: { type: string; fieldName: "asyncDefault_1"; nullable: true; insert: "optional"; update: true };
+  asyncDefault_2: { type: string; fieldName: "asyncDefault_2"; nullable: true; insert: "optional"; update: true };
+  syncDerived: { type: string; fieldName: "syncDerived"; nullable: true; insert: "optional"; update: true };
+  asyncDerived: { type: string; fieldName: "asyncDerived"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  typeId: { type: TaskType; fieldName: "type"; nullable: true; insert: "optional"; update: true };
+  specialNewAuthorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "specialNewAuthor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  copiedFromId: {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "copiedFrom";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  parentOldTaskId: {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "parentOldTask";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  selfReferentialId: {
+    type: IdOf<Task>;
+    entity: Task;
+    fieldName: "selfReferential";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface TaskOpts {
@@ -120,9 +187,11 @@ export interface TaskFilter {
   copiedFrom?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
   copiedFromTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedFromTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   copiedTo?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
   copiedToTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   copiedToTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedToTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
@@ -143,9 +212,11 @@ export interface TaskGraphQLFilter {
   copiedFromId?: ValueGraphQLFilter<TaskId>;
   copiedFromTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedFromTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
   copiedTo?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
   copiedToTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedToTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedToTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
   taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
@@ -192,6 +263,9 @@ declare module "joist-core" {
       orderType: TaskOrder;
       optsType: TaskOpts;
       fieldsType: TaskFields;
+      columnsType: TaskColumns;
+      inheritanceType: "sti";
+      supportsEmExecute: false;
       optIdsType: TaskIdsOpts;
       factoryExtrasType: TaskFactoryExtras;
       factoryOptsType: Parameters<typeof newTask>[1];
@@ -303,6 +377,10 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "type") === TaskType.New;
   }
 
+  get isThird(): boolean {
+    return getField(this, "type") === TaskType.Third;
+  }
+
   /**
    * Partial update taking any subset of the entities fields.
    *
@@ -383,12 +461,20 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     | keyof (FieldsOf<Task> & RelationsOf<Task>)
     | keyof (FieldsOf<TaskNew> & RelationsOf<TaskNew>)
     | keyof (FieldsOf<TaskOld> & RelationsOf<TaskOld>)
+    | keyof (FieldsOf<TaskThird> & RelationsOf<TaskThird>)
   > {
     return newChangesProxy(this) as any;
   }
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

@@ -1,25 +1,27 @@
+import { oneToOneBatchLoader } from "src/batchloaders/oneToOneBatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { setField } from "src/fields.ts";
 import {
+  type IdOf,
+  type LoadedReference,
+  type OneToOneField,
+  type TaggedId,
   appendStack,
   deTagId,
   ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
-  IdOf,
-  LoadedReference,
-  OneToOneField,
-  TaggedId,
-} from "../";
-import { oneToOneBatchLoader } from "../batchloaders/oneToOneBatchLoader";
-import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
-import { setField } from "../fields";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
-import { isReactiveReference } from "./ReactiveReference";
-import { Reference, ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { type ManyToOneReference, failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
+import { isReactiveReference } from "src/relations/ReactiveReference.ts";
+import { type Reference } from "src/relations/Reference.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 const OneToOne = Symbol();
 
@@ -195,7 +197,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
       }
     }
     const { fieldLogger } = getEmInternalApi(this.entity.em);
-    fieldLogger?.logSet(this.entity, this.fieldName, other);
+    fieldLogger.logSet(this.entity, this.fieldName, other);
     this.loaded = other;
     this._isLoaded = true;
     // This will no-op and mark other dirty if necessary

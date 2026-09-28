@@ -1,7 +1,6 @@
-import { hasReactiveProperty, Property } from "joist-orm";
-import { LargePublisherCodegen } from "./entities";
+import { Property, hasReactiveProperty } from "joist-orm";
 
-import { largePublisherConfig as config } from "./entities";
+import { LargePublisherCodegen, largePublisherConfig as config } from "./entities";
 
 export class LargePublisher extends LargePublisherCodegen {
   /**

@@ -1,10 +1,11 @@
 import { pascalCase } from "change-case";
 import { isPlainObject } from "joist-utils";
-import { Table } from "pg-structure";
 import pluralize from "pluralize";
 import { code, imp } from "ts-poet";
-import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
-import { Config, getTimestampConfig } from "./config";
+
+import { type Config, getTimestampConfig } from "./config.ts";
+import { type DatabaseColumnType, type PrimitiveTypescriptType } from "./EntityDbMetadata.ts";
+import { type Table } from "./pgMetadata.ts";
 
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);
@@ -207,6 +208,7 @@ function isIgnored(config: Config, t: Table): boolean {
   return (config.ignoredTables || ["migrations", "pgmigrations"]).includes(t.name) || !shouldIncludeSchema(config, t);
 }
 
-function shouldIncludeSchema(config: Config, t: Table): boolean {
+/** Uses the same schema selection for metadata and test database cleanup. */
+export function shouldIncludeSchema(config: Config, t: Table): boolean {
   return config.schemas ? config.schemas.includes(t.schema.name) : t.schema.name === "public";
 }

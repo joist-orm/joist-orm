@@ -14,6 +14,7 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -71,7 +72,7 @@ import {
 
 export type LargePublisherId = Flavor<string, "Publisher">;
 
-export interface LargePublisherFields extends PublisherFields {
+export interface LargePublisherFields extends Omit<PublisherFields, "id" | "rating" | "spotlightAuthor"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
@@ -79,6 +80,19 @@ export interface LargePublisherFields extends PublisherFields {
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
   critics: { kind: "o2m"; type: Critic };
   users: { kind: "o2m"; type: User };
+}
+
+export interface LargePublisherColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<LargePublisher>;
+    entity: LargePublisher;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  sharedColumn: { type: string; fieldName: "sharedColumn"; nullable: true; insert: "optional"; update: true };
+  country: { type: string; fieldName: "country"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
@@ -147,6 +161,9 @@ declare module "joist-core" {
       orderType: LargePublisherOrder;
       optsType: LargePublisherOpts;
       fieldsType: LargePublisherFields;
+      columnsType: LargePublisherColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: LargePublisherIdsOpts;
       factoryExtrasType: LargePublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newLargePublisher>[1];

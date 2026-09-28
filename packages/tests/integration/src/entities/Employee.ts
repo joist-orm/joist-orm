@@ -1,4 +1,5 @@
-import { hasReactiveManyToMany, type ReactiveManyToMany } from "joist-orm";
+import { type ReactiveManyToMany, hasReactiveManyToMany } from "joist-orm";
+
 import { EmployeeCodegen } from "./entities";
 
 export class Employee extends EmployeeCodegen {

@@ -18,6 +18,7 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -28,6 +29,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -112,6 +114,81 @@ export interface PublisherFields {
   bookAdvances: { kind: "o2m"; type: BookAdvance };
   comments: { kind: "o2m"; type: Comment };
   images: { kind: "o2m"; type: Image };
+}
+
+export interface PublisherColumns {
+  id: { fieldName: "id"; type: IdOf<Publisher>; entity: Publisher; nullable: false; insert: "optional"; update: false };
+  name: { type: string; fieldName: "name"; nullable: false; insert: "required"; update: true };
+  latitude: { type: number; fieldName: "latitude"; nullable: true; insert: "optional"; update: true };
+  longitude: { type: number; fieldName: "longitude"; nullable: true; insert: "optional"; update: true };
+  hugeNumber: { type: number; fieldName: "hugeNumber"; nullable: true; insert: "optional"; update: true };
+  numberOfBookReviews: {
+    type: number;
+    fieldName: "numberOfBookReviews";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  titlesOfFavoriteBooks: {
+    type: string;
+    fieldName: "titlesOfFavoriteBooks";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  bookAdvanceTitlesSnapshot: {
+    type: string;
+    fieldName: "bookAdvanceTitlesSnapshot";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  numberOfBookAdvancesSnapshot: {
+    type: string;
+    fieldName: "numberOfBookAdvancesSnapshot";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  baseSyncDefault: { type: string; fieldName: "baseSyncDefault"; nullable: false; insert: "required"; update: true };
+  baseAsyncDefault: { type: string; fieldName: "baseAsyncDefault"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  favoriteAuthorName: {
+    type: string;
+    fieldName: "favoriteAuthorName";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  rating: { type: number; fieldName: "rating"; nullable: true; insert: "optional"; update: true };
+  sizeId: { type: PublisherSize; fieldName: "size"; nullable: true; insert: "optional"; update: true };
+  typeId: { type: PublisherType; fieldName: "type"; nullable: false; insert: "optional"; update: true };
+  favoriteAuthorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "favoriteAuthor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  groupId: {
+    type: IdOf<PublisherGroup>;
+    entity: PublisherGroup;
+    fieldName: "group";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  spotlightAuthorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "spotlightAuthor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface PublisherOpts {
@@ -284,6 +361,9 @@ declare module "joist-core" {
       orderType: PublisherOrder;
       optsType: PublisherOpts;
       fieldsType: PublisherFields;
+      columnsType: PublisherColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: PublisherIdsOpts;
       factoryExtrasType: PublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisher>[1];
@@ -297,6 +377,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   declare readonly __type: { 0: "Publisher" };
 
+  /**
+   * Example of a ReactiveReference in an entity with subtypes.
+   * @generated Publisher.md
+   */
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
   readonly authors: Collection<Publisher, Author> = hasMany();
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany();
@@ -355,7 +439,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set hugeNumber(hugeNumber: number | undefined) {
     setField(this, "hugeNumber", hugeNumber);
   }
-
+  /**
+   * Example of a reactive query.
+   * @generated Publisher.md
+   */
   abstract readonly numberOfBookReviews: ReactiveField<Publisher, number>;
 
   get deletedAt(): Date | undefined {
@@ -365,11 +452,20 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
-
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique).
+   * @generated Publisher.md
+   */
   abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
-
+  /**
+   * Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   abstract readonly bookAdvanceTitlesSnapshot: ReactiveField<Publisher, string | undefined>;
-
+  /**
+   * Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   abstract readonly numberOfBookAdvancesSnapshot: ReactiveField<Publisher, string | undefined>;
 
   get baseSyncDefault(): string {
@@ -395,7 +491,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
-
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) .
+   * @generated Publisher.md
+   */
   abstract readonly favoriteAuthorName: ReactiveField<Publisher, string | undefined>;
 
   get rating(): number | undefined {
@@ -532,6 +631,13 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

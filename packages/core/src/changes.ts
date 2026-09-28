@@ -1,21 +1,22 @@
-import { getInstanceData } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { IdOf } from "./EntityManager";
-import { getField, isChangeableField } from "./fields";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf } from "src/EntityManager.ts";
+import { getField, isChangeableField } from "src/fields.ts";
+import type { JoinColumnValue, JoinRows } from "src/flush/JoinRows.ts";
 import {
-  Field,
-  ManyToManyCollection,
-  OneToManyCollection,
-  RelationsOf,
+  type Field,
+  type ManyToManyCollection,
+  type OneToManyCollection,
+  type RelationsOf,
   assertNever,
   getEmInternalApi,
   getMetadata,
   isEntity,
   isId,
-} from "./index";
-import { JoinColumnValue, JoinRows } from "./JoinRows";
-import { EnumCollectionImpl } from "./relations/EnumCollection";
-import { FieldsOf, OptsOf } from "./typeMap";
+} from "src/index.ts";
+import { type EnumCollectionImpl } from "src/relations/EnumCollection.ts";
+import { notLoadedValue } from "src/relations/LazyField.ts";
+import { type FieldsOf, type OptsOf } from "src/typeMap.ts";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -46,7 +47,10 @@ abstract class BaseFieldStatusImpl<T> {
   get originalValue(): T | undefined {
     const { originalData, data } = getInstanceData(this.entity);
     // If `p` is in originalData, always respect that, even if it's undefined
-    return this.fieldName in originalData ? originalData[this.fieldName] : getField(this.entity, this.fieldName as any);
+    const value =
+      this.fieldName in originalData ? originalData[this.fieldName] : getField(this.entity, this.fieldName as any);
+    // An unloaded lazy column's original value is unknown
+    return value === notLoadedValue ? undefined : value;
   }
 
   get hasChanged(): boolean {
@@ -332,17 +336,22 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
   /** Array of changed field names w/o o2m & m2m relations (which can be expensive). */
   fieldsWithoutRelations: NonNullable<K>[];
 } & {
+  // The o2o branch is `never`: the FK lives on the other entity, so changes never track o2o fields.
+  // (The exclusion must stay in the value position: a conditional in the `[P in ...]` clause defers on
+  // a generic `T` and collapses `keyof Changes<T>` at inference time, i.e. in `cannotBeUpdated` calls.)
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
     ? ManyToManyFieldStatus<U>
     : FieldsOf<T>[P] extends { kind: "m2mEnum"; type: infer E }
       ? EnumCollectionFieldStatus<E>
       : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
         ? OneToManyFieldStatus<U>
-        : FieldsOf<T>[P] extends { type: infer U | undefined }
-          ? U extends Entity
-            ? ManyToOneFieldStatus<U>
-            : PrimitiveFieldStatus<U>
-          : never;
+        : FieldsOf<T>[P] extends { kind: "o2o" }
+          ? never
+          : FieldsOf<T>[P] extends { type: (infer U) | undefined }
+            ? U extends Entity
+              ? ManyToOneFieldStatus<U>
+              : PrimitiveFieldStatus<U>
+            : never;
 };
 
 // type A1 = never extends string ? 1 : 2;

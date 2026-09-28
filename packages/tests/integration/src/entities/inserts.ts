@@ -1,4 +1,4 @@
-import { testDriver } from "@src/testEm";
+import { testDriver } from "src/testEm";
 
 // Note this test infrastructure exist solely to test Joist itself, i.e. to use
 // the low-level driver infra to setup/assert against data. Downstream applications
@@ -81,6 +81,7 @@ export function insertBook(row: {
   author_id: number | null;
   reviewer_id?: number | null;
   prequel_id?: number | null;
+  random_comment_id?: number | null;
   deleted_at?: Date;
   order?: number;
 }) {
@@ -163,7 +164,8 @@ export async function insertPublisher(row: {
   base_sync_default?: string;
   base_async_default?: string;
 }) {
-  const { shared_column, ...others } = row;
+  // `city`/`shared_column` live on small_publishers, not the base publishers table
+  const { shared_column, city, ...others } = row;
   await testDriver.insert("publishers", {
     base_sync_default: "FactorySyncDefault",
     base_async_default: "FactoryAsyncDefault",
@@ -248,6 +250,15 @@ export function insertPublisherGroup(row: { id?: number; name: string; number_of
     number_of_book_reviews_formatted: "count=0",
     ...row,
   });
+}
+
+export function insertParentGroup(row: {
+  id?: number;
+  name?: string | null;
+  bulk_data?: object | null;
+  required_data?: object;
+}) {
+  return testDriver.insert("parent_groups", { required_data: {}, ...row });
 }
 
 export async function insertSmallPublisherGroup(row: { id: number; name: string; number_of_book_reviews?: number }) {

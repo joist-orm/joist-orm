@@ -1,6 +1,6 @@
 import ansis from "ansis";
-import { Entity, isEntity } from "../Entity";
-import { getFuzzyCallerName } from "../config";
+import { getFuzzyCallerName } from "src/config.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
 
 const { gray, green, yellow, blue, red } = ansis;
 export type WriteFn = (line: string) => void;
@@ -77,3 +77,16 @@ export class FieldLogger {
         : blue; // otherwise strings/dates/numbers are blue;
   }
 }
+
+class NoopFieldLogger extends FieldLogger {
+  constructor() {
+    super([]);
+  }
+
+  logCreate(entity: Entity): void {}
+
+  logSet(entity: Entity, fieldName: string, value: unknown): void {}
+}
+
+/** A shared no-op logger that avoids optional chaining in hot field access paths. */
+export const noopFieldLogger: FieldLogger = new NoopFieldLogger();

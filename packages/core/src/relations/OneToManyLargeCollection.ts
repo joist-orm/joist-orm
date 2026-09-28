@@ -1,12 +1,12 @@
-import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
-import { Entity } from "../Entity";
-import { appendStack, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata, getMetadataForField, LargeOneToManyField } from "../EntityMetadata";
-import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
-import { lazyField } from "../newEntity";
-import { remove } from "../utils";
-import { LargeCollection } from "./LargeCollection";
-import { RelationT, RelationU } from "./Relation";
+import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type IdOf, appendStack, sameEntity } from "src/EntityManager.ts";
+import { type EntityMetadata, type LargeOneToManyField, getMetadataForField } from "src/EntityMetadata.ts";
+import { type ManyToOneReferenceImpl, ensureNotDeleted, getMetadata } from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { type LargeCollection } from "src/relations/LargeCollection.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { remove } from "src/utils.ts";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(): LargeCollection<T, U> {

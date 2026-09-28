@@ -1,3 +1,15 @@
+import { buildQuery } from "joist-knex";
+import {
+  EntityConstructor,
+  EntityManagerHook,
+  FilterWithAlias,
+  Entity as JoistEntity,
+  Loaded,
+  MaybeAbstractEntityConstructor,
+  OptsOf,
+  getInstanceData,
+  sameEntity,
+} from "joist-orm";
 import {
   countOfAuthors,
   countOfBookReviews,
@@ -17,22 +29,11 @@ import {
   insertTag,
   select,
   update,
-} from "@src/entities/inserts";
-import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
-import { buildQuery } from "joist-knex";
-import {
-  EntityConstructor,
-  EntityManagerHook,
-  FilterWithAlias,
-  Entity as JoistEntity,
-  Loaded,
-  MaybeAbstractEntityConstructor,
-  OptsOf,
-  getInstanceData,
-  sameEntity,
-} from "joist-orm";
+} from "src/entities/inserts";
 import { jan1, jan2 } from "src/testDates";
+import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { twoOf } from "src/utils";
+
 import {
   Author,
   Book,
@@ -1451,8 +1452,19 @@ describe("EntityManager", () => {
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     await expect(em.flush()).rejects.toMatchObject({
-      message: "There is already a publisher with a Jim",
+      // The top-level message keeps the pg DETAIL suffix for debugging...
+      message: `There is already a publisher with a Jim — Key (publisher_id)=(1) already exists.`,
+      // ...but the user-facing structured error stays pretty.
       errors: [{ message: "There is already a publisher with a Jim" }],
+    });
+  });
+
+  it("includes the pg DETAIL in raw constraint failures", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "123" });
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a2", ssn: "123" });
+    await expect(em.flush()).rejects.toMatchObject({
+      message: `duplicate key value violates unique constraint "authors_ssn_key" — Key (ssn)=(123) already exists.`,
     });
   });
 

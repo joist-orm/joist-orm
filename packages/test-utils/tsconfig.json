@@ -1,9 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.package.json",
   "compilerOptions": {
     "outDir": "./build",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "types": ["jest", "node"]
   },
   "include": ["./src"],
-  "references": [{ "path": "../core" }, { "path": "../knex" }, { "path": "../utils" }]
+  "references": [{ "path": "../core" }, { "path": "../utils" }]
 }

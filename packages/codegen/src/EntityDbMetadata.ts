@@ -1,27 +1,40 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
-import { Action, Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
-import { plural, singular } from "pluralize";
-import { Code, Import, code, imp } from "ts-poet";
+import pluralize from "pluralize";
+import { type Code, Import, code, imp } from "ts-poet";
+
 import {
-  Config,
+  type Config,
   fieldTypeConfig,
   getTimestampConfig,
   isFieldHasDefault,
   isFieldIgnored,
   isGetterField,
   isLargeCollection,
+  isLazyField,
   isProtected,
   isReactiveField,
   isReactiveManyToMany,
   isReactiveReference,
   ormMaintainedFields,
   serdeConfig,
+  softDeletesConfig,
   superstructConfig,
   zodSchemaConfig,
-} from "./config";
-import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
-import { Zod } from "./symbols";
+} from "./config.ts";
+import { type EnumMetadata, type EnumRow, type PgEnumMetadata } from "./loadMetadata.ts";
+import {
+  type Action,
+  type Column,
+  EnumType,
+  type Index,
+  type JSONData,
+  type M2MRelation,
+  M2ORelation,
+  type O2MRelation,
+  type Table,
+} from "./pgMetadata.ts";
+import { Zod } from "./symbols.ts";
 import {
   fail,
   isEnumTable,
@@ -31,7 +44,9 @@ import {
   mapSimpleDbTypeToTypescriptType,
   parseOrder,
   tableToEntityName,
-} from "./utils";
+} from "./utils.ts";
+
+const { plural, singular } = pluralize;
 
 /** All the entities + enums in our database. */
 export interface DbMetadata {
@@ -133,8 +148,13 @@ export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object"
 export type PrimitiveField = Field & {
   kind: "primitive";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  /** Database nullability, unchanged by domain inheritance specialization. */
+  columnNotNull: boolean;
   // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
   fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
@@ -147,13 +167,18 @@ export type PrimitiveField = Field & {
   customSerde: Import | undefined;
   isArray: boolean;
   hasConfigDefault: boolean;
+  lazy?: boolean;
 };
 
 export type EnumField = Field & {
   kind: "enum";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   derived: "sync" | "async" | false;
   enumName: string;
   enumType: Import;
@@ -168,7 +193,11 @@ export type EnumField = Field & {
 export type PgEnumField = Field & {
   kind: "pg-enum";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   columnDefault: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   /** I.e. `favorite_shape`. */
   dbType: string;
   /** I.e. `FavoriteShape`. */
@@ -183,6 +212,11 @@ export type PgEnumField = Field & {
 export type ManyToOneField = Field & {
   kind: "m2o";
   columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
+  columnDefault?: number | boolean | string | null;
+  columnGenerated: boolean;
+  columnNotNull: boolean;
   dbType: string;
   otherFieldName: string;
   otherEntity: Entity;
@@ -204,6 +238,7 @@ export type OneToManyField = Field & {
   otherColumnNotNull: boolean;
   isLargeCollection: boolean;
   orderBy: { field: string; direction: "ASC" | "DESC" } | undefined;
+  softDeletes: "include" | "exclude" | undefined;
 };
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
@@ -226,6 +261,7 @@ export type ManyToManyField = Field & {
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
   derived: "async" | "otherSide" | false;
+  softDeletes: "include" | "exclude" | undefined;
   /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
   hasJoinTableId: boolean;
 };
@@ -256,8 +292,11 @@ export type PolymorphicField = Field & {
   components: PolymorphicFieldComponent[];
 };
 
+/** A column such as `parent_book_id` or `parent_book_review_id`. */
 export type PolymorphicFieldComponent = {
-  columnName: string; // eg `parent_book_id` or `parent_book_review_id`
+  columnName: string;
+  /** Physical table owner, unchanged by domain inheritance specialization. */
+  columnOwner: Entity;
   otherFieldName: string; // eg `comment` or `comments`
   otherEntity: Entity;
   isDeferredAndDeferrable: boolean;
@@ -270,7 +309,7 @@ export type FieldNameOverrides = {
   otherFieldName?: string;
 };
 
-/** Adapts the generally-great pg-structure metadata into our specific ORM types. */
+/** Adapts PostgreSQL catalog metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
   primaryKey: PrimitiveField;
@@ -301,6 +340,12 @@ export class EntityDbMetadata {
   abstract: boolean;
   nonDeferredFkOrder: number = -1;
   uniqueConstraints?: string[][];
+  /** Gates mutation targets, not reads; false when required columns or array storage have no supported mutation mapping. */
+  supportsEmExecute?: boolean;
+  /** Original table fields, captured before inheritance partitions or specializes them. */
+  physicalMetadata?: EntityDbMetadata;
+  /** Physical columns ignored by entity fields, retained for direct SQL reads and writes. */
+  ignoredColumns: PrimitiveField[];
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -332,12 +377,10 @@ export class EntityDbMetadata {
         .map((column) => newEnumArrayField(config, this.entity, column, enums))
         .filter((f) => !f.ignore),
     ];
-    this.pgEnums = [
-      ...table.columns
-        .filter((c) => isPgEnum(c))
-        .map((column) => newPgEnumField(config, this.entity, column))
-        .filter((f) => !f.ignore),
-    ];
+    this.pgEnums = table.columns
+      .filter((c) => isPgEnum(c))
+      .map((column) => newPgEnumField(config, this.entity, column))
+      .filter((f) => !f.ignore);
 
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(config, r.targetTable))
@@ -396,6 +439,18 @@ export class EntityDbMetadata {
       newPolymorphicField(config, table, this.entity, rc),
     );
 
+    const modeledColumns = new Set([
+      this.primaryKey.columnName,
+      ...this.primitives.map((field) => field.columnName),
+      ...this.enums.map((field) => field.columnName),
+      ...this.pgEnums.map((field) => field.columnName),
+      ...this.manyToOnes.map((field) => field.columnName),
+      ...this.polymorphics.flatMap((field) => field.components.map((component) => component.columnName)),
+    ]);
+    this.ignoredColumns = table.columns
+      .filter((column) => !modeledColumns.has(column.name))
+      .map((column) => newPhysicalColumn(config, this.entity, column));
+
     this.tableName = table.name;
     this.tagName = config.entities[this.entity.name]?.tag;
     this.abstract = config.entities[this.entity.name]?.abstract || false;
@@ -405,6 +460,24 @@ export class EntityDbMetadata {
     this.updatedAt = this.primitives.find((f) => updatedAtConf.names.includes(f.columnName));
     this.deletedAt = this.primitives.find((f) => deletedAtConf.names.includes(f.columnName));
     this.uniqueConstraints = inferUniqueConstraints(this, table);
+    // Composite keys and unsupported physical arrays still cannot be written through mutation field names.
+    this.supportsEmExecute =
+      table.primaryKey?.columns.length === 1 &&
+      this.primaryKey.columnName === "id" &&
+      // Native enum and multidimensional arrays still have scalar field mappings.
+      table.columns.every((column) => column.arrayDimension <= 1 && !(isArray(column) && isPgEnum(column))) &&
+      // JSON/schema serdes encode one JSON value, not a SQL array. Date-mode serdes also encode one scalar.
+      // Custom element mappers and Temporal array serdes have separate elementwise write paths.
+      ![...this.primitives, ...this.ignoredColumns].some(
+        (field) =>
+          field.isArray &&
+          !field.customSerde &&
+          (field.columnType === "jsonb" ||
+            (!config.temporal &&
+              (field.columnType === "date" ||
+                field.columnType === "timestamp with time zone" ||
+                field.columnType === "timestamp without time zone"))),
+      );
   }
 
   get name(): string {
@@ -525,13 +598,16 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "primitive",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
-    fieldType: array ? code`${fieldType}[]` : maybeUserType,
+    fieldType: array ? code`${maybeUserType}[]` : maybeUserType,
     rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
     unique,
@@ -541,6 +617,35 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     customSerde: customSerde ? serdeType(customSerde) : undefined,
     isArray: array,
     hasConfigDefault, // can be set to true by scanEntityFiles
+    lazy: isLazyField(config, entity, fieldName),
+  };
+}
+
+/** Keeps an ignored column's database type without applying entity-only field configuration. */
+function newPhysicalColumn(config: Config, entity: Entity, column: Column): PrimitiveField {
+  const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
+  const rawFieldType = column.type instanceof EnumType ? "string" : mapSimpleDbTypeToTypescriptType(config, columnType);
+  const isArray = column.arrayDimension === 1;
+  return {
+    kind: "primitive",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
+    fieldName: primitiveFieldName(column.name),
+    columnName: column.name,
+    columnType,
+    fieldType: isArray ? code`${rawFieldType}[]` : rawFieldType,
+    rawFieldType,
+    notNull: column.notNull,
+    columnDefault: column.default,
+    columnGenerated: column.isGenerated,
+    derived: false,
+    protected: false,
+    unique: false,
+    superstruct: undefined,
+    zodSchema: undefined,
+    customSerde: undefined,
+    isArray,
+    hasConfigDefault: false,
   };
 }
 
@@ -578,10 +683,13 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
@@ -610,10 +718,13 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     columnType,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
@@ -635,6 +746,8 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "pg-enum",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
     dbType: column.type.name,
@@ -643,6 +756,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     enumValues: (column.type as EnumType).values,
     notNull: column.notNull,
     columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     hasConfigDefault, // can be set to true by scanEntityFiles
   };
@@ -665,8 +779,12 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "m2o",
+    columnOwner: entity,
+    columnNotNull: column.notNull,
     fieldName,
     columnName,
+    columnDefault: column.default,
+    columnGenerated: column.isGenerated,
     otherEntity,
     otherFieldName,
     notNull,
@@ -700,6 +818,7 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     orderBy: parseOrder(orderBy),
+    softDeletes: softDeletesConfig(config, entity, fieldName),
   };
 }
 
@@ -745,6 +864,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
     derived,
+    softDeletes: softDeletesConfig(config, entity, fieldName),
     hasJoinTableId: joinTableHasId(r.joinTable),
   };
 }
@@ -805,6 +925,7 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   const isDeferredAndDeferrable = r.foreignKey.isDeferred && r.foreignKey.isDeferrable;
   return {
     columnName,
+    columnOwner: entity,
     otherEntity,
     otherFieldName,
     isDeferredAndDeferrable,
@@ -993,6 +1114,9 @@ export function canonicalizeOtherEntities(db: DbMetadata): void {
     }
     for (const poly of meta.polymorphics) {
       for (const comp of poly.components) comp.otherEntity = canonical(comp.otherEntity);
+    }
+    if (meta.physicalMetadata) {
+      canonicalizeOtherEntities({ ...db, entities: [meta.physicalMetadata] });
     }
   }
 }

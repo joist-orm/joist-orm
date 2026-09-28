@@ -1,20 +1,20 @@
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import type { ManyToManyLike } from "src/flush/JoinRows.ts";
 import {
+  type Entity,
+  type EntityMetadata,
+  type ManyToManyField,
+  type ReadOnlyCollection,
   ensureNotDeleted,
-  Entity,
-  EntityMetadata,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-  ManyToManyField,
-  ReadOnlyCollection,
-} from "..";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { ManyToManyLike } from "../JoinRows";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 /**
  * A read-only collection representing the "other side" of a ReactiveManyToMany.
@@ -51,7 +51,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   constructor(entity: T, field: ManyToManyField) {
     super(entity);
     this.#field = field;
-    getInstanceData(entity).relations[field.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {

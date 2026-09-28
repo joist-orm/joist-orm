@@ -1,10 +1,12 @@
+#!/usr/bin/env node
+
 import { joistMigrate } from "joist-migration-utils";
 
 // Re-export everything from joist-migration-utils
 export * from "joist-migration-utils";
 
 // If we're being run locally.
-if (require.main === module) {
+if (typeof module !== "undefined" && require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
   }

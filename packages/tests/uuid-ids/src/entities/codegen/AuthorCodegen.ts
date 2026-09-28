@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -48,6 +49,14 @@ export interface AuthorFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   books: { kind: "o2m"; type: Book };
+}
+
+export interface AuthorColumns {
+  id: { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "required"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  lastName: { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface AuthorOpts {
@@ -111,6 +120,9 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];

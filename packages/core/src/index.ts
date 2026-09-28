@@ -1,87 +1,206 @@
-import { getInstanceData } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
-import { getDefaultDependencies } from "./defaults";
-import { buildWhereClause } from "./drivers/buildUtils";
-import { getField, setField } from "./fields";
-import { getProperties } from "./getProperties";
-import { New } from "./loadHints";
-import { isAllSqlPaths } from "./loadLens";
-import { FactoryInitialValue } from "./newTestInstance";
-import { partitionHint } from "./preloading/partitionHint";
-import { isAsyncProperty, isAsyncReactiveField, isProperty, isReactiveField, isReactiveGetter } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
-import { OptsOf } from "./typeMap";
-import { fail } from "./utils";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { getDefaultDependencies } from "src/defaults.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { type EntityMetadata, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
+import { getField, setField } from "src/fields.ts";
+import { getProperties } from "src/getProperties.ts";
+import type { New } from "src/loading/loadHints.ts";
+import { isAllSqlPaths } from "src/loading/loadLens.ts";
+import { FactoryInitialValue } from "src/newTestInstance.ts";
+import { partitionHint } from "src/preloading/partitionHint.ts";
+import { buildWhereClause } from "src/queries/renderConditions.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
+import {
+  isAsyncProperty,
+  isAsyncReactiveField,
+  isLazyField,
+  isProperty,
+  isReactiveField,
+  isReactiveGetter,
+} from "src/relations/index.ts";
+import { ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
+import { type OptsOf } from "src/typeMap.ts";
+import { fail } from "src/utils.ts";
 
 export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
-export { AliasAssigner } from "./AliasAssigner";
-export * from "./Aliases";
-export { BaseEntity, getInstanceData } from "./BaseEntity";
-export { ConditionBuilder } from "./ConditionBuilder";
-export { Entity, IdType, isEntity } from "./Entity";
-export * from "./EntityFields";
-export * from "./EntityFilter";
-export * from "./EntityGraphQLFilter";
-export * from "./EntityManager";
-export * from "./EntityMetadata";
-export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export { InstanceData } from "./InstanceData";
-export { JoinColumnValue, JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
-export * from "./PendingChanges";
-export { Plugin } from "./PluginManager";
-export * from "./QueryParser";
-export * from "./QueryParser.collectionJoins";
-export { visitConditions } from "./QueryVisitor";
-export { JoinRowTodo, Todo } from "./Todo";
-export * from "./changes";
-export { ConfigApi, EntityHook, resetBootFlag } from "./config";
+export { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
+export type { JoinTree } from "src/queries/sql/JoinTree.ts";
+export {
+  type AndCondition,
+  type ConditionGroup,
+  type DomainPredicate,
+  type OrCondition,
+  type PredicateBrand,
+  type SqlCondition,
+  type SqlPredicate,
+} from "src/queries/conditions.ts";
+// Domain aliases belong to em.find; physical table expressions belong to em.query/em.execute.
+export {
+  alias,
+  aliases,
+  getAliasMetadata,
+  getAliasMgmt,
+  getMaybeCtiAlias,
+  isAlias,
+  newAliasProxy,
+  type Alias,
+  type AliasBrand,
+  type AliasMgmt,
+  type AliasColumn,
+  type EntityAlias,
+  type PolyAlias,
+  type PrimitiveAlias,
+} from "src/queries/find/Aliases.ts";
+export {
+  table,
+  tables,
+  tableMgmt,
+  getTableMetadata,
+  getTableMgmt,
+  isTable,
+  newTableProxy,
+  type Table,
+  type TableFilter,
+  type TableBrand,
+  type TableSourceBrand,
+  type TableFor,
+  type TableMgmt,
+  type TableSourceMgmt,
+  type ReferenceJoin,
+  type PrimitiveColumn,
+  type EntityColumn,
+  type ReferenceColumn,
+  type CollectionJoin,
+  type PolyReference,
+} from "src/queries/sql/Tables.ts";
+export {
+  declareTable,
+  type CustomColumnConfig,
+  type CustomColumnInput,
+  type CustomColumnInputs,
+  type CustomColumnType,
+  type CustomTable,
+  type CustomTableDefinition,
+  type CustomTableFor,
+} from "src/queries/sql/custom.ts";
+export { BaseEntity, getInstanceData } from "src/BaseEntity.ts";
+export { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
+export { type Entity, type IdType, isEntity } from "src/Entity.ts";
+export type * from "src/EntityFields.ts";
+export * from "src/queries/find/EntityFilter.ts";
+export * from "src/queries/find/EntityGraphQLFilter.ts";
+export * from "src/EntityManager.ts";
+export * from "src/EntityMetadata.ts";
+export type {
+  DeleteStatement,
+  ExecuteResult,
+  InsertStatement,
+  InsertValues,
+  MutationReturning,
+  MutationStatement,
+  UpdateStatement,
+  UpdateValues,
+} from "src/queries/sql/execute.ts";
+export type { EnumMetadata } from "src/EnumMetadata.ts";
+// `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
+// (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
+// joist-core, so `toSql`/`decode`/`encode` never show up as something a user could call.
+export {
+  type ArrayAggOptions,
+  type Expr,
+  type ExprBrand,
+  exprBrand,
+  type ExprLike,
+  type InnerJoin,
+  type LeftJoin,
+} from "src/queries/sql/Expr.ts";
+export {
+  expr,
+  type CaseElse,
+  type CaseWhen,
+  type ExprFromInput,
+  type ExprInput,
+} from "src/queries/sql/expressions/expression.ts";
+export { skipCondition } from "src/queries/skipCondition.ts";
+export type { EntityOrId, HintNode } from "src/loading/HintTree.ts";
+export { InstanceData } from "src/InstanceData.ts";
+export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "src/flush/JoinRows.ts";
+export type * from "src/flush/PendingChanges.ts";
+export { Plugin } from "src/PluginManager.ts";
+export * from "src/queries/find/QueryParser.ts";
+export * from "src/queries/find/buildFindQuery.ts";
+export * from "src/queries/renderConditions.ts";
+export type {
+  ColumnCondition,
+  ExistsCondition,
+  ParsedExpressionCondition,
+  ParsedExpressionFilter,
+  ParsedValueFilter,
+  RawCondition,
+} from "src/queries/parsedConditions.ts";
+export {
+  type ParsedEntityFilter,
+  makeLike,
+  mapToDb,
+  parseEntityFilter,
+  parseValueFilter,
+} from "src/queries/valueFilters.ts";
+export {
+  filterSoftDeletes,
+  lazyExcludedSelects,
+  maybeAddNotSoftDeleted,
+  stiSubtypeFilter,
+} from "src/queries/entityQueryUtils.ts";
+export * from "src/queries/find/QueryParser.collectionJoins.ts";
+export { visitConditions } from "src/queries/find/QueryVisitor.ts";
+export * from "src/RowData.ts";
+export { type JoinRowTodo, Todo } from "src/flush/Todo.ts";
+export * from "src/changes.ts";
+export { ConfigApi, type EntityHook, resetBootFlag } from "src/config.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,
   getMetadataForTable,
   getMetadataForType,
   maybeGetConstructorFromReference,
-} from "./configure";
-export { driverApi } from "./driverApi";
-export * from "./drivers";
-export { getField, isChangeableField, isFieldSet, setField } from "./fields";
-export * from "./getProperties";
-export * from "./json";
-export * from "./keys";
-export { kq, kqDot, kqStar } from "./keywords";
+} from "src/configure.ts";
+export { driverApi } from "src/drivers/driverApi.ts";
+export * from "src/drivers/index.ts";
+export { getField, isChangeableField, isFieldSet, setField } from "src/fields.ts";
+export * from "src/getProperties.ts";
+export * from "src/json.ts";
+export * from "src/keys.ts";
+export { kq, kqDot, kqStar } from "src/queries/sql/keywords.ts";
 export {
   assertLoaded,
-  DeepNew,
+  type DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
-  Loadable,
-  Loaded,
-  LoadHint,
-  MarkLoaded,
+  type Loadable,
+  type Loaded,
+  type LoadHint,
+  type MarkLoaded,
   maybePopulateThen,
-  NestedLoadHint,
-  New,
-  RelationsIn,
+  type NestedLoadHint,
+  type New,
+  type RelationsIn,
   unsafeLoaded,
-} from "./loadHints";
-export * from "./loadLens";
-export { setFactoryWriter } from "./logging/FactoryLogger";
-export * from "./logging/FieldLogger";
-export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
-export { lazyField } from "./newEntity";
+} from "src/loading/loadHints.ts";
+export * from "src/loading/loadLens.ts";
+export { setFactoryWriter } from "src/logging/FactoryLogger.ts";
+export * from "src/logging/FieldLogger.ts";
+export { ReactionLogger, setReactionLogging } from "src/logging/ReactionLogger.ts";
+export { lazyField } from "src/newEntity.ts";
 export {
   defaultValue,
   factories,
-  FactoryEntityOpt,
-  FactoryOpts,
+  type FactoryEntityOpt,
+  type FactoryOpts,
   getTestIndex,
   isFactoryCreation,
   maybeBranchValue,
@@ -91,45 +210,87 @@ export {
   noValue,
   setFactoryLogging,
   testIndex,
-} from "./newTestInstance";
-export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
-export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin";
-export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
-export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
+} from "src/newTestInstance.ts";
+export { deepNormalizeHint, normalizeHint } from "src/normalizeHints.ts";
+export { ImmutableEntitiesPlugin } from "src/plugins/ImmutableEntitiesPlugin.ts";
+export type { JoinResult, PreloadHydrator, PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
+export { JsonAggregatePreloader } from "src/preloading/JsonAggregatePreloader.ts";
+// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseUserQuery, Plan) stays internal
+export {
+  type CheckScope,
+  type Clauses,
+  type EntityQuery,
+  type ExpressionOrderBy,
+  type ExistsQuery,
+  entityQueryBrand,
+  type MaybeNull,
+  type NameOf,
+  type NotWidened,
+  type OrderByDirection,
+  type OrderByKeys,
+  type Query,
+  type QueryArg,
+  type QueryCondition,
+  type QueryJoin,
+  type QueryJoinInput,
+  type QueryJoinList,
+  type QueryRow,
+  type QuerySelect,
+  type QuerySource,
+  type QueryValue,
+  recursiveQuery,
+  type RecursiveOptions,
+  type ResolvedJoins,
+  type ScalarQuery,
+  type SetQuery,
+  query,
+  queryMaybe,
+  sql,
+  type Subquery,
+  type SubqueryBrand,
+  subqueryBrand,
+  type WithInput,
+  type WithSource,
+} from "src/queries/sql/query.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,
-  Reactable,
-  Reacted,
-  ReactiveHint,
-  ReactiveTarget,
+  type Reactable,
+  type Reacted,
+  type ReactiveHint,
+  type ReactiveTarget,
   reverseReactiveHint,
-} from "./reactiveHints";
-export * from "./relations";
+} from "src/reactivity/reactiveHints.ts";
+export * from "src/relations/index.ts";
 export {
   cannotBeChanged,
   cannotBeUpdated,
-  GenericError,
+  type GenericError,
   maxValueRule,
   minValueRule,
   mustBeSubType,
+  newRequiredLazyFieldRule,
   newRequiredRule,
   rangeValueRule,
   ValidationCode,
-  ValidationError,
+  type ValidationError,
   ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
-} from "./rules";
-export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
-export * from "./serde";
-export * from "./scopes";
-export { Temporal } from "./temporal";
-export * from "./temporalMappers";
-export { isInTrustedContext, runInTrustedContext } from "./trusted";
-export * from "./typeMap";
-export { buildUnnestCte, ensureRectangularArraySizes } from "./unnest";
-export { DeepPartialOrNull, updatePartial, upsert } from "./upsert";
+  type ValidationRule,
+  type ValidationRuleInternal,
+  type ValidationRuleResult,
+} from "src/rules.ts";
+export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "src/runtimeConfig.ts";
+export { nowUTC } from "src/nowUTC.ts";
+export * from "src/serde/serde.ts";
+export * from "src/serde/columns.ts";
+export * from "src/serde/fieldSerde.ts";
+export * from "src/queries/find/scopes.ts";
+export { maybeRequireTemporal, requireTemporal, Temporal } from "src/serde/temporal.ts";
+export * from "src/serde/temporalMappers.ts";
+export { isInTrustedContext, runInTrustedContext } from "src/trusted.ts";
+export type * from "src/typeMap.ts";
+export { buildUnnestCte, ensureRectangularArraySizes } from "src/queries/unnest.ts";
+export { type DeepPartialOrNull, updatePartial, upsert } from "src/upsert.ts";
 export {
   abbreviation,
   asNew,
@@ -141,8 +302,8 @@ export {
   indexBy,
   partition,
   zeroTo,
-} from "./utils";
-export { ensureWithLoaded, StubbedRelation, WithLoaded, withLoaded } from "./withLoaded";
+} from "src/utils.ts";
+export { ensureWithLoaded, StubbedRelation, type WithLoaded, withLoaded } from "src/loading/withLoaded.ts";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -162,8 +323,8 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  * APIs were an input of `undefined` means "do not set / noop" and `null` means "unset".
  *
  * Note that constructors _always_ call this method, but if the call is coming from `em.hydrate`, we
- * use `values` being a primary key to short-circuit and let `hydrate` set the fields via the serde
- * `setOnEntity` methods.
+ * use `values` being a primary key to short-circuit and let hydration callers assign the values
+ * returned by the serde `fromRow` methods.
  */
 export function setOpts<T extends Entity>(
   entity: T,
@@ -223,6 +384,8 @@ export function setOpt<T extends Entity>(
     } else {
       current.set(value);
     }
+  } else if (isLazyField(current)) {
+    current.set(value);
   } else if (isProperty(current) || isAsyncProperty(current) || isReactiveGetter(current)) {
     throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
   } else if (isReactiveField(current) || isAsyncReactiveField(current)) {

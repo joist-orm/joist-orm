@@ -1,6 +1,7 @@
-import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
-import { generateSaveResolvers } from "./generateSaveResolvers";
-import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils";
+import { type Config, type DbMetadata, type EntityDbMetadata } from "joist-codegen";
+
+import { generateSaveResolvers } from "./generateSaveResolvers.ts";
+import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils.ts";
 
 describe("generateSaveResolvers", () => {
   it.each([

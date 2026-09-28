@@ -1,6 +1,4 @@
-import { UserCodegen } from "./entities";
-
-import { userConfig as config } from "./entities";
+import { UserCodegen, userConfig as config } from "./entities";
 
 export class User extends UserCodegen {
   transientFields = { reactions: { poly: 0 } };

@@ -1,11 +1,11 @@
-import { Changes, EntityChanges } from "./changes";
-import { Entity } from "./Entity";
-import { getEmInternalApi } from "./EntityManager";
-import { getField } from "./fields";
-import { ReactiveHint } from "./reactiveHints";
-import { isAsyncReactiveField, isLoadedReference, ManyToOneReferenceImpl } from "./relations";
-import { FieldsOf } from "./typeMap";
-import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
+import { type Changes, type EntityChanges } from "src/changes.ts";
+import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { getField } from "src/fields.ts";
+import type { ReactiveHint } from "src/reactivity/reactiveHints.ts";
+import { type ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "src/relations/index.ts";
+import { type FieldsOf } from "src/typeMap.ts";
+import { type MaybePromise, groupBy, maybePromiseThen } from "src/utils.ts";
 
 export enum ValidationCode {
   required = "required",
@@ -92,12 +92,25 @@ function ruleWithOpts<T extends Entity>(
 }
 
 /**
+ * The fields of `F` that have their own column, i.e. what a required rule can check.
+ *
+ * The filter is an allow-list ("keep kinds primitive/enum/m2o/poly"), not a deny-list ("drop kind
+ * o2o"), because of how it degrades when `T` is generic/uninferred: `FieldsOf<T>` is then `never`,
+ * and `never extends X` is true for any `X`, so an allow-list keeps every key (permissive, exactly
+ * like the unfiltered `keyof FieldsOf<T>` before it) while a deny-list would drop every key and
+ * break valid calls like `newRequiredRule("city")`.
+ */
+type ColumnBackedFields<F> = {
+  [K in keyof F as F[K] extends { kind: "primitive" | "enum" | "m2o" | "poly" } ? K : never]: F[K];
+};
+
+/**
  * Creates a validation rule for required fields.
  *
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
 export function newRequiredRule<T extends Entity>(
-  key: keyof FieldsOf<T> & string,
+  key: keyof ColumnBackedFields<FieldsOf<T>> & string,
   opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
   return ruleWithOpts(opts, (entity) => {
@@ -111,6 +124,25 @@ export function newRequiredRule<T extends Entity>(
           `AsyncReactiveField ${entity.constructor.name}.${key} must have a default value, either in the database or with config.setDefault (see the 4th step in https://joist-orm.io/modeling/reactive-fields/#async-reactive-fields.`,
         );
       }
+      return { field: key, code: ValidationCode.required, message: `${key} is required` };
+    }
+  });
+}
+
+/**
+ * Like `newRequiredRule`, but for `lazy` columns (i.e. codegen only wires this up for `lazy` fields).
+ *
+ * On an already-persisted entity that hasn't loaded the column, we skip the check rather than force-load
+ * (or falsely fail) a value that was required when the row was last saved. It still fires on create and
+ * when the field is explicitly loaded-then-unset.
+ */
+export function newRequiredLazyFieldRule<T extends Entity>(
+  key: keyof FieldsOf<T> & string,
+  opts: ValidationRuleOpts<T> = {},
+): ValidationRule<T> {
+  return ruleWithOpts(opts, (entity) => {
+    if (!entity.isNewEntity && !(entity as any)[key].isLoaded) return;
+    if (getField(entity, key) === undefined) {
       return { field: key, code: ValidationCode.required, message: `${key} is required` };
     }
   });

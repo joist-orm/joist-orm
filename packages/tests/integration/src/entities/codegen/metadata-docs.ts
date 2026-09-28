@@ -4,6 +4,8 @@ export const docs = {
     comment:
       "The Author entity represents a writer who can publish books.\n\nAuthors can have mentors (other authors) forming a recursive tree.",
     fields: {
+      firstName: "The author's first name.",
+      publisher: "The publisher this author writes for.",
       numberOfBooks: "Example of a derived async property that can be calculated via a populate hint.",
       mentorNames: "Example of a ReactiveField that uses a recursive parent relation.",
       menteeNames: "Example of a ReactiveField that uses a recursive child relation.",
@@ -25,6 +27,7 @@ export const docs = {
       hasBooks: "Example of an async boolean that can be navigated via a lens.",
       reviews: "All reviews across all of this author's books.",
       imageFileName: "Example of a ReactiveField that watches through an o2o relation.",
+      nameWithMentor: "Example of a Property that recursively loads the same property from its mentor.",
     },
     operations: undefined,
   },
@@ -103,6 +106,11 @@ export const docs = {
   TaskOld: {
     comment: "",
     fields: { commentParentInfo: "For testing reacting to poly CommentParent properties." },
+    operations: undefined,
+  },
+  TaskThird: {
+    comment: "A third subtype, so `stiType` arrays can cover some subtypes but not all of them.",
+    fields: {},
     operations: undefined,
   },
 } as const;

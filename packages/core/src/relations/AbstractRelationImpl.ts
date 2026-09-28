@@ -1,5 +1,4 @@
-import { getBaseAndSelfMetas, getMetadata } from "../EntityMetadata";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
 
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.
@@ -48,10 +47,4 @@ export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T>
   abstract maybeCascadeDelete(): void;
 
   abstract get fieldName(): string;
-}
-
-export function isCascadeDelete(relation: AbstractRelationImpl<any, any>, fieldName: string): boolean {
-  return getBaseAndSelfMetas(getMetadata(relation.entity)).some((meta) =>
-    meta.config.__data.cascadeDeleteFields.includes(fieldName as any),
-  );
 }

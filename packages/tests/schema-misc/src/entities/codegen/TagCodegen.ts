@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasManyToMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -59,6 +60,11 @@ export interface TagFields {
   authors: { kind: "m2m"; type: Author };
   books: { kind: "m2m"; type: Book };
   databaseOwners: { kind: "m2m"; type: DatabaseOwner };
+}
+
+export interface TagColumns {
+  id: { fieldName: "id"; type: IdOf<Tag>; entity: Tag; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
 }
 
 export interface TagOpts {
@@ -123,6 +129,9 @@ declare module "joist-core" {
       orderType: TagOrder;
       optsType: TagOpts;
       fieldsType: TagFields;
+      columnsType: TagColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: TagIdsOpts;
       factoryExtrasType: TagFactoryExtras;
       factoryOptsType: Parameters<typeof newTag>[1];

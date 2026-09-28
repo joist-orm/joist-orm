@@ -1,22 +1,28 @@
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
 import {
+  type Entity,
+  type EntityMetadata,
+  type ManyToManyField,
+  type ReadOnlyCollection,
   ensureNotDeleted,
-  Entity,
-  EntityMetadata,
   fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
   isLoaded,
-  ManyToManyField,
-  ReadOnlyCollection,
-} from "..";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import {
+  type MaybeReactedEntity,
+  type Reacted,
+  type ReactiveHint,
+  convertToLoadHint,
+} from "src/reactivity/reactiveHints.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 /**
  * A reactive, derived many-to-many collection.
@@ -65,7 +71,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   ) {
     super(entity);
     this.#field = field;
-    getInstanceData(entity).relations[this.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[this.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {

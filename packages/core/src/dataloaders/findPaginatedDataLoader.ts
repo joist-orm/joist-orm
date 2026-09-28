@@ -1,12 +1,3 @@
-import { Entity } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
-import { buildHintTree } from "../HintTree";
-import { LoadHint } from "../loadHints";
-import { hintKey } from "../normalizeHints";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { buildUnnestCte } from "../unnest";
 import {
   collectAndReplaceArgs,
   collectValues,
@@ -15,7 +6,17 @@ import {
   findOperation,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader";
+} from "src/dataloaders/findDataLoader.ts";
+import type { Entity } from "src/Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import { buildHintTree } from "src/loading/HintTree.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { hintKey } from "src/normalizeHints.ts";
+import type { FilterAndSettings } from "src/queries/find/EntityFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty } from "src/queries/find/QueryVisitor.ts";
+import { buildUnnestCte } from "src/queries/unnest.ts";
 
 interface PreparedPaginatedFindEntry<T extends Entity> {
   filter: FilterAndSettings<T>;
@@ -37,6 +38,8 @@ export function findPaginatedDataLoader<T extends Entity>(
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
   const { findSettings } = em["prepareFind"](meta, findOperation, query, { ...opts, limit, offset, checkLimit: false });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve([]);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = {

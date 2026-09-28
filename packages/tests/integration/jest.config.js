@@ -1,7 +1,6 @@
 module.exports = {
   transform: { "^.+\\.tsx?$": "@swc/jest" },
   moduleNameMapper: {
-    "^@src/(.*)": "<rootDir>/src/$1",
     "^src/(.*)": "<rootDir>/src/$1",
   },
   globalSetup: "<rootDir>/src/setupTestEnv.ts",
@@ -16,7 +15,7 @@ module.exports = {
       "jest-junit",
       {
         outputDirectory: "../../../artifacts",
-        outputName: `junit-tests-integration-${process.env.PLUGINS ?? "stock"}.xml`,
+        outputName: `junit-tests-integration-${process.env.TEST_VARIANT ?? "stock"}.xml`,
         usePathForSuiteName: "true",
       },
     ],

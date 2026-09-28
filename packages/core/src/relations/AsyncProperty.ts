@@ -1,7 +1,8 @@
-import { Entity } from "../Entity";
-import { lazyField } from "../newEntity";
-import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { Property, PropertyT } from "./hasProperty";
+import { type Entity } from "src/Entity.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
+import { type LoadedProperty, type Property } from "src/relations/hasProperty.ts";
+import { PropertyT } from "src/relations/PropertySymbols.ts";
 
 export interface AsyncProperty<T extends Entity, V> extends Property<T, V> {
   load(opts?: { forceReload?: boolean }): Promise<V>;
@@ -16,18 +17,13 @@ export interface AsyncProperty<T extends Entity, V> extends Property<T, V> {
  * - For new (un-flushed) entities, `load` throws because the entity has no id yet.
  * - The result is cached until the next `em.flush`.
  */
-export function hasAsyncProperty<T extends Entity, V>(
-  fn: (entity: T) => Promise<V>,
-): Property<T, V> {
+export function hasAsyncProperty<T extends Entity, V>(fn: (entity: T) => Promise<V>): Property<T, V> {
   return lazyField((entity: T) => {
     return new AsyncPropertyImpl(entity, fn);
   });
 }
 
-export class AsyncPropertyImpl<T extends Entity, V>
-  extends AbstractPropertyImpl<T>
-  implements AsyncProperty<T, V>
-{
+export class AsyncPropertyImpl<T extends Entity, V> extends AbstractPropertyImpl<T> implements AsyncProperty<T, V> {
   #loadPromise: Promise<V> | undefined;
   #loaded = false;
   #value: V | undefined;
@@ -86,6 +82,6 @@ export function isAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> {
 }
 
 /** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> {
+export function isLoadedAsyncProperty(maybe: any): maybe is AsyncProperty<any, any> & LoadedProperty<any, any> {
   return isAsyncProperty(maybe) && maybe.isLoaded;
 }

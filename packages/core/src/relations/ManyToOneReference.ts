@@ -1,13 +1,13 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
-import { getField, setField } from "../fields";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
+import { type EntityMetadata, type ManyToOneField, getMetadata } from "src/EntityMetadata.ts";
+import { getField, setField } from "src/fields.ts";
 import {
   BaseEntity,
   NoIdError,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
-  Reference,
+  type Reference,
   deTagId,
   ensureNotDeleted,
   ensureTagged,
@@ -16,13 +16,14 @@ import {
   maybeResolveReferenceToId,
   toIdOf,
   toTaggedId,
-} from "../index";
-import { lazyField } from "../newEntity";
-import { maybeAdd, maybeRemove } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { OneToManyCollection } from "./OneToManyCollection";
-import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { maybeAdd, maybeRemove } from "src/utils.ts";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {
@@ -250,8 +251,15 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
-      if (current !== undefined && typeof current !== "string") {
-        this.entity.em.delete(current as U);
+      if (current !== undefined) {
+        if (typeof current === "string") {
+          // We're invoked twice, once sync on em.delete, and again in em.flush when we're loaded;
+          // but even when loaded, current might still be the tagged id, but we can find the entity in the EM
+          const other = this.entity.em.getEntity(current);
+          if (other) this.entity.em.delete(other as U);
+        } else {
+          this.entity.em.delete(current as U);
+        }
       }
     }
   }

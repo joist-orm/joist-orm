@@ -9,7 +9,13 @@ export function up(b: MigrationBuilder): void {
   //          ParentGroup <-- ParentItem
   //                |              |
   //  Child <-  ChildGroup  <-- ChildItem
-  createEntityTable(b, "parent_groups", { name: "text" });
+  createEntityTable(b, "parent_groups", {
+    name: "text",
+    // for testing `lazy: true` columns that are excluded from the default SELECT
+    bulk_data: { type: "jsonb", notNull: false },
+    // for testing a required (notNull) `lazy: true` column
+    required_data: { type: "jsonb", notNull: true },
+  });
   createEntityTable(b, "parent_items", {
     name: "text",
     parent_group_id: foreignKey("parent_groups", { notNull: true }),

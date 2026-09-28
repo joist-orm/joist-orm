@@ -1,6 +1,6 @@
-import { Entity } from "../Entity";
-import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { lazyField } from "../newEntity";
+import { type Entity } from "src/Entity.ts";
+import { type LoadHint, type Loaded, isLoaded } from "src/loading/loadHints.ts";
+import { lazyField } from "src/newEntity.ts";
 
 const AsyncMethodM = Symbol();
 export const AsyncMethodPopulateSecret = Symbol();

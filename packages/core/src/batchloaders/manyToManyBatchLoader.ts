@@ -1,8 +1,8 @@
-import { Entity } from "../Entity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { keyToNumber, ManyToManyLike, ParsedFindQuery } from "../index";
-import { abbreviation, getOrSet } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { type ManyToManyLike, type ParsedFindQuery, keyToNumber } from "src/index.ts";
+import { abbreviation, getOrSet } from "src/utils.ts";
 
 export const manyToManyLoadOperation = "m2m-load";
 

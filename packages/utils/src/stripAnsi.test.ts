@@ -1,4 +1,4 @@
-import { stripAnsi } from "./stripAnsi";
+import { stripAnsi } from "./stripAnsi.ts";
 
 describe("stripAnsi", () => {
   it("removes ANSI color codes", () => {

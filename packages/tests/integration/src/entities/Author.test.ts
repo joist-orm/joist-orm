@@ -1,3 +1,7 @@
+import { loadPgMetadata } from "joist-codegen/pgMetadata";
+import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
+import { newPgConnectionConfig } from "joist-utils";
+import { Client } from "pg";
 import {
   insertAuthor,
   insertBook,
@@ -5,12 +9,10 @@ import {
   insertComment,
   insertPublisher,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
-import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
-import { newPgConnectionConfig } from "joist-utils";
-import pgStructure from "pg-structure";
+} from "src/entities/inserts";
 import { jan1, jan2 } from "src/testDates";
+import { newEntityManager } from "src/testEm";
+
 import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
 import { makeApiCall } from "../setupDbTests";
 import { zeroTo } from "../utils";
@@ -484,17 +486,19 @@ describe("Author", () => {
   });
 
   it("has an index on the publisher_id foreign key", async () => {
-    // Ensures createEntityTable automatically creates indexes for foreign keys.
-    const pgConfig = newPgConnectionConfig();
-    const db = await pgStructure(pgConfig);
-    const t = db.tables.find((t) => t.name === "authors")!;
+    // Given the public Authors table also has an archived table with the same name
+    const db = await loadSchema();
+
+    // When inspecting the public Authors table's publisher index
+    const t = db.tables.find((t) => t.name === "authors" && t.schema.name === "public")!;
     const i = t.indexes.find((i) => i.name === "authors_publisher_id_index")!;
+
+    // Then createEntityTable has indexed the publisher foreign key
     expect(i).toBeDefined();
   });
 
   it("creates a unique composite index for m2m authors_to_tags", async () => {
-    const pgConfig = newPgConnectionConfig();
-    const db = await pgStructure(pgConfig);
+    const db = await loadSchema();
     const t = db.tables.find((t) => t.name === "authors_to_tags")!;
     const i = t.indexes.find((i) => i.name === "authors_to_tags_author_id_tag_id_unique_index")!;
     expect(i).toBeDefined();
@@ -503,8 +507,7 @@ describe("Author", () => {
   });
 
   it("creates an index for the second column of an m2m relationship", async () => {
-    const pgConfig = newPgConnectionConfig();
-    const db = await pgStructure(pgConfig);
+    const db = await loadSchema();
     const t = db.tables.find((t) => t.name === "authors_to_tags")!;
     const i = t.indexes.find((i) => i.name === "authors_to_tags_tag_id_index")!;
     expect(i).toBeDefined();
@@ -691,4 +694,41 @@ describe("Author", () => {
     const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22]) } });
     expect(authors.length).toBe(1);
   });
+
+  it("introspects Authors with a trigger function in another schema", async () => {
+    // Given Authors has a trigger whose function lives outside the public schema
+    const client = new Client(newPgConnectionConfig());
+    await client.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("CREATE SCHEMA joist_audit_test");
+      await client.query(`CREATE FUNCTION joist_audit_test.on_author_change() RETURNS trigger
+        LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END'`);
+      await client.query(`CREATE TRIGGER author_audit_test BEFORE INSERT ON public.authors
+        FOR EACH ROW EXECUTE FUNCTION joist_audit_test.on_author_change()`);
+
+      // When codegen introspects the schema
+      const db = await loadPgMetadata(client);
+
+      // Then the Authors columns and relations are still available
+      expect(
+        db.tables.find((table) => table.name === "authors" && table.schema.name === "public")?.columns.get("id")
+          .isPrimaryKey,
+      ).toBe(true);
+    } finally {
+      await client.query("ROLLBACK");
+      await client.end();
+    }
+  });
 });
+
+/** Introspects the real integration schema with the same catalog reader as codegen. */
+async function loadSchema() {
+  const client = new Client(newPgConnectionConfig());
+  await client.connect();
+  try {
+    return await loadPgMetadata(client);
+  } finally {
+    await client.end();
+  }
+}

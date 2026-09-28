@@ -1,7 +1,9 @@
+import { readFileSync } from "fs";
+
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { readFileSync } from "fs";
-import { Fs, sortKeys } from "./utils";
+
+import { type Fs, sortKeys } from "./utils.ts";
 
 /** A map from GraphQL object type name -> its field names that have already been scaffolded. */
 export type History = Record<string, string[]>;

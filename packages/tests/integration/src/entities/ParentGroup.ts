@@ -1,6 +1,4 @@
-import { ParentGroupCodegen } from "./entities";
-
-import { parentGroupConfig as config } from "./entities";
+import { ParentGroupCodegen, parentGroupConfig as config } from "./entities";
 
 export class ParentGroup extends ParentGroupCodegen {
   public transientFields = {

@@ -1,0 +1,4273 @@
+import {
+  EntityFilter,
+  ExpressionFilter,
+  NotFoundError,
+  TooManyError,
+  UniqueFilter,
+  alias,
+  aliases,
+  getAliasMetadata,
+  getMetadata,
+  optimizeCollectionJoins,
+  parseFindQuery,
+} from "joist-orm";
+import {
+  Author,
+  AuthorFilter,
+  AuthorGraphQLFilter,
+  AuthorOrder,
+  Book,
+  BookFilter,
+  BookReview,
+  Color,
+  Comment,
+  CommentFilter,
+  Critic,
+  CriticFilter,
+  FavoriteShape,
+  Image,
+  ImageType,
+  Publisher,
+  PublisherFilter,
+  PublisherId,
+  PublisherSize,
+  SmallPublisher,
+  SmallPublisherGroup,
+  Tag,
+  Task,
+  TaskFilter,
+  TaskItem,
+  TaskItemFilter,
+  User,
+  UserFilter,
+  newAuthor,
+  newBook,
+  newTag,
+} from "src/entities";
+import {
+  insertAuthor,
+  insertAuthorToTag,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertCritic,
+  insertImage,
+  insertLargePublisher,
+  insertPublisher,
+  insertSmallPublisher,
+  insertSmallPublisherGroup,
+  insertTag,
+  insertUser,
+  update,
+} from "src/entities/inserts";
+import { PasswordValue } from "src/entities/types";
+import { jan1, jan2, jan3 } from "src/testDates";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import { twoOf } from "src/utils";
+
+const am = getMetadata(Author);
+const bm = getMetadata(Book);
+const pm = getMetadata(Publisher);
+const cm = getMetadata(Comment);
+const um = getMetadata(User);
+const tm = getMetadata(Task);
+const criticMeta = getMetadata(Critic);
+const taskItemMeta = getMetadata(TaskItem);
+const opts = { softDeletes: "include" } as const;
+
+function parseAndOptimizeFindQuery(...args: Parameters<typeof parseFindQuery>): ReturnType<typeof parseFindQuery> {
+  const query = parseFindQuery(...args);
+  optimizeCollectionJoins(query, args[2]);
+  return query;
+}
+
+describe("em.find", () => {
+  it("can find all", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = {} satisfies AuthorFilter;
+    const authors = await em.find(Author, where, opts);
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by simple varchar", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { firstName: "a2" } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by simple varchar is null", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "last_name" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: null } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "last_name", dbType: "character varying", cond: { kind: "is-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("cannot find by simple varchar is undefined", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "last_name" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: undefined } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by simple varchar not null", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: { ne: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "last_name", dbType: "character varying", cond: { kind: "not-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by simple varchar not undefined", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: { ne: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by varchar through join", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertBook({ title: "b3", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { author: { firstName: "a2" } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(2);
+    expect(books[0].title).toEqual("b2");
+    expect(books[1].title).toEqual("b3");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
+        ],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by varchar through two joins", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { author: { publisher: { name: "p2" } } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "p", column: "name", dbType: "character varying", cond: { kind: "eq", value: "p2" } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by foreign key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const a2 = await em.load(Author, "a:2");
+    // This is different from the next test case b/c Publisher does not currently have any References
+    const where = { author: a2 } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [{ alias: "b", table: "books", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "author_id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by foreign key is null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: null } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "is-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is true means not null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisher: true } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+  });
+
+  it("can find by foreign key is false means is null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisher: false } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
+  it("can find by foreign key id is undefined is ignored", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: undefined } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is new entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "a1" }),
+    });
+    const where = { publisher } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is not null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { ne: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "not-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is not undefined is ignored", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { ne: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is flavor", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: publisherId } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key id in list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: { in: [publisherId] } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [1] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by NULL value on IN list", async () => {
+    await insertAuthor({ id: 2, first_name: "a1", age: null });
+    await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+
+    const em = newEntityManager();
+    const where = { age: { in: [20, null] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } },
+          { kind: "column", alias: "a", column: "age", dbType: "int", cond: { kind: "in", value: [20] } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by NULL value on complex condition IN list", async () => {
+    await insertAuthor({ id: 2, first_name: "a1", age: null });
+    await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+
+    const em = newEntityManager();
+    // const authors = await em.find(Author, where);
+    const a = alias(Author);
+    const authors = await em.find(Author, { as: a }, { conditions: { and: [a.age.in([20, null])] } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+  });
+
+  it("can find by foreign key id in empty list of polys", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertComment({ text: "comment", parent_author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { text: "comment", parent: [] } satisfies CommentFilter;
+    // `parent: []` means "parent is in the empty set", i.e. it should match nothing, just like
+    // a non-poly m2o `{ publisher: [] }` does, instead of being pruned and matching everything.
+    const comments = await em.find(Comment, where);
+    expect(comments.length).toEqual(0);
+
+    expect(parseFindQuery(cm, where, opts)).toMatchObject({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "and",
+        // The empty `parent` becomes a single always-false `in: []` condition
+        conditions: [
+          { alias: "c", column: "text", dbType: "text", cond: { kind: "eq", value: "comment" } },
+          { alias: "c", column: "parent_author_id", dbType: "int", cond: { kind: "in", value: [] } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key id in undefined list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { in: undefined } } } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key id in empty list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { in: [] } } } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
+      },
+    });
+  });
+
+  it("can find by foreign key in empty list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    // `publisher: []` means "publisher is in the empty set", i.e. it matches nothing (not "any publisher")
+    const where = { publisher: [] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
+      },
+    });
+  });
+
+  it("can find by foreign key id nin list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ id: 2, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: { nin: [publisherId] } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "nin", value: [1] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key id nin list that is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ id: 2, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { nin: undefined } } } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is flavor list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: [publisherId] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [1] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is entity list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisher = await em.load(Publisher, "p:1");
+    const where = { publisher: [publisher] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [1] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is entity list that is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: undefined } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key with a m2o reference", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    const where = { publisher: a1.publisher } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can find by foreign key is tagged flavor", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "p:1";
+    const where = { publisher: publisherId } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("fails find by foreign key is invalid tagged id", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "a:1";
+    const where = { publisher: publisherId } satisfies AuthorFilter;
+    await expect(em.find(Author, where)).rejects.toThrow("Invalid tagged id, expected tag p, got a:1");
+
+    expect(() => parseFindQuery(am, where)).toThrow("Invalid tagged id");
+  });
+
+  it("can find by foreign key is not flavor", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    // Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
+    const where = { publisher: { ne: publisherId } } satisfies AuthorFilter;
+    const authors = await em.find(Author, { publisher: { ne: publisherId } });
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "ne", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find books by publisher", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const publisher = await em.load(Publisher, "2");
+    const where = { author: { publisher } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find through a o2o entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertImage({ book_id: 1, file_name: "1", type_id: 1 });
+    await insertImage({ book_id: 2, file_name: "2", type_id: 1 });
+
+    const em = newEntityManager();
+    const image = await em.load(Image, "2");
+    const where = { image } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "i", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: [
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "b", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can find through a o2o filter", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertImage({ book_id: 1, file_name: "1", type_id: 1 });
+    await insertImage({ author_id: 2, file_name: "2", type_id: 2 });
+
+    const em = newEntityManager();
+    const where = { image: { type: ImageType.BookImage } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b1");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "i", column: "type_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "b", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can find by foreign key using only an id", async () => {
+    await insertAuthor({ id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
+
+    const em = newEntityManager();
+    const where = { author: { id: "4" } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [{ alias: "b", table: "books", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "author_id", dbType: "int", cond: { kind: "eq", value: 4 } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by foreign key using only a tagged id", async () => {
+    await insertAuthor({ id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
+
+    const em = newEntityManager();
+    const where = { author: { id: "a:4" } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [{ alias: "b", table: "books", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "author_id", dbType: "int", cond: { kind: "eq", value: 4 } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by foreign key using a tagged id list", async () => {
+    await insertAuthor({ id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
+
+    const em = newEntityManager();
+    const where = { author: { id: ["a:4"] } } satisfies BookFilter;
+    const books = await em.find(Book, where);
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
+      selects: [`b.*`],
+      tables: [{ alias: "b", table: "books", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "author_id", dbType: "int", cond: { kind: "in", value: [4] } }],
+      },
+      orderBys: expect.anything(),
+    });
+  });
+
+  it("can find by ids", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+
+    const em = newEntityManager();
+    const where = { id: ["1", "2"] } satisfies PublisherFilter;
+    const pubs = await em.find(Publisher, where);
+    expect(pubs.length).toEqual(2);
+
+    expect(parseFindQuery(pm, where)).toMatchObject({
+      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.stringContaining("shared_column"), expect.anything()],
+      tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "p", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+          { alias: "p", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by tagged ids", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+
+    const em = newEntityManager();
+    const where = { id: ["p:1", "p:2"] } satisfies PublisherFilter;
+    const pubs = await em.find(Publisher, where, opts);
+    expect(pubs.length).toEqual(2);
+
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
+      tables: [
+        { alias: "p", table: "publishers", join: "primary" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "p", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by ids with in clause", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+
+    const em = newEntityManager();
+    const where = { id: { in: ["1", "2"] } } satisfies PublisherFilter;
+    const pubs = await em.find(Publisher, where, opts);
+    expect(pubs.length).toEqual(2);
+
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
+      tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "p", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by enums", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
+
+    const em = newEntityManager();
+    const where = { size: PublisherSize.Large } satisfies PublisherFilter;
+    const pubs = await em.find(Publisher, where, opts);
+    expect(pubs.length).toEqual(1);
+    expect(pubs[0].name).toEqual("p2");
+
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
+      tables: [
+        { alias: "p", table: "publishers", join: "primary" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "p", column: "size_id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by not equal enum", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
+
+    const em = newEntityManager();
+    const where = { size: { ne: PublisherSize.Large } } satisfies PublisherFilter;
+    const pubs = await em.find(Publisher, where);
+    expect(pubs.length).toEqual(1);
+    expect(pubs[0].name).toEqual("p1");
+
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
+      tables: [
+        { alias: "p", table: "publishers", join: "primary" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "p", column: "size_id", dbType: "int", cond: { kind: "ne", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by simple integer", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: 2 } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by integer with eq", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { eq: 2 } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by integer with in", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { in: [1, 2] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "in", value: [1, 2] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by integer with null", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { age: { eq: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: { op: "and", conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } }] },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by integer with non-op null", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { age: null, firstName: undefined };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: { op: "and", conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } }] },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by greater than", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { gt: 1 } };
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by greater than or equal to", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { gte: 2 } };
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "gte", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by between", async () => {
+    await insertAuthor({ first_name: "a1", age: 50 });
+
+    const em = newEntityManager();
+    const where = { age: { between: [40, 60] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "between", value: [40, 60] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by less than", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { lt: 2 } };
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "lt", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by less than or equal to", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { lte: 1 } };
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "lte", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by less than or equal to and greater than or equal to simultaneously", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    await insertAuthor({ first_name: "a3", age: 3 });
+    await insertAuthor({ first_name: "a4", age: 4 });
+
+    const em = newEntityManager();
+    const where = { age: { gte: 2, lte: 3 } };
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a3");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "between", value: [2, 3] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by greater than and lesser than", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { gt: 0, lt: 3 } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 0 } },
+          { alias: "a", column: "age", dbType: "int", cond: { kind: "lt", value: 3 } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by not equal", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { ne: 1 } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "ne", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by date", async () => {
+    await insertAuthor({ first_name: "a1", graduated: jan1 });
+    await insertAuthor({ first_name: "a2", graduated: jan2 });
+
+    const em = newEntityManager();
+    const where = { graduated: jan2 } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "graduated", dbType: "date", cond: { kind: "eq", value: jan2.toISOString() } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by like", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { like: "a%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "like", value: "a%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nlike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nlike: "a%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nlike", value: "a%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by ilike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { ilike: "A%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "A%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("prunes ilike filters with false values", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const firstName: string | null | undefined = undefined;
+    const where = { firstName: { ilike: firstName && `${firstName}%` } } as AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nilike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nilike: "A%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nilike", value: "A%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by regex", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { regex: "a[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "regex", value: "a[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by iregex", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { iregex: "A[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "iregex", value: "A[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nregex", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nregex: "a[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nregex", value: "a[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by niregex", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { niregex: "A[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "niregex", value: "A[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by search", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "2a2" });
+    await insertAuthor({ first_name: "b" });
+
+    const em = newEntityManager();
+    const where = { firstName: { search: "A" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%A%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by like and join with not equal enum", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
+    await insertAuthor({ first_name: "a", publisher_id: 1 });
+    await insertAuthor({ first_name: "a", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const where = {
+      firstName: "a",
+      publisher: {
+        size: { ne: PublisherSize.Large },
+      },
+    } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
+          { alias: "p", column: "size_id", dbType: "int", cond: { kind: "ne", value: 2 } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by one", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    const em = newEntityManager();
+    const publisher = await em.findOne(Publisher, { name: "p2" });
+    expect(publisher).toBeUndefined();
+  });
+
+  it("does not find an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const authors = await em.find(Author, { firstName: "a1" });
+
+    expect(authors).toEqual([]);
+  });
+
+  it("does not find a paginated entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const orderBy = { firstName: "ASC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { limit: 2, orderBy });
+
+    expect(authors.map((author) => author.firstName)).toEqual(["a2"]);
+  });
+
+  it("does not findOne an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findOne(Author, { firstName: "a1" });
+
+    expect(foundAuthor).toBeUndefined();
+  });
+
+  it("can find by one or fail", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
+    const em = newEntityManager();
+    const publisher = await em.findOneOrFail(Publisher, { name: "p2" });
+    expect(publisher.name).toEqual("p2");
+  });
+
+  it("can find by one when not found", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
+    const em = newEntityManager();
+    await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow(NotFoundError);
+    await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow("Did not find Publisher for given query");
+  });
+
+  it("can find by one when too many found", async () => {
+    await insertPublisher({ name: "p", size_id: 1 });
+    await insertPublisher({ id: 2, name: "p", size_id: 2 });
+    const em = newEntityManager();
+    await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(TooManyError);
+    await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
+      "Found more than one: SmallPublisher:1, SmallPublisher:2",
+    );
+  });
+
+  it("can order by string asc", async () => {
+    await insertAuthor({ first_name: "a2" });
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+
+    const orderBy = { firstName: "ASC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [
+        { alias: "a", column: "first_name", order: "ASC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can order by string desc", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const orderBy = { firstName: "DESC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [
+        { alias: "a", column: "first_name", order: "DESC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can prune order by undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const orderBy = { firstName: undefined } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    });
+  });
+
+  it("can order by multiple m2os", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const orderBy = { currentDraftBook: { title: "ASC" }, publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+      ],
+      orderBys: [
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "p", column: "name", order: "ASC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can order by multiple m2os as an array", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const orderBy1 = { currentDraftBook: { title: "ASC" } } satisfies AuthorOrder;
+    const orderBy2 = { publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy: [orderBy2, orderBy1] });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy: [orderBy2, orderBy1] })).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
+      ],
+      orderBys: [
+        { alias: "p", column: "name", order: "ASC" },
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can order by joined string asc", async () => {
+    await insertPublisher({ name: "pB" });
+    await insertPublisher({ id: 2, name: "pA" });
+    await insertAuthor({ first_name: "aB", publisher_id: 1 });
+    await insertAuthor({ first_name: "aA", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const orderBy = { publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("aA");
+    expect(authors[1].firstName).toEqual("aB");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+      ],
+      orderBys: [
+        { alias: "p", column: "name", order: "ASC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
+  it("can find empty results in a loop", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    resetQueryCount();
+    await Promise.all(
+      ["a", "b"].map(async (lastName) => {
+        const authors = await em.find(Author, { lastName });
+        expect(authors.length).toEqual(0);
+      }),
+    );
+    expect(numberOfQueries).toEqual(1);
+  });
+
+  it("can find with GQL filters", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const gqlFilter: GraphQLAuthorFilter = {
+      age: { eq: 2 },
+    };
+    const authors = await em.findGql(Author, gqlFilter);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can findGql by foreign key is not null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const gqlFilter = { publisher: { ne: null } } as GraphQLAuthorFilter;
+    const authors = await em.findGql(Author, gqlFilter);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "not-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find with GQL filters but still use hash declaration", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const age = 2;
+    // The { age } syntax still works i.e. for massaging arguments to findGql in TS
+    const authors = await em.findGql(Author, { age });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find with GQL filters on booleans", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: false });
+    await insertAuthor({ first_name: "a2", is_popular: true });
+    const em = newEntityManager();
+    const gqlFilter: GraphQLAuthorFilter = {
+      isPopular: true,
+    };
+    const authors = await em.findGql(Author, gqlFilter);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find with GQL filters with enums", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    const em = newEntityManager();
+    const gqlFilter: GraphQLPublisherFilter = { size: [PublisherSize.Small] };
+    const publishers = await em.find(Publisher, gqlFilter);
+    expect(publishers.length).toEqual(1);
+  });
+
+  it("can find with GQL by greater than with op/value", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const gqlFilter = { age: { op: "gt", value: 1 } } satisfies AuthorGraphQLFilter;
+    const authors = await em.findGql(Author, gqlFilter);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find with GQL filters with offset/limit", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const gqlFilter: GraphQLAuthorFilter = { age: { gt: 0 } };
+    // Use a typical GQL input type with optional keys + nulls
+    type GqlPage = { offset?: number | null; limit?: number | null };
+    const page: GqlPage = { offset: 1, limit: 1 };
+    const authors = await em.findGql(Author, gqlFilter, page);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can offset/limit", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertPublisher({ id: 3, name: "p3" });
+    await insertPublisher({ id: 4, name: "p4" });
+    const em = newEntityManager();
+    const p23 = await em.find(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
+    expect(p23.length).toEqual(2);
+    expect(p23[0].name).toEqual("p2");
+    expect(p23[1].name).toEqual("p3");
+
+    const p43 = await em.find(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
+    expect(p43.length).toEqual(2);
+    expect(p43[0].name).toEqual("p2");
+    expect(p43[1].name).toEqual("p1");
+  });
+
+  it("can offset/limit with undefined", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const authors = await em.findGql(Author, {}, { offset: undefined, limit: undefined });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("cannot find too many entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertAuthor({ first_name: "a3" });
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 entityLimit rows");
+  });
+
+  it("can find in an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: [Color.Red] });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find equal an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [1] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { eq: [Color.Red] } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find neq an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [1] });
+    await insertAuthor({ first_name: "a3", favorite_colors: [] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { ne: [Color.Red] } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a3");
+  });
+
+  it("can find contains an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2, 3] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { contains: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find overlaps an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2, 3] });
+    const em = newEntityManager();
+    // Look for 1 (Red) & 2 (Green)
+    const authors = await em.find(Author, { favoriteColors: { overlaps: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can find containedBy an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { containedBy: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can find overlaps with GQL filter", async () => {
+    const em = newEntityManager();
+    const colors: Color[] | undefined | null = [Color.Red, Color.Green];
+    await em.findGql(Publisher, { authors: { favoriteColors: { overlaps: colors } } });
+  });
+
+  it("can find through a polymorphic reference by id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const where = { parent: "b:1" } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through a polymorphic component by id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const where = { parentBook: { title: "t" } } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [
+        { alias: "c", table: "comments", join: "primary" },
+        { alias: "b", table: "books", join: "outer", col1: "c.parent_book_id", col2: "b.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "t" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through a polymorphic reference by entity", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const where = { parent: book } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through a null polymorphic reference", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertUser({ name: "u1", favorite_publisher_small_id: 1 });
+    await insertUser({ name: "u2" });
+
+    const em = newEntityManager();
+    const where = { favoritePublisher: null } satisfies UserFilter;
+    const users = await em.find(User, where);
+    const [user] = users;
+    expect(users.length).toEqual(1);
+    expect(user.name).toEqual("u2");
+
+    expect(parseFindQuery(um, where)).toMatchObject({
+      selects: [`u.*`, `u_s0.*`, `u.id as id`, expect.stringContaining("CASE")],
+      tables: [{ alias: "u", table: "users", join: "primary" }, { alias: "u_s0" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "u", column: "favorite_publisher_large_id", dbType: "int", cond: { kind: "is-null" } },
+          { alias: "u", column: "favorite_publisher_small_id", dbType: "int", cond: { kind: "is-null" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through polymorphic reference by array of ids/entities", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2", parent_book_review_id: 1 });
+    await insertComment({ text: "t3" });
+
+    const em = newEntityManager();
+    const where = { parent: ["b:1", "br:1"] } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [c1, c2] = comments;
+    expect(comments.length).toEqual(2);
+    expect(c1.text).toEqual("t1");
+    expect(c2.text).toEqual("t2");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "or",
+        conditions: [
+          { alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "in", value: [1] } },
+          { alias: "c", column: "parent_book_review_id", dbType: "int", cond: { kind: "in", value: [1] } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through polymorphic reference by not id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2", parent_book_id: 2 });
+
+    const em = newEntityManager();
+    const where = { parent: { ne: "b:1" } } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t2");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "ne", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through polymorphic reference by not null", async () => {
+    await insertPublisher({ id: 1, name: "lp" });
+    await insertLargePublisher({ id: 2, name: "lp" });
+    await insertUser({ id: 1, name: "u1", favorite_publisher_small_id: 1 });
+    await insertUser({ id: 2, name: "u2", favorite_publisher_large_id: 2 });
+    await insertUser({ id: 3, name: "u3" });
+
+    const em = newEntityManager();
+    const where = { favoritePublisher: { ne: null } } satisfies UserFilter;
+    const users = await em.find(User, where);
+    expect(users.length).toEqual(2);
+
+    expect(parseFindQuery(um, where)).toMatchObject({
+      selects: [`u.*`, "u_s0.*", "u.id as id", expect.anything()],
+      tables: [
+        { alias: "u", table: "users", join: "primary" },
+        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
+      ],
+      condition: {
+        op: "or",
+        conditions: [
+          { alias: "u", column: "favorite_publisher_large_id", dbType: "int", cond: { kind: "not-null" } },
+          { alias: "u", column: "favorite_publisher_small_id", dbType: "int", cond: { kind: "not-null" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m to a polymorphic reference", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2", parent_book_id: 1 });
+    await insertComment({ text: "t3" });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const comments = await book.comments.load();
+    expect(comments.length).toEqual(2);
+    expect(comments.map((c) => c.text)).toEqual(["t1", "t2"]);
+  });
+
+  it("can find through o2o to a polymorphic reference", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBookReview({ rating: 1, book_id: 1 });
+    await insertComment({ text: "t1", parent_book_review_id: 1 });
+
+    const em = newEntityManager();
+    const review = await em.load(BookReview, "1");
+    const comment = await review.comment.load();
+    expect(comment!.text).toEqual("t1");
+  });
+
+  it("can find through m2m matching on a primary key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+    const em = newEntityManager();
+    const where = { tags: "t:1" } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through m2m matching on new values and not fail", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const t1 = newTag(em, 1);
+    const where = { tags: [t1] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [] } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through m2m matching on a column value", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+    const em = newEntityManager();
+    const where = { tags: { name: "t1" } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [
+                { alias: "att", table: "authors_to_tags", join: "primary" },
+                // I.e. moved child joins preserve their original nullable shape; the `t.name` predicate still filters
+                // matches, while `distinct: false` keeps the EXISTS as plain `SELECT 1`.
+                { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id", distinct: false },
+              ],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can have the same table twice in the query", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await update("authors", { id: 1, current_draft_book_id: 1 });
+
+    const em = newEntityManager();
+    const book = await em.findOneOrFail(Book, { title: "b2", author: { currentDraftBook: { title: "b1" } } });
+    expect(book.title).toBe("b2");
+  });
+
+  it("can find through o2m with all children matching", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { books: { title: { like: "b1%" } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m with no children matching", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { books: { title: { eq: "b3" } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("prunes o2m filters whose only condition is undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: { title: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m matching on a primary key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: "b:2" } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m matching on a null column", async () => {
+    // Given two authors
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    // And only one of them has a book with a null `notes` column
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.notes column
+    const where = { books: { acknowledgements: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    // Then we only get back the 1st author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(parseAndOptimizeFindQuery(am, where)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            alias: "a",
+            column: "deleted_at",
+            dbType: "timestamp with time zone",
+            cond: { kind: "is-null" },
+            pruneable: true,
+          },
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  {
+                    alias: "b",
+                    column: "deleted_at",
+                    dbType: "timestamp with time zone",
+                    cond: { kind: "is-null" },
+                    pruneable: true,
+                  },
+                  { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
+                  { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m matching on a null id column", async () => {
+    // Given two authors
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    // And only the 1st author has a book
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.id column
+    const where = { books: { id: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    // Then we only get back 2nd author
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: true,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m via inheritance", async () => {
+    await insertLargePublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertCritic({ name: "c1", favorite_large_publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { favoriteLargePublisher: { authors: { firstName: "a1" } } } satisfies CriticFilter;
+    const critics = await em.find(Critic, where);
+    expect(critics.length).toEqual(1);
+
+    expect(parseAndOptimizeFindQuery(criticMeta, where, opts)).toMatchObject({
+      selects: [`c.*`],
+      tables: [
+        { alias: "c", table: "critics", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "outer", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "a", table: "authors", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "lp.id = a.publisher_id" },
+                  { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m with preloading", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.id column
+    const where = { books: { title: { like: "b%" } } } satisfies AuthorFilter;
+    // And the books are populated/preloaded (currently via LEFT JOIN)
+    const authors = await em.find(Author, where, { populate: "books" });
+    // Then the query didn't fail
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
+  it("can find through m2o with subtype only fields", async () => {
+    const where = { taskTaskNew: { specialNewField: 1 } } satisfies TaskItemFilter;
+    expect(parseFindQuery(taskItemMeta, where, opts)).toMatchObject({
+      selects: [`ti.*`],
+      tables: [
+        { alias: "ti", table: "task_items", join: "primary" },
+        { alias: "t", table: "tasks", join: "outer", col1: "ti.task_id", col2: "t.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "t", column: "type_id", dbType: "int", cond: { kind: "eq", value: 2 } },
+          { alias: "t", column: "special_new_field", dbType: "int", cond: { kind: "eq", value: 1 } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can prune m2o STI subtype only fields", async () => {
+    const where = { copiedToTaskNew: { specialNewField: undefined } } satisfies TaskFilter;
+    expect(parseFindQuery(tm, where, { ...opts, pruneJoins: true })).toMatchObject({
+      selects: [`t.*`],
+      tables: [{ alias: "t", table: "tasks", join: "primary" }],
+      condition: undefined,
+    });
+  });
+
+  it("can prune m2o CTI subtype only fields", async () => {
+    const where = { publisherLargePublisher: { country: undefined } } satisfies AuthorFilter;
+    expect(parseFindQuery(am, where, { ...opts, pruneJoins: true })).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: undefined,
+    });
+  });
+
+  it("can find by unique", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    await insertAuthor({ first_name: "a2", ssn: "13" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [a1, a2, a3] = await Promise.all([
+      em.findByUnique(Author, { ssn: "12" }),
+      em.findByUnique(Author, { ssn: "13" }),
+      em.findByUnique(Author, { ssn: "14" }),
+    ]);
+    expect(a1!.firstName).toEqual("a1");
+    expect(a2!.firstName).toEqual("a2");
+    expect(a3).toBeUndefined();
+    // Then we only issued a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // @ts-expect-error
+    const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
+    // @ts-expect-error
+    const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
+  });
+
+  it("does not findByUnique an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findByUnique(Author, { ssn: "12" });
+
+    expect(foundAuthor).toBeUndefined();
+  });
+
+  it("fails when findByUnique hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "11" });
+    await insertAuthor({ first_name: "a2", ssn: "12" });
+    await insertAuthor({ first_name: "a3", ssn: "13" });
+    await insertAuthor({ first_name: "a4", ssn: "14" });
+    const em = newEntityManager();
+    // Pre-load all 4 authors so hydrate won't create new entities
+    await em.loadAll(Author, ["a:1", "a:2", "a:3", "a:4"]);
+    // Now lower the limit so the batched SQL query (4 rows matching 4 SSNs) hits the LIMIT,
+    // but since all entities are already in the EM, no new entities are created
+    em.entityLimit = 4;
+    const result = Promise.all([
+      em.findByUnique(Author, { ssn: "11" }),
+      em.findByUnique(Author, { ssn: "12" }),
+      em.findByUnique(Author, { ssn: "13" }),
+      em.findByUnique(Author, { ssn: "14" }),
+    ]);
+    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+  });
+
+  it("can use jsonb path exists", async () => {
+    await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+    await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { address: { pathExists: `$.street` } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can use for jsonb path predicate", async () => {
+    await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+    await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { address: { pathIsTrue: `$.street == "rr2"` } });
+    expect(authors.length).toEqual(1);
+  });
+
+  describe("complex queries", () => {
+    it("can use aliases for or", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq("a1"), a.firstName.eq("a2")] };
+      const authors = await em.find(Author, { as: a }, { ...opts, conditions });
+      expect(authors.length).toEqual(2);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "or",
+          conditions: [
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("correctly merges inline conditions with complex ors", async () => {
+      // Given two authors
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        // And we have an inline condition that matches only 1 author
+        { as: a, firstName: { like: "a1" } },
+        // And a complex OR that would match both
+        { ...opts, conditions: { or: [a.firstName.eq("a1"), a.firstName.eq("a2")] } },
+      );
+      // Then we grouped the ors
+      expect(queries[0]).toEqual(
+        "SELECT a.* FROM authors AS a WHERE a.first_name LIKE $1 AND (a.first_name = $2 OR a.first_name = $3) ORDER BY a.id ASC LIMIT $4",
+      );
+      // And only returned the 1 matching author
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an m2o entity filter", async () => {
+      await insertLargePublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const p = alias(Publisher);
+      const authors = await em.find(Author, { publisher: p }, { conditions: { and: [p.name.eq("p1")] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an o2m entity filter", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.title.eq("b1")] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an o2m entity filter with primary key is null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.id.eq(null)] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an o2m entity filter with primary key in tagged ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.id.in(["b:1"])] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("fails an o2m entity filter with primary key invalid tagged ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      expect(() => {
+        em.find(Author, { books: b }, { conditions: { and: [b.id.in(["bad:1"])] } });
+      }).toThrow("Invalid tagged id");
+    });
+
+    it("can use aliases for polymorphic reference with eq", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      const em = newEntityManager();
+      const c = alias(Comment);
+      const comments = await em.find(
+        Comment,
+        { as: c },
+        {
+          conditions: { or: [c.parent.eq("b:1")] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(1);
+      expect(comment.text).toEqual("t1");
+    });
+
+    it("can use aliases for polymorphic component with eq", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t2", parent_author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const comments = await em.find(
+        Comment,
+        { parentBook: b },
+        {
+          conditions: { or: [b.id.ne(null)] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(1);
+      expect(comment.text).toEqual("t1");
+    });
+
+    it("can use aliases for two polymorphic component with or", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t2", parent_author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const comments = await em.find(
+        Comment,
+        { parentAuthor: a, parentBook: b },
+        {
+          conditions: { or: [a.firstName.eq("a"), b.title.eq("t")] },
+        },
+      );
+      expect(comments.length).toEqual(2);
+    });
+
+    it("can use aliases for polymorphic reference with in", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertPublisher({ name: "p1" });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t1", parent_publisher_id: 1 });
+      const em = newEntityManager();
+      const c = alias(Comment);
+      const comments = await em.find(
+        Comment,
+        { as: c },
+        {
+          conditions: { or: [c.parent.in(["b:1", "p:1"])] },
+        },
+      );
+      expect(comments.length).toEqual(2);
+    });
+
+    it("can use aliases for array contains", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["a11", "11a"] });
+      await insertAuthor({ first_name: "a2", nick_names: ["a22", "22a"] });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { or: [a.nickNames.contains(["a11"]), a.nickNames.contains(["a22", "22a"])] } },
+      );
+      expect(authors.length).toEqual(2);
+    });
+
+    it("can use aliases for array ncontains", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["foo"] }); // does not contain
+      await insertAuthor({ first_name: "a2", nick_names: ["bar"] }); // does not contain
+      await insertAuthor({ first_name: "a3", nick_names: ["foo", "bar", "zaz"] }); // does contain
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.nickNames.ncontains(["foo", "bar"])] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
+    it("can use aliases for array noverlaps", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["foo"] }); // does not overlap
+      await insertAuthor({ first_name: "a2", nick_names: ["bar"] }); // does overlap
+      await insertAuthor({ first_name: "a3", nick_names: ["foo", "bar", "zaz"] }); // does overlap
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.nickNames.noverlaps(["bar", "zaz"])] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("can use aliases for or with nested and", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", age: 30 });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        {
+          conditions: {
+            or: [a.firstName.eq("a1"), { and: [a.firstName.eq("a2"), a.age.eq(30)] }],
+          },
+        },
+      );
+      expect(authors.length).toEqual(2);
+    });
+
+    it("can use exclusively allows or or and", async () => {
+      const em = newEntityManager();
+      const a = alias(Author);
+      // @ts-expect-error
+      await em.find(Author, { as: a }, { conditions: { and: [a.isPopular.eq(true)], or: [a.lastName.eq(null)] } });
+    });
+
+    it("can use primitive aliases for null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", last_name: "l2" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.lastName.eq(null)] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("can use primitive aliases for not null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", last_name: "l2" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.lastName.ne(null)] } });
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    it("can use aliases for m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+
+      const em = newEntityManager();
+      const b = alias(Book);
+      const books = await em.find(
+        Book,
+        { as: b },
+        {
+          conditions: { or: [b.author.eq("a:1"), b.author.eq("a:2")] },
+        },
+      );
+      expect(books.length).toEqual(2);
+    });
+
+    it("can use aliases for m2o with gt/gte/lt/lte", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const books = await em.find(
+        Book,
+        { as: b },
+        {
+          conditions: {
+            and: [
+              // Use all of gt/gte/lte/lt
+              b.author.gt("a:1"),
+              b.author.gte("a:2"),
+              b.author.lte("a:2"),
+              b.author.lt("a:3"),
+            ],
+          },
+        },
+      );
+      expect(books.length).toEqual(1);
+    });
+
+    it("can use aliases for m2m", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+      const em = newEntityManager();
+      const t = alias(Tag);
+      const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] } });
+      expect(books.length).toEqual(1);
+
+      expect(
+        parseAndOptimizeFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] }, ...opts }),
+      ).toMatchObject({
+        selects: [`b.*`],
+        tables: [
+          { alias: "b", table: "books", join: "primary" },
+          { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+        ],
+        condition: {
+          op: "or",
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [
+                  { alias: "att", table: "authors_to_tags", join: "primary" },
+                  // I.e. preserving the moved child join as outer avoids changing nullable branch semantics.
+                  { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id", distinct: false },
+                ],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = att.author_id" },
+                    {
+                      op: "or",
+                      conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        orderBys: expect.anything(),
+      });
+    });
+
+    it("can use aliases for raw conditions", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { and: [a.address.raw("@? ?", ['$.street ? (@ == "rr2")'])] } },
+      );
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for m2m with raw conditions", async () => {
+      const em = newEntityManager();
+      const [book1, book2] = twoOf((i) => newBook(em, { tags: [{ name: `t${i + 1}` }] }));
+      await em.flush();
+      const t = alias(Tag);
+      const result = await em.find(Book, { tags: { as: t } }, { conditions: { and: [t.name.raw("in (?)", ["t2"])] } });
+      expect(result).toMatchEntity([book2]);
+    });
+
+    it("can use aliases for jsonb contains", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { and: [a.address.contains(`{"street": "rr2"}`)] } },
+      );
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for jsonb path exists", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { and: [a.address.pathExists(`$.street`)] } });
+      expect(authors.length).toEqual(2);
+    });
+
+    it("can use aliases for jsonb path exists in a batch", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      await Promise.all([
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathExists(`$.street`)] } }),
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathExists(`$.city`)] } }),
+      ]);
+    });
+
+    it("can use aliases for jsonb path predicate", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { and: [a.address.pathIsTrue(`$.street == "rr2"`)] } },
+      );
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for jsonb path predicate in a batch", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      await Promise.all([
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathIsTrue(`$.street == "rr1"`)] } }),
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathIsTrue(`$.street == "rr2"`)] } }),
+      ]);
+    });
+
+    it("prunes unused joins", async () => {
+      const [a, p, b] = aliases(Author, Publisher, Book);
+      expect(
+        parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } }, { ...opts, pruneJoins: true }),
+      ).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("prunes nested unused collection aliases", async () => {
+      const [b, br] = aliases(Book, BookReview);
+      expect(parseFindQuery(am, { books: { as: b, reviews: { as: br } } }, { ...opts, pruneJoins: true })).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("removes nested collection aliases not referenced by conditions", async () => {
+      const [a, br] = aliases(Author, BookReview);
+      const conditions = { and: [a.firstName.eq("a1")] };
+      expect(
+        parseFindQuery(am, { as: a, books: { reviews: { as: br } } }, { ...opts, conditions, pruneJoins: true }),
+      ).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "column",
+              alias: "a",
+              column: "first_name",
+              dbType: "character varying",
+              cond: { kind: "eq", value: "a1" },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("keeps pure collection alias id IS NULL conditions as NOT EXISTS", async () => {
+      const [a, b] = aliases(Author, Book);
+      const conditions = { and: [b.id.eq(null as never)] };
+      expect(parseAndOptimizeFindQuery(am, { as: a, books: { as: b } }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("keeps multiple pure collection alias id IS NULL conditions as NOT EXISTS", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = { and: [b.id.eq(null as never), c.id.eq(null as never)] };
+      expect(
+        parseAndOptimizeFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions }),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "c", table: "comments", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = c.parent_author_id" }] },
+              },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("rewrites collection alias id IS NULL conditions inside OR to NOT EXISTS", async () => {
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [b.id.eq(null as never), a.firstName.eq("a1")] };
+      expect(parseAndOptimizeFindQuery(am, { as: a, books: { as: b } }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "or",
+          conditions: [
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
+            {
+              kind: "column",
+              alias: "a",
+              column: "first_name",
+              dbType: "character varying",
+              cond: { kind: "eq", value: "a1" },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("rewrites multiple mixed OR collection branches by default after optimization", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
+      const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+      optimizeCollectionJoins(query);
+      expect(query).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "b", table: "books", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "c", table: "comments", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "last_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+          ],
+        },
+      });
+    });
+
+    it("fails multiple collection left joins when OR branches mix ordinary and collection aliases", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = {
+        and: [
+          { or: [{ and: [b.title.eq("b1"), a.firstName.eq("a1")] }, a.age.eq(1)] },
+          { or: [{ and: [c.text.eq("c1"), a.lastName.eq("a1")] }, a.age.eq(2)] },
+        ],
+      };
+      expect(() => {
+        const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+        optimizeCollectionJoins(query);
+      }).toThrow("allowMultipleLeftJoins");
+    });
+
+    it("allows em.find calls with multiple mixed OR collection branches by default", async () => {
+      const em = newEntityManager();
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
+      const authors = await em.find(Author, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+      expect(authors).toEqual([]);
+    });
+
+    it("rewrites multiple mixed OR collection branches with allowMultipleLeftJoins", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
+      expect(
+        parseAndOptimizeFindQuery(
+          am,
+          { as: a, books: { as: b }, comments: { as: c } },
+          { ...opts, conditions, allowMultipleLeftJoins: true },
+        ),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "b", table: "books", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "c", table: "comments", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "last_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+          ],
+        },
+      });
+    });
+
+    it("keeps all joins by default", async () => {
+      const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
+      expect(parseFindQuery(am, filter, opts)).toMatchObject({
+        selects: [`a.*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("keeps marked aliases", async () => {
+      const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
+      expect(parseFindQuery(am, filter, { ...opts, keepAliases: ["b"], pruneJoins: true })).toMatchObject({
+        selects: [`a.*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("does not prune joins from complex conditions", async () => {
+      const [p, b] = aliases(Publisher, Book);
+      expect(
+        parseAndOptimizeFindQuery(
+          am,
+          { publisher: { as: p }, books: { as: b } },
+          { ...opts, conditions: { and: [b.title.eq("b1")] } },
+        ),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = b.author_id" },
+                    { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.search("a1"), a.firstName.search("a2")] };
+      const authors = await em.find(Author, { as: a }, { ...opts, conditions });
+      expect(authors.length).toEqual(2);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "or",
+          conditions: [
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%a1%" } },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%a2%" } },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search on empty string", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.firstName.search(""), b.title.search("")] };
+      const authors = await em.find(Author, { as: a, books: b }, { ...opts, conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search on undefined", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.firstName.search(undefined), b.title.search(undefined)] };
+      const authors = await em.find(Author, { as: a, books: b }, { ...opts, conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("prunes partially used complex conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq("a1"), a.firstName.eq(undefined)] };
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(1);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "or",
+          conditions: [
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("prunes partially used complex conditions completely", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = {
+        or: [a.firstName.eq("a1"), a.firstName.eq(undefined)],
+        pruneIfUndefined: "any",
+      } satisfies ExpressionFilter;
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("prunes completely unused conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq(undefined), a.firstName.eq(undefined)] };
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("prunes unnecessary soft-deleted conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+
+      const em = newEntityManager();
+      const where = { books: { title: undefined } } satisfies AuthorFilter;
+      const authors = await em.find(Author, where);
+      expect(authors.length).toEqual(1);
+
+      expect(parseFindQuery(am, where, { softDeletes: "exclude", pruneJoins: true })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "and",
+          conditions: [
+            {
+              alias: "a",
+              column: "deleted_at",
+              dbType: "timestamp with time zone",
+              cond: { kind: "is-null" },
+              pruneable: true,
+            },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("allows undefined expressions", async () => {
+      const a = alias(Author);
+      const where: EntityFilter<Author> = { as: a };
+      const conditionalFilter: ExpressionFilter | undefined = undefined;
+      expect(
+        parseFindQuery(am, where, {
+          conditions: { and: [a.firstName.eq("a"), undefined] },
+        }),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "and",
+          conditions: [
+            {
+              alias: "a",
+              column: "deleted_at",
+              dbType: "timestamp with time zone",
+              cond: { kind: "is-null" },
+              pruneable: true,
+            },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("allows query for nested o2m using left outer joins", async () => {
+      await insertComment({ text: "test" });
+      const em = newEntityManager();
+
+      const [c, p] = aliases(Comment, Publisher);
+      const result = await em.find(
+        Comment,
+        { as: c, user: { authorManyToOne: { books: { advances: { publisher: p } } } } },
+        {
+          conditions: { or: [p.name.eq("test"), c.text.eq("test")] },
+          allowMultipleLeftJoins: true,
+        },
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].text).toEqual("test");
+    });
+
+    it("allows query by o2m polymorphic field", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, { comments: [{ text: "test" }] });
+      await em.flush();
+
+      const result = await em.find(Book, { comments: { text: "test" } });
+
+      expect(result).toMatchEntity([book]);
+    });
+  });
+
+  describe("aliases", () => {
+    it("can eq", async () => {
+      const a = alias(Author);
+      expect(a.firstName.eq("a1")).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "first_name",
+        dbType: "character varying",
+        cond: { kind: "eq", value: "a1" },
+      });
+    });
+
+    it("can ne", async () => {
+      const a = alias(Author);
+      expect(a.firstName.ne("a1")).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "first_name",
+        dbType: "character varying",
+        cond: { kind: "ne", value: "a1" },
+      });
+    });
+
+    it("can eq a native enum", async () => {
+      const a = alias(Author);
+      expect(a.favoriteShape.ne(FavoriteShape.Square)).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "favorite_shape",
+        dbType: "favorite_shape",
+        cond: { kind: "ne", value: "square" },
+      });
+    });
+
+    it("can eq an enum", async () => {
+      const p = alias(Publisher);
+      expect(p.size.eq(PublisherSize.Large)).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "size_id",
+        dbType: "int",
+        cond: { kind: "eq", value: 2 },
+      });
+    });
+
+    it("can eq an foreign key", async () => {
+      const b = alias(Book);
+      expect(b.author.eq("a:1")).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "author_id",
+        dbType: "int",
+        cond: { kind: "eq", value: 1 },
+      });
+    });
+
+    it("can eq null a foreign key", async () => {
+      const b = alias(Book);
+      expect(b.author.eq(null)).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "author_id",
+        dbType: "int",
+        cond: { kind: "is-null" },
+      });
+    });
+
+    it("can in a foreign key", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      const b = alias(Book);
+      expect(b.author.in([a1, "a:2"])).toEqual({
+        kind: "column",
+        alias: "unset",
+        column: "author_id",
+        dbType: "int",
+        cond: { kind: "in", value: [1, 2] },
+      });
+    });
+
+    it("can in a foreign key with gql string[] | null", async () => {
+      const b = alias(Book);
+      const maybeIds: string[] | null | undefined = null as any;
+      // We want this to type-check (because of GraphQL) but not actually work
+      expect(() => b.author.in(maybeIds)).toThrow("Unsupported");
+    });
+
+    it("can in keys", async () => {
+      const a = alias(Author);
+      expect("firstName" in a).toBe(true);
+      expect("invalidName" in a).toBe(false);
+    });
+
+    it("can retrieve metadata", async () => {
+      const a = alias(Author);
+      expect(getAliasMetadata(a)).toBe(getMetadata(Author));
+    });
+  });
+
+  describe("aliases against other columns", () => {
+    it("can eq", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.lastName.eq(b.title), a.firstName.eq("a2")] };
+      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions });
+      expect(books.length).toEqual(1);
+
+      // The parse binds both aliases through the join literal; conditions referencing an alias the
+      // literal does not bind fail fast (each parse resolves alias conditions against its own bindings)
+      expect(parseFindQuery(bm, { as: b, author: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`b.*`],
+        tables: [
+          { alias: "b", table: "books", join: "primary" },
+          { alias: "a", table: "authors", join: "inner" },
+        ],
+        condition: {
+          op: "or",
+          conditions: [
+            { aliases: ["a", "b"], condition: "a.last_name = b.title", bindings: [], pruneable: false },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
+          ],
+        },
+        orderBys: [expect.anything(), expect.anything()],
+      });
+      expect(() => parseFindQuery(am, { as: a }, { ...opts, conditions })).toThrow(
+        "Alias for books is not bound to this query's join literal",
+      );
+    });
+
+    it("can eq in a loop", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const [p1, p2] = await Promise.all([
+        em.find(
+          Book,
+          { as: b, author: a },
+          { ...opts, conditions: { or: [a.lastName.eq(b.title), b.title.eq("b0")] } },
+        ),
+        em.find(
+          Book,
+          { as: b, author: a },
+          { ...opts, conditions: { or: [a.lastName.eq(b.title), b.title.eq("b1")] } },
+        ),
+      ]);
+      // expect(queries).toEqual("");
+      expect(p1.length).toEqual(1);
+      expect(p2.length).toEqual(2);
+    });
+
+    it("can eq ids", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions: { and: [a.id.eq(b.id as any)] } });
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can ne", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.ne(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can gt", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.gt(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "a1" }]);
+    });
+
+    it("can gte", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.gte(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "a1" }]);
+    });
+
+    it("can lt", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.lt(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can lte", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.lte(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+  });
+
+  describe("types", () => {
+    it("catch invalid entity filters", () => {
+      // @ts-expect-error
+      const a = { books: { foo: 1 } } satisfies AuthorFilter;
+    });
+  });
+
+  describe("count", () => {
+    it("can count", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      resetQueryCount();
+      const em = newEntityManager();
+      const [c1, c2] = await Promise.all([
+        em.findCount(Author, { firstName: "a1" }, opts),
+        em.findCount(Author, { firstName: "a1" }, opts),
+      ]);
+      const c3 = await em.findCount(Author, { firstName: "a1" }, opts);
+      expect(c1).toBe(1);
+      expect(c2).toBe(1);
+      expect(c3).toBe(1);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count with o2m joins", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBook({ author_id: 1, title: "b2" });
+      await insertBook({ author_id: 2, title: "b3" });
+      resetQueryCount();
+      const em = newEntityManager();
+      const count = await em.findCount(Author, { books: { title: { like: "b%" } } }, opts);
+      expect(count).toBe(2);
+    });
+
+    it("can count and include new entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      resetQueryCount();
+      // Given we have 1 author and do a count
+      const em = newEntityManager();
+      const c1 = await em.findCount(Author, {}, opts);
+      // And we return it correctly
+      expect(c1).toBe(2);
+      // When we create a new author in-memory
+      const a = newAuthor(em, {});
+      // Then our count is updated
+      const c2 = await em.findCount(Author, {}, opts);
+      expect(c2).toBe(3);
+      // And we didn't make an extra query for it
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count and exclude deleted entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      // Given we have 1 author and do a count
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      resetQueryCount();
+      const c1 = await em.findCount(Author, {}, opts);
+      // And we return it correctly
+      expect(c1).toBe(2);
+      // When we delete an existing author
+      em.delete(a1);
+      // Then our count is updated
+      const c2 = await em.findCount(Author, {}, opts);
+      expect(c2).toBe(1);
+      // And we didn't make an extra query for it
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count with filters and exclude deleted entities", async () => {
+      // Given we have two authors
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      // And initially findCount returns 1
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(1);
+      // When we delete the author
+      em.delete(a1);
+      // Then findCount returns 0
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(0);
+    });
+
+    it("can count with dates between", async () => {
+      await insertAuthor({ first_name: "a1", graduated: jan1 });
+      await insertAuthor({ first_name: "a2", graduated: jan2 });
+      await insertAuthor({ first_name: "a3", graduated: jan3 });
+      await insertAuthor({ first_name: "a4", graduated: undefined });
+      const em = newEntityManager();
+      const q1 = await em.findCount(Author, { graduated: { between: [jan2, jan3] } });
+      expect(q1).toBe(2);
+    });
+
+    it("can batch count", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        em.findCount(Author, { firstName: "a1" }, opts),
+        em.findCount(Author, { firstName: "a2" }, opts),
+        em.findCount(Author, { firstName: "a3" }, opts),
+      ]);
+      expect(counts).toEqual([1, 1, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can batch count with m2o joins", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3", last_name: "doe", publisher_id: 2 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // both a1 and a2
+        em.findCount(Author, { lastName: "smith", publisher: "p:1" }, opts),
+        // only a3
+        em.findCount(Author, { lastName: "doe", publisher: "p:2" }, opts),
+      ]);
+      expect(counts).toEqual([2, 1]);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can batch count with o2m joins", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // one book matches
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b1" } } }, opts),
+        // two books match, but only 1 author
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b%" } } }, opts),
+        // one author matches, but no books
+        em.findCount(Author, { firstName: "a2", books: { title: { like: "b%" } } }, opts),
+      ]);
+      expect(counts).toEqual([1, 1, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
+  });
+
+  it("can find against serde values", async () => {
+    const password = PasswordValue.fromPlainText("asdf");
+    await insertUser({ name: "u1", password: password.encoded });
+    const em = newEntityManager();
+    const users = await em.find(User, { password });
+    expect(users.length).toBe(1);
+  });
+
+  it("can find through polymorphic relations that have subclass components directly", async () => {
+    await insertLargePublisher({ id: 1, name: "lp1" });
+    await insertLargePublisher({ id: 2, name: "lp2" });
+    await insertUser({ id: 1, name: "User 1", favorite_publisher_large_id: 1 });
+    await insertUser({ id: 2, name: "User 2", favorite_publisher_large_id: 2 });
+    const em = newEntityManager();
+    const result = await em.find(User, { favoritePublisher: "p:1" });
+    expect(result).toMatchEntity([{ name: "User 1" }]);
+  });
+
+  it("can find across polymorphic relations that have subclass components via array", async () => {
+    await insertLargePublisher({ id: 1, name: "lp1" });
+    await insertLargePublisher({ id: 2, name: "lp2" });
+    await insertUser({ id: 1, name: "User 1", favorite_publisher_large_id: 1 });
+    await insertUser({ id: 2, name: "User 2", favorite_publisher_large_id: 2 });
+    const em = newEntityManager();
+    const result = await em.find(User, { favoritePublisher: ["p:1"] });
+    expect(result).toMatchEntity([{ name: "User 1" }]);
+  });
+
+  it("fails nicely on invalid polymorphic ids", async () => {
+    const em = newEntityManager();
+    const where = { parent: ["c:1", "c:2", "a:1"] } satisfies CommentFilter;
+    const result = em.find(Comment, where);
+    await expect(result).rejects.toThrow("Invalid tagged ids passed to Comment.parent: c:1,c:2");
+  });
+
+  it("fails nicely on invalid polymorphic id", async () => {
+    const em = newEntityManager();
+    const where = { parent: "c:1" } satisfies CommentFilter;
+    const result = em.find(Comment, where);
+    await expect(result).rejects.toThrow("Invalid tagged id passed to Comment.parent: c:1");
+  });
+
+  it("can find across subtype restricted o2ms", async () => {
+    await insertSmallPublisherGroup({ id: 1, name: "spg1" });
+    await insertSmallPublisher({ id: 1, name: "sp1", group_id: 1, city: "sp city" });
+    const em = newEntityManager();
+    const result = await em.find(SmallPublisherGroup, { publishers: { id: "p:1", name: "sp1", city: "sp city" } });
+    expect(result).toMatchEntity([{ name: "spg1" }]);
+  });
+
+  it("can find across subtype restricted m2os", async () => {
+    await insertSmallPublisherGroup({ id: 1, name: "spg1" });
+    await insertSmallPublisher({ id: 1, name: "sp1", group_id: 1 });
+    const em = newEntityManager();
+    const result = await em.find(SmallPublisher, { group: { id: "pg:1", name: "spg1" } });
+    expect(result).toMatchEntity([{ name: "sp1" }]);
+  });
+
+  it("can find across o2os with a polymorphic other", async () => {
+    await insertAuthor({ id: 1, first_name: "a" });
+    await insertBook({ id: 1, author_id: 1, title: "title" });
+    await insertBookReview({ id: 1, book_id: 1, rating: 5 });
+    await insertComment({ id: 1, parent_book_review_id: 1, text: "text" });
+    const em = newEntityManager();
+    const result = await em.find(BookReview, { comment: "comment:1" });
+    expect(result).toMatchEntity([{ id: "br:1" }]);
+  });
+
+  it("skips find queries that compare a relation to a new entity", async () => {
+    // Given an Author belongs to a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding persisted Authors that belong to the Publisher
+    const authors = await em.find(Author, { publisher });
+
+    // Then Joist returns no Authors without querying the database
+    expect(authors).toEqual([]);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("queries when another OR branch can match", async () => {
+    // Given a persisted Author and a new Publisher
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors that match either value
+    const where = { or: [{ publisher }, { firstName: "a1" }] } as unknown as AuthorFilter;
+    const authors = await em.find(Author, where);
+
+    // Then the viable branch still finds the persisted Author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("skips paginated find queries that compare a relation to a new entity", async () => {
+    // Given a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding one page of persisted Authors that belong to the Publisher
+    const authors = await em.find(Author, { publisher }, { limit: 1 });
+
+    // Then Joist returns no Authors without querying the database
+    expect(authors).toEqual([]);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("skips count queries that compare a relation to a new entity", async () => {
+    // Given a new Publisher
+    const em = newEntityManager();
+    const publisher = em.create(SmallPublisher, {
+      name: "p1",
+      city: "c1",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When counting persisted Authors that belong to the Publisher
+    const count = await em.findCount(Author, { publisher });
+
+    // Then Joist returns zero without querying the database
+    expect(count).toBe(0);
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("does not treat primitive sentinel values as impossible", async () => {
+    // Given a persisted Author has a primitive value of -1
+    await insertAuthor({ first_name: "a1", age: -1 });
+    const em = newEntityManager();
+    resetQueryCount();
+
+    // When finding Authors by that primitive value
+    const authors = await em.find(Author, { age: -1 });
+
+    // Then Joist queries and returns the matching Author
+    expect(authors).toMatchEntity([{ firstName: "a1", age: -1 }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("treats a relation not equal to a new entity as not null", async () => {
+    // Given one Author has a Publisher, another does not, and a different Publisher is new
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const newPublisher = em.create(SmallPublisher, {
+      name: "p2",
+      city: "c2",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors whose Publisher is not the new Publisher
+    const authors = await em.find(Author, { publisher: { ne: newPublisher } });
+
+    // Then Joist returns only the Author with a persisted Publisher
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
+  });
+
+  it("removes new entities from mixed relation lists", async () => {
+    // Given an Author belongs to a persisted Publisher and another Publisher is new
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const persistedPublisher = await em.load(Publisher, "p:1");
+    const newPublisher = em.create(SmallPublisher, {
+      name: "p2",
+      city: "c2",
+      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
+    });
+    resetQueryCount();
+
+    // When finding Authors by both Publishers
+    const authors = await em.find(Author, { publisher: [newPublisher, persistedPublisher] });
+
+    // Then Joist queries with the persisted Publisher and returns its Author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(numberOfQueries).toBe(1);
+  });
+});
+
+/** Example AuthorFilter generated by graphql-code-generator. */
+interface GraphQLAuthorFilter {
+  age?: GraphQLIntFilter | null | undefined;
+  isPopular?: boolean | null | undefined;
+}
+
+/** Example IntFilter generated by graphql-code-generator. */
+interface GraphQLIntFilter {
+  eq?: number | null | undefined;
+  in?: number[] | null | undefined;
+  lte?: number | null | undefined;
+  lt?: number | null | undefined;
+  gte?: number | null | undefined;
+  gt?: number | null | undefined;
+  ne?: number | null | undefined;
+}
+
+/** Example PublisherFilter generated by graphql-code-generator. */
+interface GraphQLPublisherFilter {
+  size?: PublisherSize[] | null | undefined;
+}

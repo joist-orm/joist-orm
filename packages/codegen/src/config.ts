@@ -1,14 +1,17 @@
+import { existsSync, promises as fs, readFileSync } from "fs";
+import { dirname, join } from "path";
+
 import { createFromBuffer } from "@dprint/formatter";
 import { getPath } from "@dprint/json";
-import { DbMetadata, Entity, EntityDbMetadata } from "./EntityDbMetadata";
-import { promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
-import ts from "typescript";
+import { type ParseError, parse } from "jsonc-parser";
 import { z } from "zod";
-import { getLatestCodemodVersion } from "./codemods";
-import { getStiEntities } from "./inheritance";
-import { logger } from "./logger";
-import { fail, sortKeys, trueIfResolved } from "./utils";
+
+import { getLatestCodemodVersion } from "./codemods/index.ts";
+import { type DbMetadata, type Entity, type EntityDbMetadata } from "./EntityDbMetadata.ts";
+import { getStiEntities } from "./inheritance.ts";
+import { logger } from "./logger.ts";
+import { fail, sortKeys, trueIfResolved } from "./utils.ts";
 
 const jsonFormatter = createFromBuffer(readFileSync(getPath()));
 
@@ -23,11 +26,13 @@ const fieldConfig = z
     type: z.optional(z.string()),
     serde: z.optional(z.string()),
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
-    stiType: z.optional(z.string()),
+    stiType: z.optional(z.union([z.string(), z.array(z.string())])),
     // Allow subclasses to mark fields as required
     notNull: z.optional(z.boolean()),
     // Allow overriding scanEntities default detection for fields with defaults added by helpers
     hasDefault: z.optional(z.boolean()),
+    // Exclude a (large jsonb/text) column from the default SELECT and expose it as a lazy-loaded LazyField
+    lazy: z.optional(z.boolean()),
   })
   .strict();
 
@@ -40,8 +45,15 @@ const relationConfig = z
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    /**
+     * Controls whether this collection's `.get`/`.load` hide soft-deleted entities.
+     *
+     * Defaults to `"exclude"` (soft-deleted entities are hidden); set to `"include"` to have
+     * this specific o2m/m2m always return soft-deleted entities from `.get`/`.load`.
+     */
+    softDeletes: z.optional(z.union([z.literal("include"), z.literal("exclude")])),
     // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
-    stiType: z.optional(z.string()),
+    stiType: z.optional(z.union([z.string(), z.array(z.string())])),
     /**
      * Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup).
      *
@@ -137,6 +149,8 @@ export const config = z
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
+    /** The separator between entity tags and ids; defaults to `:`, and `""` disables the separator. */
+    tagDelimiter: z.optional(z.string()),
     /** How we should support non-deferred foreign keys. */
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
@@ -145,6 +159,8 @@ export const config = z
     paginationStyle: z.optional(z.union([z.literal("cursor"), z.literal("limit")])).default("cursor"),
     /** Enables documentation syncing between .md files and JSDocs. */
     docs: z.optional(z.boolean()),
+    /** Installs Joist's bundled Agent Skills into `.claude/skills` and `.agents/skills`; on by default, set `false` to disable. */
+    skills: z.optional(z.boolean()),
     /** Output a metadata-docs.ts file with entity/field documentation available at runtime. */
     outputDocs: z.optional(z.boolean()),
     /** Auto-set by probing the project's `tsconfig.json` file. */
@@ -277,6 +293,11 @@ export function isProtected(config: Config, entity: Entity, fieldName: string): 
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
 }
 
+/** Whether a column should be excluded from the default SELECT and exposed as a lazy-loaded `LazyField`. */
+export function isLazyField(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.fields?.[fieldName]?.lazy === true;
+}
+
 export function serdeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
   return config.entities[entity.name]?.fields?.[fieldName]?.serde;
 }
@@ -295,6 +316,15 @@ export function fieldTypeConfig(config: Config, entity: Entity, fieldName: strin
 
 export function isLargeCollection(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.relations?.[fieldName]?.large === true;
+}
+
+/** Whether a collection should include (or exclude) soft-deleted entities from `.get`/`.load`. */
+export function softDeletesConfig(
+  config: Config,
+  entity: Entity,
+  fieldName: string,
+): "include" | "exclude" | undefined {
+  return config.entities[entity.name]?.relations?.[fieldName]?.softDeletes;
 }
 
 export function isFieldIgnored(
@@ -398,15 +428,26 @@ export function getTimestampConfig(config: Config): {
 
 function projectIsUsingEsmWithImports(): boolean {
   // Attempt to find the project's tsconfig.json in the current directory or up the directory hierarchy
-  const configPath = ts.findConfigFile("./", ts.sys.fileExists, "tsconfig.json");
+  const configPath = findTsConfigFile(process.cwd());
   if (!configPath) {
     return false;
   }
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (configFile.error) {
+  try {
+    // Use jsonc-parser to parse the tsconfig.json file (not the old tsc readConfigFile which was
+    // dropped in TypeScript 7), allowing for comments and trailing commas.
+    const errors: ParseError[] = [];
+    const parsed: unknown = parse(readFileSync(configPath, "utf8"), errors, { allowTrailingComma: true });
+    if (errors.length > 0 || typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false;
+    const compilerOptions = (parsed as Record<string, unknown>).compilerOptions;
+    return (
+      typeof compilerOptions === "object" &&
+      compilerOptions !== null &&
+      !Array.isArray(compilerOptions) &&
+      (compilerOptions as Record<string, unknown>).allowImportingTsExtensions === true
+    );
+  } catch {
     return false;
   }
-  return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
 }
 
 /** Normalizes `uniqueBy` config sugar into runtime identity candidates. */
@@ -424,4 +465,15 @@ function stripLegacyConfigKeys(raw: unknown): unknown {
   const parsed = { ...(raw as Record<string, unknown>) };
   delete parsed.version;
   return parsed;
+}
+
+/** Finds the nearest `tsconfig.json` in `directory` or one of its ancestors. */
+function findTsConfigFile(directory: string): string | undefined {
+  while (true) {
+    const fileName = join(directory, "tsconfig.json");
+    if (existsSync(fileName)) return fileName;
+    const parent = dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
+  }
 }

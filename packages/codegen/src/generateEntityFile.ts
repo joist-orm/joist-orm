@@ -1,6 +1,7 @@
-import { code, Code, imp } from "ts-poet";
-import { EntityDbMetadata } from "./EntityDbMetadata";
-import { Config } from "./config";
+import { type Code, code, imp } from "ts-poet";
+
+import { type Config } from "./config.ts";
+import { type EntityDbMetadata } from "./EntityDbMetadata.ts";
 
 /** Creates the placeholder file for our per-entity custom business logic in. */
 export function generateEntityFile(config: Config, meta: EntityDbMetadata): Code {

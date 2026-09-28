@@ -1,3 +1,8 @@
+extend type Query {
+  taskNew(id: ID!): TaskNew!
+  taskNews(filter: TaskNewFilter, limit: Int, offset: Int): TaskNewsPage!
+}
+
 extend type Mutation {
   saveTaskNew(input: SaveTaskNewInput!): SaveTaskNewResult!
 }
@@ -26,6 +31,7 @@ type TaskNew {
   asyncDerived: String
   selfReferential: TaskNew
   selfReferentialTasks: [TaskNew!]!
+  sharedSubtypeField: Int
 }
 
 input SaveTaskNewInput {
@@ -40,15 +46,11 @@ input SaveTaskNewInput {
   asyncDefault_1: String
   asyncDefault_2: String
   selfReferentialId: ID
+  sharedSubtypeField: Int
 }
 
 type SaveTaskNewResult {
   taskNew: TaskNew!
-}
-
-extend type Query {
-  taskNew(id: ID!): TaskNew!
-  taskNews(filter: TaskNewFilter, limit: Int, offset: Int): TaskNewsPage!
 }
 
 type TaskNewsPage {
@@ -72,4 +74,5 @@ input TaskNewFilter {
   specialNewField: [Int!]
   selfReferentialId: [ID!]
   specialNewAuthorId: [ID!]
+  sharedSubtypeField: [Int!]
 }

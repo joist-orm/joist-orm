@@ -15,6 +15,7 @@ import {
   type GraphQLFilterOf,
   hasLargeMany,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type LargeCollection,
@@ -69,6 +70,34 @@ export interface PublisherGroupFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   publishers: { kind: "o2m"; type: Publisher };
   critics: { kind: "o2m"; type: Critic };
+}
+
+export interface PublisherGroupColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<PublisherGroup>;
+    entity: PublisherGroup;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  numberOfBookReviews: {
+    type: number;
+    fieldName: "numberOfBookReviews";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  numberOfBookReviewsFormatted: {
+    type: string;
+    fieldName: "numberOfBookReviewsFormatted";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
 }
 
 export interface PublisherGroupOpts {
@@ -151,6 +180,9 @@ declare module "joist-core" {
       orderType: PublisherGroupOrder;
       optsType: PublisherGroupOpts;
       fieldsType: PublisherGroupFields;
+      columnsType: PublisherGroupColumns;
+      inheritanceType: "cti";
+      supportsEmExecute: false;
       optIdsType: PublisherGroupIdsOpts;
       factoryExtrasType: PublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisherGroup>[1];

@@ -1,7 +1,11 @@
-import { BookReview, PublisherGroupCodegen, smallPublisherBeforeFlushRan } from "./entities";
+import { ReactiveField, hasAsyncReactiveField, hasReactiveField } from "joist-orm";
 
-import { hasAsyncReactiveField, hasReactiveField, ReactiveField } from "joist-orm";
-import { publisherGroupConfig as config } from "./entities";
+import {
+  BookReview,
+  PublisherGroupCodegen,
+  publisherGroupConfig as config,
+  smallPublisherBeforeFlushRan,
+} from "./entities";
 
 export class PublisherGroup extends PublisherGroupCodegen {
   transientFields = { smallPublisherBeforeFlushRan: false };

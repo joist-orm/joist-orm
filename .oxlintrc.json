@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "off"
+  },
+  "plugins": ["eslint", "import"],
+  "rules": {
+    "eslint/sort-imports": [
+      "error",
+      {
+        "ignoreDeclarationSort": true
+      }
+    ],
+    "import/no-duplicates": [
+      "error",
+      {
+        "preferInline": true
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "**/entities/codegen/*.ts",
+    "**/entities/metadata.ts",
+    "**/entities/factories.ts",
+    "**/src/generated/*.ts",
+    "**/__testfixtures__/**"
+  ]
+}

@@ -1,8 +1,8 @@
 import ansis from "ansis";
-import { getCallerName } from "../config";
-import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
-import { UseMapSource } from "../newTestInstance";
+import { getCallerName } from "src/config.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { type UseMapSource } from "src/newTestInstance.ts";
 
 let writer: WriteFn | undefined = undefined;
 export type WriteFn = (line: string) => void;

@@ -3,6 +3,7 @@ import { type EntityManagerOpts } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import pg from "pg";
+
 import { EntityManager, newAuthor } from "./entities.js";
 
 const pool = new pg.Pool(newPgConnectionConfig());

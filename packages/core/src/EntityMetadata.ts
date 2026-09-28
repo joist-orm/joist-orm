@@ -1,11 +1,12 @@
-import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
-import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
-import { getMetadataForType } from "./configure";
-import { EnumMetadata } from "./EnumMetadata";
-import { DeepNew } from "./loadHints";
-import { FieldSerde, PolymorphicKeySerde } from "./serde";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type ConfigApi, type Reactable, type ReactiveRule } from "src/config.ts";
+import { getMetadataForType } from "src/configure.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "src/EntityManager.ts";
+import { type EnumMetadata } from "src/EnumMetadata.ts";
+import type { DeepNew } from "src/loading/loadHints.ts";
+import type { Column, ColumnDescriptors } from "src/serde/columns.ts";
+import type { FieldSerde, PolymorphicKeySerde } from "src/serde/fieldSerde.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
@@ -43,11 +44,13 @@ export function getMetadataForField(meta: EntityMetadata, fieldName: string): En
 export interface EntityMetadata<T extends Entity = any> {
   cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
-  /** Whether id field is a tagged string. */
+  /** How the domain entity's id is represented. */
   idType: "tagged-string" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
   idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;
+  /** Whether codegen verified this table is a supported SQL mutation target; does not gate reads. */
+  supportsEmExecute?: boolean;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;
   inheritanceType?: "sti" | "cti" | undefined;
@@ -59,6 +62,8 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
+  /** Physical storage descriptors, without CTI base columns; STI metadata shares its base table. */
+  columns: ColumnDescriptors;
   allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
@@ -74,6 +79,16 @@ export interface EntityMetadata<T extends Entity = any> {
   reactablesIncludingReadOnlyByField?: ReadonlyMap<string, Reactable[]>;
   /** The lazy list of reactive validation rules for this metadata and its subtypes. */
   reactiveRules?: ReactiveRule[];
+  /** The lazy list of reactive *commit* rules (post-flush/pre-commit) for this metadata and its subtypes. */
+  reactiveCommitRules?: ReactiveRule[];
+  /** Lazily-cached: whether flushing an entity of this type could trigger any `addCommitRule` work. */
+  hasCommitRules?: boolean;
+  /** The lazily-cached set of own `lazy` primitive field names, i.e. columns excluded from the default SELECT. */
+  lazyFieldNames?: ReadonlySet<string>;
+  /** The lazily-cached list of sync-derived (`hasReactiveField`-less) field names, recalced during flush. */
+  syncDerivedFields?: string[];
+  /** Lazily-cached: whether this entity has any `lazy` columns, i.e. so the default SELECT lists columns explicitly. */
+  hasLazyColumns?: boolean;
   orderBy: string | undefined;
   /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */
   uniqueBy?: string[][];
@@ -84,6 +99,10 @@ export interface EntityMetadata<T extends Entity = any> {
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
   subTypes: EntityMetadata[];
+  /** Cached `[...baseTypes, this]` set up by `configureMetadata`, so hot paths avoid re-allocating it. */
+  baseSelfMetas?: EntityMetadata[];
+  /** Cached `[...baseTypes, this, ...subTypes]` set up by `configureMetadata`, so hot paths avoid re-allocating it. */
+  baseSelfAndSubMetas?: EntityMetadata[];
   /** The lazy lookup of subtypes by type name, i.e. `Animal.metadata.subTypesByType.get("Dog")`. */
   subTypesByType?: ReadonlyMap<string, EntityMetadata>;
   /** The lazy lookup of STI subtypes by discriminator value, i.e. `Task.metadata.subTypesByStiValue.get(1)`. */
@@ -131,6 +150,8 @@ export type PrimitiveField = {
   citext?: boolean;
   default?: "schema" | "config";
   sanitize?: boolean;
+  /** When true, this column is excluded from the entity's default SELECT and lazy-loaded via a `LazyField`. */
+  lazy?: boolean;
 };
 
 export type EnumField = {
@@ -157,6 +178,8 @@ export type OneToManyField = {
   serde: undefined;
   immutable: false;
   orderBy?: { field: string; direction: "ASC" | "DESC" };
+  /** When `"include"`, this collection's `.get`/`.load` returns soft-deleted entities instead of hiding them. */
+  softDeletes?: "include" | "exclude";
 };
 
 export type LargeOneToManyField = {
@@ -199,6 +222,8 @@ export type ManyToManyField = {
   columnNames: [string, string];
   /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
   hasJoinTableId: boolean;
+  /** When `"include"`, this collection's `.get`/`.load` returns soft-deleted entities instead of hiding them. */
+  softDeletes?: "include" | "exclude";
 };
 
 /**
@@ -252,6 +277,7 @@ export type PolymorphicFieldComponent = {
   otherMetadata: () => EntityMetadata;
   otherFieldName: string; // eg `comment` or `comments`
   columnName: string; // eg `parent_book_id` or `parent_book_review_id`
+  column: Column;
 };
 
 export function isOneToManyField(ormField: Field): ormField is OneToManyField {
@@ -289,11 +315,13 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
 export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[];
 export function getBaseAndSelfMetas(entity: Entity): EntityMetadata[];
 export function getBaseAndSelfMetas(param: Entity | EntityMetadata): EntityMetadata[] {
-  return isEntity(param) ? getBaseSelfAndSubMetas(getMetadata(param)) : [...param.baseTypes, param];
+  return isEntity(param)
+    ? getBaseSelfAndSubMetas(getMetadata(param))
+    : (param.baseSelfMetas ?? [...param.baseTypes, param]);
 }
 
 export function getBaseSelfAndSubMetas(meta: EntityMetadata): EntityMetadata[] {
-  return [...meta.baseTypes, meta, ...meta.subTypes];
+  return meta.baseSelfAndSubMetas ?? [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
 export function getSubMetas(meta: EntityMetadata): EntityMetadata[] {

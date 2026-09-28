@@ -1,4 +1,3 @@
-import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
 import { CursorPageInfo } from "joist-graphql-resolver-utils/index.js";
 import type { Context } from "src/context.js";
@@ -132,37 +131,37 @@ export interface QueryBooksArgs {
   last?: number | null | undefined;
 }
 export interface AllEnumDetails {
-  color: Color[];
+  color: MaybePromise<Color[]>;
 }
 
 export interface AuthorsConnection {
-  edges: AuthorsEdge[];
-  nodes: Author[];
-  pageInfo: CursorPageInfo;
+  edges: MaybePromise<AuthorsEdge[]>;
+  nodes: MaybePromise<Author[]>;
+  pageInfo: MaybePromise<CursorPageInfo>;
 }
 
 export interface AuthorsEdge {
-  cursor: string;
-  node: Author;
+  cursor: MaybePromise<string>;
+  node: MaybePromise<Author>;
 }
 
 export interface BooksConnection {
-  edges: BooksEdge[];
-  nodes: Book[];
-  pageInfo: CursorPageInfo;
+  edges: MaybePromise<BooksEdge[]>;
+  nodes: MaybePromise<Book[]>;
+  pageInfo: MaybePromise<CursorPageInfo>;
 }
 
 export interface BooksEdge {
-  cursor: string;
-  node: Book;
+  cursor: MaybePromise<string>;
+  node: MaybePromise<Book>;
 }
 
 export interface SaveAuthorResult {
-  author: Author;
+  author: MaybePromise<Author>;
 }
 
 export interface SaveBookResult {
-  book: Book;
+  book: MaybePromise<Book>;
 }
 
 export interface AuthorFilter {

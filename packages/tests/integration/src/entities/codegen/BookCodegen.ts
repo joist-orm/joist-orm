@@ -18,6 +18,7 @@ import {
   hasOneToOne,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -28,6 +29,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -81,14 +83,56 @@ export interface BookFields {
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
-  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
+  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   advances: { kind: "o2m"; type: BookAdvance };
   reviews: { kind: "o2m"; type: BookReview };
   comments: { kind: "o2m"; type: Comment };
+  sequel: { kind: "o2o"; type: Book };
+  currentDraftAuthor: { kind: "o2o"; type: Author };
+  favoriteAuthor: { kind: "o2o"; type: Author };
+  image: { kind: "o2o"; type: Image };
+}
+
+export interface BookColumns {
+  id: { fieldName: "id"; type: IdOf<Book>; entity: Book; nullable: false; insert: "optional"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  order: { type: number; fieldName: "order"; nullable: false; insert: "optional"; update: true };
+  notes: { type: string; fieldName: "notes"; nullable: false; insert: "required"; update: true };
+  acknowledgements: { type: string; fieldName: "acknowledgements"; nullable: true; insert: "optional"; update: true };
+  authorsNickNames: { type: string; fieldName: "authorsNickNames"; nullable: true; insert: "optional"; update: true };
+  search: { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  authorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "author";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
+  prequelId: { type: IdOf<Book>; entity: Book; fieldName: "prequel"; nullable: true; insert: "optional"; update: true };
+  randomCommentId: {
+    type: IdOf<Comment>;
+    entity: Comment;
+    fieldName: "randomComment";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  reviewerId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "reviewer";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface BookOpts {
@@ -98,10 +142,10 @@ export interface BookOpts {
   acknowledgements?: string | null;
   authorsNickNames?: string | null;
   deletedAt?: Date | null;
-  prequel?: Book | BookId | null;
   author?: Author | AuthorId;
-  reviewer?: Author | AuthorId | null;
+  prequel?: Book | BookId | null;
   randomComment?: Comment | CommentId | null;
+  reviewer?: Author | AuthorId | null;
   sequel?: Book | null;
   currentDraftAuthor?: Author | null;
   favoriteAuthor?: Author | null;
@@ -113,10 +157,10 @@ export interface BookOpts {
 }
 
 export interface BookIdsOpts {
-  prequelId?: BookId | null;
   authorId?: AuthorId | null;
-  reviewerId?: AuthorId | null;
+  prequelId?: BookId | null;
   randomCommentId?: CommentId | null;
+  reviewerId?: AuthorId | null;
   sequelId?: BookId | null;
   currentDraftAuthorId?: AuthorId | null;
   favoriteAuthorId?: AuthorId | null;
@@ -138,10 +182,10 @@ export interface BookFilter {
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
+  reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -163,14 +207,14 @@ export interface BookGraphQLFilter {
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
-  prequelId?: ValueGraphQLFilter<BookId>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   authorId?: ValueGraphQLFilter<AuthorId>;
-  reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  reviewerId?: ValueGraphQLFilter<AuthorId>;
+  prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  prequelId?: ValueGraphQLFilter<BookId>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
   randomCommentId?: ValueGraphQLFilter<CommentId>;
+  reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  reviewerId?: ValueGraphQLFilter<AuthorId>;
   sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -192,10 +236,10 @@ export interface BookOrder {
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  prequel?: BookOrder;
   author?: AuthorOrder;
-  reviewer?: AuthorOrder;
+  prequel?: BookOrder;
   randomComment?: CommentOrder;
+  reviewer?: AuthorOrder;
 }
 
 export interface BookFactoryExtras {
@@ -229,6 +273,9 @@ declare module "joist-core" {
       orderType: BookOrder;
       optsType: BookOpts;
       fieldsType: BookFields;
+      columnsType: BookColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: BookIdsOpts;
       factoryExtrasType: BookFactoryExtras;
       factoryOptsType: Parameters<typeof newBook>[1];
@@ -245,10 +292,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   readonly advances: Collection<Book, BookAdvance> = hasMany();
   readonly reviews: Collection<Book, BookReview> = hasMany();
   readonly comments: Collection<Book, Comment> = hasMany();
-  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne();
   readonly author: ManyToOneReference<Book, Author, never> = hasOne();
-  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
+  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne();
   readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne();
+  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
   readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
   readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
   readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
@@ -312,7 +359,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   set authorsNickNames(authorsNickNames: string | undefined) {
     setField(this, "authorsNickNames", authorsNickNames);
   }
-
+  /**
+   * For testing accessing `book.author.get` when it's undefined.
+   * @generated Book.md
+   */
   abstract readonly search: ReactiveField<Book, string | undefined>;
 
   get deletedAt(): Date | undefined {
@@ -412,6 +462,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

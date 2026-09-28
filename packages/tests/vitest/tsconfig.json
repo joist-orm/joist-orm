@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.test.json",
+  "compilerOptions": {
+    "types": ["vitest/globals", "node"],
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
+    "paths": {
+      "src/*": ["./src/*"]
+    }
+  },
+  "include": ["./src", "./migrations", "./vitest.config.ts"],
+  "references": [
+    { "path": "../../core" },
+    { "path": "../../orm" },
+    { "path": "../../test-utils" },
+    { "path": "../../utils" }
+  ]
+}

@@ -1,5 +1,5 @@
 import {
-  AsyncProperty,
+  type AsyncProperty,
   hasAsyncProperty,
   hasReactiveAsyncProperty,
   isAsyncProperty,

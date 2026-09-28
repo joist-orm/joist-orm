@@ -1,10 +1,24 @@
 import {
+  factories,
+  isFactoryCreation,
+  maybeNew,
+  maybeNewPoly,
+  newTestInstance,
+  noValue,
+  setFactoryWriter,
+  testIndex,
+} from "joist-orm";
+import { stripAnsi } from "joist-utils";
+import {
   AdvanceStatus,
   Author,
   Book,
   Comment,
   CommentParent,
   LargePublisher,
+  Publisher,
+  PublisherType,
+  SmallPublisher,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
   lastCriticFactory,
@@ -24,22 +38,8 @@ import {
   newSmallPublisher,
   newTag,
   parentGroupBranchValue,
-  Publisher,
-  PublisherType,
-  SmallPublisher,
-} from "@src/entities";
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import {
-  factories,
-  isFactoryCreation,
-  maybeNew,
-  maybeNewPoly,
-  newTestInstance,
-  noValue,
-  setFactoryWriter,
-  testIndex,
-} from "joist-orm";
-import { stripAnsi } from "joist-utils";
+} from "src/entities";
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 let factoryOutput: string[] = [];
 
@@ -261,8 +261,8 @@ describe("EntityManager.factories", () => {
        "Creating new Book at jestAdapterInit.js:1561↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
-       "  reviewer = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
+       "  reviewer = Author#1 from em↩",
        "  created Book#1 added to scope↩",
        "  comments[0] = Comment#2 from opt↩",
      ]

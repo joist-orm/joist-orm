@@ -1,12 +1,36 @@
-import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
-import { Author, Book, newAuthor, newBook } from "@src/entities";
-import { newEntityManager } from "@src/testEm";
+import { expect as jestExpect } from "@jest/globals";
 import { DeepNew, getInstanceData } from "joist-orm";
+import { alignedAnsiStyleSerializer } from "src/alignedAnsiStyleSerializer";
+import { Author, Book, newAuthor, newBook, newPublisher } from "src/entities";
 import { jan1 } from "src/testDates";
+import { newEntityManager } from "src/testEm";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 
 describe("toMatchEntity", () => {
+  it("reads Jest's matchers when invoked", () => {
+    const matcherSymbol = Symbol.for("$$jest-matchers-object");
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, matcherSymbol);
+    if (!descriptor) throw new Error("Expected Jest to initialize its matcher state");
+
+    Reflect.deleteProperty(globalThis, matcherSymbol);
+    let toMatchLateEntity: typeof import("joist-test-utils").toMatchEntity;
+    try {
+      jest.isolateModules(() => {
+        toMatchLateEntity = jest.requireActual<typeof import("joist-test-utils")>("joist-test-utils").toMatchEntity;
+      });
+    } finally {
+      Object.defineProperty(globalThis, matcherSymbol, descriptor);
+    }
+
+    jestExpect.extend({ toMatchLateEntity: toMatchLateEntity! });
+    jestExpect.addEqualityTesters([areLateComparableValuesEqual]);
+    const matcher = jestExpect({ value: new LateComparableValue(1) }) as unknown as {
+      toMatchLateEntity(expected: unknown): void;
+    };
+    matcher.toMatchLateEntity({ value: new LateComparableValue(2) });
+  });
+
   it("can match primitive fields", async () => {
     const em = newEntityManager();
     const p1 = newAuthor(em, { firstName: "Author 1" });
@@ -52,18 +76,26 @@ describe("toMatchEntity", () => {
     expect(a1).toMatchEntity({ books: [{ deletedAt: jan1 }] });
   });
 
-  it("can match async properties", async () => {
+  it("can match properties", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
     expect(a1).toMatchEntity({ numberOfBooks2: 2 });
   });
 
-  it("can match persisted async properties", async () => {
+  it("can match reactive fields", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
     expect(a1).toMatchEntity({ numberOfBooks: 2 });
+  });
+
+  it("can match async properties, if they're loaded", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { authors: [{}] });
+    await em.flush();
+    await p1.numberOfAuthors.load();
+    expect(p1).toMatchEntity({ numberOfAuthors: 1 });
   });
 
   it("can match reference with entity directly", async () => {
@@ -340,7 +372,7 @@ describe("toMatchEntity", () => {
     await em.flush();
     // This test assumes that no Author rules loaded `comments` during
     // flush, and so this is the 1st time comments is being accessed
-    expect(Object.keys(getInstanceData(a1).relations)).toEqual(expect.arrayContaining(["comments"]));
+    expect(Object.keys(getInstanceData(a1).relations ?? {})).toEqual(expect.arrayContaining(["comments"]));
     expect(a1).toMatchEntity({ comments: [] });
   });
 
@@ -402,3 +434,13 @@ describe("toMatchEntity", () => {
     `);
   });
 });
+
+class LateComparableValue {
+  constructor(readonly value: number) {}
+}
+
+/** Equates the two intentionally different values used by the lazy matcher regression test. */
+function areLateComparableValuesEqual(a: unknown, b: unknown): boolean | undefined {
+  if (a instanceof LateComparableValue && b instanceof LateComparableValue) return a.value + 1 === b.value;
+  return undefined;
+}

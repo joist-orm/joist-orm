@@ -26,10 +26,7 @@ export default {
           ...enumValues,
         },
       },
-      plugins: [
-        { add: { content: 'import { Temporal } from "temporal-polyfill"' } },
-        "@homebound/graphql-typescript-simple-resolvers",
-      ],
+      plugins: ["@homebound/graphql-typescript-simple-resolvers"],
     },
   },
 };

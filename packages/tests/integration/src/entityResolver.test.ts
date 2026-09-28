@@ -1,19 +1,19 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
-import { Author, BookRange, type Publisher } from "@src/entities";
-import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
-import { type Resolver } from "@src/generated/graphql-types";
-import { newEntityManager } from "@src/testEm";
 import {
   type FieldNode,
   type GraphQLResolveInfo,
   type GraphQLSchema,
-  isOutputType,
   Kind,
   type SelectionNode,
+  isOutputType,
 } from "graphql";
 import { convertInfoToLoadHint, entityResolver } from "joist-graphql-resolver-utils";
 import { getMetadata } from "joist-orm";
+import { Author, BookRange, ParentGroup, Publisher } from "src/entities";
+import { insertAuthor, insertBook, insertParentGroup, insertPublisher, update } from "src/entities/inserts";
+import { type Resolver } from "src/generated/graphql-types";
+import { newEntityManager } from "src/testEm";
 
 describe("entityResolver", () => {
   let schema: GraphQLSchema;
@@ -189,6 +189,39 @@ describe("entityResolver", () => {
     const a = await em.load(Author, "a:1");
     const result = await entityResolver(Author).isRed(a, {}, {}, undefined!);
     expect(result).toBe(false);
+  });
+
+  it("loads async properties on demand and returns loaded values synchronously", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    const resolver = entityResolver(Publisher).numberOfAuthors;
+
+    expect(await resolver(p, {}, {}, undefined!)).toBe(1);
+    expect(resolver(p, {}, {}, undefined!)).toBe(1);
+  });
+
+  it("loads lazy jsonb fields on demand", async () => {
+    // Given a parent group with a `lazy` jsonb column that is excluded from the default SELECT
+    await insertParentGroup({ name: "pg1", bulk_data: { a: 1 } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+    // When we access the lazy field via the entity resolver
+    const result = await entityResolver(ParentGroup).bulkData(pg, {}, {}, undefined!);
+    // Then it is fetched and put on the wire
+    expect(result).toEqual({ a: 1 });
+  });
+
+  it("returns lazy jsonb fields synchronously once loaded", async () => {
+    // Given a parent group whose `lazy` column has already been populated
+    await insertParentGroup({ name: "pg1", required_data: { b: 2 } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1", "requiredData");
+    // When we access the lazy field via the entity resolver
+    const result = entityResolver(ParentGroup).requiredData(pg, {}, {}, undefined!);
+    // Then it is returned synchronously from the already-loaded value
+    expect(result).toEqual({ b: 2 });
   });
 });
 

@@ -1,7 +1,7 @@
-import { Author, Book, newAuthor, newBook } from "@src/entities";
-import { insertAuthor } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
 import { RandomUuidAssigner } from "joist-orm";
+import { Author, Book, newAuthor, newBook } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/setupDbTests";
 
 describe("Author", () => {
   it("can load an entity with a uuid id", async () => {

@@ -1,4 +1,4 @@
-import { defineTest } from "jscodeshift/src/testUtils";
+import { defineTest } from "jscodeshift/src/testUtils.js";
 
 describe("codemod_0003-rename_find_paginated", () => {
   defineTest(__dirname, "codemod_0003-rename_find_paginated", null, "codemod_0003-rename_find_paginated", {

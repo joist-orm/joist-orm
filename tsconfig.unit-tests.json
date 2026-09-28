@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "src/*": ["./packages/core/src/*"]
+    },
+    "tsBuildInfoFile": "./build/tsconfig.unit-tests.tsbuildinfo"
+  },
+  "include": [
+    "./packages/codegen/src",
+    "./packages/core/src",
+    "./packages/graphql-codegen/src",
+    "./packages/utils/src"
+  ],
+  "exclude": ["./packages/codegen/src/codemods/__testfixtures__"]
+}

@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -65,6 +66,72 @@ export interface AuthorFields {
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   books: { kind: "o2m"; type: Book };
+}
+
+export interface AuthorColumns {
+  id: { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  lastName: { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  birthday: { type: Temporal.PlainDate; fieldName: "birthday"; nullable: false; insert: "required"; update: true };
+  childrenBirthdays: {
+    type: Temporal.PlainDate[];
+    fieldName: "childrenBirthdays";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  maybeBirthdays: {
+    type: Temporal.PlainDate[];
+    fieldName: "maybeBirthdays";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  timestamp: {
+    type: Temporal.PlainDateTime;
+    fieldName: "timestamp";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  timestamps: {
+    type: Temporal.PlainDateTime[];
+    fieldName: "timestamps";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  maybeTimestamps: {
+    type: Temporal.PlainDateTime[];
+    fieldName: "maybeTimestamps";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  time: { type: Temporal.PlainTime; fieldName: "time"; nullable: true; insert: "optional"; update: true };
+  times: { type: Temporal.PlainTime[]; fieldName: "times"; nullable: false; insert: "optional"; update: true };
+  maybeTimes: { type: Temporal.PlainTime[]; fieldName: "maybeTimes"; nullable: true; insert: "optional"; update: true };
+  timeToMicros: {
+    type: Temporal.PlainTime;
+    fieldName: "timeToMicros";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  createdAt: {
+    type: Temporal.ZonedDateTime;
+    fieldName: "createdAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  updatedAt: {
+    type: Temporal.ZonedDateTime;
+    fieldName: "updatedAt";
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface AuthorOpts {
@@ -173,6 +240,9 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];

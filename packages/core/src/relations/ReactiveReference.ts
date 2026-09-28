@@ -1,7 +1,10 @@
+import { type Entity } from "src/Entity.ts";
+import { type IdOf } from "src/EntityManager.ts";
+import { getField, setField } from "src/fields.ts";
 import {
-  EntityMetadata,
-  ManyToOneField,
-  TaggedId,
+  type EntityMetadata,
+  type ManyToOneField,
+  type TaggedId,
   deTagId,
   ensureNotDeleted,
   fail,
@@ -13,17 +16,21 @@ import {
   maybeResolveReferenceToId,
   sameEntity,
   toIdOf,
-} from "..";
-import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
-import { getField, setField } from "../fields";
-import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField } from "../newEntity";
-import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId } from "./ManyToOneReference";
-import { Reference, ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { lazyField } from "src/newEntity.ts";
+import {
+  type MaybeReactedEntity,
+  type Reacted,
+  type ReactiveHint,
+  convertToLoadHint,
+} from "src/reactivity/reactiveHints.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
+import { type Reference } from "src/relations/Reference.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
   T,
@@ -134,7 +141,7 @@ export class ReactiveReferenceImpl<
     }
     // If the property transformer is not enabled, then the RR will not be in the relations map because they are
     // defined in the implementation file and not the codegen file.  So we should insert ourselves regardless.
-    getInstanceData(entity).relations[field.fieldName] = this;
+    (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {

@@ -1,6 +1,4 @@
-import { T4AuthorCodegen } from "./entities";
-
-import { t4AuthorConfig as config } from "./entities";
+import { T4AuthorCodegen, t4AuthorConfig as config } from "./entities";
 
 export class T4Author extends T4AuthorCodegen {}
 

@@ -1,29 +1,30 @@
 import {
-  assertNever,
-  Column,
-  createRowFromEntityData,
-  Entity,
-  EntityManager,
+  type Entity,
+  type EntityManager,
   EnumCollectionImpl,
-  getEmInternalApi,
-  getInstanceData,
-  getMetadata,
-  getRelations,
-  isEntity,
-  JoinRow,
-  JoinRowTodo,
+  type FieldColumn,
+  type JoinRow,
+  type JoinRowTodo,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
-  MaybeAbstractEntityConstructor,
+  type MaybeAbstractEntityConstructor,
   OneToManyCollection,
   OneToOneReferenceImpl,
   Plugin,
+  PojoRowData,
   PolymorphicKeySerde,
   PolymorphicReferenceImpl,
   ReactiveManyToManyImpl,
   ReactiveManyToManyOtherSideImpl,
   ReactiveReferenceImpl,
-  Todo,
+  type Todo,
+  assertNever,
+  createRowFromEntityData,
+  getEmInternalApi,
+  getInstanceData,
+  getMetadata,
+  getRelations,
+  isEntity,
 } from "joist-core";
 
 /*
@@ -81,7 +82,7 @@ export class RunPlugin extends Plugin {
             // We're imitating a round trip to the database here, so we use our field's serde to map the value back
             // and forth.
             const serde = meta.allFields[fieldName].serde!;
-            let column: Column | undefined;
+            let column: FieldColumn | undefined;
             let value: any;
             if (serde instanceof PolymorphicKeySerde) {
               [column, value] =
@@ -94,7 +95,7 @@ export class RunPlugin extends Plugin {
               // the 2nd and 3rd arguments are only used if the 4th argument is defined, so it's OK to pass undefined here
               value = column.rowValue(newData);
             }
-            serde.setOnEntity(oldData, column ? { [column.columnName]: value } : {});
+            oldData[fieldName] = serde.fromRow(new PojoRowData([column ? { [column.columnName]: value } : {}]), 0);
           });
       });
       todo.deletes.forEach((newEntity) => {

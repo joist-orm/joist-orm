@@ -49,6 +49,7 @@ import {
   newTaskNew,
   type Tag,
   Task,
+  type TaskColumns,
   type TaskFields,
   type TaskFilter,
   type TaskGraphQLFilter,
@@ -63,29 +64,34 @@ import {
 
 export type TaskNewId = Flavor<string, "Task">;
 
-export interface TaskNewFields extends TaskFields {
+export interface TaskNewFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
+  sharedSubtypeField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   newTaskTaskItems: { kind: "o2m"; type: TaskItem };
   selfReferentialTasks: { kind: "o2m"; type: TaskNew };
   copiedTo: { kind: "o2m"; type: TaskNew };
 }
 
+export interface TaskNewColumns extends TaskColumns {
+}
+
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
-  selfReferential?: TaskNew | TaskNewId | null;
+  sharedSubtypeField?: number | null;
   specialNewAuthor?: Author | AuthorId | null;
+  selfReferential?: TaskNew | TaskNewId | null;
   newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
   copiedTo?: TaskNew[];
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
-  selfReferentialId?: TaskNewId | null;
   specialNewAuthorId?: AuthorId | null;
+  selfReferentialId?: TaskNewId | null;
   copiedFromId?: TaskNewId | null;
   newTaskTaskItemIds?: TaskItemId[] | null;
   selfReferentialTaskIds?: TaskNewId[] | null;
@@ -94,8 +100,9 @@ export interface TaskNewIdsOpts extends TaskIdsOpts {
 
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
-  selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
+  sharedSubtypeField?: ValueFilter<number, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
@@ -104,10 +111,11 @@ export interface TaskNewFilter extends TaskFilter {
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
-  selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
-  selfReferentialId?: ValueGraphQLFilter<TaskNewId>;
+  sharedSubtypeField?: ValueGraphQLFilter<number>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   specialNewAuthorId?: ValueGraphQLFilter<AuthorId>;
+  selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  selfReferentialId?: ValueGraphQLFilter<TaskNewId>;
   copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromId?: ValueGraphQLFilter<TaskNewId>;
   newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
@@ -117,8 +125,9 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
 
 export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
-  selfReferential?: TaskNewOrder;
+  sharedSubtypeField?: OrderBy;
   specialNewAuthor?: AuthorOrder;
+  selfReferential?: TaskNewOrder;
   copiedFrom?: TaskNewOrder;
 }
 
@@ -147,6 +156,9 @@ declare module "joist-core" {
       orderType: TaskNewOrder;
       optsType: TaskNewOpts;
       fieldsType: TaskNewFields;
+      columnsType: TaskNewColumns;
+      inheritanceType: "sti";
+      supportsEmExecute: false;
       optIdsType: TaskNewIdsOpts;
       factoryExtrasType: TaskNewFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskNew>[1];
@@ -163,8 +175,8 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany();
   readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany();
   readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany();
-  readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne();
+  readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly copiedFrom: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly copiedFromsRecursive: ReadOnlyCollection<TaskNew, TaskNew> = hasRecursiveParents(
     "copiedFrom",
@@ -199,6 +211,14 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   set specialNewField(specialNewField: number | undefined) {
     setField(this, "specialNewField", specialNewField);
+  }
+
+  get sharedSubtypeField(): number | undefined {
+    return getField(this, "sharedSubtypeField");
+  }
+
+  set sharedSubtypeField(sharedSubtypeField: number | undefined) {
+    setField(this, "sharedSubtypeField", sharedSubtypeField);
   }
 
   /**

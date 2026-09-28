@@ -1,5 +1,5 @@
-import { Entity } from "./Entity";
-import { EntityManager } from "./EntityManager";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager } from "src/EntityManager.ts";
 
 /**
  * Provides a container for entities to attach their application-specific types.
@@ -11,7 +11,7 @@ import { EntityManager } from "./EntityManager";
  * ```ts
  * declare module "joist-core" {
  *   interface TypeMap {
- *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; filterType: AuthorFilter };
+ *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; columnsType: AuthorColumns; filterType: AuthorFilter };
  *   }
  * }
  * ```
@@ -28,6 +28,23 @@ export interface TypeMap {}
  */
 type TypeMapKey<T> = T extends { __type: { 1: infer K } } ? K : T extends { __type: { 0: infer K } } ? K : never;
 
+/** The literal type name of an entity, i.e. `"Author"` or `"SmallPublisher"`. */
+export type TypeNameOf<T> = TypeMapKey<T>;
+
+/**
+ * The literal type name of an entity's root type, i.e. `"Publisher"` for both `Publisher` and
+ * `SmallPublisher`.
+ *
+ * `em.query` uses it as an alias's default source key, so that `Alias<SmallPublisher>` stays assignable to
+ * `Alias<Publisher>` (codegen'd subtype filters extend their base filters) and a CTI subtype alias and
+ * its base alias share one nullability identity, which they should, being one table family.
+ *
+ * A type without `__type` (i.e. the bare `Entity` interface in generic code like `Scope<T>`) gets the
+ * untracked key `string`, not `never`: `never` means "source-less" and also broke the comparability of
+ * `Alias<T>` with `Alias<Entity>`.
+ */
+export type RootTypeNameOf<T> = T extends { __type: { 0: infer K extends string } } ? K : string;
+
 /** A helper type to look up `U` in the `TypeMap` for a given entity type `T`. */
 export type TypeMapEntry<T, U extends string> =
   TypeMapKey<T> extends infer K
@@ -43,6 +60,12 @@ export type OptsOf<T> = TypeMapEntry<T, "optsType">;
 
 /** Return the `FooFields` type for the given `Foo` entity. */
 export type FieldsOf<T> = TypeMapEntry<T, "fieldsType">;
+
+/** Return the physical `FooColumns` type for the given `Foo` entity. */
+export type ColumnsOf<T> = TypeMapEntry<T, "columnsType">;
+
+/** Returns the inheritance strategy, or never for non-inherited entities. */
+export type InheritanceTypeOf<T> = TypeMapEntry<T, "inheritanceType">;
 
 export type OptIdsOf<T> = TypeMapEntry<T, "optIdsType">;
 

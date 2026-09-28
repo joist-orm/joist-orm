@@ -1,23 +1,24 @@
+import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
 import {
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type IdOf,
+  type ManyToManyField,
   appendStack,
-  Collection,
   ensureNotDeleted,
-  Entity,
-  EntityMetadata,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
-  IdOf,
-  ManyToManyField,
   toTaggedId,
-} from "../";
-import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
-import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { lazyField } from "../newEntity";
-import { maybeAdd, maybeRemove, remove } from "../utils";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { maybeAdd, maybeRemove, remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {
@@ -72,9 +73,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true
-      ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    if (opts?.withDeleted === true) return [...entities];
+    // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
+    const includeSoftDeleted = this.#field.softDeletes === "include";
+    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
@@ -559,7 +561,7 @@ class LoadedState<T extends Entity, U extends Entity> implements M2MState<T, U> 
 
   set(values: readonly U[]): M2MState<T, U> {
     this.#hasBeenSet = true;
-    const loaded = new Set([...this.#loaded]);
+    const loaded = new Set(this.#loaded);
     const valuesSet = new Set(values);
     for (const other of loaded) {
       if (!valuesSet.has(other)) {

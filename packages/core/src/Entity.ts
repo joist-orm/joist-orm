@@ -1,5 +1,5 @@
-import { EntityManager, TaggedId } from "./EntityManager";
-import { BaseEntity } from "./index";
+import { type EntityManager, type TaggedId } from "src/EntityManager.ts";
+import { BaseEntity } from "src/index.ts";
 
 export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
   return maybeEntity instanceof BaseEntity;

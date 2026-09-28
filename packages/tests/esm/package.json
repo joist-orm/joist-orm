@@ -11,34 +11,33 @@
   },
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/esm node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
-    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen && graphql-codegen --config graphql-codegen.mjs",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
+    "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^8.0.4",
-    "temporal-polyfill": "^0.3.2"
+    "temporal-polyfill": "^1.0.4"
   },
   "devDependencies": {
-    "@graphql-codegen/add": "^7.0.1",
-    "@graphql-codegen/cli": "^7.1.3",
-    "@homebound/graphql-typescript-simple-resolvers": "^1.58.0",
-    "@swc/core": "^1.15.43",
+    "@graphql-codegen/add": "^7.1.0",
+    "@graphql-codegen/cli": "^7.2.0",
+    "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
+    "@swc/core": "^1.16.1",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.2.0",
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
     "joist-codegen": "workspace:*",
+    "joist-core": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.8.4",
-    "prettier-plugin-organize-imports": "^4.3.0",
+    "joist-utils": "workspace:*",
     "superstruct": "^2.0.2",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

@@ -1,5 +1,5 @@
-import { Resolver } from "./context";
-import { ResolverResult, RunFn } from "./typeUtils";
+import { type Resolver } from "./context.ts";
+import { type ResolverResult, type RunFn } from "./typeUtils.ts";
 
 /**
  * Creates a `makeRunInputMutation` function for each project's `testUtils` file.

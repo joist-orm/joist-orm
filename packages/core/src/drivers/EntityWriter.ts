@@ -1,18 +1,18 @@
-import { getInstanceData } from "../BaseEntity";
-import { Entity } from "../Entity";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity } from "src/Entity.ts";
 import {
-  EntityMetadata,
-  Field,
-  PrimitiveField,
+  type EntityMetadata,
+  type Field,
+  type PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-} from "../EntityMetadata";
-import { Todo } from "../Todo";
-import { getField, isChangeableField } from "../fields";
-import { keyToNumber } from "../keys";
-import { Column, TimestampSerde, hasSerde } from "../serde";
-import { groupBy } from "../utils";
+} from "src/EntityMetadata.ts";
+import { getField, isChangeableField } from "src/fields.ts";
+import type { Todo } from "src/flush/Todo.ts";
+import { keyToNumber } from "src/keys.ts";
+import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
+import { groupBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };
@@ -88,7 +88,12 @@ function addInserts(ops: Ops, todo: Todo, fixups: InsertFixup[]): void {
           ops.inserts.push(newInsertOp(meta, group, fixups));
         }
       } else if (meta.inheritanceType === "sti") {
-        ops.inserts.push(newStiInsertOp(meta, todo.inserts, fixups));
+        // One INSERT per subtype, so each statement's column list spans exactly what that subtype can
+        // set. A single statement across subtypes has to bind NULL for the other subtypes' columns,
+        // which defeats their database defaults, and outright fails for notNull ones.
+        for (const group of groupBy(todo.inserts, (e) => getMetadata(e)).values()) {
+          ops.inserts.push(newStiInsertOp(meta, group, fixups));
+        }
       } else {
         throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
@@ -108,21 +113,10 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[], fixups: InsertFix
 }
 
 function newStiInsertOp(root: EntityMetadata, entities: Entity[], fixups: InsertFixup[]): InsertOp {
-  // Get the unique set of subtypes
-  const subTypes = new Set<EntityMetadata>();
-  for (const e of entities) subTypes.add(getMetadata(e));
-  // All the root fields (including id)
-  const fields: Field[] = Object.values(root.fields);
-  // Then the subtype fields that haven't been seen yet (subtypes have the root fields + can share non-root fields)
-  for (const st of subTypes) {
-    for (const f of Object.values(st.fields)) {
-      if (!fields.some((f2) => f2.fieldName === f.fieldName)) {
-        fields.push(f);
-      }
-    }
-  }
+  // `allFields` is the base's fields plus this subtype's own, i.e. everything this subtype can write.
+  // Anything it can't write is left out of the statement entirely, so the database applies its default.
+  const fields: Field[] = Object.values(getMetadata(entities[0]).allFields);
   const columns = fields.filter(hasSerde).flatMap((f) => f.serde.columns);
-  // And then collect the same bindings across each STI
   const columnValues = collectBindings(entities, root.tableName, columns, fixups);
   return { tableName: root.tableName, columns, columnValues };
 }
@@ -135,17 +129,40 @@ function addUpdates(ops: Ops, todo: Todo): void {
         for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
           const op = newUpdateOp(meta, group);
           if (op) ops.updates.push(op);
+          addLazyUpdates(ops, meta, group);
         }
       } else if (meta.inheritanceType === "sti") {
         const op = newUpdateOp(meta, todo.updates);
         if (op) ops.updates.push(op);
+        addLazyUpdates(ops, meta, todo.updates);
       } else {
         throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
       const op = newUpdateOp(meta, todo.updates);
       if (op) ops.updates.push(op);
+      addLazyUpdates(ops, meta, todo.updates);
     }
+  }
+}
+
+/**
+ * Writes changed `lazy` columns via a targeted `UPDATE table SET lazy_col = ... WHERE id in (...)`.
+ *
+ * Lazy columns are excluded from the main batch UPDATE (which spans the batch's union of changed fields),
+ * so that entities in the batch that never loaded a lazy column keep their existing db value instead of
+ * being overwritten with null. Here we write each lazy column only for the entities that actually changed it.
+ */
+function addLazyUpdates(ops: Ops, meta: EntityMetadata, entities: Entity[]): void {
+  const idColumn = meta.fields["id"].serde!.columns[0];
+  for (const fieldName of meta.lazyFieldNames!) {
+    const field = meta.fields[fieldName];
+    if (!hasSerde(field)) continue;
+    const changed = entities.filter((e) => fieldName in getInstanceData(e).changedData);
+    if (changed.length === 0) continue;
+    const columns: BindingColumn[] = [idColumn, ...field.serde.columns];
+    const columnValues = collectBindings(changed, meta.tableName, columns, undefined);
+    ops.updates.push({ tableName: meta.tableName, columns, columnValues, updatedAt: undefined });
   }
 }
 
@@ -154,7 +171,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    for (const fieldName of getInstanceData(entity).changedFields) changedFields.add(fieldName);
+    for (const fieldName in getInstanceData(entity).changedData) changedFields.add(fieldName);
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.
@@ -169,12 +186,15 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   const updatedAt = meta.timestampFields?.updatedAt;
   changedFields.add("id");
   if (updatedAt) changedFields.add(updatedAt);
+  // `lazy` columns are deliberately excluded from the batch UPDATE and written by `addLazyUpdates`; an
+  // entity that never loaded a lazy column isn't in `row`, so forcing `getField` here would clobber it to null.
+  const lazyFieldNames = meta.lazyFieldNames!;
   for (const entity of entities) {
     const { data } = getInstanceData(entity);
     for (const key of changedFields) {
       // Check isChangeableField because we might be updating the base `publishers` table
       // and `originalData` might have fields from a subclass `large_publishers` table.
-      if (!(key in data) && isChangeableField(entity, key)) {
+      if (!(key in data) && isChangeableField(entity, key) && !lazyFieldNames.has(key)) {
         getField(entity, key);
       }
     }
@@ -191,6 +211,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
       : Object.values(meta.fields)
   )
     .filter((f) => changedFields.has(f.fieldName))
+    .filter((f) => !lazyFieldNames.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
 
@@ -243,7 +264,7 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity
   return [...entitiesByType.entries()];
 }
 
-type BindingColumn = OpColumn & Pick<Column, "dbValue">;
+type BindingColumn = OpColumn & Pick<FieldColumn, "dbValue">;
 type EntityWithData = Entity & { __data: { data: Record<string, unknown> } };
 
 /**
@@ -268,7 +289,8 @@ function collectBindings(
     const column = columns[columnIndex];
     const columnValues: any[] = new Array(entityCount);
     for (let entityIndex = 0; entityIndex < entityCount; entityIndex++) {
-      columnValues[entityIndex] = column.dbValue(entityData[entityIndex], entities[entityIndex], tableName, fixups) ?? null;
+      columnValues[entityIndex] =
+        column.dbValue(entityData[entityIndex], entities[entityIndex], tableName, fixups) ?? null;
     }
     bindings[columnIndex] = columnValues;
   }

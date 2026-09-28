@@ -1,17 +1,17 @@
-import { getMetadataForType } from "../configure";
-import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { getMetadataForType } from "src/configure.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager } from "src/EntityManager.ts";
 import {
+  type ManyToOneField,
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
+  deTagIds,
   getField,
   kq,
-  ManyToOneField,
-  ParsedFindQuery,
-  unsafeDeTagIds,
-} from "../index";
-import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
-import { abbreviation } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+} from "src/index.ts";
+import { type RecursiveParentsCollectionImpl } from "src/relations/RecursiveCollection.ts";
+import { abbreviation } from "src/utils.ts";
 
 export const recursiveParentsOperation = "m2o-recursive";
 
@@ -55,7 +55,7 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
               UNION
               SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
             `,
-            bindings: [unsafeDeTagIds(immediateParentIds)],
+            bindings: [deTagIds(meta, immediateParentIds)],
           },
           recursive: true,
         },
@@ -64,11 +64,11 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
-    const rows = await em["executeFind"](meta, recursiveParentsOperation, query, {});
+    const rowData = await em["executeFindRowData"](meta, recursiveParentsOperation, query, {});
 
     // Since we're preloading m2os up the tree, merely having the entities in the EM is enough
     // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the
     // keys, or push them into the preloader cache.
-    em.hydrate(meta.cstr, rows);
+    em["hydrateAndFinalize"](meta.cstr, rowData);
   });
 }

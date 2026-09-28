@@ -1,4 +1,4 @@
-import { type Config } from "../config";
+import { type Config } from "../config.ts";
 
 /**
  * A generic interface for Joist codemods.

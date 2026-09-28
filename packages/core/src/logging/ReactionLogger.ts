@@ -1,15 +1,20 @@
 import ansis from "ansis";
-import { Reactable, ReactiveRule } from "../config";
-import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
-import { ReactiveAction } from "../ReactionsManager";
-import { Todo } from "../Todo";
-import { groupBy } from "../utils";
+import { type Reactable, type ReactiveRule } from "src/config.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager } from "src/EntityManager.ts";
+import type { Todo } from "src/flush/Todo.ts";
+import type { ReactiveAction } from "src/reactivity/ReactionsManager.ts";
+import { groupBy } from "src/utils.ts";
 
 const { gray, green, yellow, white } = ansis;
 
 export let globalLogger: ReactionLogger | undefined = undefined;
 type WriteFn = (line: string) => void;
+export type ReactionWalk = {
+  todo: Entity[];
+  r: Reactable | ReactiveRule;
+  entities: Entity[];
+};
 
 export class ReactionLogger {
   private writeFn: WriteFn;
@@ -46,7 +51,6 @@ export class ReactionLogger {
     );
   }
 
-  // Both EntityManager.runValidation and RM.recalc use `logWalked`
   logStartingValidate(em: EntityManager, todos: Record<string, Todo>): void {
     const count = Object.values(todos).reduce(
       (sum, t) => sum + t.inserts.length + t.updates.length + t.deletes.length,
@@ -55,36 +59,39 @@ export class ReactionLogger {
     this.log(white.bold(`Validating from ${count} changed entities...`), this.entityCount(em));
   }
 
-  logWalked(todo: Entity[], r: Reactable | ReactiveRule, entities: Entity[], action: "recalc" | "validate"): void {
-    // Keep for future debugging...
-    const from = todo[0].constructor.name;
-    this.log(
-      " ", // indent
-      gray(`Walked`),
-      white(`${todo.length}`),
-      green.bold(`${from}`) + green(`.${r.path.length === 0 ? "(self)" : r.path.join(".")}`),
-      gray("paths, found"),
-      white(`${entities.length}`),
-      green.bold(`${r.cstr.name}`) + green(".") + yellow(r.name),
-      gray(`to ${action}`),
-    );
-    if (entities.length > 0) {
+  /** Logs completed walks in deterministic shortest-path order. */
+  logWalks(walks: readonly (ReactionWalk | undefined)[], action: "recalc" | "validate"): void {
+    const ordered = walks.filter((walk) => walk !== undefined).sort((a, b) => a.r.path.length - b.r.path.length);
+    for (const { todo, r, entities } of ordered) {
+      const from = todo[0].constructor.name;
       this.log(
-        "   ", // indent
-        gray("["),
-        todo.map((e) => e.toTaggedString()).join(" "),
-        gray("] -> ["),
-        [...new Set(entities)].map((e) => e.toTaggedString()).join(" "),
-        gray("]"),
+        " ", // indent
+        gray(`Walked`),
+        white(`${todo.length}`),
+        green.bold(`${from}`) + green(`.${r.path.length === 0 ? "(self)" : r.path.join(".")}`),
+        gray("paths, found"),
+        white(`${entities.length}`),
+        green.bold(`${r.cstr.name}`) + green(".") + yellow(r.name),
+        gray(`to ${action}`),
       );
+      if (entities.length > 0) {
+        this.log(
+          "   ", // indent
+          gray("["),
+          todo.map((e) => e.toTaggedString()).join(" "),
+          gray("] -> ["),
+          [...new Set(entities)].map((e) => e.toTaggedString()).join(" "),
+          gray("]"),
+        );
+      }
     }
   }
 
   /** After finding the RFs/RQFs/Reactions to recalc, we call their `.load` promise to update. */
   logLoadingStart(em: EntityManager, actions: ReactiveAction[]): void {
     this.log(" ", gray("Loading"), String(actions.length), gray("actions..."), this.entityCount(em));
-    // Group by the action name
-    [...groupBy(actions, (a) => `${a.entity.constructor.name},${a.r.name}`).values()].forEach((actions) => {
+    const ordered = [...actions].sort((a, b) => a.r.path.length - b.r.path.length);
+    [...groupBy(ordered, (a) => `${a.entity.constructor.name},${a.r.name}`).values()].forEach((actions) => {
       const { r, entity } = actions[0];
       this.log(
         "   ",
@@ -119,3 +126,26 @@ export function setReactionLogging(arg: boolean | ReactionLogger): void {
 function maybeDotPath(r: Reactable): string {
   return r.path.length > 0 ? `.${r.path.join(".")}.` : ".";
 }
+
+class NoopReactionLogger extends ReactionLogger {
+  now(): number {
+    return 0;
+  }
+
+  logQueued(entity: Entity, fieldName: string, r: Reactable): void {}
+
+  logQueuedAll(entity: Entity, reason: string, r: Reactable): void {}
+
+  logStartingRecalc(em: EntityManager, kind: "reactables" | "reactiveQueries"): void {}
+
+  logStartingValidate(em: EntityManager, todos: Record<string, Todo>): void {}
+
+  logWalks(walks: readonly (ReactionWalk | undefined)[], action: "recalc" | "validate"): void {}
+
+  logLoadingStart(em: EntityManager, actions: ReactiveAction[]): void {}
+
+  logLoadingEnd(em: EntityManager, millis: number): void {}
+}
+
+/** A shared no-op logger that avoids optional chaining in hot reaction paths. */
+export const noopReactionLogger: ReactionLogger = new NoopReactionLogger();

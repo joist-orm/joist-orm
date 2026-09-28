@@ -1,6 +1,10 @@
 import {
-  cannotBeUpdated,
   Collection,
+  Loaded,
+  Property,
+  ReactiveField,
+  ReactiveReference,
+  cannotBeUpdated,
   hasAsyncProperty,
   hasAsyncReactiveField,
   hasCustomCollection,
@@ -8,21 +12,18 @@ import {
   hasReactiveProperty,
   hasReactiveReference,
   isLoaded,
-  Loaded,
-  Property,
-  ReactiveField,
-  ReactiveReference,
 } from "joist-orm";
+
 import {
   Author,
   BookReview,
   Color,
-  publisherConfig as config,
   Image,
   ImageType,
   ImageTypes,
   PublisherCodegen,
   PublisherType,
+  publisherConfig as config,
 } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;

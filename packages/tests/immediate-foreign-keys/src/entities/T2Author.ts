@@ -1,6 +1,4 @@
-import { T2AuthorCodegen } from "./entities";
-
-import { t2AuthorConfig as config } from "./entities";
+import { T2AuthorCodegen, t2AuthorConfig as config } from "./entities";
 
 export class T2Author extends T2AuthorCodegen {}
 

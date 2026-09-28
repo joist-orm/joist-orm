@@ -1,5 +1,5 @@
 import { EntityMetadata, noValue, testing } from "joist-orm";
-import { Author, Book, newAuthor, newBook, newUser, SmallPublisher } from "src/entities";
+import { Author, Book, SmallPublisher, newAuthor, newBook, newUser } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 

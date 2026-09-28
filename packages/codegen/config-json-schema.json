@@ -72,9 +72,10 @@
                   "propertyNames": { "type": "string" },
                   "additionalProperties": { "type": "string" }
                 },
-                "stiType": { "type": "string" },
+                "stiType": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
                 "notNull": { "type": "boolean" },
-                "hasDefault": { "type": "boolean" }
+                "hasDefault": { "type": "boolean" },
+                "lazy": { "type": "boolean" }
               },
               "additionalProperties": false
             }
@@ -91,7 +92,10 @@
                 },
                 "large": { "type": "boolean" },
                 "orderBy": { "type": "string" },
-                "stiType": { "type": "string" },
+                "softDeletes": {
+                  "anyOf": [{ "type": "string", "const": "include" }, { "type": "string", "const": "exclude" }]
+                },
+                "stiType": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
                 "subType": { "type": "string" },
                 "skipRecursiveRelations": { "type": "boolean" },
                 "notNull": { "type": "boolean" },
@@ -122,6 +126,7 @@
         { "type": "string", "const": "number" }
       ]
     },
+    "tagDelimiter": { "type": "string" },
     "nonDeferredForeignKeys": {
       "anyOf": [
         { "type": "string", "const": "error" },
@@ -135,6 +140,7 @@
       "anyOf": [{ "type": "string", "const": "cursor" }, { "type": "string", "const": "limit" }]
     },
     "docs": { "type": "boolean" },
+    "skills": { "type": "boolean" },
     "outputDocs": { "type": "boolean" },
     "allowImportingTsExtensions": { "type": "boolean" },
     "codemodVersion": { "default": 0, "type": "integer", "minimum": 0, "maximum": 9007199254740991 },

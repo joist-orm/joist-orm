@@ -1,7 +1,6 @@
-import { Author, FavoriteShape, newAuthor } from "@src/entities";
-import { insertAuthor, select } from "@src/entities/inserts";
-
-import { newEntityManager } from "@src/testEm";
+import { Author, FavoriteShape, newAuthor } from "src/entities";
+import { insertAuthor, select } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("NativeEnums", () => {
   it("can save native enums", async () => {

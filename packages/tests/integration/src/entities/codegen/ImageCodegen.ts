@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -72,6 +73,31 @@ export interface ImageFields {
   author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+}
+
+export interface ImageColumns {
+  id: { fieldName: "id"; type: IdOf<Image>; entity: Image; nullable: false; insert: "optional"; update: false };
+  fileName: { type: string; fieldName: "fileName"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  typeId: { type: ImageType; fieldName: "type"; nullable: false; insert: "required"; update: true };
+  authorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "author";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: true; insert: "optional"; update: true };
+  publisherId: {
+    type: IdOf<Publisher>;
+    entity: Publisher;
+    fieldName: "publisher";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface ImageOpts {
@@ -164,6 +190,9 @@ declare module "joist-core" {
       orderType: ImageOrder;
       optsType: ImageOpts;
       fieldsType: ImageFields;
+      columnsType: ImageColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: ImageIdsOpts;
       factoryExtrasType: ImageFactoryExtras;
       factoryOptsType: Parameters<typeof newImage>[1];

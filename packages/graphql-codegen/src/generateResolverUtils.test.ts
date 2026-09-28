@@ -1,12 +1,12 @@
-import { generateResolverUtils } from "./generateResolverUtils";
-import { renderCodegenFile } from "./testUtils";
+import { generateResolverUtils } from "./generateResolverUtils.ts";
+import { renderCodegenFile } from "./testUtils.ts";
 
 describe("generateResolverUtils", () => {
   it("generates cursor resolver utils", () => {
     const [utils] = generateResolverUtils({ paginationStyle: "cursor" } as never);
     expect(utils.name).toBe("resolvers/utils.ts");
     expect(renderCodegenFile(utils, {} as never)).toMatchInlineSnapshot(`
-      "import { entityResolver, paginateCursor, saveEntity } from \"joist-graphql-resolver-utils\";
+      "import { entityResolver, paginateCursor, saveEntity } from "joist-graphql-resolver-utils";
 
       export { entityResolver, paginateCursor as paginate, saveEntity };
       "
@@ -17,7 +17,7 @@ describe("generateResolverUtils", () => {
     const [utils] = generateResolverUtils({ paginationStyle: "limit" } as never);
     expect(utils.name).toBe("resolvers/utils.ts");
     expect(renderCodegenFile(utils, {} as never)).toMatchInlineSnapshot(`
-      "import { entityResolver, paginateLimit, saveEntity } from \"joist-graphql-resolver-utils\";
+      "import { entityResolver, paginateLimit, saveEntity } from "joist-graphql-resolver-utils";
 
       export { entityResolver, paginateLimit as paginate, saveEntity };
       "

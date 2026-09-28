@@ -1,3 +1,4 @@
+import { getEmInternalApi, noValue } from "joist-orm";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -10,22 +11,22 @@ import {
   insertTag,
   select,
   update,
-} from "@src/entities/inserts";
-import { knex, newEntityManager } from "@src/testEm";
-import { getEmInternalApi, noValue } from "joist-orm";
+} from "src/entities/inserts";
+import { knex, newEntityManager } from "src/testEm";
+
 import {
   Author,
   Book,
   BookRange,
   BookReview,
+  Publisher,
+  Tag,
   newAuthor,
   newBook,
   newBookAdvance,
   newBookReview,
   newComment,
   newPublisher,
-  Publisher,
-  Tag,
 } from "../entities";
 
 describe("ReactiveField", () => {
@@ -284,6 +285,32 @@ describe("ReactiveField", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
+  it("can recalc RFs without assigned ids", async () => {
+    const em = newEntityManager();
+    // When we have a new author
+    const a1 = newAuthor(em, { firstName: "a1" });
+    // And Author.search accesses `a.id` before it is assigned
+    await em.recalc(a1);
+    // Then the id is assigned and Author.search is recalculated
+    expect(a1.search.get).toBe("a:1 a1");
+  });
+
+  it("throws when recalculating RFs that use deleted entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const b = await em.load(Book, "b:1");
+    // When we delete author, which will eventually percolate to the Book
+    em.delete(a);
+    // Then recalcing the Book still surfaces the TypeError
+    await expect(em.recalc(b)).rejects.toThrow(TypeError);
+    // And a subsequent flush finishes the pending cascade cleanly
+    await em.flush();
+    expect(a.isDeletedEntity).toBe(true);
+    expect(b.isDeletedEntity).toBe(true);
+  });
+
   it("ignores type errors in downstream reactions on recalc", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -537,6 +564,39 @@ describe("ReactiveField", () => {
     }
   });
 
+  it("reacts to soft deletion and resurrection through recursive relations", async () => {
+    // Given three Authors in a mentor chain with current persisted reactive fields
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    // And a2 is both a mentee of a1 and a mentor of a3
+    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 });
+    // And a3 observes both ancestors through mentorsRecursive
+    newAuthor(em, { firstName: "a3", mentor: a2 });
+    await em.flush();
+
+    // When the middle Author is soft-deleted without changing its name or mentor
+    a2.softDelete();
+    await em.flush();
+
+    // Then a1 loses the branch, while a3 still sees a1 through its soft-deleted mentor
+    expect(await select("authors")).toMatchObject([
+      { id: 1, mentee_names: null },
+      { id: 2, mentor_names: "a1", mentee_names: "a3" },
+      { id: 3, mentor_names: "a1" },
+    ]);
+
+    // When the middle Author is resurrected
+    a2.deletedAt = undefined;
+    await em.flush();
+
+    // Then both recursive directions have their original membership
+    expect(await select("authors")).toMatchObject([
+      { id: 1, mentee_names: "a2, a3" },
+      { id: 2, mentor_names: "a1", mentee_names: "a3" },
+      { id: 3, mentor_names: "a2, a1" },
+    ]);
+  });
+
   it("throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
     const em = newEntityManager();
     newBook(em, { author: noValue() });
@@ -548,6 +608,15 @@ describe("ReactiveField", () => {
     const b1 = newBook(em);
     b1.transientFields.throwNpeInSearch = true;
     await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
+  });
+
+  it("still throws valid NPEs during em.recalc", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1");
+    b1.transientFields.throwNpeInSearch = true;
+    await expect(em.recalc(b1)).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
   });
 
   it("cache invalidates transitive RFs", async () => {

@@ -53,6 +53,33 @@ console.log(a.books.getWithDeleted);
 
 `em.find` queries also filter out soft-deleted rows by default but at the database level (by adding a `WHERE deleted_at IS NULL` to the query).
 
+To keep find queries consistent with the load/populate behavior above, this filtering is only applied to:
+
+1. The entity being queried, and
+2. Collection joins, i.e. `o2m` and `m2m` relations
+
+I.e. reference joins (`m2o` and `o2o` relations) are _not_ filtered, because their in-memory accessors also return soft-deleted entities:
+
+```ts
+// Given a Book b1 that is not soft-deleted, but its Author a1 is soft-deleted
+
+// This returns b1, b/c `b1.author.get` also returns the soft-deleted a1
+const books = await em.find(Book, { author: { firstName: "a1" } });
+
+// But this skips b1, b/c `b1.deleted_at IS NULL` is applied to the queried entity itself
+const books2 = await em.find(Book, { title: "b1" });
+
+// And, given an Author a2 with a soft-deleted Book b2, this skips a2, b/c
+// `a2.books.get` also skips the soft-deleted b2
+const authors = await em.find(Author, { books: { title: "b2" } });
+```
+
+If you do want a reference join to skip soft-deleted rows, just ask for it explicitly:
+
+```ts
+const books = await em.find(Book, { author: { deletedAt: null } });
+```
+
 If you'd like to include soft-deleted rows in a `find` query, you can use the `softDeletes` option:
 
 ```ts

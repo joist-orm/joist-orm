@@ -1,7 +1,7 @@
-import { EntityManager } from "@src/entities";
-import { PostgresTestDriver, TestDriver } from "@src/testDrivers";
 import { EntityManagerOpts } from "joist-orm";
 import { Knex } from "knex";
+import { EntityManager } from "src/entities";
+import { PostgresTestDriver, TestDriver } from "src/testDrivers";
 
 // Create a shared test context that tests can use, and also we'll use to auto-flush the db between tests.
 const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");

@@ -1,7 +1,8 @@
-import { EntityManager } from "../EntityManager";
-import { ParsedFindQuery } from "../QueryParser";
-import { JoinRowTodo, Todo } from "../Todo";
-import { PreloadPlugin } from "../plugins/PreloadPlugin";
+import { type EntityManager } from "src/EntityManager.ts";
+import type { JoinRowTodo, Todo } from "src/flush/Todo.ts";
+import { type PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { type RowData } from "src/RowData.ts";
 
 /**
  * Isolates all SQL calls that Joist needs to make to fetch/save data.
@@ -16,8 +17,26 @@ export interface Driver<TX = unknown> {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]>;
 
-  /** Executes a raw SQL query with bindings. */
-  executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
+  /**
+   * Executes a raw SQL query with bindings and returns its command count and rows.
+   *
+   * The count is reported by the database command, never inferred from the returned rows.
+   * Commands without a count, such as DDL, return null; `em.execute` requires a nonnegative integer.
+   */
+  executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<DriverQueryResult>;
+
+  /**
+   * Like `executeFind`, but returns a lazy {@link RowData} instead of materialized POJO rows.
+   *
+   * This method's *presence* is the capability signal: drivers define it only when lazy rows
+   * are supported + enabled (i.e. `PostgresDriver` with `lazyRows: true`), and entity-hydrating
+   * loaders fall back to classic rows wrapped in a `PojoRowData` when it is undefined.
+   */
+  executeFindRowData?(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<RowData>;
 
   transaction<T>(em: EntityManager, fn: (txn: TX) => Promise<T>): Promise<T>;
 
@@ -27,4 +46,10 @@ export interface Driver<TX = unknown> {
 
   /** Allows the driver to opt `EntityManager`s into plugins it has enabled/supported by default. */
   defaultPlugins: { preloadPlugin?: PreloadPlugin };
+}
+
+/** Raw rows and the database command's affected-row count for mutations or selected-row count for reads. */
+export interface DriverQueryResult {
+  rowCount: number | null;
+  rows: any[];
 }

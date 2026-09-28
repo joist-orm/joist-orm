@@ -1,6 +1,5 @@
-import { Context } from "@src/context";
-
-import { knex, newEntityManager } from "@src/testEm";
+import { Context } from "src/context";
+import { knex, newEntityManager } from "src/testEm";
 
 type itWithCtxFn = (ctx: Context) => Promise<void>;
 

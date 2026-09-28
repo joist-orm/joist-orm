@@ -1,6 +1,4 @@
-import { T3BookCodegen } from "./entities";
-
-import { t3BookConfig as config } from "./entities";
+import { T3BookCodegen, t3BookConfig as config } from "./entities";
 
 export class T3Book extends T3BookCodegen {}
 

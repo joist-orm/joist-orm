@@ -1,10 +1,10 @@
-import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { getEmInternalApi } from "./EntityManager";
-import { type Field, getMetadata } from "./EntityMetadata";
-import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
-import { maybeRequireTemporal } from "./temporal";
-import { fail } from "./utils";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { type Field, getMetadata } from "src/EntityMetadata.ts";
+import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "src/index.ts";
+import { maybeRequireTemporal } from "src/serde/temporal.ts";
+import { fail } from "src/utils.ts";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should
@@ -18,13 +18,15 @@ export function getField(entity: Entity, fieldName: string): any {
   const api = getEmInternalApi(em);
   api.pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
-  const { data, row } = getInstanceData(entity);
+  const instanceData = getInstanceData(entity);
+  const { data } = instanceData;
   if (fieldName in data) {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
-      const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
-      serde.setOnEntity(data, row);
+      const field = getMetadata(entity).allFields[fieldName];
+      const serde = field?.serde ?? fail(`Missing serde for ${fieldName}`);
+      data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
     }
     return data[fieldName];
   }
@@ -113,7 +115,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       data[fieldName] = newValue;
       instanceData.markFieldClean(fieldName);
 
-      fieldLogger?.logSet(entity, fieldName, newValue);
+      fieldLogger.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
         rm.queueDownstreamReactables(entity, fieldName);
       } else {
@@ -137,7 +139,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   if (!(fieldName in originalData)) {
     instanceData.markFieldDirty(fieldName, currentValue);
   }
-  fieldLogger?.logSet(entity, fieldName, newValue);
+  fieldLogger.logSet(entity, fieldName, newValue);
   rm.queueDownstreamReactables(entity, fieldName);
 
   indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);

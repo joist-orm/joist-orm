@@ -1,6 +1,4 @@
-import { DatabaseOwnerCodegen } from "./entities";
-
-import { databaseOwnerConfig as config } from "./entities";
+import { DatabaseOwnerCodegen, databaseOwnerConfig as config } from "./entities";
 
 export class DatabaseOwner extends DatabaseOwnerCodegen {}
 

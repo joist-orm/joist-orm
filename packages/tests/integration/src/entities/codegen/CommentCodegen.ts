@@ -59,6 +59,7 @@ import {
   EntityManager,
   newComment,
   Publisher,
+  type Task,
   TaskOld,
   type User,
   type UserId,
@@ -86,6 +87,42 @@ export interface CommentFields {
   parent: { kind: "poly"; type: CommentParent; nullable: never };
   likedByUsers: { kind: "m2m"; type: User };
   books: { kind: "o2m"; type: Book };
+}
+
+export interface CommentColumns {
+  id: { fieldName: "id"; type: IdOf<Comment>; entity: Comment; nullable: false; insert: "optional"; update: false };
+  parentTaggedId: { type: string; fieldName: "parentTaggedId"; nullable: true; insert: "optional"; update: true };
+  parentTags: { type: string; fieldName: "parentTags"; nullable: false; insert: "required"; update: true };
+  text: { type: string; fieldName: "text"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  userId: { type: IdOf<User>; entity: User; fieldName: "user"; nullable: true; insert: "optional"; update: true };
+  parentAuthorId: {
+    fieldName: never;
+    type: IdOf<Author>;
+    entity: Author;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  parentBookId: { fieldName: never; type: IdOf<Book>; entity: Book; nullable: true; insert: "never"; update: false };
+  parentBookReviewId: {
+    fieldName: never;
+    type: IdOf<BookReview>;
+    entity: BookReview;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  parentPublisherId: {
+    fieldName: never;
+    type: IdOf<Publisher>;
+    entity: Publisher;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  parentTaskId: { fieldName: never; type: IdOf<Task>; entity: Task; nullable: true; insert: "never"; update: false };
 }
 
 export interface CommentOpts {
@@ -181,6 +218,9 @@ declare module "joist-core" {
       orderType: CommentOrder;
       optsType: CommentOpts;
       fieldsType: CommentFields;
+      columnsType: CommentColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: CommentIdsOpts;
       factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];

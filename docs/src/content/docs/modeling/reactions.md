@@ -68,6 +68,15 @@ config.addReaction(
 
 The name will appear in error messages and logs, making it easier to trace which reaction is executing or causing issues.
 
+Named reactions can also be run explicitly for one or more entities:
+
+```typescript
+await em.recalc(author, "syncPublisherData");
+await em.recalc(authors, "syncPublisherData");
+```
+
+The reaction's hint is loaded before it runs, just as it is when Joist triggers the reaction automatically.
+
 ## Run-Once Reactions
 
 By default, reactions can run multiple times during a flush as the reactivity graph settles. If you need a reaction to run only once per flush, use the `runOnce` option.  Be aware this means your reaction will not be called again if further changes occur during the same flush:

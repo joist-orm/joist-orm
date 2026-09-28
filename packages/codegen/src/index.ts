@@ -1,37 +1,59 @@
-import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
+#!/usr/bin/env node
+
+import { existsSync } from "node:fs";
 import process from "node:process";
+
+import { type ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
-import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveNameConflicts } from "./EntityDbMetadata";
-import { assignTags } from "./assignTags";
-import { maybeRunTransforms } from "./codemods";
-import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
-import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering";
-import { generateFiles } from "./generate";
-import { createFlushFunction } from "./generateFlushFunction";
-import { applyInheritanceUpdates } from "./inheritance";
-import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
-import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
-import { scanEntityFiles } from "./scanEntityFiles";
-import { isEntityTable, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
+
+import { assignTags } from "./assignTags.ts";
+import { maybeRunTransforms } from "./codemods/index.ts";
+import { type Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config.ts";
+import {
+  type DbMetadata,
+  EntityDbMetadata,
+  failIfOverlappingFieldNames,
+  resolveNameConflicts,
+} from "./EntityDbMetadata.ts";
+import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering.ts";
+import { generateFiles } from "./generate.ts";
+import { createFlushFunction } from "./generateFlushFunction.ts";
+import { applyInheritanceUpdates } from "./inheritance.ts";
+import { installSkills } from "./installSkills.ts";
+import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata.ts";
+import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger.ts";
+import { loadPgMetadata } from "./pgMetadata.ts";
+import { scanEntityFiles } from "./scanEntityFiles.ts";
+import {
+  isEntityTable,
+  isEnumTable,
+  isJoinTable,
+  mapSimpleDbTypeToTypescriptType,
+  shouldIncludeSchema,
+  tableToEntityName,
+} from "./utils.ts";
 
 export {
-  DbMetadata,
-  EnumField,
+  type DbMetadata,
+  type EnumField,
   makeEntity,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimitiveField,
-  PrimitiveTypescriptType,
-} from "./EntityDbMetadata";
-export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
-export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
+  type PrimitiveTypescriptType,
+} from "./EntityDbMetadata.ts";
+export type { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata.ts";
+export { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "./utils.ts";
+export { type Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export async function joistCodegen() {
+  // pg-structure used to load .env on import; keep that behavior for fixtures and apps
+  // that provide DATABASE_URL in a local .env without a separate dotenv bootstrap.
+  if (existsSync(".env")) process.loadEnvFile();
   const config = await loadConfig();
 
   maybeSetDatabaseUrl(config);
@@ -61,6 +83,7 @@ export async function joistCodegen() {
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);
+  validateTagDelimiter(config, entities);
 
   // Scan `*.ts` files after we've expanded `Task` -> `TaskOld.ts`
   await scanEntityFiles(config, dbMetadata);
@@ -82,6 +105,9 @@ export async function joistCodegen() {
 
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
+
+  // Install our bundled Agent Skills so coding agents can find them, unless explicitly disabled
+  if (config.skills !== false) await installSkills();
 
   stripStiPlaceholders(config, entities);
   await writeConfig(config);
@@ -121,20 +147,27 @@ async function maybeGenerateFlushFunctions(config: Config, client: Client, pgCon
 }
 
 async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMetadata> {
-  // Here we load all schemas, to avoid pg-structure failing on cross-schema foreign keys
-  // like our cyanaudit triggers (https://github.com/ozum/pg-structure/issues/85), and then
-  // later filter them non-public schema tables out.
-  const db = await pgStructure(client);
+  // Load all user schemas so cross-schema foreign keys can be resolved. Codegen filters
+  // non-public tables below; trigger functions in other schemas do not affect entities.
+  const db = await loadPgMetadata(client);
   const enums = await loadEnumMetadata(db, client, config);
   const pgEnums = await loadPgEnumMetadata(db, client, config);
+  // The order also controls generated exports; sorting physical table names puts book_reviews
+  // before books and changes initialization order for entity modules with circular imports.
   const entities = db.tables
     .filter((t) => isEntityTable(config, t))
-    .sortBy("name")
+    .sort((a, b) => tableToEntityName(config, a).localeCompare(tableToEntityName(config, b)))
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
   const otherTables = db.tables
-    .filter((t) => !isEntityTable(config, t) && !isEnumTable(config, t) && !isJoinTable(config, t))
+    .filter(
+      (t) =>
+        shouldIncludeSchema(config, t) &&
+        !isEntityTable(config, t) &&
+        !isEnumTable(config, t) &&
+        !isJoinTable(config, t),
+    )
     .map((t) => t.name);
   const entitiesByName = Object.fromEntries(entities.map((e) => [e.name, e]));
   return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables, otherTables };
@@ -158,7 +191,29 @@ export function maybeSetExitCode(): void {
   }
 }
 
-if (require.main === module) {
+/** Validates that tags can be parsed unambiguously with the configured delimiter. */
+function validateTagDelimiter(config: Config, entities: EntityDbMetadata[]): void {
+  const tagDelimiter = config.tagDelimiter ?? ":";
+  for (const entity of entities) {
+    if (tagDelimiter !== "" && `${entity.tagName}${tagDelimiter}`.indexOf(tagDelimiter) !== entity.tagName.length) {
+      throw new Error(
+        `Tagged id delimiter '${tagDelimiter}' cannot occur in or overlap tag '${entity.tagName}' for ${entity.name}`,
+      );
+    } else if (tagDelimiter === "" && !/^[a-z]+$/i.test(entity.tagName)) {
+      throw new Error(`Delimiterless ids require an alphabetic tag, got '${entity.tagName}' for ${entity.name}`);
+    } else if (
+      tagDelimiter === "" &&
+      entity.primaryKey.columnType !== "int" &&
+      entity.primaryKey.columnType !== "bigint"
+    ) {
+      throw new Error(
+        `Delimiterless ids require an int or bigint primary key, got '${entity.primaryKey.columnType}' for ${entity.name}`,
+      );
+    }
+  }
+}
+
+if (typeof module !== "undefined" && require.main === module) {
   joistCodegen()
     .then(() => maybeSetExitCode())
     .catch((err) => {

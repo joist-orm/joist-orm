@@ -1,17 +1,45 @@
+import { type Config } from "./config.ts";
 import {
+  type DbMetadata,
+  type EntityDbMetadata,
+  type ManyToManyField,
+  type ManyToOneField,
+  type PolymorphicFieldComponent,
   canonicalizeOtherEntities,
-  DbMetadata,
-  EntityDbMetadata,
   makeEntity,
-  ManyToManyField,
-  ManyToOneField,
-  PolymorphicFieldComponent,
-} from "./EntityDbMetadata";
-import { Config } from "./config";
-import { fail } from "./utils";
+} from "./EntityDbMetadata.ts";
+import { fail } from "./utils.ts";
 
+/** Preserves physical storage metadata, then applies domain inheritance specialization. */
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
+  // Preserve storage domains before STI moves fields or rewrites relationship targets.
+  for (const meta of entities) {
+    meta.physicalMetadata = {
+      ...meta,
+      name: meta.name,
+      primitives: meta.primitives.map((field) => ({ ...field })),
+      enums: meta.enums.map((field) => ({ ...field })),
+      pgEnums: meta.pgEnums.map((field) => ({ ...field })),
+      manyToOnes: meta.manyToOnes.map((field) => ({ ...field })),
+      oneToManys: meta.oneToManys.map((field) => ({ ...field })),
+      largeOneToManys: meta.largeOneToManys.map((field) => ({ ...field })),
+      oneToOnes: meta.oneToOnes.map((field) => ({ ...field })),
+      manyToManys: meta.manyToManys.map((field) => ({ ...field })),
+      largeManyToManys: meta.largeManyToManys.map((field) => ({ ...field })),
+      polymorphics: meta.polymorphics.map((field) => ({
+        ...field,
+        components: field.components.map((component) => ({ ...component })),
+      })),
+      nonDeferredFks: meta.nonDeferredFks,
+      nonDeferredManyToManyFks: meta.nonDeferredManyToManyFks,
+    };
+    for (const timestamp of ["createdAt", "updatedAt", "deletedAt"] as const) {
+      meta.physicalMetadata[timestamp] = meta.physicalMetadata.primitives.find(
+        (field) => field.fieldName === meta[timestamp]?.fieldName,
+      );
+    }
+  }
   setClassTableInheritance(entities, entitiesByName);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
@@ -129,16 +157,46 @@ function expandSingleTableInheritance(
       const availableCodes = subTypes.map(([code]) => code);
       const availableNames = subTypes.map(([, name]) => name);
       const available = [...availableCodes, ...availableNames];
-      allFields.filter(([name, f]) => {
-        if (f.stiType && !available.includes(f.stiType)) {
-          fail(`${name}.stiType '${f.stiType}' is invalid, expected one of ${available.join(", ")}`);
+      for (const [name, f] of allFields) {
+        for (const stiType of stiTypesOf(f)) {
+          if (!available.includes(stiType)) {
+            fail(`${name}.stiType '${stiType}' is invalid, expected one of ${available.join(", ")}`);
+          }
         }
-      });
+      }
+
+      // A `notNull` column with no database default cannot be pushed down to a subtype: the other
+      // subtypes omit it from their INSERT (see `addInserts`), and the database has nothing to fall back
+      // on. A `notNull` column *with* a default is fine -- the other subtypes simply get the default.
+      const requiredFieldNames = new Set(
+        [...entity.primitives, ...entity.enums, ...entity.pgEnums, ...entity.manyToOnes]
+          .filter((f) => f.notNull && f.columnDefault === null && !("columnGenerated" in f && f.columnGenerated))
+          .map((f) => f.fieldName),
+      );
+      for (const [name, f] of allFields) {
+        const stiTypes = stiTypesOf(f);
+        // Claiming every subtype leaves no one without a value, so it's equivalent to staying on the base
+        const claimsEverySubtype = subTypes.every(([code, name]) => stiTypes.some((t) => t === code || t === name));
+        if (stiTypes.length > 0 && !claimsEverySubtype && requiredFieldNames.has(name)) {
+          fail(
+            `${entity.name}.${name} is notNull with no database default, so it cannot be pushed down to` +
+              ` ${stiTypes.map((t) => `'${t}'`).join(", ")} -- the other subtypes would have no value to` +
+              ` insert. Either give the column a default, make it nullable (stiType will still make it` +
+              ` required on those subtypes), or leave the field on ${entity.name}.`,
+          );
+        }
+      }
+
+      // Names claimed by any subtype; stripped from the base after the loop, not during it, so that a
+      // field claimed by two subtypes is still on the base when the second iteration looks for it.
+      const claimedFieldNames = new Set(allFields.filter(([, f]) => stiTypesOf(f).length > 0).map(([name]) => name));
 
       // Now split each subType out into its out entity
       for (const [enumCode, subTypeName] of subTypes) {
         // Find all the base entity's fields that belong to us
-        const subTypeFields = allFields.filter(([, f]) => f.stiType === subTypeName || f.stiType === enumCode);
+        const subTypeFields = allFields.filter(([, f]) =>
+          stiTypesOf(f).some((t) => t === subTypeName || t === enumCode),
+        );
         const subTypeFieldNames = subTypeFields.map(([name]) => name);
 
         // Make fields as required
@@ -153,6 +211,8 @@ function expandSingleTableInheritance(
           name: subTypeName,
           entity: makeEntity(subTypeName),
           tableName: entity.tableName,
+          physicalMetadata: entity.physicalMetadata,
+          ignoredColumns: entity.ignoredColumns,
           primaryKey: entity.primaryKey,
           primitives: entity.primitives.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
           enums: entity.enums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
@@ -190,23 +250,25 @@ function expandSingleTableInheritance(
           },
         };
 
-        // Now strip all the subclass fields from the base class
-        entity.primitives = entity.primitives.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.enums = entity.enums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.pgEnums = entity.pgEnums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.manyToOnes = entity.manyToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.oneToManys = entity.oneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.largeOneToManys = entity.largeOneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.oneToOnes = entity.oneToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.manyToManys = entity.manyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.largeManyToManys = entity.largeManyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.manyToManyEnums = entity.manyToManyEnums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
-        entity.polymorphics = entity.polymorphics.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.subTypes.push(subEntity);
 
         entities.push(subEntity);
         entitiesByName[subEntity.name] = subEntity;
       }
+
+      // Now strip the subclass fields from the base class
+      const keep = <T extends { fieldName: string }>(f: T) => !claimedFieldNames.has(f.fieldName);
+      entity.primitives = entity.primitives.filter(keep);
+      entity.enums = entity.enums.filter(keep);
+      entity.pgEnums = entity.pgEnums.filter(keep);
+      entity.manyToOnes = entity.manyToOnes.filter(keep);
+      entity.oneToManys = entity.oneToManys.filter(keep);
+      entity.largeOneToManys = entity.largeOneToManys.filter(keep);
+      entity.oneToOnes = entity.oneToOnes.filter(keep);
+      entity.manyToManys = entity.manyToManys.filter(keep);
+      entity.largeManyToManys = entity.largeManyToManys.filter(keep);
+      entity.manyToManyEnums = entity.manyToManyEnums.filter(keep);
+      entity.polymorphics = entity.polymorphics.filter(keep);
     }
   }
 }
@@ -243,8 +305,12 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
       const target = stiEntities.get(m2o.otherEntity.name);
       const base = target?.base.entity.name;
       // See if the user has pushed `Task.entities` down to a subtype
-      const stiType = base && config.entities[base]?.relations?.[m2o.otherFieldName]?.stiType;
-      if (target && stiType) {
+      // Only a lone subtype can retype the FK; naming several means the FK can point at any of them,
+      // which is just the base type, so leave it alone.
+      const [stiType, ...others] = stiTypesOf(
+        base ? config.entities[base]?.relations?.[m2o.otherFieldName] : undefined,
+      );
+      if (target && stiType && others.length === 0) {
         const { subTypes } = target;
         m2o.otherEntity = (
           subTypes.find((s) => s.name === stiType) ??
@@ -258,8 +324,10 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
         const target = stiEntities.get(comp.otherEntity.name);
         const base = target?.base.entity.name;
         // See if the user has pushed `Task.entities` down to a subtype
-        const stiType = base && config.entities[base]?.relations?.[comp.otherFieldName]?.stiType;
-        if (target && stiType) {
+        const [stiType, ...others] = stiTypesOf(
+          base ? config.entities[base]?.relations?.[comp.otherFieldName] : undefined,
+        );
+        if (target && stiType && others.length === 0) {
           const { subTypes } = target;
           comp.otherEntity = (
             subTypes.find((s) => s.name === stiType) ??
@@ -299,4 +367,10 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
       }
     }
   }
+}
+
+/** Normalizes a field/relation's `stiType`, which may name one subtype or several, to an array. */
+function stiTypesOf(config: { stiType?: string | string[] } | undefined): string[] {
+  const stiType = config?.stiType;
+  return stiType === undefined ? [] : typeof stiType === "string" ? [stiType] : stiType;
 }

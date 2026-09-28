@@ -1,4 +1,4 @@
-import { Resolver } from "./context";
+import { type Resolver } from "./context.ts";
 
 export type RunFn<C> = <T>(ctx: C, fn: (ctx: C) => Promise<T>) => Promise<T>;
 

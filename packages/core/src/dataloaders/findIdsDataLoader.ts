@@ -1,19 +1,20 @@
-import { Entity } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
-import { keyToTaggedId } from "../keys";
-import { kq } from "../keywords";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { buildUnnestCte } from "../unnest";
-import { fail } from "../utils";
 import {
   collectAndReplaceArgs,
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader";
+} from "src/dataloaders/findDataLoader.ts";
+import type { Entity } from "src/Entity.ts";
+import type { EntityManager, MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import { keyToTaggedId } from "src/keys.ts";
+import type { FilterAndSettings } from "src/queries/find/EntityFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty } from "src/queries/find/QueryVisitor.ts";
+import { kq } from "src/queries/sql/keywords.ts";
+import { buildUnnestCte } from "src/queries/unnest.ts";
+import { fail } from "src/utils.ts";
 
 export const findIdsOperation = "find-ids";
 
@@ -30,6 +31,8 @@ export function findIdsDataLoader<T extends Entity>(
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
   const { findSettings } = em["prepareFind"](meta, findIdsOperation, query, { ...opts, limit: undefined });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve([]);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, query, bindings, findSettings };

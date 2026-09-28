@@ -42,6 +42,8 @@ Available values: `tagged-string`, `untagged-string`, `number`.
 
 Joist's default behavior is `tagged-string` which means the type of `Author.id` will be a `string`, and the value will be `"a:1"` where `a` is the "tag" established for all `Author` entities, and `1` is the numeric primary key value of that row.
 
+The delimiter can be customized separately with `tagDelimiter`. For example, `"tagDelimiter": "_"` produces `"a_1"`, while an empty delimiter produces URL-friendly ids such as `"author123"`. Delimiterless ids require alphabetic tags and non-negative `int` or `bigint` primary keys.
+
 If you do not want the `a:` tagged prefix, you can use `untagged-string` or `number`:
 
 ```json
@@ -347,6 +349,7 @@ export interface RelationConfig {
   polymorphic?: "notNull" | true;
   large?: true;
   orderBy?: string;
+  softDeletes?: "include" | "exclude";
 }
 ```
 
@@ -355,6 +358,7 @@ The supported values are:
 - `polymorphic` creates this relation as a [polymorphic relation](/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
 - `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`
 - `orderBy` allows setting an order specific to this collection, the value must be a primitive, synchronous field on the entities within the collection
+- `softDeletes` controls whether this o2m/m2m collection's `.get`/`.load` hide soft-deleted entities; it defaults to `"exclude"` (soft-deleted entities are hidden), but can be set to `"include"` to have this specific collection always return soft-deleted entities
 
 ## Runtime Configuration
 

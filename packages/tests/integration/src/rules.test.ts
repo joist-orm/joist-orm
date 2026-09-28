@@ -1,13 +1,13 @@
 import {
+  ValidationCode,
+  ValidationErrors,
+  ValidationRuleResult,
   cannotBeChanged,
   cannotBeUpdated,
   getMetadata,
   newRequiredRule,
-  ValidationCode,
-  ValidationErrors,
-  ValidationRuleResult,
 } from "joist-orm";
-import { Author, LargePublisher, newAuthor, newPublisher, Publisher, SmallPublisher } from "src/entities";
+import { Author, LargePublisher, Publisher, SmallPublisher, newAuthor, newPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 

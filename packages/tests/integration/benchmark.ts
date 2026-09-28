@@ -8,6 +8,7 @@ import postgres from "postgres";
 const pool = new pg.Pool({
   connectionString: "postgres://joist:local@localhost:5435/joist",
   max: 4,
+  pipeline: true,
 });
 const knex: Knex = createKnex(pool);
 

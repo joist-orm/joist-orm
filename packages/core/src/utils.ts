@@ -1,8 +1,8 @@
-import { Entity } from "./Entity";
-import { OrderBy } from "./EntityFilter";
-import { isDefined } from "./EntityManager";
-import { New } from "./loadHints";
-import { isReactiveField, isReference } from "./relations";
+import { type Entity } from "src/Entity.ts";
+import { isDefined } from "src/EntityManager.ts";
+import type { New } from "src/loading/loadHints.ts";
+import type { OrderBy } from "src/queries/find/EntityFilter.ts";
+import { isReactiveField, isReference } from "src/relations/index.ts";
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -65,6 +65,12 @@ export function tryResolve<T>(fn: () => T): Promise<T> {
   } catch (e) {
     return Promise.reject(e);
   }
+}
+
+/** Returns whether `obj` has at least one key, without allocating a keys array. */
+export function hasAnyKey(obj: Record<any, any> | undefined): boolean {
+  for (const _ in obj) return true;
+  return false;
 }
 
 export function fail(message?: string): never {

@@ -1,10 +1,11 @@
 import { BaseEntity } from "joist-core";
-import { MatchedEntity } from "./toMatchEntity";
-export { Context } from "./context";
-export { ContextFn, makeRun, makeRunEach, newContext, run, runEach } from "./run";
-export { RunPlugin } from "./RunPlugin";
-export { seed, SeedConfig } from "./seed";
-export { toMatchEntity } from "./toMatchEntity";
+
+import { type MatchedEntity } from "./toMatchEntity.ts";
+export type { Context } from "./context.ts";
+export { type ContextFn, makeRun, makeRunEach, newContext, run, runEach } from "./run.ts";
+export { RunPlugin } from "./RunPlugin.ts";
+export { seed, type SeedConfig } from "./seed.ts";
+export { toMatchEntity } from "./toMatchEntity.ts";
 
 export interface CustomMatcherResult {
   pass: boolean;
@@ -29,6 +30,16 @@ declare module "expect" {
 declare module "bun:test" {
   interface Matchers<T = unknown> {
     toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
+  }
+}
+
+// @ts-ignore
+declare module "vitest" {
+  interface Assertion<T = any> {
+    toMatchEntity(expected: MatchedEntity<T>): void;
+  }
+  interface AsymmetricMatchersContaining {
+    toMatchEntity(expected: MatchedEntity<any>): void;
   }
 }
 

@@ -18,6 +18,7 @@ import {
   hasOne,
   hasOneToOne,
   hasReactiveManyToManyOtherSide,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -80,6 +81,33 @@ export interface BookReviewFields {
   critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   bestReviewAuthors: { kind: "m2m"; type: Author };
+  comment: { kind: "o2o"; type: Comment };
+}
+
+export interface BookReviewColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<BookReview>;
+    entity: BookReview;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  rating: { type: number; fieldName: "rating"; nullable: false; insert: "required"; update: true };
+  isPublic: { type: boolean; fieldName: "isPublic"; nullable: false; insert: "required"; update: true };
+  isTest: { type: boolean; fieldName: "isTest"; nullable: false; insert: "required"; update: true };
+  isTestChain: { type: boolean; fieldName: "isTestChain"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  bookId: { type: IdOf<Book>; entity: Book; fieldName: "book"; nullable: false; insert: "required"; update: true };
+  criticId: {
+    type: IdOf<Critic>;
+    entity: Critic;
+    fieldName: "critic";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface BookReviewOpts {
@@ -173,6 +201,9 @@ declare module "joist-core" {
       orderType: BookReviewOrder;
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
+      columnsType: BookReviewColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: BookReviewIdsOpts;
       factoryExtrasType: BookReviewFactoryExtras;
       factoryOptsType: Parameters<typeof newBookReview>[1];

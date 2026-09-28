@@ -1,9 +1,9 @@
-import { EntityMetadata } from "../EntityMetadata";
-import { getProperties } from "../getProperties";
-import { LoadHint, NestedLoadHint } from "../loadHints";
-import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
-import { ReactiveReferenceImpl } from "../relations";
-import { canPreload } from "./canPreload";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { getProperties } from "src/getProperties.ts";
+import type { LoadHint, NestedLoadHint } from "src/loading/loadHints.ts";
+import { deepNormalizeHint, normalizeHint } from "src/normalizeHints.ts";
+import { canPreload } from "src/preloading/canPreload.ts";
+import { ReactiveReferenceImpl } from "src/relations/index.ts";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */
 export function partitionHint(

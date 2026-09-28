@@ -1,15 +1,16 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+
+import { type Config } from "./config.ts";
 import {
-  DbMetadata,
-  EntityDbMetadata,
-  EnumField,
-  ManyToOneField,
-  PgEnumField,
-  PolymorphicField,
-  PrimitiveField,
-} from "./EntityDbMetadata";
-import { Config } from "./config";
+  type DbMetadata,
+  type EntityDbMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type PgEnumField,
+  type PolymorphicField,
+  type PrimitiveField,
+} from "./EntityDbMetadata.ts";
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
 const regex = /config\.setDefault\([\s\n]*["'](\w+)["']/g;

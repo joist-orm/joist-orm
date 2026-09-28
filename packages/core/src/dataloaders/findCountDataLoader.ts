@@ -1,25 +1,26 @@
-import { Entity, IdType } from "../Entity";
-import { FilterAndSettings, FindFilter } from "../EntityFilter";
-import { GraphQLFilterWithAlias } from "../EntityGraphQLFilter";
-import {
-  EntityManager,
-  FindCountFilterOptions,
-  getEmInternalApi,
-  MaybeAbstractEntityConstructor,
-} from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
-import { kq } from "../keywords";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { isScope, isSelectAllFilter, resolveScope } from "../scopes";
-import { buildUnnestCte } from "../unnest";
-import { fail } from "../utils";
 import {
   collectAndReplaceArgs,
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   queryFilterHash,
-} from "./findDataLoader";
+} from "src/dataloaders/findDataLoader.ts";
+import type { Entity, IdType } from "src/Entity.ts";
+import {
+  type EntityManager,
+  type FindCountFilterOptions,
+  type MaybeAbstractEntityConstructor,
+  getEmInternalApi,
+} from "src/EntityManager.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
+import type { FilterAndSettings, FindFilter } from "src/queries/find/EntityFilter.ts";
+import type { GraphQLFilterWithAlias } from "src/queries/find/EntityGraphQLFilter.ts";
+import { type ParsedFindQuery, parseFindQuery } from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty } from "src/queries/find/QueryVisitor.ts";
+import { isScope, isSelectAllFilter, resolveScope } from "src/queries/find/scopes.ts";
+import { kq } from "src/queries/sql/keywords.ts";
+import { buildUnnestCte } from "src/queries/unnest.ts";
+import { fail } from "src/utils.ts";
 
 export const findCountOperation = "find-count";
 
@@ -37,6 +38,8 @@ export function findCountDataLoader<T extends Entity>(
   const query = parseFindQuery(meta, where, opts);
   const pendingDeletedIds = appendPendingDeletedIds(em, type, query, meta.idDbType, where, opts);
   const { findSettings } = em["prepareFind"](meta, findCountOperation, query, { ...opts, checkLimit: false });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve(0);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, pendingDeletedIds, query, bindings, findSettings };

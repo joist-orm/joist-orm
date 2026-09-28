@@ -1,18 +1,21 @@
 import { pascalCase, snakeCase } from "change-case";
 import {
-  Config,
-  DbMetadata,
-  EntityDbMetadata,
-  EnumField,
+  type Config,
+  type DbMetadata,
+  type EntityDbMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
   makeEntity,
-  ManyToOneField,
-  PolymorphicField,
-  PrimitiveField,
 } from "joist-codegen";
 import { keyBy } from "joist-utils";
-import { plural } from "pluralize";
-import { CodegenFile, imp } from "ts-poet";
-import { Fs, getImportExtension } from "./utils";
+import pluralize from "pluralize";
+import { type CodegenFile, imp } from "ts-poet";
+
+import { type Fs, getImportExtension } from "./utils.ts";
+
+const { plural } = pluralize;
 
 export function newFs(files: Record<string, string>): Fs {
   return {
@@ -49,8 +52,10 @@ export function newDbMeta(opt: EntityDbMetadata[] | Partial<DbMetadata>): DbMeta
 export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveField> = {}): PrimitiveField {
   return {
     kind: "primitive",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
+    columnGenerated: false,
     columnType: "varchar",
     fieldType: "string",
     rawFieldType: "string",
@@ -59,6 +64,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     protected: false,
     unique: false,
     columnDefault: null,
+    columnNotNull: opts.notNull ?? true,
     superstruct: undefined,
     zodSchema: undefined,
     customSerde: undefined,
@@ -74,6 +80,7 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     entity: makeEntity(name),
     primaryKey: newPrimitiveField("id", { columnType: "int", fieldType: "number", rawFieldType: "number" }),
     primitives: [],
+    ignoredColumns: [],
     enums: [],
     pgEnums: [],
     manyToOnes: [],
@@ -112,10 +119,13 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
   const enumDetailsType = imp(`${enumName}Details@./entities`);
   return {
     kind: "enum",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
+    columnGenerated: false,
     columnType: "int",
     columnDefault: null,
+    columnNotNull: opts.notNull ?? true,
     derived: false,
     enumName,
     enumType,
@@ -136,8 +146,11 @@ export function newManyToOneField(
 ): ManyToOneField {
   return {
     kind: "m2o",
+    columnOwner: makeEntity("Author"),
     fieldName,
     columnName: snakeCase(fieldName),
+    columnGenerated: false,
+    columnNotNull: opts.notNull ?? true,
     derived: false,
     notNull: true,
     hasConfigDefault: false,
@@ -152,7 +165,11 @@ export function newManyToOneField(
 }
 
 /** Creates a polymorphic field for tests. */
-export function newPolymorphicField(fieldName: string, components: string[], opts: Partial<PolymorphicField> = {}) {
+export function newPolymorphicField(
+  fieldName: string,
+  components: string[],
+  opts: Partial<PolymorphicField> = {},
+): PolymorphicField {
   return {
     kind: "poly",
     fieldName,
@@ -161,6 +178,7 @@ export function newPolymorphicField(fieldName: string, components: string[], opt
     hasConfigDefault: false,
     components: components.map((component) => ({
       columnName: `${snakeCase(fieldName)}_${snakeCase(component)}_id`,
+      columnOwner: makeEntity("Author"),
       otherFieldName: fieldName,
       otherEntity: makeEntity(component),
       isDeferredAndDeferrable: true,

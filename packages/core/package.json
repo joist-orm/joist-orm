@@ -2,6 +2,7 @@
   "name": "joist-core",
   "version": "2.3.0",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
@@ -10,11 +11,32 @@
   "engines": {
     "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/index.cjs",
+  "module": "build/index.js",
+  "types": "build/index.d.mts",
+  "exports": {
+    ".": {
+      "bun": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "module-sync": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      },
+      "default": "./build/index.js"
+    }
+  },
   "scripts": {
-    "test": "jest",
-    "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "test": "jest"
   },
   "files": [
     "build"
@@ -24,19 +46,17 @@
   },
   "dependencies": {
     "ansis": "^4.3.1",
-    "dataloader": "^2.2.3"
+    "dataloader": "^2.2.3",
+    "temporal-spec": "^1.0.1"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.43",
+    "@swc/core": "^1.16.1",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.2.0",
     "jest": "30.4.2",
-    "prettier": "^3.8.4",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "temporal-polyfill": "^0.3.2",
-    "ts-node-dev": "^2.0.0",
+    "temporal-polyfill": "^1.0.4",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   }
 }

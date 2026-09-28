@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -52,6 +53,8 @@ import {
   type TaskOldId,
   type TaskOldOrder,
   type TaskOrder,
+  type TaskThird,
+  type TaskThirdId,
 } from "../entities";
 
 export type TaskItemId = Flavor<string, "TaskItem">;
@@ -63,6 +66,15 @@ export interface TaskItemFields {
   newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+}
+
+export interface TaskItemColumns {
+  id: { fieldName: "id"; type: IdOf<TaskItem>; entity: TaskItem; nullable: false; insert: "optional"; update: false };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  newTaskId: { type: IdOf<Task>; entity: Task; fieldName: "newTask"; nullable: true; insert: "optional"; update: true };
+  oldTaskId: { type: IdOf<Task>; entity: Task; fieldName: "oldTask"; nullable: true; insert: "optional"; update: true };
+  taskId: { type: IdOf<Task>; entity: Task; fieldName: "task"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface TaskItemOpts {
@@ -86,6 +98,7 @@ export interface TaskItemFilter {
   task?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
   taskTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   taskTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  taskTaskThird?: EntityFilter<TaskThird, TaskThirdId, FilterOf<TaskThird>, null>;
 }
 
 export interface TaskItemGraphQLFilter {
@@ -100,6 +113,7 @@ export interface TaskItemGraphQLFilter {
   taskId?: ValueGraphQLFilter<TaskId>;
   taskTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   taskTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  taskTaskThird?: EntityGraphQLFilter<TaskThird, TaskThirdId, GraphQLFilterOf<TaskThird>, null>;
 }
 
 export interface TaskItemOrder {
@@ -137,6 +151,9 @@ declare module "joist-core" {
       orderType: TaskItemOrder;
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
+      columnsType: TaskItemColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: TaskItemIdsOpts;
       factoryExtrasType: TaskItemFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskItem>[1];

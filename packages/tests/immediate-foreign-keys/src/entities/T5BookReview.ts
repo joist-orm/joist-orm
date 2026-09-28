@@ -1,6 +1,4 @@
-import { T5BookReviewCodegen } from "./entities";
-
-import { t5BookReviewConfig as config } from "./entities";
+import { T5BookReviewCodegen, t5BookReviewConfig as config } from "./entities";
 
 export class T5BookReview extends T5BookReviewCodegen {}
 

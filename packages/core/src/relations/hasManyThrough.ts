@@ -1,15 +1,15 @@
 import {
-  Collection,
+  type Collection,
   CustomCollection,
-  Entity,
+  type Entity,
+  type Lens,
   getLens,
   getMetadata,
   isLensLoaded,
-  Lens,
   lensToLoadHint,
   loadLens,
-} from "../index";
-import { lazyField } from "../newEntity";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
 
 /**
  * Creates a CustomCollection that will walk across references in the object graph.

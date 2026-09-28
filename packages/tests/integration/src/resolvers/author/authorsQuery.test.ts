@@ -9,13 +9,15 @@ describe("authors", () => {
     await ctx.em.flush();
 
     const result = await run(ctx, { limit: 1, offset: 0 });
+    const entities = await result.entities;
+    const pageInfo = await result.pageInfo;
 
-    expect(result.entities.map((a) => a.firstName)).toEqual(["basic 1"]);
-    expect(result.pageInfo.hasPreviousPage).toEqual(false);
-    expect(result.pageInfo.currentPage).toEqual(1);
-    await expect(result.pageInfo.hasNextPage).resolves.toEqual(true);
-    await expect(result.pageInfo.nextPage).resolves.toEqual(2);
-    await expect(result.pageInfo.totalCount).resolves.toEqual(2);
+    expect(entities.map((a) => a.firstName)).toEqual(["basic 1"]);
+    expect(pageInfo.hasPreviousPage).toEqual(false);
+    expect(pageInfo.currentPage).toEqual(1);
+    await expect(pageInfo.hasNextPage).resolves.toEqual(true);
+    await expect(pageInfo.nextPage).resolves.toEqual(2);
+    await expect(pageInfo.totalCount).resolves.toEqual(2);
   });
 
   it.withCtx("filters by primitive fields", async (ctx) => {
@@ -24,9 +26,11 @@ describe("authors", () => {
     await ctx.em.flush();
 
     const result = await run(ctx, { filter: { firstName: ["primitive query match"] }, limit: 10 });
+    const entities = await result.entities;
+    const pageInfo = await result.pageInfo;
 
-    expect(result.entities.map((a) => a.firstName)).toEqual(["primitive query match"]);
-    await expect(result.pageInfo.totalCount).resolves.toEqual(1);
+    expect(entities.map((a) => a.firstName)).toEqual(["primitive query match"]);
+    await expect(pageInfo.totalCount).resolves.toEqual(1);
   });
 
   it.withCtx("filters by many-to-one id aliases", async (ctx) => {
@@ -36,9 +40,11 @@ describe("authors", () => {
     await ctx.em.flush();
 
     const result = await run(ctx, { filter: { publisherId: [publisher.id] }, limit: 10 });
+    const entities = await result.entities;
+    const pageInfo = await result.pageInfo;
 
-    expect(result.entities.map((a) => a.firstName)).toEqual(["publisher query match"]);
-    await expect(result.pageInfo.totalCount).resolves.toEqual(1);
+    expect(entities.map((a) => a.firstName)).toEqual(["publisher query match"]);
+    await expect(pageInfo.totalCount).resolves.toEqual(1);
   });
 
   it.withCtx("ors filter values", async (ctx) => {
@@ -48,9 +54,11 @@ describe("authors", () => {
     await ctx.em.flush();
 
     const result = await run(ctx, { filter: { firstName: ["or query a", "or query b"] }, limit: 10 });
+    const entities = await result.entities;
+    const pageInfo = await result.pageInfo;
 
-    expect(result.entities.map((a) => a.firstName).sort()).toEqual(["or query a", "or query b"]);
-    await expect(result.pageInfo.totalCount).resolves.toEqual(2);
+    expect(entities.map((a) => a.firstName).sort()).toEqual(["or query a", "or query b"]);
+    await expect(pageInfo.totalCount).resolves.toEqual(2);
   });
 });
 

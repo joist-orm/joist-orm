@@ -2,17 +2,25 @@
   "version": "2.3.0",
   "name": "joist",
   "scripts": {
-    "build": "tspc --build",
+    "build": "yarn clean && tsdown && yarn typecheck:packages && yarn typecheck:consumers && node scripts/test-module-sync.mjs",
+    "build:watch": "tsdown --watch --no-clean",
+    "clean": "rm -rf build && find packages -type d -name build -prune -exec rm -rf '{}' + && find packages -name '*.tsbuildinfo' -delete",
     "semantic-release": "semantic-release",
     "publish-next": "./scripts/publish-next.sh",
     "trust-npm-circleci": "node ./scripts/trust-npm-circleci.mjs",
     "migrate": "yarn workspaces foreach --all run migrate",
     "codegen": "yarn workspaces foreach --all run codegen",
-    "format": "yarn workspaces foreach --all run format",
+    "db:clone": "bash scripts/clone-integration-dbs.sh",
+    "format": "oxlint --fix packages && oxfmt --write 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format:check": "oxlint packages && oxfmt --check 'packages/**/{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "lint:skills": "check-skills validate packages/codegen/skills --recursive --no-quality",
     "start": "yarn mprocs",
     "test": "yarn workspaces foreach --all run test",
+    "typecheck:packages": "yarn workspaces foreach --all --include 'joist-*' --exclude 'joist-tests-*' --exclude joist-docs exec tsc --project tsconfig.json --noEmit --composite false",
+    "typecheck:consumers": "tsc --project tsconfig.unit-tests.json --composite false && yarn workspaces foreach --all --include 'joist-tests-*' exec tsc --project tsconfig.json --composite false",
+    "typecheck:watch": "tsc --build --watch --emitDeclarationOnly --preserveWatchOutput",
     "docker": "docker-compose build",
-    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
+    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen && yarn db:clone",
     "psql": "docker compose exec db ./console.sh"
   },
   "private": true,
@@ -32,33 +40,36 @@
     "packages/tests/bun-sql-pg",
     "packages/tests/integration",
     "packages/tests/schema-misc",
+    "packages/tests/slug-ids",
     "packages/tests/esm",
     "packages/tests/immediate-foreign-keys",
     "packages/tests/number-ids",
     "packages/tests/untagged-ids",
     "packages/tests/uuid-ids",
-    "packages/tests/temporal"
+    "packages/tests/temporal",
+    "packages/tests/vitest"
   ],
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.1.1",
-    "@tsconfig/node20": "^20.1.9",
+    "@tsconfig/node20": "^20.1.10",
+    "check-skills": "0.0.10",
     "env-cmd": "^11.0.0",
-    "expect-type": "^1.3.0",
+    "expect-type": "^1.4.0",
     "mprocs": "^0.9.6",
-    "semantic-release": "^25.0.5",
-    "ts-patch": "^4.0.1",
-    "typescript-transform-paths": "^4.0.0"
-  },
-  "dependencies": {
-    "typescript": "6.0.3"
+    "oxfmt": "0.64.0",
+    "oxlint": "1.79.0",
+    "pg": "^8.23.0",
+    "semantic-release": "^25.0.9",
+    "tsdown": "0.22.14",
+    "typescript": "7.0.2"
   },
   "resolutions": {
     "marked": "15.0.8"
   },
-  "packageManager": "yarn@4.17.0"
+  "packageManager": "yarn@4.18.0"
 }

@@ -1,14 +1,29 @@
-import { GraphQLResolveInfo } from "graphql/type";
+import { type GraphQLResolveInfo } from "graphql/type";
 import {
-  Collection,
-  Entity,
-  EntityMetadata,
-  Field,
+  type Collection,
+  type Entity,
+  type EntityMetadata,
+  type Field,
+  type IdOf,
+  type LoadHint,
+  type ManyToManyField,
+  type ManyToOneField,
+  type MaybeAbstractEntityConstructor,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimaryKeyField,
+  type Property,
+  type ReactiveGetter,
+  type ReadOnlyCollection,
+  type Reference,
   getMetadata,
   getProperties,
-  IdOf,
+  isAsyncProperty,
   isCollection,
+  isLoadedAsyncProperty,
   isLoadedCollection,
+  isLoadedLazyField,
   isLoadedProperty,
   isLoadedReadOnlyCollection,
   isLoadedReference,
@@ -18,21 +33,10 @@ import {
   isReactiveGetter,
   isReadOnlyCollection,
   isReference,
-  LoadHint,
-  ManyToManyField,
-  ManyToOneField,
-  MaybeAbstractEntityConstructor,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimaryKeyField,
-  Property,
-  ReactiveGetter,
-  ReadOnlyCollection,
-  Reference,
 } from "joist-core";
-import { Resolver } from "./context";
-import { convertInfoToLoadHint } from "./hint";
+
+import { type Resolver } from "./context.ts";
+import { convertInfoToLoadHint } from "./hint.ts";
 
 type GraphQLPrimitive = string | Date | boolean | number | bigint | null | undefined;
 
@@ -74,7 +78,7 @@ export type EntityResolver<T extends Entity> = {
 /**
  * Creates field resolvers for each of the fields on our entity.
  */
-export function entityResolver<T extends Entity, A extends Record<string, keyof T> = Record<string, any>>(
+export function entityResolver<T extends Entity, A extends Record<string, keyof T> = {}>(
   entity: MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {
@@ -89,6 +93,16 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .map((ormField) => {
       if ("derived" in ormField && ormField.derived === "async") {
         return [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName].get];
+      } else if ("lazy" in ormField && ormField.lazy) {
+        // `lazy` columns are excluded from the default SELECT and exposed as `LazyField`s, so put the
+        // value on the wire by loading it on demand (or reading `.get` if already loaded/populated).
+        return [
+          ormField.fieldName,
+          (entity: T) => {
+            const lazyField = (entity as any)[ormField.fieldName];
+            return isLoadedLazyField(lazyField) ? lazyField.get : lazyField.load();
+          },
+        ];
       } else {
         // Currently, we only support primitives, i.e. strings/numbers/etc. and not collections.
         return [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName]];
@@ -176,8 +190,13 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         return (property as Function).apply(entity);
       } else if (isReactiveGetter(property)) {
         return property.get;
-      } else if (isReference(property) || isCollection(property) || isProperty(property)) {
-        if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedProperty(property)) {
+      } else if (isReference(property) || isCollection(property) || isProperty(property) || isAsyncProperty(property)) {
+        if (
+          isLoadedReference(property) ||
+          isLoadedCollection(property) ||
+          isLoadedProperty(property) ||
+          isLoadedAsyncProperty(property)
+        ) {
           return property.get;
         }
         // ...we need to know the `property.otherMetadata()` return type, which isn't available right now

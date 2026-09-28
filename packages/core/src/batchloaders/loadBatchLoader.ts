@@ -1,12 +1,13 @@
-import { getInstanceData } from "../BaseEntity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
-import { buildHintTree } from "../HintTree";
-import { ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../QueryParser";
-import { keyToNumber, tagId } from "../keys";
-import { LoadHint } from "../loadHints";
-import { abbreviation } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { keyToNumber, tagId } from "src/keys.ts";
+import { buildHintTree } from "src/loading/HintTree.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { lazyExcludedSelects } from "src/queries/entityQueryUtils.ts";
+import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/queries/find/QueryParser.ts";
+import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
 
@@ -26,7 +27,7 @@ export function loadBatchLoader(
     const keys = loads.map((l) => keyToNumber(meta, l.taggedId));
     const alias = abbreviation(meta.tableName);
     const query = {
-      selects: [`"${alias}".*`],
+      selects: meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       condition: {
         kind: "exp",
@@ -41,20 +42,25 @@ export function loadBatchLoader(
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rows = await em["executeFind"](meta, loadOperation, query, {});
-    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
-    preloadHydrator && preloadHydrator(rows, entities);
-    // If we're missing any requested rows, mark any requested-but-not-found entities as deleted
-    if (rows.length !== loads.length) {
-      const foundIds = new Set(rows.map((r: any) => tagId(meta, r.id)));
-      for (const load of loads) {
-        if (!foundIds.has(load.taggedId)) {
-          const existingEntity = em.findExistingInstance(load.taggedId);
-          if (existingEntity) {
-            getInstanceData(existingEntity).markDeletedBecauseNotFound();
+    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
+    em["hydrateAndFinalize"](meta.cstr, rowData, {
+      overwriteExisting,
+      sidecars: (entities) => {
+        preloadHydrator && preloadHydrator(rowData, entities);
+        // If we're missing any requested rows, mark any requested-but-not-found entities as deleted
+        if (rowData.rowCount !== loads.length) {
+          const foundIds = new Set<string>();
+          for (let i = 0; i < rowData.rowCount; i++) foundIds.add(tagId(meta, rowData.get(i, "id")));
+          for (const load of loads) {
+            if (!foundIds.has(load.taggedId)) {
+              const existingEntity = em.findExistingInstance(load.taggedId);
+              if (existingEntity) {
+                getInstanceData(existingEntity).markDeletedBecauseNotFound();
+              }
+            }
           }
         }
-      }
-    }
+      },
+    });
   });
 }

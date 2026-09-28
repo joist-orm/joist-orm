@@ -1,5 +1,5 @@
 import { runner } from "node-pg-migrate";
-import { Client } from "pg";
+import { type Client } from "pg";
 
 const productionDirectory = "/home/node/app/migrations";
 

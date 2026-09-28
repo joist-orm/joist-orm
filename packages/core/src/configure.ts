@@ -1,25 +1,26 @@
-import { type Entity } from "./Entity";
-import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager";
+import { type Reactable, setAfterMetadataLocked, setBooted } from "src/config.ts";
+import { AsyncDefault } from "src/defaults.ts";
+import { type Entity } from "src/Entity.ts";
+import { type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
 import {
-  getBaseAndSelfMetas,
-  getBaseSelfAndSubMetas,
-  getMetadata,
   type EntityMetadata,
   type EnumField,
   type ManyToOneField,
   type OneToManyField,
-} from "./EntityMetadata";
-import { setAfterMetadataLocked, setBooted, type Reactable } from "./config";
-import { AsyncDefault } from "./defaults";
-import { getProperties } from "./getProperties";
-import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { reverseReactiveHint } from "./reactiveHints";
-import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
-import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { isCannotBeUpdatedRule } from "./rules";
-import { KeySerde } from "./serde";
-import { defineLazyGetter, fail } from "./utils";
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
+} from "src/EntityMetadata.ts";
+import { getProperties } from "src/getProperties.ts";
+import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "src/keys.ts";
+import { reverseReactiveHint } from "src/reactivity/reactiveHints.ts";
+import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
+import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "src/relations/index.ts";
+import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
+import { isCannotBeUpdatedRule } from "src/rules.ts";
+import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
+import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
+import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();
@@ -72,6 +73,21 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
       if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
       return (field as EnumField).serde.columns[0].columnName;
     });
+    defineLazyGetter(meta, "lazyFieldNames", function buildLazyFieldNames() {
+      return new Set(
+        Object.values(meta.fields)
+          .filter((f) => f.kind === "primitive" && f.lazy)
+          .map((f) => f.fieldName),
+      );
+    });
+    defineLazyGetter(meta, "hasLazyColumns", function buildHasLazyColumns() {
+      return meta.lazyFieldNames!.size > 0;
+    });
+    defineLazyGetter(meta, "syncDerivedFields", function buildSyncDerivedFields() {
+      return Object.values(meta.allFields)
+        .filter((f) => (f.kind === "primitive" || f.kind === "enum") && f.derived === "sync")
+        .map((f) => f.fieldName);
+    });
   }
 }
 
@@ -100,6 +116,31 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
       // immutable fields (so all read-only, and so not "reactive") need to run on initial entity creation.
       return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
     });
+    defineLazyGetter(meta, "reactiveCommitRules", function buildReactiveCommitRules() {
+      // Same "AndSub" reasoning as `reactiveRules`, just for the post-flush/pre-commit commit rules.
+      return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveCommitRules);
+    });
+    defineLazyGetter(meta, "hasCommitRules", function buildHasCommitRules() {
+      // True if flushing an entity of this type could trigger commit-rule work, so `em.flush` can
+      // skip the whole commit-rule pass otherwise. We need *both* checks because hinted and
+      // non-hinted commit rules are stored in different places:
+      //
+      // 1. Hinted commit rules are reverse-indexed onto their *trigger* entity's `reactiveCommitRules`,
+      //    which is often a *different* entity than the one the rule is declared on. I.e. a rule
+      //    `config.addCommitRule({ books: "title" }, fn)` declared on `Author` lands on
+      //    `Book.reactiveCommitRules`, so flushing a Book must run it even though `Book`'s own
+      //    `config.__data.commitRules` is empty — hence checking `reactiveCommitRules`, not `commitRules`.
+      //
+      // 2. Non-hinted commit rules are *not* reverse-indexed at all; they run on every insert/update of
+      //    the entity they're declared on (via `validateSimpleRules`). I.e. `config.addCommitRule(fn)` on
+      //    `Author` only ever shows up in `Author.config.__data.commitRules` with `hint === undefined`,
+      //    so `reactiveCommitRules` would miss it. (We filter to `hint === undefined` because hinted
+      //    rules are already covered by check #1.)
+      return (
+        meta.reactiveCommitRules!.length > 0 ||
+        getBaseSelfAndSubMetas(meta).some((m) => m.config.__data.commitRules.some((r) => r.hint === undefined))
+      );
+    });
   }
 }
 
@@ -126,6 +167,7 @@ function fireAfterMetadatas(metas: EntityMetadata[]): void {
 
 export function resetConstructorMap(): void {
   tagToConstructorMap.clear();
+  setTaggedIdDelimiter(":");
 }
 
 export function getConstructorFromTag(tag: string): MaybeAbstractEntityConstructor<any> {
@@ -133,8 +175,7 @@ export function getConstructorFromTag(tag: string): MaybeAbstractEntityConstruct
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
-  const tag = tagFromId(id);
-  return getConstructorFromTag(tag);
+  return getConstructorFromTag(tagFromId(id));
 }
 
 export function getMetadataForTable(tableName: string): EntityMetadata {
@@ -158,6 +199,10 @@ export function maybeGetConstructorFromReference(
 }
 
 function populateConstructorMaps(metas: EntityMetadata[]): void {
+  const runtimeConfig = maybeGetRuntimeConfig();
+  const tagDelimiter = runtimeConfig && Object.hasOwn(runtimeConfig, "tagDelimiter") ? runtimeConfig.tagDelimiter : ":";
+  setTaggedIdDelimiter(tagDelimiter);
+
   for (const meta of metas) {
     // Add each (root) constructor into our tag -> constructor map for future lookups
     if (!meta.baseType) {
@@ -209,6 +254,9 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
     // Only supporting one level of inheritance for now, ideally would loop `while current !== null`
     if (m.baseType) {
       const b = metaByName[m.baseType];
+      if (m.inheritanceType === "sti") {
+        m.columns = b.columns;
+      }
       m.baseTypes.push(b);
       b.subTypes.push(m);
       // Add all the base's fields to our allFields, with the base's aliasSuffix, so that in
@@ -237,6 +285,12 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
         }
       });
     }
+  }
+  // Now that base/sub links are complete, cache the hot-path meta arrays that
+  // `getBaseAndSelfMetas`/`getBaseSelfAndSubMetas` would otherwise re-allocate per call.
+  for (const m of metas) {
+    m.baseSelfMetas = [...m.baseTypes, m];
+    m.baseSelfAndSubMetas = [...m.baseTypes, m, ...m.subTypes];
   }
 }
 
@@ -275,6 +329,25 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         for (const { kind, entity, path, fields } of reversals) {
           if (kind === "update") {
             getMetadata(entity).config.__data.reactiveRules.push({
+              source: entity,
+              cstr: meta.cstr,
+              name,
+              fields,
+              path,
+              fn,
+            });
+          }
+        }
+      }
+    }
+
+    // Same reverse-indexing as `rules` above, but for `commitRules` -> `reactiveCommitRules`.
+    for (const { name, hint, fn } of meta.config.__data.commitRules) {
+      if (hint) {
+        const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
+        for (const { kind, entity, path, fields } of reversals) {
+          if (kind === "update") {
+            getMetadata(entity).config.__data.reactiveCommitRules.push({
               source: entity,
               cstr: meta.cstr,
               name,
@@ -364,13 +437,9 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             required: false,
             immutable: false,
             derived: false,
-            serde: new KeySerde(
-              comp.otherMetadata().tagName,
-              fieldName,
-              comp.columnName,
-              field.serde.columns[0].dbType as any,
-            ),
-            ...comp,
+            serde: new SimpleFieldSerde(fieldName, comp.column),
+            otherMetadata: comp.otherMetadata,
+            otherFieldName: comp.otherFieldName,
             aliasSuffix: field.aliasSuffix,
           } satisfies ManyToOneField & { aliasSuffix: string };
         }

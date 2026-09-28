@@ -1,12 +1,29 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
-import { alias, getMetadata, PrimitiveField } from "joist-orm";
-import { Temporal } from "joist-orm";
-import { Author, Book, BookFilter, newBook } from "./entities";
+import { PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
+import { PostgresDriver, registerDatabaseBinaryParsers } from "joist-orm/pg";
+import { newPgConnectionConfig } from "joist-utils";
+import pg from "pg";
+import { knex, newEntityManager, pool } from "src/setupDbTests";
+import { jan1DateTime, jan1at10am, jan2DateTime, jan3DateTime } from "src/utils";
+
+import { Author, Book, BookFilter, EntityManager, newBook } from "./entities";
 
 describe("zonedDateTime", () => {
   it("has the correct type for a zoned date time field", () => {
     expect((getMetadata(Book).fields["publishedAt"] as PrimitiveField).type).toBe(Temporal.ZonedDateTime);
+  });
+
+  it("soft deletes with a zoned date time", async () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+
+    book.softDelete();
+    await em.flush();
+
+    expect(book.deletedAt).toBeInstanceOf(Temporal.ZonedDateTime);
+    expect(book.deletedAt?.timeZoneId).toBe("UTC");
+    expect(await knex.select(knex.raw("deleted_at is not null as soft_deleted")).from("book")).toMatchObject([
+      { soft_deleted: true },
+    ]);
   });
 
   it("can create with a zoned date time", async () => {
@@ -34,6 +51,30 @@ describe("zonedDateTime", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(book.publishedAt).toEqual(jan1DateTime);
+  });
+
+  it("zones loads by the session TimeZone identically in classic and lazy modes", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
+    await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
+    // A session whose TimeZone is not UTC renders timestamptz with local offsets, which classic
+    // parsing preserves as the ZonedDateTime's zone — binary decoding must match it exactly
+    const nyPool = new pg.Pool({ ...newPgConnectionConfig(), options: "-c TimeZone=America/New_York" });
+    try {
+      const classicEm = new EntityManager({} as any, new PostgresDriver(nyPool, { lazyRows: false }));
+      const classicBook = await classicEm.load(Book, "b:1");
+      const lazyEm = new EntityManager(
+        {} as any,
+        new PostgresDriver(nyPool, { lazyRows: process.env.JOIST_ROW_DATA === "1" }),
+      );
+      const lazyBook = await lazyEm.load(Book, "b:1");
+      expect(lazyBook.publishedAt).toEqual(classicBook.publishedAt);
+      // i.e. jan1 UTC renders as Dec 31 in EST, zoned by the rendered offset
+      expect(lazyBook.publishedAt.toString()).toBe(classicBook.publishedAt.toString());
+    } finally {
+      // Restore the shared UTC session zone captured by the lazy driver's auto-registration
+      await registerDatabaseBinaryParsers(pool);
+      await nyPool.end();
+    }
   });
 
   it("can load a zoned date time array", async () => {

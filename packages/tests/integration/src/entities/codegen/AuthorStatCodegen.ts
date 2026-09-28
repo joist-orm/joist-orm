@@ -7,6 +7,7 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -51,6 +52,35 @@ export interface AuthorStatFields {
   json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  decimalSamples: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  bigintSamples: { kind: "primitive"; type: bigint[]; unique: false; nullable: undefined; derived: false };
+}
+
+export interface AuthorStatColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<AuthorStat>;
+    entity: AuthorStat;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  smallint: { type: number; fieldName: "smallint"; nullable: false; insert: "required"; update: true };
+  integer: { type: number; fieldName: "integer"; nullable: false; insert: "required"; update: true };
+  nullableInteger: { type: number; fieldName: "nullableInteger"; nullable: true; insert: "optional"; update: true };
+  bigint: { type: bigint; fieldName: "bigint"; nullable: false; insert: "required"; update: true };
+  decimal: { type: number; fieldName: "decimal"; nullable: false; insert: "required"; update: true };
+  real: { type: number; fieldName: "real"; nullable: false; insert: "required"; update: true };
+  smallserial: { type: number; fieldName: "smallserial"; nullable: false; insert: "optional"; update: true };
+  serial: { type: number; fieldName: "serial"; nullable: false; insert: "optional"; update: true };
+  bigserial: { type: bigint; fieldName: "bigserial"; nullable: false; insert: "optional"; update: true };
+  doublePrecision: { type: number; fieldName: "doublePrecision"; nullable: false; insert: "required"; update: true };
+  nullableText: { type: string; fieldName: "nullableText"; nullable: true; insert: "optional"; update: true };
+  json: { type: Object; fieldName: "json"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  decimalSamples: { type: number[]; fieldName: "decimalSamples"; nullable: true; insert: "optional"; update: true };
+  bigintSamples: { type: bigint[]; fieldName: "bigintSamples"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorStatOpts {
@@ -66,6 +96,8 @@ export interface AuthorStatOpts {
   doublePrecision: number;
   nullableText?: string | null;
   json?: Object | null;
+  decimalSamples?: number[] | null;
+  bigintSamples?: bigint[] | null;
 }
 
 export interface AuthorStatIdsOpts {
@@ -87,6 +119,8 @@ export interface AuthorStatFilter {
   json?: ValueFilter<Object, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  decimalSamples?: ValueFilter<number[], null>;
+  bigintSamples?: ValueFilter<bigint[], null>;
 }
 
 export interface AuthorStatGraphQLFilter {
@@ -105,6 +139,8 @@ export interface AuthorStatGraphQLFilter {
   json?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  decimalSamples?: ValueGraphQLFilter<number[]>;
+  bigintSamples?: ValueGraphQLFilter<bigint[]>;
 }
 
 export interface AuthorStatOrder {
@@ -123,6 +159,8 @@ export interface AuthorStatOrder {
   json?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  decimalSamples?: OrderBy;
+  bigintSamples?: OrderBy;
 }
 
 export interface AuthorStatFactoryExtras {
@@ -158,6 +196,9 @@ declare module "joist-core" {
       orderType: AuthorStatOrder;
       optsType: AuthorStatOpts;
       fieldsType: AuthorStatFields;
+      columnsType: AuthorStatColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: AuthorStatIdsOpts;
       factoryExtrasType: AuthorStatFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthorStat>[1];
@@ -289,6 +330,22 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get decimalSamples(): number[] | undefined {
+    return getField(this, "decimalSamples");
+  }
+
+  set decimalSamples(decimalSamples: number[] | undefined) {
+    setField(this, "decimalSamples", decimalSamples);
+  }
+
+  get bigintSamples(): bigint[] | undefined {
+    return getField(this, "bigintSamples");
+  }
+
+  set bigintSamples(bigintSamples: bigint[] | undefined) {
+    setField(this, "bigintSamples", bigintSamples);
   }
 
   /**

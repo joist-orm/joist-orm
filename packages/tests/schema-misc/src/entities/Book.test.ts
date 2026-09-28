@@ -1,6 +1,6 @@
-import { newBook } from "@src/entities";
-import { newEntityManager, queries } from "@src/setupDbTests";
 import { getInstanceData } from "joist-orm";
+import { newBook } from "src/entities";
+import { newEntityManager, queries } from "src/setupDbTests";
 
 describe("Book", () => {
   it.withCtx("can save", async () => {

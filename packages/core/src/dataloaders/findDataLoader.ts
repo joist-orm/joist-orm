@@ -1,30 +1,28 @@
-import { Entity } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { opToFn } from "../EntityGraphQLFilter";
-import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
-import { EntityMetadata, getMetadata } from "../EntityMetadata";
-import { buildHintTree } from "../HintTree";
+import { fastWhereFilterHash } from "src/dataloaders/fastWhereFilterHash.ts";
+import type { OpColumn } from "src/drivers/EntityWriter.ts";
+import type { Entity } from "src/Entity.ts";
+import { type EntityManager, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { equal, equalArrays } from "src/fields.ts";
+import { buildHintTree } from "src/loading/HintTree.ts";
+import type { LoadHint } from "src/loading/loadHints.ts";
+import { hintKey } from "src/normalizeHints.ts";
+import type { FilterAndSettings } from "src/queries/find/EntityFilter.ts";
+import { opToFn } from "src/queries/find/EntityGraphQLFilter.ts";
 import {
-  ColumnCondition,
-  ParsedCteClause,
-  ParsedFindQuery,
-  ParsedGroupBy,
-  ParsedSelect,
-  ParsedValueFilter,
-  RawCondition,
+  type ParsedCteClause,
+  type ParsedFindQuery,
+  type ParsedGroupBy,
+  type ParsedSelect,
   getTables,
   parseAlias,
   parseFindQuery,
-} from "../QueryParser";
-import { visitConditions } from "../QueryVisitor";
-import { OpColumn } from "../drivers/EntityWriter";
-import { equal, equalArrays } from "../fields";
-import { kqDot } from "../keywords";
-import { LoadHint } from "../loadHints";
-import { hintKey } from "../normalizeHints";
-import { buildUnnestCte } from "../unnest";
-import { assertNever } from "../utils";
-import { fastWhereFilterHash } from "./fastWhereFilterHash";
+} from "src/queries/find/QueryParser.ts";
+import { isQueryProvablyEmpty, visitConditions } from "src/queries/find/QueryVisitor.ts";
+import type { ColumnCondition, ParsedValueFilter, RawCondition } from "src/queries/parsedConditions.ts";
+import { kqDot } from "src/queries/sql/keywords.ts";
+import { buildUnnestCte } from "src/queries/unnest.ts";
+import { assertNever, fail } from "src/utils.ts";
 
 export const findOperation = "find";
 
@@ -53,6 +51,8 @@ export function findDataLoader<T extends Entity>(
     ...opts,
     limit: em.entityLimit,
   });
+  if (isQueryProvablyEmpty(query)) return Promise.resolve([]);
+
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, query, bindings, findSettings, checkLimit } satisfies PreparedFindEntry<T>;
@@ -76,9 +76,10 @@ export function findDataLoader<T extends Entity>(
           // Maybe add preload joins
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
-          const entities = em.hydrate(type, rows);
-          preloadHydrator?.(rows, entities);
+          const rowData = await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, checkLimit);
+          const entities = em["hydrateAndFinalize"](type, rowData, {
+            sidecars: (entities) => preloadHydrator?.(rowData, entities),
+          });
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -127,20 +128,21 @@ export function findDataLoader<T extends Entity>(
           }
         }
 
-        const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
-
-        const entities = em.hydrate(type, rows);
-        preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+        const rowData = await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit);
 
         // Make an empty array for each batched query, per the dataloader contract
         const results = entries.map(() => [] as T[]);
-        // Then put each row into the tagged query it matched
-        rows.forEach((row, i) => {
-          const entity = entities[i];
-          if (!entity.isDeletedEntity) {
-            for (const tag of row._tags) results[tag].push(entity);
-          }
-          delete row._tags;
+        em["hydrateAndFinalize"](type, rowData, {
+          sidecars: (entities) => {
+            preloadJoins?.forEach((j) => j.hydrator(rowData, entities));
+            // Put each row into the tagged query it matched
+            for (let i = 0; i < entities.length; i++) {
+              const entity = entities[i];
+              if (!entity.isDeletedEntity) {
+                for (const tag of rowData.get(i, "_tags")) results[tag].push(entity);
+              }
+            }
+          },
         });
         return results;
       },
@@ -378,17 +380,6 @@ function findSelectedAliases(expression: string): string[] {
   return [...aliases];
 }
 
-/** Replaces all values with `*` so we can see the generic structure of the query. */
-function stripValues(query: ParsedFindQuery): void {
-  visitConditions(query, {
-    visitCond(c: ColumnCondition) {
-      if ("value" in c.cond) {
-        c.cond.value = "*";
-      }
-    },
-  });
-}
-
 /** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */
 function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, boolean] {
   switch (cond.kind) {
@@ -494,13 +485,22 @@ function argsEqual(a: any, b: any): boolean {
 }
 
 export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {
-  // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
-  const clone = structuredClone(query);
-  stripValues(clone);
-  if (meta.stiDiscriminatorValue) {
-    // Include the meta b/c STI queries for different subtypes will look identical
-    (clone as any).meta = meta.type;
-  }
-  // We could use `whereFilterHash` too if it's faster?
-  return JSON.stringify(clone);
+  // Temporarily swap condition values for `*` so we can see the generic structure of the query,
+  // then restore them; this avoids deep-cloning the entire parsed query on every em.find call.
+  // Track values per condition object b/c parseFindQuery does not deep copy complex conditions,
+  // i.e. `a.firstName.eq(...)`, so the same condition instance could appear twice.
+  const saved = new Map<any, any>();
+  visitConditions(query, {
+    visitCond(c: ColumnCondition) {
+      const { cond } = c;
+      if ("value" in cond && !saved.has(cond)) {
+        saved.set(cond, cond.value);
+        cond.value = "*";
+      }
+    },
+  });
+  const structure = JSON.stringify(query);
+  for (const [cond, value] of saved) cond.value = value;
+  // Include the meta b/c STI queries for different subtypes will look identical
+  return meta.stiDiscriminatorValue ? `${structure}|${meta.type}` : structure;
 }

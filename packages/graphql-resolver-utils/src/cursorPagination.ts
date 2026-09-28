@@ -1,10 +1,20 @@
 import {
   type Entity,
   type FindGqlFilterOptions,
+  type IdOf,
   type MaybeAbstractEntityConstructor,
+  type QueryCondition,
   type ValueGraphQLFilter,
 } from "joist-core";
-import { type ContextWithEm, defaultLimit, type PaginationFilter } from "./paginationUtils";
+
+import {
+  type ContextWithEm,
+  type PaginationFilter,
+  type PaginationQuery,
+  countQuery,
+  defaultLimit,
+  queryEntities,
+} from "./paginationUtils.ts";
 
 type CursorArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   filter?: F | null;
@@ -14,23 +24,46 @@ type CursorArgs<T extends Entity, F extends object = PaginationFilter<T>> = {
   before?: string | null;
 };
 
-/** Returns a cursor connection shape for a generated query resolver. */
-export async function paginateCursor<T extends Entity, F extends object = PaginationFilter<T>>(
+/** Returns an ID-ordered cursor connection for a resolver, replacing the entity query's ordering. */
+export function paginateCursor<T extends Entity>(
+  ctx: ContextWithEm,
+  query: PaginationQuery<T>,
+  args: Omit<CursorArgs<T>, "filter">,
+): Promise<{ edges: { node: T; cursor: string }[]; nodes: T[]; pageInfo: CursorPageInfo<T> }>;
+export function paginateCursor<T extends Entity, F extends object = PaginationFilter<T>>(
   ctx: ContextWithEm,
   type: MaybeAbstractEntityConstructor<T>,
+  args: CursorArgs<T, F>,
+): Promise<{ edges: { node: T; cursor: string }[]; nodes: T[]; pageInfo: CursorPageInfo<T> }>;
+export async function paginateCursor<T extends Entity, F extends object = PaginationFilter<T>>(
+  ctx: ContextWithEm,
+  type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>,
   args: CursorArgs<T, F>,
 ): Promise<{ edges: { node: T; cursor: string }[]; nodes: T[]; pageInfo: CursorPageInfo<T> }> {
   const limit = args.first ?? args.last ?? defaultLimit;
   const baseFilter = (args.filter ?? {}) as PaginationFilter<T>;
   const filter = withCursorFilter(baseFilter, args);
   const orderBy = { id: args.last ? "DESC" : "ASC" } as FindGqlFilterOptions<T>["orderBy"];
-  const nodes = await ctx.em.findGql(type, filter, { limit, orderBy });
+  const nodes =
+    typeof type === "function"
+      ? await ctx.em.findGql(type, filter, { limit, orderBy })
+      : await queryEntities(ctx, {
+          ...withCursorQuery(type, args),
+          orderBy: [args.last ? { sort: type.select.id, order: "DESC" } : { sort: type.select.id, order: "ASC" }],
+          limit,
+          offset: undefined,
+        });
   const orderedNodes = args.last ? [...nodes].reverse() : nodes;
   const edges = orderedNodes.map((node) => ({ node, cursor: encodeCursor(String(node.id)) }));
   return {
     edges,
     nodes: orderedNodes,
-    pageInfo: new CursorPageInfo(ctx, type, baseFilter, edges),
+    pageInfo: new CursorPageInfo(
+      ctx,
+      typeof type === "function" ? type : { ...type, orderBy: undefined },
+      baseFilter,
+      edges,
+    ),
   };
 }
 
@@ -42,11 +75,11 @@ export class CursorPageInfo<T extends Entity = Entity> {
   #hasNextPagePromise: Promise<boolean> | undefined;
   #hasPreviousPagePromise: Promise<boolean> | undefined;
   #totalCountPromise: Promise<number> | undefined;
-  #type: MaybeAbstractEntityConstructor<T>;
+  #type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>;
 
   constructor(
     ctx: ContextWithEm,
-    type: MaybeAbstractEntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T> | PaginationQuery<T>,
     filter: PaginationFilter<T>,
     edges: { node: T; cursor: string }[],
   ) {
@@ -73,15 +106,38 @@ export class CursorPageInfo<T extends Entity = Entity> {
   }
 
   get totalCount(): Promise<number> {
-    return (this.#totalCountPromise ??= this.#ctx.em.findCount(this.#type, this.#filter));
+    return (this.#totalCountPromise ??=
+      typeof this.#type === "function"
+        ? this.#ctx.em.findCount(this.#type, this.#filter)
+        : countQuery(this.#ctx, this.#type));
   }
 
   /** Counts rows past a cursor only when the field is requested. */
   async #countPastCursor(direction: "after" | "before", cursor: string | undefined): Promise<boolean> {
     if (!cursor) return false;
+    if (typeof this.#type !== "function") {
+      return (await countQuery(this.#ctx, withCursorQuery(this.#type, { [direction]: cursor }))) > 0;
+    }
     const filter = withCursorFilter(this.#filter, { [direction]: cursor });
     return (await this.#ctx.em.findCount(this.#type, filter)) > 0;
   }
+}
+
+/** Adds both cursor bounds without replacing the query's existing conditions. */
+function withCursorQuery<T extends Entity>(
+  base: PaginationQuery<T>,
+  args: { after?: string | null; before?: string | null },
+): PaginationQuery<T> {
+  return {
+    ...base,
+    where: {
+      and: [
+        ...(Array.isArray(base.where) ? base.where : [base.where as QueryCondition | undefined]),
+        args.after ? base.select.id.gt(decodeCursor(args.after) as IdOf<T>) : undefined,
+        args.before ? base.select.id.lt(decodeCursor(args.before) as IdOf<T>) : undefined,
+      ],
+    },
+  };
 }
 
 /** Adds cursor bounds to a filter. */

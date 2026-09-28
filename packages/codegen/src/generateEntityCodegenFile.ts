@@ -1,21 +1,23 @@
 import { camelCase, pascalCase } from "change-case";
-import { plural } from "pluralize";
-import { Code, code, imp, joinCode } from "ts-poet";
+import pluralize from "pluralize";
+import { type Code, code, imp, joinCode } from "ts-poet";
+
+import { type Config } from "./config.ts";
+import { type ParsedDoc, buildJSDocBlock, generatedTag } from "./docs/index.ts";
 import {
-  DbMetadata,
-  Entity,
-  EntityDbMetadata,
-  EnumField,
-  ManyToOneField,
-  PgEnumField,
-  PolymorphicField,
-  PrimitiveField,
-  PrimitiveTypescriptType,
-} from "./EntityDbMetadata";
-import { type Config } from "./config";
-import { type ScopeMember } from "./findEntityScopes";
-import { getStiEntities } from "./inheritance";
-import { keywords } from "./keywords";
+  type DbMetadata,
+  type Entity,
+  type EntityDbMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type PgEnumField,
+  type PolymorphicField,
+  type PrimitiveField,
+  type PrimitiveTypescriptType,
+} from "./EntityDbMetadata.ts";
+import { type ScopeMember } from "./findEntityScopes.ts";
+import { getStiEntities } from "./inheritance.ts";
+import { keywords } from "./keywords.ts";
 import {
   BaseEntity,
   BooleanFilter,
@@ -36,6 +38,7 @@ import {
   IdOf,
   JsonPayload,
   LargeCollection,
+  LazyField,
   Lens,
   LoadHint,
   Loaded,
@@ -66,6 +69,7 @@ import {
   hasEnumCollection,
   hasLargeMany,
   hasLargeManyToMany,
+  hasLazyField,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -80,16 +84,20 @@ import {
   loadLens,
   mustBeSubType,
   newChangesProxy,
+  newRequiredLazyFieldRule,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   setField,
   setOpts,
   toIdOf,
   toJSON,
   updatePartial,
-} from "./symbols";
-import { tsdocComments } from "./tsdoc";
-import { assertNever, fail, uncapitalize } from "./utils";
+} from "./symbols.ts";
+import { tsdocComments } from "./tsdoc.ts";
+import { assertNever, fail, q, uncapitalize } from "./utils.ts";
+
+const { plural } = pluralize;
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -98,7 +106,7 @@ export interface ColumnMetaData {
 // A local type just for tracking abstract vs. concrete relations
 type Relation =
   // I.e. `abstract ReactiveReference` that the user must implement
-  | { kind: "abstract"; line: Code; comment?: string }
+  | { kind: "abstract"; fieldName: string; line: Code; comment?: string }
   // I.e. a `get author(): ManyToOne<...>`
   | { kind: "concrete"; fieldName: string; decl: Code; init: Code; comment?: string }
   // I.e. a `get author(): { super.author as ... }`
@@ -110,18 +118,22 @@ export function generateEntityCodegenFile(
   dbMeta: DbMetadata,
   meta: EntityDbMetadata,
   scopeMembers: ScopeMember[] = [],
+  docs?: ParsedDoc,
 ): Code {
   const { entitiesByName: metasByName } = dbMeta;
   const { entity, tagName } = meta;
   const entityName = entity.name;
 
+  // Per-field `.md` docs to inject as JSDocs on the codegen'd getters/relations (empty if docs are off)
+  const fieldDocs = docs?.fields ?? {};
+
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
 
-  const primitives = createPrimitives(meta, entity); // Add the primitives
-  primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
-  primitives.push(...createArrayEnums(meta)); // Add integer[] enums
-  primitives.push(...createPgEnums(meta)); // Add native enums
+  const primitives = createPrimitives(meta, entity, fieldDocs); // Add the primitives
+  primitives.push(...createRegularEnums(meta, entity, fieldDocs)); // Add ManyToOne enums
+  primitives.push(...createArrayEnums(meta, fieldDocs)); // Add integer[] enums
+  primitives.push(...createPgEnums(meta, fieldDocs)); // Add native enums
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
@@ -138,10 +150,15 @@ export function generateEntityCodegenFile(
       : code`return ${toIdOf}(${metadata}, this.idTaggedMaybe);`;
   const idType = getIdType(config);
 
-  const maybeIsSoftDeleted = meta.deletedAt
+  const maybeSoftDeleteMethods = meta.deletedAt
     ? code`
     get isSoftDeletedEntity(): boolean {
       return this.${meta.deletedAt.fieldName} !== undefined;
+    }
+
+    softDelete(): void {
+      if (this.isSoftDeletedEntity) return;
+      this.${meta.deletedAt.fieldName} = ${nowUTCCall(config, meta.deletedAt)};
     }
   `
     : "";
@@ -150,10 +167,27 @@ export function generateEntityCodegenFile(
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
+  // CTI subtype ids have their own SQL defaults, unlike the base table's sequence-backed ids.
+  // Locally redeclared fields also replace base policies when STI strengthens notNull.
   const maybeBaseFields = baseEntity
-    ? code`extends ${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}`
+    ? code`extends Omit<${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}, "id"${[
+        ...meta.primitives,
+        ...meta.enums,
+        ...meta.pgEnums,
+        ...meta.manyToOnes,
+      ]
+        .filter((field) =>
+          [...baseEntity.primitives, ...baseEntity.enums, ...baseEntity.pgEnums, ...baseEntity.manyToOnes].some(
+            (baseField) => baseField.fieldName === field.fieldName,
+          ),
+        )
+        .map((field) => code` | "${field.fieldName}"`)}>`
     : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
+  const physical = meta.physicalMetadata ?? meta;
+  const sharedTable = meta.inheritanceType === "sti" && baseEntity;
+  const columns = sharedTable ? {} : generateColumnsType(physical);
+  const maybeBaseColumns = sharedTable ? code`extends ${imp(`t:${baseEntity.name}Columns@./entities.ts`)}` : "";
   const maybeBaseIdOpts = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
     : "";
@@ -213,6 +247,10 @@ export function generateEntityCodegenFile(
       ${generateFieldsType(meta, idType)}
     }
 
+    export interface ${entityName}Columns ${maybeBaseColumns} {
+      ${Object.entries(columns).map(([name, descriptor]) => code`${camelCase(name)}: ${descriptor};`)}
+    }
+
     export interface ${entity.optsName} ${maybeBaseOpts} {
       ${generateOptsFields(meta)}
     }
@@ -259,6 +297,9 @@ export function generateEntityCodegenFile(
           orderType: ${entity.orderName};
           optsType: ${entity.optsName};
           fieldsType: ${entity.fieldsName};
+          columnsType: ${entityName}Columns;
+          inheritanceType: ${meta.inheritanceType ? code`"${meta.inheritanceType}"` : "never"};
+          supportsEmExecute: ${!meta.inheritanceType && meta.supportsEmExecute === true};
           optIdsType: ${entity.idsOptsName};
           factoryExtrasType: ${entity.factoryExtrasName};
           factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
@@ -278,17 +319,17 @@ export function generateEntityCodegenFile(
       ${relations
         .filter((r) => r.kind === "abstract")
         .map((r) => {
-          return code`${r.line}${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}${r.line}${maybeComment(r.comment)}`;
         })}
       ${relations
         .filter((r) => r.kind === "concrete")
         .map((r) => {
-          return code`readonly ${r.fieldName}: ${r.decl} = ${r.init};${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}readonly ${r.fieldName}: ${r.decl} = ${r.init};${maybeComment(r.comment)}`;
         })}
       ${relations
         .filter((r) => r.kind === "super")
         .map((r) => {
-          return code`declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
+          return code`${relationDocBlock(fieldDocs, r.fieldName, entityName)}declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
         })}
 
       get id(): ${entity.idName} {
@@ -329,7 +370,7 @@ export function generateEntityCodegenFile(
         return ${newChangesProxy}(this) as any;
       }
 
-      ${maybeIsSoftDeleted}
+      ${maybeSoftDeleteMethods}
 
       ${tsdocComments.entity.load}
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
@@ -429,7 +470,10 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
     .map((p) => {
       const { fieldName } = p;
       const isReactive = "derived" in p && p.derived === "async";
-      if (isReactive) {
+      if ("lazy" in p && p.lazy) {
+        // Lazy columns use a rule that won't force-load (or falsely fail) an unloaded value on a persisted entity
+        return code`${configName}.addRule(${newRequiredLazyFieldRule}("${fieldName}"));`;
+      } else if (isReactive) {
         return code`${configName}.addRule("${fieldName}", ${newRequiredRule}("${fieldName}"));`;
       } else {
         return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
@@ -523,32 +567,35 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never };`;
+  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never; };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
     return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
       notNull,
-    )}, derived: ${derived !== false} };`;
+    )}, derived: ${derived !== false}; };`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; };`;
     } else {
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)} };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; };`;
     }
   });
-  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
+  const pgEnums = meta.pgEnums.map((field) => {
+    const { fieldName, enumType, notNull } = field;
     const nullable = undefinedOrNever(notNull);
-    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
+    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true; };`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull, derived }) => {
+  const m2o = meta.manyToOnes.map((field) => {
+    const { fieldName, otherEntity, notNull, derived } = field;
     return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(
       notNull,
-    )}, derived: ${derived !== false} };`;
+    )}, derived: ${derived !== false}; };`;
   });
-  const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
+  const polys = meta.polymorphics.map((field) => {
+    const { fieldName, notNull, fieldType } = field;
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
@@ -560,10 +607,67 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
+  const o2o = meta.oneToOnes.map((field) => {
+    return code`${field.fieldName}: { kind: "o2o"; type: ${field.otherEntity.type} };`;
+  });
   const lo2m = meta.largeOneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
-  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...lo2m];
+  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...o2o, ...lo2m];
+}
+
+/**
+ * Emits physical columns with domain value types and database nullability.
+ * I.e. Comment.parent_book_id is an optional Book reference, not the CommentParent union.
+ * fieldName identifies direct local domain filters; polymorphic components have no eligible name.
+ * Polymorphic component writes remain unsupported, so their policies are conservative.
+ */
+function generateColumnsType(meta: EntityDbMetadata): Record<string, Code> {
+  const columns: Record<string, Code> = {
+    id: code`{ fieldName: "id"; type: ${IdOf}<${meta.entity.type}>; entity: ${meta.entity.type}; ${columnPolicyType(meta, meta.primaryKey)} }`,
+  };
+  for (const field of [...meta.primitives, ...meta.enums, ...meta.pgEnums, ...meta.manyToOnes]) {
+    const policy = code`fieldName: "${field.fieldName}"; ${columnPolicyType(meta, field)}`;
+    if (field.kind === "primitive") {
+      columns[field.columnName] = code`{ type: ${field.fieldType}; ${policy} }`;
+    } else if (field.kind === "m2o") {
+      columns[field.columnName] =
+        code`{ type: ${IdOf}<${field.otherEntity.type}>; entity: ${field.otherEntity.type}; ${policy} }`;
+    } else {
+      const array = field.kind === "enum" && field.isArray ? "[]" : "";
+      columns[field.columnName] = code`{ type: ${field.enumType}${array}; ${policy} }`;
+    }
+  }
+  for (const column of meta.ignoredColumns) {
+    columns[column.columnName] =
+      code`{ type: ${column.fieldType}; fieldName: never; ${columnPolicyType(meta, column)} }`;
+  }
+  for (const field of meta.polymorphics) {
+    for (const component of field.components) {
+      columns[component.columnName] =
+        code`{ fieldName: never; type: ${IdOf}<${component.otherEntity.type}>; entity: ${component.otherEntity.type}; nullable: true; insert: "never"; update: false; }`;
+    }
+  }
+  return columns;
+}
+
+/** Emits SQL write policy without using ORM defaults or derived-field restrictions. */
+function columnPolicyType(
+  meta: EntityDbMetadata,
+  column: Pick<PrimitiveField, "columnNotNull" | "columnGenerated"> & Partial<Pick<PrimitiveField, "columnDefault">>,
+): Code {
+  const primaryKey = column === meta.primaryKey ? meta.primaryKey.columnType : undefined;
+  const insert = column.columnGenerated
+    ? "never"
+    : !column.columnNotNull ||
+        column.columnDefault != null ||
+        column === meta.createdAt ||
+        column === meta.updatedAt ||
+        primaryKey === "int" ||
+        primaryKey === "bigint"
+      ? "optional"
+      : "required";
+  return code`nullable: ${!column.columnNotNull}; insert: "${insert}"; update: ${!primaryKey && !column.columnGenerated};`;
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.
@@ -758,10 +862,13 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums];
 }
 
-function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
+function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
+
+    // `lazy` columns are emitted as `LazyField` relations by `createLazyFields`, not as getters/setters
+    if (p.lazy) return code``;
 
     let getter: Code;
     if (p.derived === "async") {
@@ -833,12 +940,12 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
       `;
     }
 
-    return code`${getter} ${setter}`;
+    return code`${fieldDocBlock(fieldDocs, fieldName, entity.name)}${getter} ${setter}`;
   });
   return primitives;
 }
 
-function createRegularEnums(meta: EntityDbMetadata, entity: Entity) {
+function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => !e.isArray)
     .flatMap((e) => {
@@ -890,11 +997,11 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity) {
           }
         `,
       );
-      return [getter, setter, ...accessors];
+      return [code`${fieldDocBlock(fieldDocs, fieldName, entity.name)}${getter}`, setter, ...accessors];
     });
 }
 
-function createArrayEnums(meta: EntityDbMetadata) {
+function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => e.isArray)
     .flatMap((e) => {
@@ -926,11 +1033,11 @@ function createArrayEnums(meta: EntityDbMetadata) {
           }
         `,
       );
-      return [getter, setter, ...accessors];
+      return [code`${fieldDocBlock(fieldDocs, fieldName, meta.entity.name)}${getter}`, setter, ...accessors];
     });
 }
 
-function createPgEnums(meta: EntityDbMetadata) {
+function createPgEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.pgEnums.flatMap((e) => {
     const { fieldName, enumType, enumValues, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -958,7 +1065,7 @@ function createPgEnums(meta: EntityDbMetadata) {
           }
         `,
     );
-    return [getter, setter, ...accessors];
+    return [code`${fieldDocBlock(fieldDocs, fieldName, meta.entity.name)}${getter}`, setter, ...accessors];
   });
 }
 
@@ -969,7 +1076,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const maybeOptional = notNull ? "never" : "undefined";
     if (m2o.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;`;
-      return { kind: "abstract", line } as const;
+      return { kind: "abstract", fieldName, line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
     const init = code`${hasOne}()`;
@@ -1095,7 +1202,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const comment = `// ${m2m.joinTableName} ${m2m.columnName} ${m2m.otherColumnName}`;
     if (m2m.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
-      return { kind: "abstract", line, comment } as const;
+      return { kind: "abstract", fieldName, line, comment } as const;
     } else if (m2m.derived === "otherSide") {
       const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
       const init = code`${hasReactiveManyToManyOtherSide}()`;
@@ -1159,6 +1266,17 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
+  // Add `lazy` primitives, which are exposed as `LazyField`s instead of getters/setters
+  const lazy: Relation[] = meta.primitives
+    .filter((p) => p.lazy)
+    .map((p) => {
+      const { fieldName, fieldType, notNull } = p;
+      const maybeOptional = notNull ? "" : " | undefined";
+      const decl = code`${LazyField}<${entity.type}, ${fieldType}${maybeOptional}>`;
+      const init = code`${hasLazyField}()`;
+      return { kind: "concrete", fieldName, decl, init };
+    });
+
   return [
     o2m,
     o2mBase,
@@ -1175,6 +1293,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     m2mEnumBase,
     lm2m,
     polymorphic,
+    lazy,
   ].flat();
 }
 
@@ -1203,9 +1322,42 @@ function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : "null";
 }
 
+/** Returns the nowUTC call for the deleted-at field's generated timestamp type. */
+function nowUTCCall(config: Config, field: PrimitiveField): Code {
+  if (!config.temporal) return code`${nowUTC}()`;
+  switch (field.columnType) {
+    case "date":
+      return code`${nowUTC}("plainDate")`;
+    case "timestamp without time zone":
+      return code`${nowUTC}("plainDateTime")`;
+    case "timestamp with time zone":
+      return code`${nowUTC}("zonedDateTime")`;
+    default:
+      return fail(`Unsupported deleted-at column type ${field.columnType}`);
+  }
+}
+
 /** Prefixes the comment with a newline, so it gets its own line. */
 function maybeComment(comment: string | undefined): string {
   return comment ? ` ${comment}\n` : "";
+}
+
+/**
+ * Renders a field's `.md` doc (plus its `@generated` tag) as a bare JSDoc block, or `""` if undocumented.
+ *
+ * Reuses the same {@link buildJSDocBlock} formatter the `.md` sync uses for hand-written `Entity.ts`
+ * members. Used directly before a getter template (which supplies its own leading newline), so the
+ * JSDoc lands immediately above the getter with no intervening blank line.
+ */
+function fieldDocBlock(fieldDocs: Record<string, string>, fieldName: string, entityName: string): string {
+  const doc = fieldDocs[fieldName];
+  return doc ? buildJSDocBlock(`${doc}\n${generatedTag(entityName)}`, 0) : "";
+}
+
+/** Like {@link fieldDocBlock} but wrapped in newlines, i.e. for inline `readonly x = ...` relation decls. */
+function relationDocBlock(fieldDocs: Record<string, string>, fieldName: string, entityName: string): string {
+  const block = fieldDocBlock(fieldDocs, fieldName, entityName);
+  return block ? `\n${block}\n` : "";
 }
 
 export function getIdType(config: Config) {

@@ -1,5 +1,6 @@
-import { hasReactiveProperty, Property } from "joist-orm";
-import { criticConfig as config, CriticCodegen, PublisherGroup } from "./entities";
+import { Property, hasReactiveProperty } from "joist-orm";
+
+import { CriticCodegen, PublisherGroup, criticConfig as config } from "./entities";
 
 export class Critic extends CriticCodegen {
   // For testing returning Reacted<...> from hasReactiveProperty

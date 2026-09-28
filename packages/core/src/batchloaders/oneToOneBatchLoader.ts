@@ -1,17 +1,17 @@
-import { Entity } from "../Entity";
-import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { getMetadata, OneToOneField } from "../EntityMetadata";
-import { getField } from "../fields";
+import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { type OneToOneField, getMetadata } from "src/EntityMetadata.ts";
+import { getField } from "src/fields.ts";
 import {
+  type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
   maybeResolveReferenceToId,
-  ParsedFindQuery,
-} from "../index";
-import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
-import { abbreviation, groupBy } from "../utils";
-import { BatchLoader } from "./BatchLoader";
+} from "src/index.ts";
+import { type OneToOneReferenceImpl } from "src/relations/OneToOneReference.ts";
+import { abbreviation, groupBy } from "src/utils.ts";
 
 export const oneToOneLoadOperation = "o2o-load";
 
@@ -50,8 +50,8 @@ export function oneToOneBatchLoader<T extends Entity, U extends Entity>(
     };
     addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
-    const rows = await em["executeFind"](otherMeta, oneToOneLoadOperation, query, {});
-    const entities = em.hydrate(otherMeta.cstr, rows);
+    const rowData = await em["executeFindRowData"](otherMeta, oneToOneLoadOperation, query, {});
+    const entities = em["hydrateAndFinalize"](otherMeta.cstr, rowData);
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
       const ownerId = maybeResolveReferenceToId(getField(entity, otherFieldName));

@@ -1,8 +1,9 @@
-import { Entity } from "./Entity";
-import { EntityManager, FindOperation, isDefined } from "./EntityManager";
-import { EntityMetadata } from "./EntityMetadata";
-import { ParsedFindQuery } from "./QueryParser";
-import { JoinRowTodo, Todo } from "./Todo";
+import { type Entity } from "src/Entity.ts";
+import { type EntityManager, type FindOperation, isDefined } from "src/EntityManager.ts";
+import { type EntityMetadata } from "src/EntityMetadata.ts";
+import type { JoinRowTodo, Todo } from "src/flush/Todo.ts";
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
   /**
@@ -42,13 +43,19 @@ interface PluginMethods {
     },
   ): void;
   /**
-   * Called after a find operation has been executed with the raw database rows.
+   * Called after a find operation has been executed to observe the raw database rows.
+   *
+   * The result is an observation-only {@link RowData} view — i.e. `rows.rowCount` for metrics,
+   * `rows.get(i, columnName)` for specific cells, or `rows.toRows()` to materialize POJO rows.
+   * For lazy results, cells decode on access, so a hook that only counts rows costs nothing;
+   * materializing via `toRows()` decodes every cell of every row. Mutating materialized rows is
+   * unsupported and is not guaranteed to affect entity hydration.
    *
    * @param meta Metadata for the entity type that was queried
    * @param operation The type of find operation that was performed
-   * @param rows The raw database rows returned from the query
+   * @param rows A read-only view of the raw database rows returned from the query
    */
-  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
+  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: RowData): void;
 
   beforeValidate?(entities: readonly Entity[]): Promise<void> | void;
 
@@ -103,6 +110,11 @@ export class PluginManager implements Required<PluginMethods> {
   #plugins = new Set<Plugin>();
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
   constructor(public readonly em: EntityManager) {}
+
+  /** Returns whether any registered plugin implements `method`, i.e. so callers can skip building its args. */
+  hasHook(method: keyof PluginMethods): boolean {
+    return this.#pluginsByCallback[method] !== undefined;
+  }
 
   /**
    * Registers a plugin with this EntityManager.
@@ -176,7 +188,7 @@ export class PluginManager implements Required<PluginMethods> {
       keepAliases?: string[];
     },
   ): void {}
-  afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+  afterFind(meta: EntityMetadata, operation: FindOperation, rows: RowData) {}
   beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}

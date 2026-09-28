@@ -1,24 +1,25 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, sameEntity } from "../EntityManager";
-import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
-import { maybeGetConstructorFromReference } from "../configure";
-import { getField, setField } from "../fields";
+import { maybeGetConstructorFromReference } from "src/configure.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
+import { type IdOf, type TaggedId, sameEntity } from "src/EntityManager.ts";
+import { type PolymorphicFieldComponent, getMetadata } from "src/EntityMetadata.ts";
+import { getField, setField } from "src/fields.ts";
 import {
-  OneToOneReference,
-  PolymorphicField,
-  Reference,
+  type OneToOneReference,
+  type PolymorphicField,
+  type Reference,
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
   getInstanceData,
   maybeResolveReferenceToId,
-} from "../index";
-import { lazyField } from "../newEntity";
-import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
-import { failIfNewEntity, failNoId } from "./ManyToOneReference";
-import { OneToManyCollection } from "./OneToManyCollection";
-import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+} from "src/index.ts";
+import { lazyField } from "src/newEntity.ts";
+import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
+import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
+import { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
+import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
+import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 export function hasOnePolymorphic<
   T extends Entity,
@@ -107,8 +108,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     ensureNotDeleted(this.entity, "pending");
     const current = this.current();
     // Resolve the id to an entity
-    if (!isEntity(current) && current !== undefined && (!this._isLoaded || opts.forceReload)) {
-      this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
+    if (!this._isLoaded || opts.forceReload) {
+      this.loaded =
+        isEntity(current) || current === undefined
+          ? (current as U | undefined)
+          : ((await this.entity.em.load(getConstructorFromTaggedId(current), current)) as U);
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);
@@ -261,8 +265,24 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
     ensureNotDeleted(this.entity, "pending");
 
-    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
+    // Keep the entity when its tagged id cannot distinguish between sibling subtypes.
+    if (isEntity(other)) {
+      const otherMeta = getMetadata(other);
+      const hasComponentsWithSameBaseType =
+        otherMeta.baseType &&
+        this.field.components.some(
+          (component) =>
+            component.otherMetadata().baseType === otherMeta.baseType &&
+            !(other instanceof component.otherMetadata().cstr),
+        );
+      setField(
+        this.entity,
+        this.fieldName,
+        other.isNewEntity || hasComponentsWithSameBaseType ? other : other.idTagged,
+      );
+    } else {
+      setField(this.entity, this.fieldName, other);
+    }
 
     if (typeof other === "string") {
       this.loaded = undefined;

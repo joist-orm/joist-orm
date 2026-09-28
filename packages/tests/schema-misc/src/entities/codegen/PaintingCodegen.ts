@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,6 +57,21 @@ export interface PaintingFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
+}
+
+export interface PaintingColumns {
+  id: { fieldName: "id"; type: IdOf<Painting>; entity: Painting; nullable: false; insert: "required"; update: false };
+  title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  artistId: {
+    type: IdOf<Artist>;
+    entity: Artist;
+    fieldName: "artist";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface PaintingOpts {
@@ -118,6 +134,9 @@ declare module "joist-core" {
       orderType: PaintingOrder;
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
+      columnsType: PaintingColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: PaintingIdsOpts;
       factoryExtrasType: PaintingFactoryExtras;
       factoryOptsType: Parameters<typeof newPainting>[1];

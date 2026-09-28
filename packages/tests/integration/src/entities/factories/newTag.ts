@@ -1,4 +1,5 @@
 import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "joist-orm";
+
 import { Tag } from "../entities";
 
 // Example of using a completely different opts type. Use number so that the type isn't a string/look like a tagged id.

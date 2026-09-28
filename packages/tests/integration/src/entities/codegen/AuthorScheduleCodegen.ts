@@ -12,6 +12,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasOne,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -56,6 +57,28 @@ export interface AuthorScheduleFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+}
+
+export interface AuthorScheduleColumns {
+  id: {
+    fieldName: "id";
+    type: IdOf<AuthorSchedule>;
+    entity: AuthorSchedule;
+    nullable: false;
+    insert: "optional";
+    update: false;
+  };
+  overview: { type: string; fieldName: "overview"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  authorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "author";
+    nullable: false;
+    insert: "required";
+    update: true;
+  };
 }
 
 export interface AuthorScheduleOpts {
@@ -117,6 +140,9 @@ declare module "joist-core" {
       orderType: AuthorScheduleOrder;
       optsType: AuthorScheduleOpts;
       fieldsType: AuthorScheduleFields;
+      columnsType: AuthorScheduleColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: AuthorScheduleIdsOpts;
       factoryExtrasType: AuthorScheduleFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthorSchedule>[1];

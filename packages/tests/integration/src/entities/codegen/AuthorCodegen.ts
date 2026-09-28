@@ -21,6 +21,7 @@ import {
   hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -31,6 +32,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -133,11 +135,11 @@ export interface AuthorFields {
   rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
-  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  rootMentor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
+  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  rootMentor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   mentorsClosure: { kind: "m2m"; type: Author };
   menteesClosure: { kind: "m2m"; type: Author };
   tags: { kind: "m2m"; type: Tag };
@@ -149,6 +151,118 @@ export interface AuthorFields {
   comments: { kind: "o2m"; type: Comment };
   spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   tasks: { kind: "o2m"; type: TaskNew };
+  image: { kind: "o2o"; type: Image };
+  userOneToOne: { kind: "o2o"; type: User };
+}
+
+export interface AuthorColumns {
+  id: { fieldName: "id"; type: IdOf<Author>; entity: Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
+  lastName: { type: string; fieldName: "lastName"; nullable: true; insert: "optional"; update: true };
+  ssn: { type: string; fieldName: "ssn"; nullable: true; insert: "optional"; update: true };
+  initials: { type: string; fieldName: "initials"; nullable: false; insert: "optional"; update: true };
+  numberOfBooks: { type: number; fieldName: "numberOfBooks"; nullable: false; insert: "required"; update: true };
+  bookComments: { type: string; fieldName: "bookComments"; nullable: true; insert: "optional"; update: true };
+  isPopular: { type: boolean; fieldName: "isPopular"; nullable: true; insert: "optional"; update: true };
+  age: { type: number; fieldName: "age"; nullable: true; insert: "optional"; update: true };
+  graduated: { type: Date; fieldName: "graduated"; nullable: true; insert: "optional"; update: true };
+  nickNames: { type: string[]; fieldName: "nickNames"; nullable: true; insert: "optional"; update: true };
+  nickNamesUpper: { type: string[]; fieldName: "nickNamesUpper"; nullable: true; insert: "optional"; update: true };
+  wasEverPopular: { type: boolean; fieldName: "wasEverPopular"; nullable: true; insert: "optional"; update: true };
+  isFunny: { type: boolean; fieldName: "isFunny"; nullable: false; insert: "optional"; update: true };
+  mentorNames: { type: string; fieldName: "mentorNames"; nullable: true; insert: "optional"; update: true };
+  menteeNames: { type: string; fieldName: "menteeNames"; nullable: true; insert: "optional"; update: true };
+  address: { type: Address; fieldName: "address"; nullable: true; insert: "optional"; update: true };
+  businessAddress: {
+    type: z.input<typeof AddressSchema>;
+    fieldName: "businessAddress";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  quotes: { type: Quotes; fieldName: "quotes"; nullable: true; insert: "optional"; update: true };
+  numberOfAtoms: { type: bigint; fieldName: "numberOfAtoms"; nullable: true; insert: "optional"; update: true };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
+  numberOfPublicReviews: {
+    type: number;
+    fieldName: "numberOfPublicReviews";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  numberOfPublicReviews2: {
+    type: number;
+    fieldName: "numberOfPublicReviews2";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  tagsOfAllBooks: { type: string; fieldName: "tagsOfAllBooks"; nullable: true; insert: "optional"; update: true };
+  search: { type: string; fieldName: "search"; nullable: true; insert: "optional"; update: true };
+  imageFileName: { type: string; fieldName: "imageFileName"; nullable: true; insert: "optional"; update: true };
+  certificate: { type: Uint8Array; fieldName: "certificate"; nullable: true; insert: "optional"; update: true };
+  createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
+  updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  rangeOfBooks: { type: BookRange; fieldName: "rangeOfBooks"; nullable: true; insert: "optional"; update: true };
+  favoriteColors: { type: Color[]; fieldName: "favoriteColors"; nullable: true; insert: "optional"; update: true };
+  favoriteShape: { type: FavoriteShape; fieldName: "favoriteShape"; nullable: true; insert: "optional"; update: true };
+  currentDraftBookId: {
+    type: IdOf<Book>;
+    entity: Book;
+    fieldName: "currentDraftBook";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  favoriteBookId: {
+    type: IdOf<Book>;
+    entity: Book;
+    fieldName: "favoriteBook";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  mentorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "mentor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  publisherId: {
+    type: IdOf<Publisher>;
+    entity: Publisher;
+    fieldName: "publisher";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  rootMentorId: {
+    type: IdOf<Author>;
+    entity: Author;
+    fieldName: "rootMentor";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
+  ignoreUsedToBeUseful: { type: boolean; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreUsedToBeUsefulRequiredWithDefault: {
+    type: boolean;
+    fieldName: never;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  ignoreEnumFkId: { type: number; fieldName: never; nullable: true; insert: "optional"; update: true };
+  ignoreEnumFkRequiredWithDefaultId: {
+    type: number;
+    fieldName: never;
+    nullable: false;
+    insert: "optional";
+    update: true;
+  };
+  tsSearch: { type: string; fieldName: never; nullable: true; insert: "never"; update: false };
 }
 
 export interface AuthorOpts {
@@ -169,8 +283,8 @@ export interface AuthorOpts {
   certificate?: Uint8Array | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
-  mentor?: Author | AuthorId | null;
   currentDraftBook?: Book | BookId | null;
+  mentor?: Author | AuthorId | null;
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   userOneToOne?: User | null;
@@ -185,8 +299,8 @@ export interface AuthorOpts {
 }
 
 export interface AuthorIdsOpts {
-  mentorId?: AuthorId | null;
   currentDraftBookId?: BookId | null;
+  mentorId?: AuthorId | null;
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
@@ -233,13 +347,13 @@ export interface AuthorFilter {
   rangeOfBooks?: ValueFilter<BookRange, null>;
   favoriteColors?: ValueFilter<Color[], null>;
   favoriteShape?: ValueFilter<FavoriteShape, null>;
-  mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
-  rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   favoriteBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
+  mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
   publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -300,14 +414,12 @@ export interface AuthorGraphQLFilter {
   rangeOfBooks?: ValueGraphQLFilter<BookRange>;
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
-  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  mentorId?: ValueGraphQLFilter<AuthorId>;
-  rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  rootMentorId?: ValueGraphQLFilter<AuthorId>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   currentDraftBookId?: ValueGraphQLFilter<BookId>;
   favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   favoriteBookId?: ValueGraphQLFilter<BookId>;
+  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  mentorId?: ValueGraphQLFilter<AuthorId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
   publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
@@ -322,6 +434,8 @@ export interface AuthorGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
+  rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  rootMentorId?: ValueGraphQLFilter<AuthorId>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -382,11 +496,11 @@ export interface AuthorOrder {
   rangeOfBooks?: OrderBy;
   favoriteColors?: OrderBy;
   favoriteShape?: OrderBy;
-  mentor?: AuthorOrder;
-  rootMentor?: AuthorOrder;
   currentDraftBook?: BookOrder;
   favoriteBook?: BookOrder;
+  mentor?: AuthorOrder;
   publisher?: PublisherOrder;
+  rootMentor?: AuthorOrder;
 }
 
 export interface AuthorFactoryExtras {
@@ -442,6 +556,9 @@ declare module "joist-core" {
       orderType: AuthorOrder;
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
+      columnsType: AuthorColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: AuthorIdsOpts;
       factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];
@@ -455,9 +572,18 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Author" };
 
-  abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
+  /**
+   * Example of a closure table.
+   * @generated Author.md
+   */
   abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>; // author_to_mentees_closure mentor_id mentee_id
+
+  /**
+   * Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership.
+   * @generated Author.md
+   */
   abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
 
   readonly mentees: Collection<Author, Author> = hasMany();
@@ -467,8 +593,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly comments: Collection<Author, Comment> = hasMany();
   readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly tasks: Collection<Author, TaskNew> = hasMany();
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
+  /**
+   * The publisher this author writes for.
+   * @generated Author.md
+   */
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne();
   readonly mentorsRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveParents("mentor", "menteesRecursive");
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
@@ -493,6 +623,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "id");
   }
 
+  /**
+   * The author's first name.
+   * @generated Author.md
+   */
   get firstName(): string {
     return getField(this, "firstName");
   }
@@ -516,13 +650,25 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set ssn(ssn: string | undefined) {
     setField(this, "ssn", ssn);
   }
-
+  /**
+   * Implements the business logic for a (synchronous) persisted derived value.
+   * @generated Author.md
+   */
   abstract get initials(): string;
-
+  /**
+   * Example of a derived async property that can be calculated via a populate hint.
+   * @generated Author.md
+   */
   abstract readonly numberOfBooks: ReactiveField<Author, number>;
-
+  /**
+   * Example of a derived async property that can be calculated via a populate hint through a polymorphic reference.
+   * @generated Author.md
+   */
   abstract readonly bookComments: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Implements a public API for controlling access to a protected field (`wasEverPopular`).
+   * @generated Author.md
+   */
   get isPopular(): boolean | undefined {
     return getField(this, "isPopular");
   }
@@ -572,9 +718,15 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set isFunny(isFunny: boolean) {
     setField(this, "isFunny", isFunny);
   }
-
+  /**
+   * Example of a ReactiveField that uses a recursive parent relation.
+   * @generated Author.md
+   */
   abstract readonly mentorNames: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Example of a ReactiveField that uses a recursive child relation.
+   * @generated Author.md
+   */
   abstract readonly menteeNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
@@ -634,7 +786,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
   abstract readonly search: ReactiveField<Author, string | undefined>;
-
+  /**
+   * Example of a ReactiveField that watches through an o2o relation.
+   * @generated Author.md
+   */
   abstract readonly imageFileName: ReactiveField<Author, string | undefined>;
 
   get certificate(): Uint8Array | undefined {
@@ -652,7 +807,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
-
+  /**
+   * Example of a derived async enum.
+   * @generated Author.md
+   */
   abstract readonly rangeOfBooks: ReactiveField<Author, BookRange | undefined>;
 
   get isFew(): boolean {
@@ -788,6 +946,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   get isSoftDeletedEntity(): boolean {
     return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

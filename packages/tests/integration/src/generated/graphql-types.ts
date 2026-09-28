@@ -625,6 +625,7 @@ export interface TaskNewResolvers {
   publishers: Resolver<TaskNew, {}, readonly Publisher[]>;
   selfReferential: Resolver<TaskNew, {}, TaskNew | null | undefined>;
   selfReferentialTasks: Resolver<TaskNew, {}, readonly TaskNew[]>;
+  sharedSubtypeField: Resolver<TaskNew, {}, number | null | undefined>;
   specialNewAuthor: Resolver<TaskNew, {}, Author | null | undefined>;
   specialNewField: Resolver<TaskNew, {}, number | null | undefined>;
   syncDefault: Resolver<TaskNew, {}, string | null | undefined>;
@@ -649,8 +650,10 @@ export interface TaskOldResolvers {
   oldTaskTaskItems: Resolver<TaskOld, {}, readonly TaskItem[]>;
   parentOldTask: Resolver<TaskOld, {}, Task | null | undefined>;
   publishers: Resolver<TaskOld, {}, readonly Publisher[]>;
+  sharedSubtypeField: Resolver<TaskOld, {}, number | null | undefined>;
   specialNewAuthor: Resolver<TaskOld, {}, Author | null | undefined>;
   specialOldField: Resolver<TaskOld, {}, number | null | undefined>;
+  specialOldFieldWithDefault: Resolver<TaskOld, {}, number>;
   syncDefault: Resolver<TaskOld, {}, string | null | undefined>;
   syncDerived: Resolver<TaskOld, {}, string | null | undefined>;
   tags: Resolver<TaskOld, {}, readonly Tag[]>;
@@ -1229,247 +1232,247 @@ export interface QueryUsersArgs {
   offset?: number | null | undefined;
 }
 export interface AdminUsersPage {
-  entities: AdminUser[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<AdminUser[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface AllEnumDetails {
-  advanceStatus: AdvanceStatus[];
-  bookRange: BookRange[];
-  color: Color[];
-  imageType: ImageType[];
-  publisherSize: PublisherSize[];
-  publisherType: PublisherType[];
-  taskType: TaskType[];
+  advanceStatus: MaybePromise<AdvanceStatus[]>;
+  bookRange: MaybePromise<BookRange[]>;
+  color: MaybePromise<Color[]>;
+  imageType: MaybePromise<ImageType[]>;
+  publisherSize: MaybePromise<PublisherSize[]>;
+  publisherType: MaybePromise<PublisherType[]>;
+  taskType: MaybePromise<TaskType[]>;
 }
 
 export interface AuthorSchedulesPage {
-  entities: AuthorSchedule[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<AuthorSchedule[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface AuthorStatsPage {
-  entities: AuthorStat[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<AuthorStat[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface AuthorsPage {
-  entities: Author[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Author[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface BookAdvancesPage {
-  entities: BookAdvance[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<BookAdvance[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface BookReviewsPage {
-  entities: BookReview[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<BookReview[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface BooksPage {
-  entities: Book[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Book[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface ChildGroupsPage {
-  entities: ChildGroup[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<ChildGroup[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface ChildItemsPage {
-  entities: ChildItem[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<ChildItem[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface ChildrenPage {
-  entities: Child[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Child[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface CommentsPage {
-  entities: Comment[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Comment[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface CriticColumnsPage {
-  entities: CriticColumn[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<CriticColumn[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface CriticsPage {
-  entities: Critic[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Critic[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface EmployeesPage {
-  entities: Employee[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Employee[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface ImagesPage {
-  entities: Image[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Image[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface LargePublishersPage {
-  entities: LargePublisher[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<LargePublisher[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface NewTask {
-  id: string;
-  specialNewField: number | null | undefined;
+  id: MaybePromise<string>;
+  specialNewField: MaybePromise<number | null | undefined>;
 }
 
 export interface OldTask {
-  id: string;
-  specialOldField: number | null | undefined;
+  id: MaybePromise<string>;
+  specialOldField: MaybePromise<number | null | undefined>;
 }
 
 export interface ParentGroupsPage {
-  entities: ParentGroup[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<ParentGroup[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface ParentItemsPage {
-  entities: ParentItem[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<ParentItem[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface PublisherGroupsPage {
-  entities: PublisherGroup[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<PublisherGroup[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface PublishersPage {
-  entities: Publisher[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Publisher[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface SaveAuthorResult {
-  author: Author;
+  author: MaybePromise<Author>;
 }
 
 export interface SaveAuthorStatResult {
-  authorStat: AuthorStat;
+  authorStat: MaybePromise<AuthorStat>;
 }
 
 export interface SaveBookAdvanceResult {
-  bookAdvance: BookAdvance;
+  bookAdvance: MaybePromise<BookAdvance>;
 }
 
 export interface SaveBookResult {
-  book: Book;
+  book: MaybePromise<Book>;
 }
 
 export interface SaveBookReviewResult {
-  bookReview: BookReview;
+  bookReview: MaybePromise<BookReview>;
 }
 
 export interface SaveCommentResult {
-  comment: Comment;
+  comment: MaybePromise<Comment>;
 }
 
 export interface SaveCriticResult {
-  critic: Critic;
+  critic: MaybePromise<Critic>;
 }
 
 export interface SaveEmployeeResult {
-  employee: Employee;
+  employee: MaybePromise<Employee>;
 }
 
 export interface SaveImageResult {
-  image: Image;
+  image: MaybePromise<Image>;
 }
 
 export interface SaveLargePublisherResult {
-  largePublisher: LargePublisher;
+  largePublisher: MaybePromise<LargePublisher>;
 }
 
 export interface SaveNewTaskResult {
-  newTask: NewTask;
+  newTask: MaybePromise<NewTask>;
 }
 
 export interface SaveOldTaskResult {
-  oldTask: OldTask;
+  oldTask: MaybePromise<OldTask>;
 }
 
 export interface SavePublisherGroupResult {
-  publisherGroup: PublisherGroup;
+  publisherGroup: MaybePromise<PublisherGroup>;
 }
 
 export interface SavePublisherResult {
-  publisher: Publisher;
+  publisher: MaybePromise<Publisher>;
 }
 
 export interface SaveSmallPublisherResult {
-  smallPublisher: SmallPublisher;
+  smallPublisher: MaybePromise<SmallPublisher>;
 }
 
 export interface SaveTagResult {
-  tag: Tag;
+  tag: MaybePromise<Tag>;
 }
 
 export interface SaveTaskItemResult {
-  taskItem: TaskItem;
+  taskItem: MaybePromise<TaskItem>;
 }
 
 export interface SaveTaskNewResult {
-  taskNew: TaskNew;
+  taskNew: MaybePromise<TaskNew>;
 }
 
 export interface SaveTaskOldResult {
-  taskOld: TaskOld;
+  taskOld: MaybePromise<TaskOld>;
 }
 
 export interface SaveTaskResult {
-  task: Task;
+  task: MaybePromise<Task>;
 }
 
 export interface SaveUserResult {
-  user: User;
+  user: MaybePromise<User>;
 }
 
 export interface SmallPublisherGroupsPage {
-  entities: SmallPublisherGroup[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<SmallPublisherGroup[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface SmallPublishersPage {
-  entities: SmallPublisher[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<SmallPublisher[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface TagsPage {
-  entities: Tag[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Tag[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface TaskItemsPage {
-  entities: TaskItem[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<TaskItem[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface TaskNewsPage {
-  entities: TaskNew[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<TaskNew[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface TaskOldsPage {
-  entities: TaskOld[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<TaskOld[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface TasksPage {
-  entities: Task[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<Task[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface UsersPage {
-  entities: User[];
-  pageInfo: LimitPageInfo;
+  entities: MaybePromise<User[]>;
+  pageInfo: MaybePromise<LimitPageInfo>;
 }
 
 export interface AdminUserFilter {
@@ -1948,6 +1951,7 @@ export interface SaveTaskNewInput {
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
   selfReferentialId?: string | null | undefined;
+  sharedSubtypeField?: number | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialNewField?: number | null | undefined;
   syncDefault?: string | null | undefined;
@@ -1961,8 +1965,10 @@ export interface SaveTaskOldInput {
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
+  sharedSubtypeField?: number | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialOldField?: number | null | undefined;
+  specialOldFieldWithDefault?: number | null | undefined;
   syncDefault?: string | null | undefined;
   type?: string | null | undefined;
 }
@@ -2056,6 +2062,7 @@ export interface TaskNewFilter {
   durationInDays?: number[] | null | undefined;
   id?: string[] | null | undefined;
   selfReferentialId?: string[] | null | undefined;
+  sharedSubtypeField?: number[] | null | undefined;
   specialNewAuthorId?: string[] | null | undefined;
   specialNewField?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;
@@ -2074,7 +2081,9 @@ export interface TaskOldFilter {
   durationInDays?: number[] | null | undefined;
   id?: string[] | null | undefined;
   parentOldTaskId?: string[] | null | undefined;
+  sharedSubtypeField?: number[] | null | undefined;
   specialOldField?: number[] | null | undefined;
+  specialOldFieldWithDefault?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;
   syncDerived?: string[] | null | undefined;
   type?: TaskType[] | null | undefined;

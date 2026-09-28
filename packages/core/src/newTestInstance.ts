@@ -1,28 +1,33 @@
 import { isPlainObject } from "joist-utils";
-import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { EntityConstructor, EntityManager, IdOf, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { getInstanceData } from "src/BaseEntity.ts";
+import { hasDefaultValue, setAsyncDefaultsSynchronously } from "src/defaults.ts";
+import { type Entity, isEntity } from "src/Entity.ts";
 import {
-  EntityMetadata,
+  type EntityConstructor,
+  type EntityManager,
+  type IdOf,
+  type MaybeAbstractEntityConstructor,
+  isId,
+} from "src/EntityManager.ts";
+import {
+  type EntityMetadata,
+  type ManyToManyField,
+  type ManyToOneField,
+  type OneToManyField,
+  type OneToOneField,
+  type PolymorphicField,
+  type PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
   isManyToOneField,
   isOneToOneField,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  PolymorphicField,
-  PrimitiveField,
-} from "./EntityMetadata";
-import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
-import { DeepNew, FactoryExtrasOf, New } from "./index";
-
-import { FactoryLogger } from "./logging/FactoryLogger";
-import { maybeRequireTemporal } from "./temporal";
-import { ActualFactoryOpts, OptsOf } from "./typeMap";
-import { assertNever } from "./utils";
+} from "src/EntityMetadata.ts";
+import { type DeepNew, type FactoryExtrasOf, type New } from "src/index.ts";
+import { FactoryLogger } from "src/logging/FactoryLogger.ts";
+import { maybeRequireTemporal } from "src/serde/temporal.ts";
+import { type ActualFactoryOpts, type OptsOf } from "src/typeMap.ts";
+import { assertNever } from "src/utils.ts";
 
 let logger: FactoryLogger | undefined = undefined;
 
@@ -689,6 +694,9 @@ function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, f
     return testDate;
   } else if (field.type === "boolean") {
     return false;
+  } else if (field.type === "Object") {
+    // A required jsonb column, i.e. so factories can satisfy a required (possibly `lazy`) column.
+    return {};
   } else if (Temporal) {
     if (field.type === Temporal.PlainDate) {
       return testPlainDate;

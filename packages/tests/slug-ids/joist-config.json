@@ -1,0 +1,13 @@
+{
+  "codegenPlugins": [],
+  "codemodVersion": 3,
+  "contextType": "Context@src/context",
+  "entities": {
+    "Author": { "tag": "a" },
+    "Book": { "tag": "book" },
+    "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "cm" }
+  },
+  "entitiesDirectory": "./src/entities",
+  "idType": "tagged-string",
+  "tagDelimiter": ""
+}

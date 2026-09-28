@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  type IdOf,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -53,6 +54,11 @@ export interface T5AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   t5Books: { kind: "o2m"; type: T5Book };
+}
+
+export interface T5AuthorColumns {
+  id: { fieldName: "id"; type: IdOf<T5Author>; entity: T5Author; nullable: false; insert: "optional"; update: false };
+  firstName: { type: string; fieldName: "firstName"; nullable: false; insert: "required"; update: true };
 }
 
 export interface T5AuthorOpts {
@@ -104,6 +110,9 @@ declare module "joist-core" {
       orderType: T5AuthorOrder;
       optsType: T5AuthorOpts;
       fieldsType: T5AuthorFields;
+      columnsType: T5AuthorColumns;
+      inheritanceType: never;
+      supportsEmExecute: true;
       optIdsType: T5AuthorIdsOpts;
       factoryExtrasType: T5AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT5Author>[1];

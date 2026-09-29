@@ -6,6 +6,7 @@ export default defineConfig({
       "packages/codegen",
       "packages/core",
       "packages/drivers/bun-pg",
+      "packages/drivers/sqlite",
       "packages/graphql-codegen",
       "packages/graphql-resolver-utils",
       "packages/knex",

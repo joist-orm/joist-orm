@@ -48,9 +48,15 @@
     "skills"
   ],
   "peerDependencies": {
+    "better-sqlite3": "^12.0.0 || ^13.0.0",
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",
     "pg": "^8.23.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@dprint/formatter": "^0.5.1",
@@ -69,8 +75,10 @@
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
+    "better-sqlite3": "^12.11.1",
     "jest": "30.4.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.12",

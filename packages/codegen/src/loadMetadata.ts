@@ -1,5 +1,4 @@
 import { pascalCase } from "change-case";
-import { type Client } from "pg";
 
 import { type Config, EntityDbMetadata, type PrimitiveField } from "./index.ts";
 import { type Db, EnumType, type Table } from "./pgMetadata.ts";
@@ -25,7 +24,10 @@ export type PgEnumMetadata = Record<string, PgEnumData>;
 
 export type EnumRow = { id: number; code: string; name: string; [key: string]: any };
 
-export async function loadEnumMetadata(db: Db, client: Client, config: Config): Promise<EnumMetadata> {
+/** The part of a `pg.Client` that loads enum rows, so that SQLite codegen can read them from its own database. */
+export type EnumRowsClient = { query(sql: string): Promise<{ rows: any[] }> };
+
+export async function loadEnumMetadata(db: Db, client: EnumRowsClient, config: Config): Promise<EnumMetadata> {
   const promises = db.tables
     .filter((t) => isEnumTable(config, t))
     .map(async (table) => {
@@ -49,7 +51,7 @@ export async function loadEnumMetadata(db: Db, client: Client, config: Config): 
   return Object.fromEntries(await Promise.all(promises));
 }
 
-export async function loadPgEnumMetadata(db: Db, client: Client, config: Config): Promise<PgEnumMetadata> {
+export async function loadPgEnumMetadata(db: Db, client: EnumRowsClient, config: Config): Promise<PgEnumMetadata> {
   return db.types.reduce((all, type) => {
     if (type instanceof EnumType) {
       return {

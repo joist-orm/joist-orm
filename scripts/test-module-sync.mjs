@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const entryPoints = [
   "joist-codegen",
   "joist-core",
+  "joist-driver-sqlite",
   "joist-graphql-codegen",
   "joist-graphql-resolver-utils",
   "joist-graphql-resolver-utils/index.js",

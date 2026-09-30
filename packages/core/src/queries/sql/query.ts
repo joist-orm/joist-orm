@@ -1400,21 +1400,17 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
   validateReadQuery(q);
   if (isSetQuery(q)) {
     const [operation, operands] = setOperands(q);
-    const first = queryOutput(toQuery(operands[0]));
+    // The first operand supplies the names and codecs; the rest only have to line up with it.
+    const first = requirePojoOperand(queryOutput(toQuery(operands[0])));
     const columns = [...first.columns];
-    for (const operand of operands) {
-      const output = operand === operands[0] ? first : queryOutput(toQuery(operand));
-      if (output.kind !== "pojo") {
-        fail(
-          output.kind === "entity"
-            ? "Set operations do not support entity-mode operands"
-            : "Set operations require POJO operands; wrap scalar expressions in a named select projection",
-        );
-      }
+    for (const operand of operands.slice(1)) {
+      const output = requirePojoOperand(queryOutput(toQuery(operand)));
       if (output.columns.length !== first.columns.length) fail("Set operands must have the same POJO keys");
+      const byKey = new Map(output.columns);
       for (let i = 0; i < columns.length; i++) {
+        // Read from `columns`, not `first`, so a nullable column stays nullable across later operands.
         const [key, expr] = columns[i];
-        const other = output.columns.find(([name]) => name === key)?.[1];
+        const other = byKey.get(key);
         if (!other) fail(`Set operands must have the same POJO keys; missing '${key}'`);
         const left = expr.outputType;
         const right = other.outputType;
@@ -1446,6 +1442,18 @@ function queryOutput(q: AnyReadQuery): QueryOutput {
   if (isTable(select)) return { kind: "entity", columns: [] };
   if (isSubqueryValue(select)) return readValueHandle(select).output();
   return joinedOutput(projectionOutput(select), q.join);
+}
+
+/** Only named POJO operands combine; entity and scalar reads have no columns to line up. */
+function requirePojoOperand(output: QueryOutput): QueryOutput {
+  if (output.kind !== "pojo") {
+    fail(
+      output.kind === "entity"
+        ? "Set operations do not support entity-mode operands"
+        : "Set operations require POJO operands; wrap scalar expressions in a named select projection",
+    );
+  }
+  return output;
 }
 
 /** Validates the projection before compiling SQL or exposing reusable query columns. */
@@ -1585,12 +1593,7 @@ function parseSetQuery(
     sql += " OFFSET ?";
     bindings.push(q.offset);
   }
-  const keptCtes = pruneCtes(ctes, new Set(plans.flatMap((plan) => plan.outerRefs)));
-  if (keptCtes.length > 0) {
-    const clause = withFragment(keptCtes);
-    sql = clause.sql + sql;
-    bindings.unshift(...clause.bindings);
-  }
+  const withCtes = prependCtes(ctes, new Set(plans.flatMap((plan) => plan.outerRefs)), sql, bindings);
   // An operand that reads one of our CTEs resolved that name here, not in the enclosing query, so the
   // name must not go out in `outerRefs`. That list is how this query tells the enclosing one which of
   // *its* aliases we depend on, and the enclosing query keeps those joins alive rather than pruning
@@ -1598,8 +1601,8 @@ function parseSetQuery(
   const cteAliases = new Set(ctes.map((cte) => cte.alias));
   const outerRefs = [...ctx.outerRefs, ...plans.flatMap((plan) => plan.outerRefs)];
   return {
-    sql,
-    bindings,
+    sql: withCtes.sql,
+    bindings: withCtes.bindings,
     outerRefs: [...new Set(outerRefs.filter((ref) => !cteAliases.has(ref)))],
     output,
     decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
@@ -1616,7 +1619,7 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
     for (const [key, direction] of Object.entries(entry)) {
       if (direction === undefined) continue;
       if (!output.columns.some(([name]) => name === key)) fail(`Set orderBy key '${key}' is not a named output column`);
-      if (!ORDER_BY_DIRECTIONS.includes(direction as string))
+      if (!ORDER_BY_DIRECTIONS.includes(direction as OrderByDirection))
         fail("Set orderBy requires output-key directions; use an outer query for expressions");
       orderBys.push(`${safeKq(key)} ${direction}`);
     }
@@ -2219,7 +2222,7 @@ function decodeValue(expr: BaseExpr, value: unknown): unknown {
   return value === null ? undefined : expr.decode(value);
 }
 
-const ORDER_BY_DIRECTIONS: string[] = [
+const ORDER_BY_DIRECTIONS: readonly OrderByDirection[] = [
   "ASC",
   "DESC",
   "ASC NULLS FIRST",
@@ -2249,7 +2252,7 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
     for (const [key, dir] of Object.entries(entry)) {
       if (dir === undefined) continue;
       // The direction is interpolated into the SQL, so never trust it, i.e. it might be a request param
-      if (!ORDER_BY_DIRECTIONS.includes(dir as string)) return fail(`Invalid orderBy direction '${dir}'`);
+      if (!ORDER_BY_DIRECTIONS.includes(dir as OrderByDirection)) return fail(`Invalid orderBy direction '${dir}'`);
       // Entity mode orders by the alias's column; POJO/subquery selects order by the output column name
       if (isTable(select)) {
         const column = (select as any)[key];
@@ -2591,6 +2594,24 @@ function withEntryHandle(entry: unknown): SubqueryHandle {
     );
   }
   return readValueHandle(entry);
+}
+
+/**
+ * Puts a statement's surviving `with` entries in front of it, dropping the ones nothing reads.
+ *
+ * `referenced` is the aliases the rest of the statement used. The WITH clause leads the statement, so
+ * its bindings lead the statement's bindings too.
+ */
+export function prependCtes(
+  ctes: ParsedCte[],
+  referenced: Set<string>,
+  sql: string,
+  bindings: any[],
+): { sql: string; bindings: any[] } {
+  const kept = pruneCtes(ctes, referenced);
+  if (kept.length === 0) return { sql, bindings };
+  const clause = withFragment(kept);
+  return { sql: clause.sql + sql, bindings: [...clause.bindings, ...bindings] };
 }
 
 /**

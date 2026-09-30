@@ -121,6 +121,8 @@ export class IndexManager {
         indexes.set(fieldName, entry);
       }
       for (const entity of entities) {
+        // Deleted entities never match, and reading a flushed one's relations throws
+        if (entity.isDeletedEntity) continue;
         const value = getFieldValue(entity, fieldName, entry.field);
         entry.index.add(value, entity);
       }
@@ -139,6 +141,7 @@ export class IndexManager {
 
     for (let i = entry.indexedCount; i < entities.length; i++) {
       const entity = entities[i];
+      if (entity.isDeletedEntity) continue;
       const value = getFieldValue(entity, fieldName, entry.field);
       entry.index.add(value, entity);
     }

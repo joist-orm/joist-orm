@@ -179,7 +179,7 @@ export type CheckMutation<M> = M extends unknown
               : never;
           } & (
               | (M extends { readonly values: infer V extends readonly unknown[] }
-                  ? { readonly values: CheckValues<T, V> }
+                  ? { readonly values: CheckValues<InsertValues<T>, V> }
                   : never)
               | (M extends { readonly from: infer Q extends SetOperand }
                   ? { readonly from: CheckInsertSource<T, Q> }
@@ -577,12 +577,14 @@ type CheckAssignments<V, Allowed, Scope> = [Exclude<UnionKeys<V>, keyof Allowed>
     }
   : "SQL assignments have unknown target fields";
 
-/** Checks every entity INSERT row in a readonly collection against writable columns. */
-type CheckValues<T extends Entity, V extends readonly unknown[]> = readonly CheckAssignments<
-  V[number],
-  InsertValues<T>,
-  never
->[];
+/**
+ * Checks every INSERT row in a readonly collection against the target's writable columns.
+ *
+ * `Allowed` is the target's accepted assignments, i.e. `InsertValues<T>` for an entity table and
+ * `CustomInsertValues<C>` for a declared one. The scope is `never` because a VALUES cell cannot read
+ * the row being written.
+ */
+type CheckValues<Allowed, V extends readonly unknown[]> = readonly CheckAssignments<V[number], Allowed, never>[];
 
 /**
  * Checks a custom-table mutation against its declared primitive columns.
@@ -601,7 +603,7 @@ type CheckCustomMutation<M> = {
   // INSERT VALUES checks every row against the custom table's writable columns.
   (
     | (M extends { readonly values: infer V extends readonly unknown[] }
-        ? { readonly values: CheckCustomValues<CustomColumnsOf<TargetTable<M>>, V> }
+        ? { readonly values: CheckValues<CustomInsertValues<CustomColumnsOf<TargetTable<M>>>, V> }
         : never)
     // INSERT SELECT checks the source's names, values, and expression scopes.
     | (M extends { readonly from: infer Q extends SetOperand }
@@ -621,23 +623,28 @@ type CheckCustomMutation<M> = {
     | (M extends { readonly delete: unknown } ? unknown : never)
   );
 
-/** Checks every custom INSERT row in a readonly collection against declared writable columns. */
-type CheckCustomValues<C extends CustomColumnInputs, V extends readonly unknown[]> = readonly CheckAssignments<
-  V[number],
-  CustomInsertValues<C>,
-  never
->[];
-
-/** Checks a custom INSERT SELECT's named outputs, required columns, values, and read source. */
-type CheckCustomInsertSource<C extends CustomColumnInputs, Q> = SetOperand extends Q
+/**
+ * Checks an INSERT SELECT's named outputs, required columns, values, and read source.
+ *
+ * `Row` is the row shape the source must produce and `Keys` the target's writable column keys, i.e.
+ * `InsertSourceRow<T>` and `InsertKey<T>` for an entity table.
+ */
+type CheckInsertSourceOf<Row, Keys extends PropertyKey, Q> = SetOperand extends Q
   ? "INSERT source type lost its select keys; use `satisfies Query` or `satisfies SetQuery` instead of a type annotation"
-  : ReadQueryRow<Q> extends CustomInsertSourceRow<C>
-    ? Exclude<UnionKeys<ReadQueryRow<Q>>, CustomInsertKey<C>> extends never
+  : ReadQueryRow<Q> extends Row
+    ? Exclude<UnionKeys<ReadQueryRow<Q>>, Keys> extends never
       ? CheckReadQuery<Q> &
           CheckSourceScope<Q> &
           (Q extends SetQuery<readonly SetOperand[]> ? CheckSetQuery<Q> : unknown)
       : "INSERT SELECT has unknown target fields"
     : "INSERT SELECT requires compatible values for all SQL-required fields";
+
+/** Checks a custom INSERT SELECT against the table's declared writable columns. */
+type CheckCustomInsertSource<C extends CustomColumnInputs, Q> = CheckInsertSourceOf<
+  CustomInsertSourceRow<C>,
+  CustomInsertKey<C>,
+  Q
+>;
 
 /** Checks every SELECT expression against the tables visible within its read-query branch. */
 type CheckSourceScope<Q> = Q extends { readonly select: infer S; readonly from: infer F }
@@ -650,16 +657,8 @@ type CheckSourceScope<Q> = Q extends { readonly select: infer S; readonly from: 
         : unknown;
     };
 
-/** Checks an entity INSERT SELECT's named outputs, required columns, values, and read source. */
-type CheckInsertSource<T, Q extends SetOperand> = SetOperand extends Q
-  ? "INSERT source type lost its select keys; use `satisfies Query` or `satisfies SetQuery` instead of a type annotation"
-  : ReadQueryRow<Q> extends InsertSourceRow<T>
-    ? Exclude<UnionKeys<ReadQueryRow<Q>>, InsertKey<T>> extends never
-      ? CheckReadQuery<Q> &
-          CheckSourceScope<Q> &
-          (Q extends SetQuery<readonly SetOperand[]> ? CheckSetQuery<Q> : unknown)
-      : "INSERT SELECT has unknown target fields"
-    : "INSERT SELECT requires compatible values for all SQL-required fields";
+/** Checks an entity INSERT SELECT against the entity's writable columns. */
+type CheckInsertSource<T, Q extends SetOperand> = CheckInsertSourceOf<InsertSourceRow<T>, InsertKey<T>, Q>;
 
 /** Extracts the entity type from any mutation target clause. */
 type TargetEntity<M> = M extends

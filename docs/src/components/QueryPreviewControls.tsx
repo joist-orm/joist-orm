@@ -10,7 +10,7 @@ export function mountQueryPreviews(carousel: HTMLElement) {
   createRoot(controls).render(<QueryPreviewControls slides={slides} />);
 }
 
-/** Cycle through the server-rendered em.query examples. */
+/** Cycle through the server-rendered examples. */
 function QueryPreviewControls(props: { slides: NodeListOf<HTMLElement> }) {
   const { slides } = props;
   const [current, setCurrent] = useState(0);

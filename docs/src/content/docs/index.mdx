@@ -13,36 +13,168 @@ hero:
       icon: rocket
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+<div class="feature-list not-content" aria-label="Joist features">
+  <section aria-label="N+1 prevention">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Performance</span>
+      <h3>N+1 safe by default</h3>
+      <p>Write natural async code. Joist batches relation loads across the loop into one query.
+      No manual dataloader boilerplate. 🎉</p>
+      <a href="/goals/avoiding-n-plus-1s/">Explore N+1 prevention →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      const books = await author.books.load();
+      await Promise.all(books.map(async (book) => {
+        // Any "load in a loop" issues 1 SELECT for all books' reviews
+        const reviews = await book.reviews.load();
+      }));
+      ```
+    </div>
+  </section>
+  <section aria-label="Reactive validation rules">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Business logic</span>
+      <h3>Reactive rules</h3>
+      <p>Declare business invariants _across entity-boundaries_ and Joist will rerun them whenever any data changes.</p>
+      <p>No spaghetti code for "when this data changes, remember to re-check this other data."</p>
+      <a href="/modeling/validation-rules/#reactive-validation-rules">Explore reactive rules →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      // Declared in `Author.ts`, enforced for all writes through `em.flush()`
+      authorConfig.addRule(
+        // Watch for changes to books' titles and author's first name
+        { books: "title", firstName: {} },
+        (a) => {
+          const { books } = withLoaded(a);
+          if (books.some((b) => b.title === a.firstName)) {
+            return "A book cannot share its author's name";
+          }
+        },
+      );
+      ```
+    </div>
+  </section>
+  <section aria-label="Reactive fields">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Business logic</span>
+      <h3>Reactive fields</h3>
+      <p>Write derived values that summarize cross-entity data and automatically stay up to date whenever their source data changes. No forgetting to manually recalc dirty fields.</p>
+      <a href="/modeling/reactive-fields/">Explore reactive fields →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      class Author extends AuthorCodegen {
+        readonly numberOfBooks: ReactiveField<Author, number> =
+          hasReactiveField("books", (author) => {
+            // Write arbitrary business logic
+            return author.books.get.length;
+          })
+      }
+      ```
+    </div>
+  </section>
+  <section aria-label="Schema-driven code generation">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Domain modeling</span>
+      <h3>Schema-driven codegen</h3>
+      <p>Joist generates typed fields and relations. Your entity stays focused on business logic.</p>
+      <a href="/goals/code-generation/">Explore code generation →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      export class Author extends AuthorCodegen {
+        // Getters & setters are hidden in the base class
+      }
+      ```
+    </div>
+  </section>
+  <section aria-label="Load-safe relations">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Type safety</span>
+      <h3>Loaded types</h3>
+      <p>Preload a relation and TypeScript knows it is safe to access synchronously.</p>
+      <a href="/goals/load-safe-relations/">Explore load-safe relations →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      const author = await em.load(Author, "a:1", {
+        books: "reviews",
+      });
+      for (const book of author.books.get) {
+        console.log(book.reviews.get.length);
+      }
+      ```
+    </div>
+  </section>
+  <section aria-label="Test factories">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Testing</span>
+      <h3>Valid test data, fast</h3>
+      <p>Build an entity graph in one call; factories fill in the required details for you.</p>
+      <a href="/testing/test-factories/">Explore test factories →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      const author = newAuthor(em, {
+        books: [
+          { title: "First book" },
+          { title: "Second book" },
+        ],
+      });
+      ```
+    </div>
+  </section>
+  <section aria-label="Batched writes">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Performance</span>
+      <h3>Efficient writes</h3>
+      <p>Make changes naturally. Joist batches inserts and updates when you flush.</p>
+      <a href="/goals/performance/">Explore performance →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      author.firstName = "Ada";
+      book.title = "Joist in Practice";
 
-## Key Features
+      await em.flush();
+      // Joist batches the pending SQL writes.
+      ```
+    </div>
+  </section>
+  <section aria-label="Fast database resets">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Testing</span>
+      <h3>Fast database resets</h3>
+      <p>Start each test with a clean database in a single SQL statement.</p>
+      <a href="/testing/fast-database-resets/">Explore database resets →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      beforeEach(async () => {
+        await knex.select(knex.raw("flush_database()"));
+      });
 
-<CardGrid>
-  <Card title="Best-in-class Performance" icon="rocket">
-    All queries are optimized for Postgres, bulk `INSERT` and `UPDATE` for all writes, and batched `SELECT` for reads.
-
-    See [performance](/goals/performance) for our high-level philosophy, and [benchmarks](https://github.com/joist-orm/joist-benchmarks) for details.
-  </Card>
-  <Card title="N+1 Safe by Default" icon="rocket">
-    [Bulletproof N+1 Preventation](/goals/avoiding-n-plus-1s/) avoids N+1 query performance problems through batched loading and pre-loading.
-
-    Any loops written using `Promise.all` will never N+1, regardless of complexity.
-  </Card>
-  <Card title="Backend Reactivity" icon="laptop">
-    [Reactive Fields](/modeling/reactive-fields) and [validation rules](/modeling/validation-rules) bring the ergonomics of declarative business logic to the backend.
-  </Card>
-    <Card title="Type-safe Domain Models" icon="seti:typescript">
-        <p>
-            Robust [Domain Modeling](/modeling/why-entities/) that leverages TypeScript for compile-time safety.
-        </p>
-        <p>
-            I.e. tracking [relation loaded-ness](/goals/load-safe-relations) in the type system.
-        </p>
-    </Card>
-  <Card title="Rich Test Support" icon="test-tube">
-    Out-of-the-box [test factories](/testing/test-factories) and [fast test database resets](/testing/fast-database-resets) make your tests succinct & resilient to change, even as your domain model evolves.
-  </Card>
-  <Card title="AI-Agent Ready" icon="puzzle">
-    Joist auto-ships [Agent Skills](/advanced/agent-skills) to help coding agents write idiomatic Joist code out-of-the-box, even in brand new repositories that don't have established conventions for the agents to copy/paste.
-  </Card>
-</CardGrid>
+      // Tables and sequence IDs are reset for the next test.
+      ```
+    </div>
+  </section>
+  <section aria-label="Agent skills">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Developer experience</span>
+      <h3>AI-agent ready</h3>
+      <p>Codegen ships Joist skills so coding agents can learn the right patterns.</p>
+      <a href="/advanced/agent-skills/">Explore agent skills →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```text
+      .agents/skills/
+        joist-em-basics/SKILL.md
+        joist-upsert/SKILL.md
+      .claude/skills/
+        joist-em-basics/SKILL.md
+      ```
+    </div>
+  </section>
+</div>

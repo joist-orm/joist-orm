@@ -1,4 +1,14 @@
-<div class="query-preview not-content" role="region" aria-label="em.query examples" aria-roledescription="carousel">
+---
+import "./query-preview.css";
+
+interface Props {
+  label?: string;
+}
+
+const { label = "em.query examples" } = Astro.props;
+---
+
+<div class="query-preview not-content" role="region" aria-label={label} aria-roledescription="carousel">
   <div class="query-preview__controls"></div>
   <div class="query-preview__slides">
     <slot />
@@ -7,7 +17,6 @@
 
 <script>
   import { mountQueryPreviews } from "./QueryPreviewControls";
-  import "./query-preview.css";
 
   document.querySelectorAll<HTMLElement>(".query-preview").forEach(mountQueryPreviews);
 </script>

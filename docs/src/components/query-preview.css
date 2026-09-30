@@ -26,6 +26,20 @@
   margin-bottom: 0;
 }
 
+.query-preview [data-query-slide] > p:last-child:not(:first-child) {
+  margin-top: 1rem;
+}
+
+.query-preview [data-query-slide] > p:last-child a {
+  color: var(--sl-color-text-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.query-preview [data-query-slide] > p:last-child a:hover {
+  text-decoration: underline;
+}
+
 .query-preview__controls {
   position: absolute;
   top: 0.625rem;
@@ -36,9 +50,12 @@
 }
 
 .query-preview__count {
-  margin-right: 0.5rem;
   font-size: var(--sl-text-sm);
   white-space: nowrap;
+}
+
+.query-preview__count + button {
+  margin-left: 0.5rem;
 }
 
 .query-preview__controls button {

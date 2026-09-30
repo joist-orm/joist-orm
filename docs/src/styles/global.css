@@ -12,6 +12,250 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+@layer components {
+  :root {
+    --joist-navy-surface: #101827;
+    --sl-font: "Inter var", sans-serif;
+    --sl-font-mono: "JetBrains Mono", monospace;
+    --sl-color-white: #f7f8fc;
+    --sl-color-gray-1: #e1e5f0;
+    --sl-color-gray-2: #bac2d3;
+    --sl-color-gray-3: #929db4;
+    --sl-color-gray-4: #6a7691;
+    --sl-color-gray-5: #343e58;
+    --sl-color-gray-6: #1b253d;
+    --sl-color-black: #10182b;
+    --sl-color-accent-low: #503018;
+    --sl-color-accent: #ff922e;
+    --sl-color-accent-high: #ffd2a4;
+    --sl-color-text-accent: var(--sl-color-accent-high);
+    --sl-color-bg: var(--sl-color-black);
+    --sl-color-bg-nav: var(--joist-navy-surface);
+    --sl-color-bg-sidebar: var(--joist-navy-surface);
+    --sl-color-bg-inline-code: #253049;
+    --sl-color-bg-accent: var(--sl-color-accent-high);
+    --sl-color-hairline-light: #303b55;
+    --sl-color-hairline: #29344b;
+    --sl-color-hairline-shade: #10182b;
+  }
+
+  :root[data-theme="light"] {
+    --joist-navy-surface: #ffffff;
+    --sl-color-white: #17223b;
+    --sl-color-gray-1: #26334b;
+    --sl-color-gray-2: #3b4961;
+    --sl-color-gray-3: #586780;
+    --sl-color-gray-4: #77849a;
+    --sl-color-gray-5: #c9d1df;
+    --sl-color-gray-6: #e9edf4;
+    --sl-color-gray-7: #f5f7fb;
+    --sl-color-black: #ffffff;
+    --sl-color-accent-low: #fff0df;
+    --sl-color-accent: #a94d0b;
+    --sl-color-accent-high: #783306;
+    --sl-color-text-accent: var(--sl-color-accent);
+    --sl-color-bg: #fbfcfe;
+    --sl-color-bg-nav: #ffffff;
+    --sl-color-bg-sidebar: #f5f7fb;
+    --sl-color-bg-inline-code: #eef1f7;
+    --sl-color-bg-accent: var(--sl-color-accent);
+    --sl-color-hairline-light: #e0e5ee;
+    --sl-color-hairline: #e9edf4;
+    --sl-color-hairline-shade: #e0e5ee;
+  }
+
+  /* Keep the existing Starlight grid while giving its surfaces a quieter edge. */
+  .sidebar a,
+  .sidebar summary {
+    border-radius: 0.5rem;
+  }
+
+  .sidebar a:not([aria-current="page"]):hover,
+  .sidebar summary:hover {
+    background: var(--sl-color-gray-6);
+  }
+
+  .sidebar a[aria-current="page"] {
+    color: var(--sl-color-accent-high);
+    background: var(--sl-color-accent-low);
+  }
+
+  [data-theme="light"] .sidebar a[aria-current="page"] {
+    color: var(--sl-color-accent-high);
+  }
+
+  .sl-markdown-content :is(h1, h2, h3):not(:where(.not-content *)) {
+    letter-spacing: -0.025em;
+  }
+
+  .sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+    border-radius: 0.3rem;
+  }
+
+  .sl-markdown-content pre:not(:where(.not-content *)),
+  .expressive-code .frame {
+    border-radius: 0.75rem;
+  }
+
+  [data-has-hero] .hero {
+    background: radial-gradient(ellipse at 75% 35%, var(--sl-color-bg-nav), transparent 65%);
+  }
+
+  [data-has-hero] .hero h1 {
+    letter-spacing: -0.05em;
+  }
+
+  [data-has-hero] .hero h1::before {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    margin-inline-end: 0.12em;
+    background: url("../assets/logos/icon.png") center / 240% no-repeat;
+    content: "";
+    vertical-align: -0.08em;
+  }
+
+  /* Starlight's splash hero reserves a large bottom gutter even without an image. */
+  @media (min-width: 50rem) {
+    [data-has-hero] .hero {
+      grid-template-columns: 1fr;
+      padding-bottom: 1rem;
+    }
+
+    [data-has-hero] .hero .stack,
+    [data-has-hero] .hero .copy {
+      align-items: center;
+      text-align: center;
+    }
+
+    [data-has-hero] .hero .actions {
+      justify-content: center;
+    }
+  }
+
+  .card-grid .card {
+    border-color: var(--sl-color-hairline-light);
+    border-radius: 0.9rem;
+    background: var(--sl-color-bg-nav);
+    box-shadow: 0 8px 24px -20px rgba(7, 16, 37, 0.5);
+  }
+
+  .card-grid .card .icon {
+    border-radius: 0.5rem;
+  }
+}
+
+/* The blog plugin ships unlayered styles, so its overrides also live outside the layers. */
+.posts .preview {
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.9rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--sl-color-bg-nav);
+  box-shadow: 0 8px 24px -20px rgba(7, 16, 37, 0.5);
+}
+
+.posts .preview-link h2 {
+  color: var(--sl-color-white);
+  letter-spacing: -0.025em;
+}
+
+.posts .preview-link:hover h2 {
+  color: var(--sl-color-text-accent);
+}
+
+.posts .preview .metadata {
+  color: var(--sl-color-gray-3);
+}
+
+/* Keep the carousel's split-card look, but let every homepage feature stay visible. */
+.feature-list {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.feature-list > section {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  min-height: 18rem;
+  overflow: hidden;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.75rem;
+  background: var(--sl-color-bg-nav);
+}
+
+.feature-preview__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.feature-preview__eyebrow {
+  color: var(--sl-color-text-accent);
+  font-size: var(--sl-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.feature-preview__copy h3 {
+  margin: 1rem 0 0;
+  color: var(--sl-color-white);
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.feature-preview__copy p {
+  margin: 0.75rem 0 1.5rem;
+  color: var(--sl-color-gray-2);
+  line-height: 1.6;
+}
+
+.feature-preview__copy a {
+  margin-top: auto;
+  color: var(--sl-color-text-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.feature-preview__copy a:hover {
+  text-decoration: underline;
+}
+
+.feature-preview__code {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding: 1.5rem clamp(1rem, 2vw, 2rem);
+  background: var(--sl-color-gray-6);
+}
+
+.feature-list .expressive-code {
+  width: 100%;
+  margin: 0;
+}
+
+.feature-list .expressive-code .frame {
+  overflow: auto;
+  border-radius: 0.6rem;
+}
+
+@media (max-width: 48rem) {
+  .feature-list > section {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-preview__code {
+    padding-top: 3rem;
+  }
+
+  .feature-list .expressive-code .ec-line .code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* Ensure code blocks use JetBrains Mono */
 code,
 pre {

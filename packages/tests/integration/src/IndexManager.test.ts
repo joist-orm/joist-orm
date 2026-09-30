@@ -1,7 +1,7 @@
 import { getEmInternalApi } from "joist-orm";
 import { newEntityManager } from "src/testEm";
 
-import { Author, newAuthor, newPublisher } from "./entities";
+import { Author, Book, newAuthor, newBook, newPublisher } from "./entities";
 import { zeroTo } from "./utils";
 
 const indexThreshold = 500;
@@ -153,6 +153,21 @@ describe("IndexManager", () => {
     // Should not find deleted author
     const found = await em.findWithNewOrChanged(Author, { firstName: "Author500" });
     expect(found).toMatchEntity([]);
+  });
+
+  it("should skip entities deleted and flushed earlier in the em", async () => {
+    const em = newEntityManager();
+    // Given an author with enough books that finding them by author is indexed
+    const author = newAuthor(em);
+    const books = zeroTo(indexThreshold).map(() => newBook(em, { author }));
+    await em.flush();
+    // And one of the books was deleted and flushed, so it lingers in the em
+    em.delete(books[0]);
+    await em.flush();
+    // When we find the author's books
+    const found = await em.findWithNewOrChanged(Book, { author });
+    // Then the deleted book is skipped rather than failing the lookup
+    expect(found).toMatchEntity(books.slice(1));
   });
 
   it("should maintain index consistency during field updates", async () => {

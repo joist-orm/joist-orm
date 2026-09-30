@@ -35,7 +35,9 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     const hasNewEntityParam = Object.values(where).some((value) => isEntity(value) && value.isNewEntity);
     if (hasNewEntityParam) continue;
 
-    const entities = onlySoftDeleted(await (em as any).find(constructor, where, { softDeletes: "include" })) as T[];
+    const entities = onlySoftDeleted(
+      await (em as any).find(constructor, exactIdentityWhere(meta, where), { softDeletes: "include" }),
+    ) as T[];
     if (entities.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (entities.length === 1) {
@@ -96,4 +98,14 @@ function whereAsString(where: object): string {
   return Object.entries(where)
     .map(([key, value]) => `${key}=${value}`)
     .join(", ");
+}
+
+/** Uses equality for array identities because bare arrays in find filters mean containment. */
+export function exactIdentityWhere(meta: EntityMetadata, input: object): object {
+  return Object.fromEntries(
+    Object.entries(input).map(([name, value]) => [
+      name,
+      meta.columns[name]?.isArray && Array.isArray(value) ? { eq: value } : value,
+    ]),
+  );
 }

@@ -17,6 +17,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   newScopeFn,
+  nowUTC,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -54,6 +55,9 @@ export interface AuthorStatFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   decimalSamples: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
   bigintSamples: { kind: "primitive"; type: bigint[]; unique: false; nullable: undefined; derived: false };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  days: { kind: "primitive"; type: number[]; unique: false; nullable: undefined; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
 }
 
 export interface AuthorStatColumns {
@@ -81,6 +85,9 @@ export interface AuthorStatColumns {
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
   decimalSamples: { type: number[]; fieldName: "decimalSamples"; nullable: true; insert: "optional"; update: true };
   bigintSamples: { type: bigint[]; fieldName: "bigintSamples"; nullable: true; insert: "optional"; update: true };
+  name: { type: string; fieldName: "name"; nullable: true; insert: "optional"; update: true };
+  days: { type: number[]; fieldName: "days"; nullable: true; insert: "optional"; update: true };
+  deletedAt: { type: Date; fieldName: "deletedAt"; nullable: true; insert: "optional"; update: true };
 }
 
 export interface AuthorStatOpts {
@@ -98,6 +105,9 @@ export interface AuthorStatOpts {
   json?: Object | null;
   decimalSamples?: number[] | null;
   bigintSamples?: bigint[] | null;
+  name?: string | null;
+  days?: number[] | null;
+  deletedAt?: Date | null;
 }
 
 export interface AuthorStatIdsOpts {
@@ -121,6 +131,9 @@ export interface AuthorStatFilter {
   updatedAt?: ValueFilter<Date, never>;
   decimalSamples?: ValueFilter<number[], null>;
   bigintSamples?: ValueFilter<bigint[], null>;
+  name?: ValueFilter<string, null>;
+  days?: ValueFilter<number[], null>;
+  deletedAt?: ValueFilter<Date, null>;
 }
 
 export interface AuthorStatGraphQLFilter {
@@ -141,6 +154,9 @@ export interface AuthorStatGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   decimalSamples?: ValueGraphQLFilter<number[]>;
   bigintSamples?: ValueGraphQLFilter<bigint[]>;
+  name?: ValueGraphQLFilter<string>;
+  days?: ValueGraphQLFilter<number[]>;
+  deletedAt?: ValueGraphQLFilter<Date>;
 }
 
 export interface AuthorStatOrder {
@@ -161,6 +177,9 @@ export interface AuthorStatOrder {
   updatedAt?: OrderBy;
   decimalSamples?: OrderBy;
   bigintSamples?: OrderBy;
+  name?: OrderBy;
+  days?: OrderBy;
+  deletedAt?: OrderBy;
 }
 
 export interface AuthorStatFactoryExtras {
@@ -348,6 +367,30 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     setField(this, "bigintSamples", bigintSamples);
   }
 
+  get name(): string | undefined {
+    return getField(this, "name");
+  }
+
+  set name(name: string | undefined) {
+    setField(this, "name", name);
+  }
+
+  get days(): number[] | undefined {
+    return getField(this, "days");
+  }
+
+  set days(days: number[] | undefined) {
+    setField(this, "days", days);
+  }
+
+  get deletedAt(): Date | undefined {
+    return getField(this, "deletedAt");
+  }
+
+  set deletedAt(deletedAt: Date | undefined) {
+    setField(this, "deletedAt", deletedAt);
+  }
+
   /**
    * Partial update taking any subset of the entities fields.
    *
@@ -425,6 +468,17 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
    */
   get changes(): Changes<AuthorStat> {
     return newChangesProxy(this) as any;
+  }
+
+  get isSoftDeletedEntity(): boolean {
+    return this.deletedAt !== undefined;
+  }
+
+  softDelete(): void {
+    if (this.isSoftDeletedEntity) {
+      return;
+    }
+    this.deletedAt = nowUTC();
   }
 
   /**

@@ -1,3 +1,4 @@
+import { jan1 } from "src/testDates";
 import { knex, newEntityManager } from "src/testEm";
 
 import { AuthorStat, newAuthorStat } from "../entities";
@@ -109,5 +110,112 @@ describe("AuthorStat", () => {
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow("Validation error: AuthorStat#1 nullableText must be a number");
     });
+  });
+
+  it("resurrects a statistic by name and the exact days array on upsert", async () => {
+    // Given two soft-deleted statistics with the same name and overlapping days.
+    const setup = newEntityManager();
+    const short = newAuthorStat(setup, { name: "weekly", days: [1, 2] });
+    const long = newAuthorStat(setup, { name: "weekly", days: [1, 2, 3] });
+    await setup.flush();
+    // And both statistics are soft-deleted.
+    short.deletedAt = jan1;
+    long.deletedAt = jan1;
+    await setup.flush();
+    const em = newEntityManager();
+
+    // When the shorter days array identifies a statistic to upsert.
+    await em.upsert(AuthorStat, {
+      name: "weekly",
+      days: [1, 2],
+      smallint: short.smallint,
+      integer: short.integer,
+      bigint: short.bigint,
+      decimal: short.decimal,
+      real: short.real,
+      smallserial: short.smallserial,
+      serial: short.serial,
+      bigserial: short.bigserial,
+      doublePrecision: short.doublePrecision,
+    });
+    await em.flush();
+
+    // Then only the statistic with the exact days array is resurrected.
+    expect(await select("author_stats")).toMatchObject([
+      { id: 1, name: "weekly", days: [1, 2], deleted_at: null },
+      { id: 2, name: "weekly", days: [1, 2, 3], deleted_at: jan1 },
+    ]);
+  });
+
+  it("resurrects a statistic by name and the exact days array on findOrCreate", async () => {
+    // Given two soft-deleted statistics with the same name and overlapping days.
+    const setup = newEntityManager();
+    const short = newAuthorStat(setup, { name: "weekly", days: [1, 2] });
+    const long = newAuthorStat(setup, { name: "weekly", days: [1, 2, 3] });
+    await setup.flush();
+    // And both statistics are soft-deleted.
+    short.deletedAt = jan1;
+    long.deletedAt = jan1;
+    await setup.flush();
+    const em = newEntityManager();
+
+    // When the shorter days array identifies a statistic to find or create.
+    await em.findOrCreate(AuthorStat, { name: "weekly", days: [1, 2] }, {
+      smallint: short.smallint,
+      integer: short.integer,
+      bigint: short.bigint,
+      decimal: short.decimal,
+      real: short.real,
+      smallserial: short.smallserial,
+      serial: short.serial,
+      bigserial: short.bigserial,
+      doublePrecision: short.doublePrecision,
+    });
+    await em.flush();
+
+    // Then only the statistic with the exact days array is resurrected.
+    expect(await select("author_stats")).toMatchObject([
+      { id: 1, name: "weekly", days: [1, 2], deleted_at: null },
+      { id: 2, name: "weekly", days: [1, 2, 3], deleted_at: jan1 },
+    ]);
+  });
+
+  it("resurrects an unflushed statistic by its days array", async () => {
+    // Given an unflushed, soft-deleted statistic that has no database row to find.
+    const em = newEntityManager();
+    const stat = newAuthorStat(em, { name: "weekly", days: [1, 2], deletedAt: jan1 });
+
+    // When a separate array with the same days identifies the statistic.
+    await em.upsert(AuthorStat, { name: "weekly", days: [1, 2] });
+
+    // Then the original statistic is resurrected instead of creating another one.
+    expect(stat.deletedAt).toBeUndefined();
+  });
+
+  it("finds the exact days array when many statistics are in memory", async () => {
+    // Given enough statistics to enable the EntityManager's scalar field indexes.
+    const em = newEntityManager();
+    for (let i = 0; i < 500; i++) {
+      newAuthorStat(em, { name: `stat${i}`, days: [i] });
+    }
+    // And two statistics share a name but cover the same days in different orders.
+    newAuthorStat(em, { name: "weekly", days: [2, 1] });
+    const stat = newAuthorStat(em, { name: "weekly", days: [1, 2] });
+
+    // When a separate array identifies the statistic to find or create.
+    const found = await em.findOrCreate(AuthorStat, { name: "weekly", days: [1, 2] }, {
+      smallint: stat.smallint,
+      integer: stat.integer,
+      bigint: stat.bigint,
+      decimal: stat.decimal,
+      real: stat.real,
+      smallserial: stat.smallserial,
+      serial: stat.serial,
+      bigserial: stat.bigserial,
+      doublePrecision: stat.doublePrecision,
+    });
+
+    // Then array order and contents identify the original statistic.
+    expect(found).toBe(stat);
   });
 });

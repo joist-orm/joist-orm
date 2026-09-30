@@ -207,9 +207,11 @@ export interface AuthorStatResolvers {
   bigserial: Resolver<AuthorStat, {}, bigint>;
   createdAt: Resolver<AuthorStat, {}, Date>;
   decimal: Resolver<AuthorStat, {}, number>;
+  deletedAt: Resolver<AuthorStat, {}, Date | null | undefined>;
   doublePrecision: Resolver<AuthorStat, {}, number>;
   id: Resolver<AuthorStat, {}, string>;
   integer: Resolver<AuthorStat, {}, number>;
+  name: Resolver<AuthorStat, {}, string | null | undefined>;
   nullableInteger: Resolver<AuthorStat, {}, number | null | undefined>;
   nullableText: Resolver<AuthorStat, {}, string | null | undefined>;
   real: Resolver<AuthorStat, {}, number>;
@@ -1537,9 +1539,11 @@ export interface AuthorStatFilter {
   bigserial?: bigint[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   decimal?: number[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
   doublePrecision?: number[] | null | undefined;
   id?: string[] | null | undefined;
   integer?: number[] | null | undefined;
+  name?: string[] | null | undefined;
   nullableInteger?: number[] | null | undefined;
   nullableText?: string[] | null | undefined;
   real?: number[] | null | undefined;
@@ -1765,9 +1769,11 @@ export interface SaveAuthorStatInput {
   bigint?: bigint | null | undefined;
   bigserial?: bigint | null | undefined;
   decimal?: number | null | undefined;
+  deletedAt?: Date | null | undefined;
   doublePrecision?: number | null | undefined;
   id?: string | null | undefined;
   integer?: number | null | undefined;
+  name?: string | null | undefined;
   nullableInteger?: number | null | undefined;
   nullableText?: string | null | undefined;
   real?: number | null | undefined;

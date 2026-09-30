@@ -110,7 +110,7 @@ export const entityQueryBrand: unique symbol = Symbol("joist.entityQuery");
 export const scalarQueryBrand: unique symbol = Symbol("joist.scalarQuery");
 
 /** A query(...) value with any projection, for EXISTS and NOT EXISTS predicates. */
-export type ExistsQuery = Subquery<unknown, string> | EntityQuery<Entity> | { readonly [scalarQueryBrand]: true };
+export type ExistsQuery = QueryTable<unknown, string> | EntityQuery<Entity> | { readonly [scalarQueryBrand]: true };
 
 /**
  * A condition for a query's where, having, or join on clause. Combine conditions with and/or,
@@ -129,21 +129,24 @@ export type QueryCondition =
   | { exists: ExistsQuery | undefined; notExists?: never; and?: never; or?: never }
   | { notExists: ExistsQuery | undefined; exists?: never; and?: never; or?: never };
 
-/** Phantom type information carried by a table-shaped subquery. */
-export interface SubqueryBrand<R, Name extends string> {
+/** Phantom type information carried by a table-shaped `query(...)` value. */
+export interface QueryTableBrand<R, Name extends string> {
   readonly __row: R;
   readonly __name: Name;
 }
 
+/** @deprecated Renamed to `QueryTableBrand`; a `query(...)` value is a table shape, not only a subquery. */
+export type SubqueryBrand<R, Name extends string> = QueryTableBrand<R, Name>;
+
 /** Anything that can be a source or be joined: an entity table or a table-shaped subquery. */
 export type QuerySource =
   | { readonly [tableMgmt]: TableSourceBrand<string> }
-  | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
+  | { readonly [subqueryBrand]: QueryTableBrand<any, string> };
 
 /** A generated entity table or table-shaped subquery that supports `select: source`. */
 type SelectableQuerySource =
   | { readonly [tableMgmt]: TableBrand<any, string> }
-  | { readonly [subqueryBrand]: SubqueryBrand<any, string> };
+  | { readonly [subqueryBrand]: QueryTableBrand<any, string> };
 
 /**
  * A join entry (see `InnerJoin`/`LeftJoin` in `Expr.ts`): the expanded `{ inner: b, on }` form, or the
@@ -174,7 +177,7 @@ export type ResolvedJoins<F, J> = J extends QueryJoinList
  * Entity-mode and scalar `query(...)` shapes are excluded: a CTE must be a table shape, so it needs
  * columns.
  */
-export type WithSource = Subquery<unknown, string>;
+export type WithSource = QueryTable<unknown, string>;
 
 /** One CTE or an array of them; an `undefined` entry prunes, like any other clause. */
 export type WithInput = WithSource | readonly (WithSource | undefined)[];
@@ -330,8 +333,8 @@ type MutationKey = "insert" | "update" | "delete" | "values" | "set" | "returnin
  * union. `{ from: a, select: a.id }` cannot: even one-column set operands must give that column a name.
  */
 export type SetOperand =
-  | Query<Record<string, SelectExpression> | Subquery<unknown, string>>
-  | Subquery<unknown, string>
+  | Query<Record<string, SelectExpression> | QueryTable<unknown, string>>
+  | QueryTable<unknown, string>
   | SetQuery<readonly SetOperand[]>;
 
 /**
@@ -563,7 +566,7 @@ export type CheckReadQuery<Q> = SetOperand extends Q
   ? unknown
   : Q extends readonly unknown[]
     ? { readonly [I in keyof Q]: CheckReadQuery<Q[I]> }
-    : Q extends { readonly [subqueryBrand]: SubqueryBrand<infer R, string> }
+    : Q extends { readonly [subqueryBrand]: QueryTableBrand<infer R, string> }
       ? { readonly [K in keyof Q]: K extends keyof R | typeof subqueryBrand ? unknown : never }
       : Q extends { readonly [entityQueryBrand]: unknown }
         ? { readonly [K in keyof Q]: K extends typeof entityQueryBrand ? unknown : never }
@@ -704,15 +707,20 @@ export type SqlExpressionValue<V> = Exclude<V, undefined> | (undefined extends V
 /**
  * A table-shaped query: one `Expr` per select key, each tagged with the table's name as its `Src`,
  * plus a brand carrying the row type. This is the direct analog of `Table<T>`: `Table<T>` maps physical
- * columns to expressions, `Subquery<Row, Name>` maps the inner query's select keys to expressions.
+ * columns to expressions, `QueryTable<Row, Name>` maps the inner query's select keys to expressions.
+ *
+ * It is a table, not only a subquery: the same value can be the `from`, be joined, or be a `with` entry.
  */
-export type Subquery<R, Name extends string> = {
-  readonly [subqueryBrand]: SubqueryBrand<R, Name>;
+export type QueryTable<R, Name extends string> = {
+  readonly [subqueryBrand]: QueryTableBrand<R, Name>;
 } & {
   // For each field in row shape R, i.e. `firstName` in `{ firstName: string }`, expose an expression
   // that retains the field name for array selects.
   readonly [K in keyof R]: Expr<SqlExpressionValue<R[K]>, Name> & { readonly [selectKeyBrand]: Extract<K, string> };
 };
+
+/** @deprecated Renamed to `QueryTable`; the value is a table shape, usable as a `with` entry too. */
+export type Subquery<R, Name extends string> = QueryTable<R, Name>;
 
 /** An entity-mode query (`select: a`): runnable, but it has no columns to reference. */
 export type EntityQuery<T extends Entity> = { readonly [entityQueryBrand]: { readonly __row: T } } & Partial<
@@ -736,7 +744,7 @@ export type ScalarQuery<R> = Expr<SqlExpressionValue<R> | null, never> & { reado
  * `em.query()` alike:
  *
  *   const narrow = { from: a, select: { name: a.first_name } } satisfies Query;
- *   query(narrow); // Subquery<{ name: string }, "?">
+ *   query(narrow); // QueryTable<{ name: string }, "?">
  *
  *   const widened: Query = { from: a, select: { name: a.first_name } };
  *   query(widened);
@@ -757,7 +765,7 @@ export type QueryValue<S, J extends QueryJoinList, Name extends string> = S exte
   ? EntityQuery<T>
   : S extends ExprLike<unknown>
     ? ScalarQuery<QueryRow<S, J>>
-    : Subquery<QueryRow<S, J>, Name>;
+    : QueryTable<QueryRow<S, J>, Name>;
 
 /** The names of every alias in scope for a query: the source alias plus every joined alias. */
 type JoinedName<X> = X extends { readonly inner: infer A }
@@ -847,7 +855,7 @@ export type QueryArg<
  */
 export function query<const Q extends SetQuery<readonly SetOperand[]>, Name extends string = "?">(
   q: Q & CheckSetQuery<Q> & { as?: Name },
-): Subquery<SetQueryRow<Q>, Name>;
+): QueryTable<SetQueryRow<Q>, Name>;
 export function query<
   F extends QuerySource,
   const S extends QuerySelect = never,
@@ -916,9 +924,9 @@ export function recursiveQuery<
 >(
   name: Name,
   base: QueryArg<F, S, J, Name>,
-  step: (self: Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name>) => SetOperand,
+  step: (self: QueryTable<QueryRow<S, ResolvedJoins<F, J>>, Name>) => SetOperand,
   opts: RecursiveOptions = {},
-): Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name> {
+): QueryTable<QueryRow<S, ResolvedJoins<F, J>>, Name> {
   if (typeof name !== "string" || name === "") fail("A recursive CTE needs a name");
   if (opts.union !== undefined && opts.union !== "all" && opts.union !== "distinct") {
     fail("A recursive CTE's union must be 'all' or 'distinct'");
@@ -926,7 +934,7 @@ export function recursiveQuery<
   // Start on the base term so `self`'s columns resolve while the step term is still being built.
   const handle = new SubqueryHandle(toQuery(base), true);
   if (handle.output().kind !== "pojo") fail("A recursive CTE's base term needs a named projection");
-  const self = newSubqueryProxy(handle) as Subquery<QueryRow<S, ResolvedJoins<F, J>>, Name>;
+  const self = newSubqueryProxy(handle) as QueryTable<QueryRow<S, ResolvedJoins<F, J>>, Name>;
   const operands = [base, step(self)] as unknown as readonly SetOperand[];
   handle.setBody(opts.union === "distinct" ? { union: operands, as: name } : { unionAll: operands, as: name });
   return self;
@@ -1001,7 +1009,7 @@ sql.condition = function condition(strings: TemplateStringsArray, ...values: unk
  * `EntityManager.query` runs the plan; this module deliberately does not import `EntityManager` (see
  * `EntityHydrator`), so it parses and hands back `{ sql, bindings, decodeRows }` instead of executing.
  */
-export function parseUserQuery(arg: unknown): Plan {
+export function parseRootQuery(arg: unknown): Plan {
   if (arg instanceof SubqueryExpr) fail("Scalar query values are expressions, not executable read inputs");
   return parseQuery(toQuery(arg), undefined, new AliasAssigner());
 }
@@ -1130,14 +1138,14 @@ export class SubqueryHandle {
   columnKeys(): string[] {
     const output = this.output();
     if (output.kind === "pojo") return output.columns.map(([key]) => key);
-    return fail(`A subquery with an entity or scalar select has no columns`);
+    return fail(`A query value with an entity or scalar select has no columns`);
   }
 
   /** The inner expression behind `key`, for its decoder/encoder. */
   columnExpr(key: string): BaseExpr {
     return (
       this.output().columns.find(([name]) => name === key)?.[1] ??
-      fail(`Subquery ${this.describe()} has no column ${key}`)
+      fail(`Query value ${this.describe()} has no column ${key}`)
     );
   }
 
@@ -1768,7 +1776,7 @@ export class Ctx implements ExprContext {
 }
 
 function describeHandle(handle: object): string {
-  if (handle instanceof SubqueryHandle) return `Subquery ${handle.describe()}`;
+  if (handle instanceof SubqueryHandle) return `Query value ${handle.describe()}`;
   if (handle instanceof JoinTableHandle) return `Join table ${handle.joinTableName}`;
   if ("tableName" in handle) return `Table for ${(handle as TableSourceMgmt).tableName}`;
   return "Table";

@@ -24,11 +24,11 @@ import {
   type Query,
   type QueryJoinInput,
   type QueryRow,
+  type QueryTable,
   type ReadQueryRow,
   type SetOperand,
   type SetOperation,
   type SetQuery,
-  type Subquery,
   type WithInput,
   checkPojoKeys,
   conditionToSql,
@@ -36,7 +36,7 @@ import {
   injectedConditions,
   isReadQueryValue,
   parseNestedQuery,
-  parseUserQuery,
+  parseRootQuery,
   prependCtes,
   projectionToSql,
   registerCtes,
@@ -84,7 +84,7 @@ export type UpdateValues<T extends Entity> = {
 export type InsertStatement<
   T extends Entity,
   R extends MutationReturning | undefined = MutationReturning | undefined,
-  Q extends SetOperand = Query<InsertProjection<T>, []> | Subquery<InsertSourceRow<T>, string>,
+  Q extends SetOperand = Query<InsertProjection<T>, []> | QueryTable<InsertSourceRow<T>, string>,
 > = {
   readonly insert: MutationTargetTable<T>;
   readonly returning?: R;
@@ -209,7 +209,7 @@ export function isMutation(arg: unknown): boolean {
  * An undefined plan represents a validated standalone empty VALUES array, not DEFAULT VALUES.
  */
 export function parseStatement(arg: unknown): Plan | undefined {
-  if (!isMutation(arg)) return parseUserQuery(arg);
+  if (!isMutation(arg)) return parseRootQuery(arg);
   const statement = arg as Record<string, unknown>;
   const roots = ["insert", "update", "delete"].filter((key) => key in statement);
   if (roots.length !== 1) fail("A mutation requires exactly one insert, update, or delete root");
@@ -421,7 +421,13 @@ type MutationFilter = {
   readonly softDeletes?: "include" | "exclude";
 };
 
-/** Read-only query clauses that mutations explicitly reject. */
+/**
+ * Read-only query clauses that mutations explicitly reject, plus the clause names users guess.
+ *
+ * `using` and `onConflict` are here rather than on `Query` on purpose: they are mutation-only SQL
+ * clauses Joist does not support, so they are a plausible guess when writing a mutation and meaningless
+ * on a read. `ctes` is banned on both sides, since it is the common guess for `with`.
+ */
 type NoMutationReadClauses = Partial<
   Record<
     | "select"
@@ -440,7 +446,6 @@ type NoMutationReadClauses = Partial<
     | "intersectAll"
     | "except"
     | "exceptAll"
-    | "ctes"
     | "using"
     | "onConflict",
     never

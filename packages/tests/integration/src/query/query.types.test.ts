@@ -10,11 +10,11 @@ import {
   type PredicateBrand,
   type Query,
   type QueryCondition,
+  type QueryTable,
   type RawCondition,
   type ScalarQuery,
   type SqlCondition,
   type SqlPredicate,
-  type Subquery,
   alias,
   declareTable,
   expr,
@@ -386,7 +386,7 @@ async function typeAssertions() {
   expectTypeOf(direct).resolves.toEqualTypeOf<{ name: string }[]>();
   // ...and `query(q)` builds the same rows as `em.query(q)` ran directly; anonymous tables share the "?" key
   const built = query(q);
-  expectTypeOf(built).toEqualTypeOf<Subquery<{ name: string }, "?">>();
+  expectTypeOf(built).toEqualTypeOf<QueryTable<{ name: string }, "?">>();
 
   // === The keyed orderBy form
   // Keys must be keys of `select`, with uppercase SQL direction literals (NULLS FIRST/LAST suffixes allowed)
@@ -418,7 +418,7 @@ async function typeAssertions() {
     select: { name: a.firstName },
     orderBy: [{ sort: a.age, order: "ASC" }, { name: "ASC" }],
   });
-  expectTypeOf(orderedNames).toEqualTypeOf<Subquery<{ name: string }, "?">>();
+  expectTypeOf(orderedNames).toEqualTypeOf<QueryTable<{ name: string }, "?">>();
 
   // === A single bare condition works for where/having, no `{ and: [...] }` wrapper needed
   em.query({ from: a, where: a.age.gte(18), select: a });
@@ -661,7 +661,7 @@ async function typeAssertions() {
   const arrayQuery = query({ from: a, select: [a.firstName, a.lastName] });
   // Then field names become result keys and retain their column nullability
   expectTypeOf(arrayRows).resolves.toEqualTypeOf<{ firstName: string; lastName: string | undefined }[]>();
-  expectTypeOf(arrayQuery).toEqualTypeOf<Subquery<{ firstName: string; lastName: string | undefined }, "?">>();
+  expectTypeOf(arrayQuery).toEqualTypeOf<QueryTable<{ firstName: string; lastName: string | undefined }, "?">>();
   // @ts-expect-error: computed expressions have no unambiguous field name for array projection shorthand
   em.query({ from: a, select: [a.firstName.max()] });
 }
@@ -680,7 +680,7 @@ function singleExpressionOrderTypeAssertions(): void {
 
   // Then both reads retain the selected name type
   expectTypeOf(direct).resolves.toEqualTypeOf<{ name: string }[]>();
-  expectTypeOf(reusable).toEqualTypeOf<Subquery<{ name: string }, "?">>();
+  expectTypeOf(reusable).toEqualTypeOf<QueryTable<{ name: string }, "?">>();
 
   // When a single expression sort mixes a projected key into the same entry
   // Then the keyed and expression sorts must still be separate entries

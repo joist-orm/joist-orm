@@ -4,7 +4,7 @@ import {
   type Query,
   type QueryJoinInput,
   type QueryJoinList,
-  type Subquery,
+  type QueryTable,
   alias,
   query,
   queryMaybe,
@@ -350,7 +350,7 @@ describe("em.query / join trees", () => {
     const rows = await em.query({ from: titles, select: titles, orderBy: { title: "ASC NULLS LAST" } });
     // Then derived-table output retains the join's nullable type and values
     expect(rows).toEqual([{ title: "One" }, { title: undefined }]);
-    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | undefined }, "titles">>();
+    expectTypeOf(titles).toEqualTypeOf<QueryTable<{ title: string | undefined }, "titles">>();
   });
 
   it("keeps a conditional scalar query with a surviving tree filter", async () => {
@@ -399,7 +399,7 @@ describe("em.query / join trees", () => {
 
     // Then the compound retains both the Book title and the unmatched Author's undefined
     expect(rows).toEqual([{ title: "One" }, { title: undefined }]);
-    expectTypeOf(titles).toEqualTypeOf<Subquery<{ title: string | undefined }, "titles">>();
+    expectTypeOf(titles).toEqualTypeOf<QueryTable<{ title: string | undefined }, "titles">>();
   });
 
   it("rejects a root binding that differs from from", async () => {

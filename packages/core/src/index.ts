@@ -215,7 +215,7 @@ export { deepNormalizeHint, normalizeHint } from "src/normalizeHints.ts";
 export { ImmutableEntitiesPlugin } from "src/plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "src/preloading/JsonAggregatePreloader.ts";
-// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseUserQuery, Plan) stays internal
+// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseRootQuery, Plan) stays internal
 export {
   type CheckScope,
   type Clauses,
@@ -246,6 +246,8 @@ export {
   query,
   queryMaybe,
   sql,
+  type QueryTable,
+  type QueryTableBrand,
   type Subquery,
   type SubqueryBrand,
   subqueryBrand,

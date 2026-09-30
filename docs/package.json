@@ -14,12 +14,16 @@
     "@astrojs/starlight": "0.41.7",
     "@astrojs/starlight-tailwind": "5.0.0",
     "astro": "^7.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "sharp": "^0.35.4",
     "starlight-blog": "^0.28.0"
   },
   "devDependencies": {
     "@astrojs/markdown-remark": "7.2.2",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "starlight-llms-txt": "^0.11.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"

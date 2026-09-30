@@ -1,0 +1,13 @@
+<div class="query-preview not-content" role="region" aria-label="em.query examples" aria-roledescription="carousel">
+  <div class="query-preview__controls"></div>
+  <div class="query-preview__slides">
+    <slot />
+  </div>
+</div>
+
+<script>
+  import { mountQueryPreviews } from "./QueryPreviewControls";
+  import "./query-preview.css";
+
+  document.querySelectorAll<HTMLElement>(".query-preview").forEach(mountQueryPreviews);
+</script>

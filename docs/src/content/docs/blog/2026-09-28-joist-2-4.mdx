@@ -7,9 +7,94 @@ tags: []
 excerpt: Joist 2.4 adds em.query and em.execute for the SQL-shaped queries and bulk writes that don't fit em.find and entity-based updates, plus lazy fields, pipelining on by default, and aligned soft-delete behavior.
 ---
 
+import QueryPreview from "../../../components/QueryPreview.astro";
+
 Joist, a full-fledged, entity-based ORM for TypeScript, release [2.4](https://github.com/joist-orm/joist-orm/commit/5dc88892e78974b3441ee38b78bf314c4a4f7a29) is out!
 
-The big addition is that Joist _finally_ 😅 supports arbitrary low-level SQL statements with a new `em.query` API for `SELECT`s and `em.execute` for `INSERT`s, `UPDATE`s, and `DELETE`s.
+The big addition is that Joist _finally_ 😅 supports arbitrary low-level SQL statements with a new `em.query` API for `SELECT`s and `em.execute` for `INSERT`s, `UPDATE`s, and `DELETE`s. Here's a quick preview of what `em.query` looks like:
+
+<QueryPreview>
+  <section data-query-slide aria-label="Pick a few columns">
+    **Pick a few columns** — typed rows, no entity required.
+
+    ```ts
+    const a = table(Author);
+    const rows = await em.query({
+      // Select subset of columns, return type will be inferred correctly
+      select: { name: a.firstName, age: a.age },
+      from: a,
+      where: a.age.gte(18),
+    });
+    // rows: { name: string; age: number | undefined }[]
+    ```
+  </section>
+  <section data-query-slide aria-label="Follow relationships" hidden>
+    **Follow relationships** — join books without writing foreign keys.
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      // Select from different tables
+      select: { author: a.firstName, title: b.title },
+      from: a,
+      // `books.as` is sugar for `{ left: b, on: a.id.equals(b.authorId) }`
+      join: [a.books.as(b)],
+      where: b.title.ilike("%database%"),
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Count books per author" hidden>
+    **Count books per author** — group, sort, and limit in one query.
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      // Use aggregates like `.count()`, `.coalesce()`
+      select: { name: a.firstName, bookCount: b.id.count() },
+      from: a,
+      join: [a.books.as(b)],
+      // Group by arbitrary columns
+      groupBy: [a.id, a.firstName],
+      orderBy: { bookCount: "DESC" },
+      limit: 10,
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Build optional filters" hidden>
+    **Build optional filters** — unused conditions and joins drop away.
+
+    ```ts
+    // Accept optional filter parameters, like in a `GET /authors?...` endpoint
+    const { name, title } = req.filter;
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      from: a,
+      join: [a.books.as(b)],
+      select: { name: a.firstName },
+      // If title is undefined, both `b.title.eq` & the books join
+      // itself are pruned/dropped from the query as unnecessary.
+      where: [a.firstName.eq(name), b.title.eq(title)],
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Find authors with books" hidden>
+    **Find authors with books** — filter with a subquery
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const authors = await em.query({
+      from: a,
+      select: a,
+      where: {
+      // Use EXISTS to avoid duplicate author rows
+        exists: query({ from: b, select: b.id, where: b.authorId.eq(a.id) }),
+      },
+    });
+    ```
+  </section>
+</QueryPreview>
+
+Read on for more details!
 
 ## Query: When Find Isn't Enough
 

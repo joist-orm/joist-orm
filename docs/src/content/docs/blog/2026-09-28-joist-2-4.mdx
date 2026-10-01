@@ -1,0 +1,278 @@
+---
+title: "Joist 2.4: SQL Queries, Lazy Fields, Pipelining, and more..."
+slug: blog/joist-2-4
+date: 2026-09-28
+authors: shaberman
+tags: []
+excerpt: Joist 2.4 adds em.query and em.execute for the SQL-shaped queries and bulk writes that don't fit em.find and entity-based updates, plus lazy fields, pipelining on by default, and aligned soft-delete behavior.
+---
+
+import QueryPreview from "../../../components/QueryPreview.astro";
+
+Joist, a full-fledged, entity-based ORM for TypeScript, release [2.4](https://github.com/joist-orm/joist-orm/commit/5dc88892e78974b3441ee38b78bf314c4a4f7a29) is out!
+
+The big addition is that Joist _finally_ 😅 supports arbitrary low-level SQL statements with a new `em.query` API for `SELECT`s and `em.execute` for `INSERT`s, `UPDATE`s, and `DELETE`s. Here's a quick preview of what `em.query` looks like:
+
+<QueryPreview>
+  <section data-query-slide aria-label="Pick a few columns">
+    **Pick a few columns** — typed rows, no entity required.
+
+    ```ts
+    const a = table(Author);
+    const rows = await em.query({
+      // Select subset of columns, return type will be inferred correctly
+      select: { name: a.firstName, age: a.age },
+      from: a,
+      where: a.age.gte(18),
+    });
+    // rows: { name: string; age: number | undefined }[]
+    ```
+  </section>
+  <section data-query-slide aria-label="Follow relationships" hidden>
+    **Follow relationships** — join books without writing foreign keys.
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      // Select from different tables
+      select: { author: a.firstName, title: b.title },
+      from: a,
+      // `books.as` is sugar for `{ left: b, on: a.id.equals(b.authorId) }`
+      join: [a.books.as(b)],
+      where: b.title.ilike("%database%"),
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Count books per author" hidden>
+    **Count books per author** — group, sort, and limit in one query.
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      // Use aggregates like `.count()`, `.coalesce()`
+      select: { name: a.firstName, bookCount: b.id.count() },
+      from: a,
+      join: [a.books.as(b)],
+      // Group by arbitrary columns
+      groupBy: [a.id, a.firstName],
+      orderBy: { bookCount: "DESC" },
+      limit: 10,
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Build optional filters" hidden>
+    **Build optional filters** — unused conditions and joins drop away.
+
+    ```ts
+    // Accept optional filter parameters, like in a `GET /authors?...` endpoint
+    const { name, title } = req.filter;
+    const [a, b] = tables(Author, Book);
+    const rows = await em.query({
+      from: a,
+      join: [a.books.as(b)],
+      select: { name: a.firstName },
+      // If title is undefined, both `b.title.eq` & the books join
+      // itself are pruned/dropped from the query as unnecessary.
+      where: [a.firstName.eq(name), b.title.eq(title)],
+    });
+    ```
+  </section>
+  <section data-query-slide aria-label="Find authors with books" hidden>
+    **Find authors with books** — filter with a subquery
+
+    ```ts
+    const [a, b] = tables(Author, Book);
+    const authors = await em.query({
+      from: a,
+      select: a,
+      where: {
+      // Use EXISTS to avoid duplicate author rows
+        exists: query({ from: b, select: b.id, where: b.authorId.eq(a.id) }),
+      },
+    });
+    ```
+  </section>
+</QueryPreview>
+
+Read on for more details!
+
+## Query: When Find Isn't Enough
+
+Joist's `em.find` has been our stalwart query API for years, and it's been pretty great!
+
+Ergonomic DX, easy to build dynamic queries, and never N+1s: 💪
+
+```ts
+// Example of our existing em.find API, loading Author entities
+const authors = await em.find(Author, {
+  firstName: { eq: "First" },
+  publisher: { country: "USA" },
+});
+```
+
+But it can't do everything, primarily because `em.find`'s automatic N+1 prevention/batching requires exact control of the SQL.
+
+For the vast majority of application queries (over 95% in our codebase; yes we actually counted 😅), this is an acceptable limitation and preferable tradeoff! N+1s are no fun. 👎
+
+But sometimes you really do need a `GROUP BY`, which historically Joist has labeled "not in scope for us", and deferred to other low-level query builders like Knex.
+
+Until now! We now provide `em.query` for creating "whatever you want" SQL queries, i.e. here's an example of finding 10 authors with the most books, including a book count:
+
+```ts
+const [a, b] = tables(Author, Book);
+const rows = await em.query({
+  select: { name: a.firstName, bookCount: b.id.count() },
+  from: a,
+  join: [a.books.as(b)],
+  groupBy: [a.id, a.firstName],
+  orderBy: { bookCount: "DESC" },
+  limit: 10,
+});
+// rows: { name: string; bookCount: number }[]
+```
+
+### POJOs not Builders
+
+This API should both look familiar (if you've used Joist) and maybe look weird if you've not. 😅
+
+Specifically the `em.query` API is purposefully __not a fluent builder API__: it's a plain object literal that you build up step-by-step.
+
+Fluent builders, i.e. the ubiquitous `.select().from().join()` of most other ORMs, are great for simple queries, but they can be hard to use for complex ones, and they often require boilerplate: "how do I nest AND/ORs with the right function calls?", joins must be conditionally included based on "are they actually needed?" by their other downstream also-conditional joins & clauses, etc.
+
+The fluent builder approach itself is an old-school design pattern, originally built for 90s-era languages like Java and C++. Which just being old doesn't mean it's bad 👴, but does mean it's not necessarily "built for JS/TS".
+
+Joist's `em.query` leans into one of JavaScript's core strengths: first-class syntax for creating data structures (object literals & arrays), and then leverages TypeScript magic to type check them. ✅
+
+We think the result is pretty great, in terms of overall readability and DX. 😅
+
+You can find more examples of `em.query` in the [SQL Queries docs](/features/queries-raw/).
+
+### Execute for Writes
+
+In addition to `em.query` for reads, we also have a new `em.execute` API for raw/bulk SQL mutations. For example, a bulk update of `books`:
+
+```ts
+const b = table(Book);
+const result = await em.execute({
+  update: b,
+  set: { title: "Revised title" },
+  where: b.title.eq("Draft title"),
+  returning: b.id,
+});
+// result.rows: BookId[]
+```
+
+Similar to `em.query`, `em.execute` **issues SQL immediately**.
+
+It also does not flush pending entity changes or run your application's entity hooks, validation rules, reactive fields, defaults, or optimistic locking--these are all still done by `em.flush`, which is why you should prefer it for the large majority of your application's writes.
+
+We support `insert` and `delete` as well, see the [SQL Mutations docs](/features/sql-mutations/).
+
+### Polished at Scale
+
+After initially implementing `em.query` in Joist itself, we also rolled it out in our main ~300k LOC TypeScript/GraphQL monolith, using `em.query` to replace the long-tail of raw SQL queries where we'd still been using Knex.
+
+Honestly this process took much longer than we thought it would 😅, because this real-world usage drove a lot of iteration and refinement of the `em.query` API itself.
+
+We ended up changing both big & small things--whether to use `author_id` or `authorId` as column names (we'd originally tried snake case "to match the db" but did not like it 😬), better relationship join sugar, first-class `taggedId` support, removing some "didn't work out" tagged literal ideas, overhauling the `orderBy` clauses, and more.
+
+The result of this iteration is a more polished, well-documented API that makes it easy to write performant, type-safe queries in Joist.
+
+Check out [the docs](/features/queries-raw/#_top) for more!
+
+:::tip
+
+Remember one important tradeoff: **`em.query` is not auto-batched.**
+
+Every call issues a database query--which is usually very normal for ORMs 😅, but can be surprising for Joist users spoiled by our otherwise ubiquitous N+1 prevention.
+
+:::
+
+## Lazy Fields
+
+Another long-requested feature ([#178](https://github.com/joist-orm/joist-orm/issues/178), finally done in [#1939](https://github.com/joist-orm/joist-orm/pull/1939) 😅) is lazy fields.
+
+Occasionally you will have tables with "larger than normal" columns--a large `jsonb` blob, a long `text` document--that you only rarely need, but that entity-based ORMs like Joist historically tend to over-fetch, pulling them back on every load of the entity.
+
+You can now mark these columns as `lazy` in `joist-config.json`:
+
+```json
+{
+  "entities": {
+    "Author": {
+      "fields": {
+        "bulkData": { "lazy": true }
+      }
+    }
+  }
+}
+```
+
+And Joist will leave the column out of the entity's default `SELECT`, and instead generate it as a relation-like `LazyField` that you load on demand:
+
+```ts
+// Loading the author doesn't return `bulk_data` by default
+// SELECT id, first_name, ... FROM authors WHERE id = ANY($1)
+const author = await em.load(Author, "a:1");
+
+// Then later load it as needed
+// SELECT id, bulk_data FROM authors WHERE id = ANY($1)
+console.log(await author.bulkData.load());
+```
+
+Here we used an explicit `bulkData.load()` call, but like all relations in Joist, you can use load hints to load it up front for the callsites where you know you'll need it:
+
+```ts
+const author = await em.load(Author, "a:1", "bulkData");
+// No `await` necessary
+console.log(author.bulkData.get);
+```
+
+Also like all relations in Joist, `bulkData.load()` is automatically batched, so loading the lazy field for a page of authors is still a single query.
+
+See the [lazy fields docs](/modeling/fields/#lazy-fields) for more.
+
+## Pipelining Everywhere
+
+We [wrote about pipelining](/blog/initial-pipelining-benchmark/) over a year ago, and measured 3-6x faster commits by sending a transaction's `INSERT`s & `UPDATE`s to Postgres without waiting for a round-trip in between each one.
+
+At the time, node-pg didn't support pipeline mode, so this was aspirational. But it does now! So in [#1980](https://github.com/joist-orm/joist-orm/pull/1980) we turned pipelining **on by default**, for everyone.
+
+There is nothing to configure--Joist's `newPgConnectionConfig` sets `pipeline: true`, and our `PostgresDriver` enables it on any pool it's given. If you need the old behavior, set `pipeline: false` on your pool's config.
+
+The higher your latency to the database (i.e. a serverless function talking to a managed Postgres, or local development against a remote db), the more this helps, because pipelining removes the waiting on _every_ round-trip SQL call.
+
+2.4 also has a few more rounds of allocation & GC work in the hot paths ([#1942](https://github.com/joist-orm/joist-orm/pull/1942), [#1943](https://github.com/joist-orm/joist-orm/pull/1943)) to get as many small perf wins as possible. 🚀
+
+## Soft Deletes, Aligned
+
+Joist's soft-delete support is purposefully opinionated: soft-deleted rows _in collections_ are ignored by default, and business logic has to explicitly opt in to seeing them.
+
+The wrinkle was that previously our `em.find` DB queries and the in-memory relations didn't agree on what "ignored" meant. 😬
+
+[#1955](https://github.com/joist-orm/joist-orm/pull/1955) fixes this by having `em.find`'s `WHERE deleted_at IS NULL` filtering match the relation behavior exactly:
+
+- The entity being queried is filtered, and
+- Collection joins (`o2m` and `m2m`) are filtered, because `a.books.get` also skips soft-deleted books, but
+- Reference joins (`m2o` and `o2o`) are _not_ filtered, because `b.author.get` does return a soft-deleted author
+
+So now "what `em.find` returns" and "what in-memory relations return" are the same thing.
+
+A few other soft-delete additions:
+
+- **Per-relation overrides** ([#1926](https://github.com/joist-orm/joist-orm/pull/1926)): a specific `o2m`/`m2m` collection that should _always_ include soft-deleted entities can set `"softDeletes": "include"` in `joist-config.json`, instead of callers remembering to use `getWithDeleted`.
+- **A generated `softDelete()` method** ([#1984](https://github.com/joist-orm/joist-orm/pull/1984)): entities with a `deleted_at` column get `author.softDelete()`, which sets the timestamp for you, instead of each codebase hand-rolling `author.deletedAt = new Date()`.
+- **Resurrection triggers reactivity** ([#1988](https://github.com/joist-orm/joist-orm/pull/1988)): when `em.upsert`/`em.findOrCreate` resurrect a soft-deleted row, reactive fields & rules now see the change.
+
+See the [soft deletes docs](/advanced/soft-deletes/) for the full behavior.
+
+## Also in 2.4
+
+A few other additions worth mentioning:
+
+- **Commit rules** ([#1927](https://github.com/joist-orm/joist-orm/pull/1927)) run validation hooks after SQL has been flushed but before the transaction commits. This lets a rule query the *new* database state and still roll back the transaction if validation fails. See the [validation rules docs](/modeling/validation-rules/#commit-rules).
+- **Configurable tagged-id delimiters** ([#1931](https://github.com/joist-orm/joist-orm/pull/1931), [#1932](https://github.com/joist-orm/joist-orm/pull/1932)) allow URL-friendly ids (called "slug ids") without the usual `:` delimiter, or a different delimiter if that better fits your application. See [Tagged IDs](/advanced/tagged-ids/).
+- **Dual CommonJS/ESM packages** ([#1972](https://github.com/joist-orm/joist-orm/pull/1972)) make Joist usable from both module systems.
+- **Vitest support for `toMatchEntity`** ([#1921](https://github.com/joist-orm/joist-orm/pull/1921)) means our entity-aware matcher now works on Jest, Vitest, and Bun. Previously `toMatchEntity` assumed Jest's matcher internals and threw `this.assert is not a function` under Vitest. It also [understands loaded async properties](https://github.com/joist-orm/joist-orm/pull/1969) now. See the [entity matcher docs](/testing/entity-matcher/).
+
+There are also fixes across relation loading, reactivity, cloning, single-table inheritance, and GraphQL resolvers. The [2.4 changelog](https://github.com/joist-orm/joist-orm/releases/tag/v2.4.0) has the full list.

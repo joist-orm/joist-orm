@@ -122,12 +122,12 @@ import {
   type QueryRow,
   type QuerySelect,
   type QuerySource,
+  type QueryTable,
   type ResolvedJoins,
   type SetOperand,
   type SetQuery,
   type SetQueryRow,
-  type Subquery,
-  parseUserQuery,
+  parseRootQuery,
 } from "src/queries/sql/query.ts";
 import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
@@ -566,7 +566,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Population runs after the query, using the same relation loaders as `em.populate`.
    * This method is not batched: these are custom queries, too unique to batch.
    */
-  public query<R>(q: Subquery<R, any>): Promise<R[]>;
+  public query<R>(q: QueryTable<R, any>): Promise<R[]>;
   public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
   public query<T extends Entity, const H extends LoadHint<T>>(
     q: EntityQuery<T>,
@@ -589,7 +589,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#assertFindAllowed("query");
     const em = this;
     return (async function query() {
-      const plan = parseUserQuery(q);
+      const plan = parseRootQuery(q);
       if (options?.populate && plan.output.kind !== "entity") {
         fail("em.query populate requires an entity selection");
       }
@@ -611,7 +611,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public execute<const M extends MutationInput>(
     statement: M & CheckMutation<M>,
   ): Promise<ExecuteResult<MutationRow<M>>>;
-  public execute<R>(statement: Subquery<R, any>): Promise<ExecuteResult<R>>;
+  public execute<R>(statement: QueryTable<R, any>): Promise<ExecuteResult<R>>;
   public execute<T extends Entity>(statement: EntityQuery<T>): Promise<ExecuteResult<T>>;
   public execute<const Q extends SetQuery<readonly SetOperand[]>>(
     statement: Q & CheckSetQuery<Q>,

@@ -37,11 +37,10 @@ import {
   isReadQueryValue,
   parseNestedQuery,
   parseUserQuery,
+  prependCtes,
   projectionToSql,
-  pruneCtes,
   registerCtes,
   subqueryBrand,
-  withFragment,
 } from "src/queries/sql/query.ts";
 import {
   type TableFor,
@@ -368,15 +367,10 @@ export function parseStatement(arg: unknown): Plan | undefined {
     sql += ` RETURNING ${returning.selects.map((select) => select.sql).join(", ")}`;
     for (const select of returning.selects) bindings.push(...select.bindings);
   }
-  const keptCtes = pruneCtes(ctes, new Set(refs));
-  if (keptCtes.length > 0) {
-    const clause = withFragment(keptCtes);
-    sql = clause.sql + sql;
-    bindings.unshift(...clause.bindings);
-  }
+  const withCtes = prependCtes(ctes, new Set(refs), sql, bindings);
   return {
-    sql,
-    bindings,
+    sql: withCtes.sql,
+    bindings: withCtes.bindings,
     outerRefs: [],
     output: returning?.output ?? { kind: "pojo", columns: [] },
     decodeRows: returning?.decodeRows ?? (() => []),

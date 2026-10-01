@@ -904,7 +904,7 @@ describe("em.query / sets", () => {
       `);
     });
 
-    it("resolves a nested multi-column projection once per output traversal", () => {
+    it("resolves a nested multi-column projection only once", () => {
       // Given an Author projection with eight independent named columns
       const a = table(Author);
       // And a projection proxy that counts output enumeration without changing its columns
@@ -930,11 +930,9 @@ describe("em.query / sets", () => {
       // And six ordinary wrappers that select all columns of their source
       let names = query({ from: a, select });
       for (let i = 0; i < 6; i++) names = query({ from: names, select: names });
-      // And enumeration isolated from constructing those wrappers
-      enumerations = 0;
       // When resolving one more wrapper's output metadata
       query({ from: names, select: names });
-      // Then the base projection is visited once, not once per column at every nesting level
+      // Then the base projection is visited once in total, not per column, per nesting level, or per read
       expect(enumerations).toBe(1);
     });
 

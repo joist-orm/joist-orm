@@ -1094,6 +1094,7 @@ export interface QueryOutput {
 /** The runtime identity of a `query(...)` value; `Ctx.aliasFor` keys on it, like a table's `TableMgmt`. */
 export class SubqueryHandle {
   #q: AnyReadQuery;
+  #output: QueryOutput | undefined;
 
   constructor(
     q: AnyReadQuery,
@@ -1107,13 +1108,18 @@ export class SubqueryHandle {
   }
 
   /**
-   * Gives a recursive CTE its finished body. `recursiveQuery` starts the handle on its base term, so
-   * the step term can read the CTE's columns while the body that will hold that step is still being
-   * built. The base term supplies the CTE's columns either way, PostgreSQL's rule for a recursive WITH.
+   * Gives a recursive CTE its finished body.
+   *
+   * `recursiveQuery(name, base, step)` cannot hand us the real body up front: it has to call `step` to
+   * get it, and `step` needs this handle first, because the recursive half of the query references the
+   * CTE's own columns. So the handle starts out holding `base` alone, and the real body, `base UNION
+   * step`, arrives here afterwards. Either way PostgreSQL takes the CTE's column names from `base`.
    */
   setBody(q: AnyReadQuery): void {
     if (!this.recursive) fail("Only a recursive CTE replaces its body");
     this.#q = q;
+    // `base UNION step` can project columns `base` alone did not, so the cached shape is now wrong.
+    this.#output = undefined;
   }
 
   get name(): string | undefined {
@@ -1135,9 +1141,21 @@ export class SubqueryHandle {
     );
   }
 
-  /** Resolve output metadata without parsing SQL or caching aliases from an enclosing query. */
+  /**
+   * The output columns, in order, with the codec for each; worked out without generating any SQL.
+   *
+   * Cached, because the answer is expensive to work out and gets asked for a lot:
+   *
+   * - `queryOutput` re-checks the whole query, converts a `join: { books: ... }` relationship tree
+   *   back into a flat list of joins, and repeats all of that for every operand of a set query.
+   * - A `query(...)` value has no real properties. `bookStats.n` runs a `Proxy` get that builds a new
+   *   column expression, and building one needs this method's answer to find `n`. So selecting two of
+   *   a value's columns asked for the whole shape twice, before parsing then asked a third time.
+   *
+   * `setBody` is the only thing that changes the shape, so it is the only thing that clears this.
+   */
   output(): QueryOutput {
-    return queryOutput(this.q);
+    return (this.#output ??= queryOutput(this.q));
   }
 
   column(key: string): SubqueryColumnExpr {

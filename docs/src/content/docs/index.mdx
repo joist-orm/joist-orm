@@ -32,6 +32,63 @@ hero:
       ```
     </div>
   </section>
+  <section aria-label="Schema-driven code generation">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Domain modeling</span>
+      <h3>Schema-driven codegen</h3>
+      <p>Joist generates fields and relations like `hasOne`, `hasMany`, etc. from your schema. Your entity files stay clean & focused on business logic, not boilerplate.</p>
+      <a href="/goals/code-generation/">Explore code generation →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      export class Author extends AuthorCodegen {
+        // Getters & setters are hidden in the base class
+      }
+      ```
+    </div>
+  </section>
+  <section aria-label="Load-safe relations">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Type safety</span>
+      <h3>Loaded types</h3>
+      <p>Preload a relation and TypeScript tracks in the type system that it is safe to access synchronously. Never get runtime "relation was not loaded" errors.</p>
+      <a href="/goals/load-safe-relations/">Explore load-safe relations →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      // Becomes a `Loaded<Author, { books: "reviews" }>` type
+      const author = await em.load(Author, "a:1", { books: "reviews" });
+      for (const book of author.books.get) {
+        console.log(book.reviews.get.length);
+      }
+
+      // Compile error on `.get`, b/c we haven't loaded `publisher`
+      console.log(author.publisher.get);
+      // Now it's valid
+      const loaded = await author.populate("publisher");
+      console.log(loaded.publisher.get);
+      ```
+    </div>
+  </section>
+  <section aria-label="Batched writes">
+    <div class="feature-preview__copy">
+      <span class="feature-preview__eyebrow">Performance</span>
+      <h3>Efficient writes</h3>
+      <p>Make changes naturally. Joist batches inserts and updates when you flush.</p>
+      <a href="/goals/performance/">Explore performance →</a>
+    </div>
+    <div class="feature-preview__code">
+      ```ts
+      // Change 100 authors and 100 books
+      for (let i = 0; i < 100; i++) {
+        authors[i].firstName = `Ada ${i}`;
+        books[i].title = `Joist in Practice v${i}`;
+      }
+      // Issues 2 SQL queries, 1 `UPDATE authors` and 1 `UPDATE books`
+      await em.flush();
+      ```
+    </div>
+  </section>
   <section aria-label="Reactive validation rules">
     <div class="feature-preview__copy">
       <span class="feature-preview__eyebrow">Business logic</span>
@@ -43,12 +100,11 @@ hero:
     <div class="feature-preview__code">
       ```ts
       // Declared in `Author.ts`, enforced for all writes through `em.flush()`
+      // Watch for changes to books' titles and author's first name
       authorConfig.addRule(
-        // Watch for changes to books' titles and author's first name
         { books: "title", firstName: {} },
         (a) => {
-          const { books } = withLoaded(a);
-          if (books.some((b) => b.title === a.firstName)) {
+          if (a.books.get.some((b) => b.title === a.firstName)) {
             return "A book cannot share its author's name";
           }
         },
@@ -66,80 +122,34 @@ hero:
     <div class="feature-preview__code">
       ```ts
       class Author extends AuthorCodegen {
+        // Write arbitrary business logic
         readonly numberOfBooks: ReactiveField<Author, number> =
           hasReactiveField("books", (author) => {
-            // Write arbitrary business logic
             return author.books.get.length;
           })
       }
-      ```
-    </div>
-  </section>
-  <section aria-label="Schema-driven code generation">
-    <div class="feature-preview__copy">
-      <span class="feature-preview__eyebrow">Domain modeling</span>
-      <h3>Schema-driven codegen</h3>
-      <p>Joist generates typed fields and relations. Your entity stays focused on business logic.</p>
-      <a href="/goals/code-generation/">Explore code generation →</a>
-    </div>
-    <div class="feature-preview__code">
-      ```ts
-      export class Author extends AuthorCodegen {
-        // Getters & setters are hidden in the base class
-      }
-      ```
-    </div>
-  </section>
-  <section aria-label="Load-safe relations">
-    <div class="feature-preview__copy">
-      <span class="feature-preview__eyebrow">Type safety</span>
-      <h3>Loaded types</h3>
-      <p>Preload a relation and TypeScript knows it is safe to access synchronously.</p>
-      <a href="/goals/load-safe-relations/">Explore load-safe relations →</a>
-    </div>
-    <div class="feature-preview__code">
-      ```ts
-      const author = await em.load(Author, "a:1", {
-        books: "reviews",
-      });
-      for (const book of author.books.get) {
-        console.log(book.reviews.get.length);
-      }
+
+      // `flush` knows to automatically recalc `author.numberOfBooks`
+      const b = em.create(Book, { author });
+      await em.flush();
       ```
     </div>
   </section>
   <section aria-label="Test factories">
     <div class="feature-preview__copy">
       <span class="feature-preview__eyebrow">Testing</span>
-      <h3>Valid test data, fast</h3>
-      <p>Build an entity graph in one call; factories fill in the required details for you.</p>
+      <h3>Test Factories</h3>
+      <p>Build an entity graph in one call; built-in factories fill in the required details for you.</p>
       <a href="/testing/test-factories/">Explore test factories →</a>
     </div>
     <div class="feature-preview__code">
       ```ts
-      const author = newAuthor(em, {
-        books: [
-          { title: "First book" },
-          { title: "Second book" },
-        ],
-      });
-      ```
-    </div>
-  </section>
-  <section aria-label="Batched writes">
-    <div class="feature-preview__copy">
-      <span class="feature-preview__eyebrow">Performance</span>
-      <h3>Efficient writes</h3>
-      <p>Make changes naturally. Joist batches inserts and updates when you flush.</p>
-      <a href="/goals/performance/">Explore performance →</a>
-    </div>
-    <div class="feature-preview__code">
-      ```ts
-      author.firstName = "Ada";
-      book.title = "Joist in Practice";
-
+      // Given an author with two books
+      const author = newAuthor(em, { books: [{}, {}] });
+      // When we flush
       await em.flush();
-      // Joist batches the pending SQL writes.
+      // Then the number of books is correct
+      expect(author.numberOfBooks.get).toBe(2);
       ```
     </div>
   </section>
@@ -147,16 +157,15 @@ hero:
     <div class="feature-preview__copy">
       <span class="feature-preview__eyebrow">Testing</span>
       <h3>Fast database resets</h3>
-      <p>Start each test with a clean database in a single SQL statement.</p>
+      <p>Start each test with a clean database in a single SQL statement. Optimized for large, 100s of tables schemas.</p>
       <a href="/testing/fast-database-resets/">Explore database resets →</a>
     </div>
     <div class="feature-preview__code">
       ```ts
       beforeEach(async () => {
+        // 1 SQL call resets all tables & sequences
         await knex.select(knex.raw("flush_database()"));
       });
-
-      // Tables and sequence IDs are reset for the next test.
       ```
     </div>
   </section>

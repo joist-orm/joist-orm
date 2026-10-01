@@ -30,6 +30,7 @@ import {
   type SetQuery,
   type Subquery,
   type WithInput,
+  checkPojoKeys,
   conditionToSql,
   entityQueryBrand,
   injectedConditions,
@@ -226,7 +227,7 @@ export function parseStatement(arg: unknown): Plan | undefined {
           "with",
           ...(operation === "update" ? ["set"] : []),
         ];
-  checkPojo(statement, allowed, `SQL ${operation}`);
+  checkPojoKeys(statement, allowed, `SQL ${operation}`);
   const target = mutationTarget(statement[operation]);
   const { meta } = target;
   if (meta) {
@@ -713,7 +714,7 @@ function assignments(target: MutationTarget, value: unknown, operation: "insert"
     fail(`${operation} assignments must be a field POJO`);
   const entries = Object.entries(value);
   for (const [key] of entries) writableField(target, key, operation);
-  checkPojo(value, Object.keys(target.columns), `${operation} assignments`);
+  checkPojoKeys(value, Object.keys(target.columns), `${operation} assignments`);
   const defined = entries.filter((entry) => entry[1] !== undefined);
   if (!defined.length) fail(`${operation} requires at least one defined field; empty rows/sets are not DEFAULT VALUES`);
   return defined;
@@ -774,15 +775,4 @@ function mutationCondition(value: unknown, ctx: Ctx): SqlFragment | undefined {
   if (isExpr(value)) return asNode(value).toSql(ctx);
   if (Array.isArray(value)) return conditionToSql({ and: value }, ctx, true);
   return conditionToSql(value as SqlCondition | undefined, ctx, true);
-}
-
-/** Only own enumerable POJO clauses count as input or explicit full-table consent. */
-function checkPojo(value: object, allowed: readonly PropertyKey[], description: string): void {
-  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
-    fail(`${description} must be a plain POJO`);
-  for (const key of Reflect.ownKeys(value)) {
-    if (!allowed.includes(key)) fail(`${description} does not support '${String(key)}'`);
-    if (typeof key === "string" && !Object.prototype.propertyIsEnumerable.call(value, key))
-      fail(`${description} requires enumerable fields`);
-  }
 }

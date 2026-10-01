@@ -2315,7 +2315,7 @@ function checkCondition(value: unknown): void {
   if ("and" in condition || "or" in condition) {
     if ("and" in condition === "or" in condition) fail("Query conditions require exactly one and/or group");
     const key = "and" in condition ? "and" : "or";
-    checkConditionKeys(condition, [key, "pruneIfUndefined"], "Query condition group");
+    checkPojoKeys(condition, [key, "pruneIfUndefined"], "Query condition group");
     if (!Array.isArray(condition[key])) fail("Query condition groups require an array");
     if (
       condition.pruneIfUndefined !== undefined &&
@@ -2326,13 +2326,13 @@ function checkCondition(value: unknown): void {
     for (const child of condition[key]) checkCondition(child);
   } else if ("exists" in condition || "notExists" in condition) {
     const key = "exists" in condition ? "exists" : "notExists";
-    checkConditionKeys(condition, [key], "Query existence condition");
+    checkPojoKeys(condition, [key], "Query existence condition");
     const query = condition[key];
     if (query === undefined) return;
     if (!(query instanceof SubqueryExpr) && !isReadQueryValue(query)) fail(`Query ${key} requires a query(...) value`);
     toQuery(query);
   } else if (condition.kind === "raw") {
-    checkConditionKeys(
+    checkPojoKeys(
       condition,
       ["kind", "aliases", "condition", "bindings", "pruneable", deferredSym, predicateBrand],
       "Query raw condition",
@@ -2346,7 +2346,7 @@ function checkCondition(value: unknown): void {
     )
       fail("Malformed query raw condition");
   } else if (condition.kind === "column") {
-    checkConditionKeys(
+    checkPojoKeys(
       condition,
       ["kind", "alias", "column", "dbType", "cond", "pruneable", predicateBrand],
       "Query column condition",
@@ -2360,7 +2360,7 @@ function checkCondition(value: unknown): void {
       fail("Malformed query column condition");
     const filter = condition.cond as Record<string, unknown> | undefined;
     if (!filter) fail("Malformed query column filter");
-    checkConditionKeys(filter, ["kind", "value"], "Query column filter");
+    checkPojoKeys(filter, ["kind", "value"], "Query column filter");
     const unary = filter.kind === "is-null" || filter.kind === "not-null";
     if (
       !unary &&
@@ -2399,8 +2399,18 @@ function checkCondition(value: unknown): void {
   }
 }
 
-/** Conditions use own enumerable POJO fields, with predicate-brand and SQL-resolver symbols allowed. */
-function checkConditionKeys(value: object, allowed: readonly PropertyKey[], description: string): void {
+/**
+ * Accepts only own enumerable POJO fields, so nothing a caller supplied can be silently ignored: the
+ * compilers read these POJOs back with `Object.entries`/`Object.keys`, which skip inherited,
+ * non-enumerable, and symbol keys, so a field hidden behind one of those would never reach the SQL.
+ * I.e. an UPDATE whose `set` carries `title` on a prototype would leave `title` unchanged and still
+ * report success.
+ *
+ * Conditions, mutation clauses, and assignment POJOs all share this rule; `allowed` may include symbol
+ * keys, i.e. a condition's predicate brand and SQL resolver. Read-query clauses instead use
+ * `validateQueryKeys`, which walks the prototype chain and reports mutation clauses by name.
+ */
+export function checkPojoKeys(value: object, allowed: readonly PropertyKey[], description: string): void {
   if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
     fail(`${description} must be a plain POJO`);
   for (const key of Reflect.ownKeys(value)) {

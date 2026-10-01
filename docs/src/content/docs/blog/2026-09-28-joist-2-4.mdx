@@ -9,7 +9,7 @@ excerpt: Joist 2.4 adds em.query and em.execute for the SQL-shaped queries and b
 
 import QueryPreview from "../../../components/QueryPreview.astro";
 
-Joist, a full-fledged, entity-based ORM for TypeScript, release [2.4](https://github.com/joist-orm/joist-orm/commit/5dc88892e78974b3441ee38b78bf314c4a4f7a29) is out!
+Joist (an entity-based ORM for TypeScript) release [2.4](https://github.com/joist-orm/joist-orm/commit/5dc88892e78974b3441ee38b78bf314c4a4f7a29) is out!
 
 The big addition is that Joist _finally_ 😅 supports arbitrary low-level SQL statements with a new `em.query` API for `SELECT`s and `em.execute` for `INSERT`s, `UPDATE`s, and `DELETE`s. Here's a quick preview of what `em.query` looks like:
 
@@ -244,7 +244,7 @@ The higher your latency to the database (i.e. a serverless function talking to a
 
 2.4 also has a few more rounds of allocation & GC work in the hot paths ([#1942](https://github.com/joist-orm/joist-orm/pull/1942), [#1943](https://github.com/joist-orm/joist-orm/pull/1943)) to get as many small perf wins as possible. 🚀
 
-## Soft Deletes, Aligned
+## Soft Deletes Alignment
 
 Joist's soft-delete support is purposefully opinionated: soft-deleted rows _in collections_ are ignored by default, and business logic has to explicitly opt in to seeing them.
 

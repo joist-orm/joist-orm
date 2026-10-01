@@ -172,6 +172,7 @@ describe("generateGraphqlSchemaFiles", () => {
   });
 
   it("generates filter fields", async () => {
+    // Given authors with primitive, enum, publisher, and polymorphic favorite fields
     const entities: EntityDbMetadata[] = [
       newEntityMetadata("Publisher"),
       newEntityMetadata("Book"),
@@ -186,8 +187,11 @@ describe("generateGraphqlSchemaFiles", () => {
         polymorphics: [newPolymorphicField("favorite", ["Book", "Publisher"])],
       }),
     ];
+    // And no author schema has been scaffolded
     const fs = newFs({});
+    // When the author schema is scaffolded
     await generate(fs, entities);
+    // Then filters accept enum codes independently of the output detail fields
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
      "extend type Query {
        author(id: ID!): Author!
@@ -214,7 +218,8 @@ describe("generateGraphqlSchemaFiles", () => {
        firstName: String!
        nickNames: [String!]!
        numberOfAtoms: BigInt!
-       color: ColorDetail!
+       color: Color!
+       colorDetail: ColorDetail!
        publisher: Publisher!
        favorite: FavoriteParent
      }
@@ -780,17 +785,17 @@ describe("generateGraphqlSchemaFiles", () => {
   });
 
   it("adds enum details", async () => {
-    // Given an author
+    // Given an author with a required color enum
     const entities: EntityDbMetadata[] = [
       newEntityMetadata("Author", {
-        // With an enum array field
         enums: [newEnumField("color")],
       }),
     ];
-    // When ran
+    // And no author schema has been scaffolded
     const fs = newFs({});
+    // When the author schema is scaffolded
     await generate(fs, entities);
-    // Then the input has both types of fields as appropriate
+    // Then the author exposes the color code and details while inputs use only the code
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
      "extend type Query {
        author(id: ID!): Author!
@@ -814,7 +819,8 @@ describe("generateGraphqlSchemaFiles", () => {
 
      type Author {
        id: ID!
-       color: ColorDetail!
+       color: Color!
+       colorDetail: ColorDetail!
      }
 
      input AuthorFilter {

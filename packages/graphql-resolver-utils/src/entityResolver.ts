@@ -4,6 +4,7 @@ import {
   type Entity,
   type EntityMetadata,
   type Field,
+  type FieldsOf,
   type IdOf,
   type LoadHint,
   type ManyToManyField,
@@ -73,6 +74,16 @@ export type EntityResolver<T extends Entity> = {
                     : T[P] extends () => infer V
                       ? Resolver<T, Record<string, any>, V>
                       : Resolver<T, Record<string, any>, T[P]>;
+} & {
+  [
+    P in keyof FieldsOf<T> & keyof T & string as FieldsOf<T>[P] extends { kind: "enum"; type: string }
+      ? FieldsOf<T>[P] extends { native: true }
+        ? never
+        : `${P}Detail` extends keyof T
+          ? never
+          : `${P}Detail`
+      : never
+  ]: EntityResolver<T>[P];
 };
 
 /**
@@ -221,6 +232,16 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     ...ormResolvers,
     ...Object.fromEntries(customResolvers),
   } as any;
+
+  for (const field of Object.values(entityMetadata.allFields)) {
+    if (field.kind === "enum" && !field.serde.columns[0].isArray) {
+      const detailName = `${field.fieldName}Detail`;
+      // Existing entity fields and custom properties take precedence over generated detail fields.
+      if (!(detailName in resolvers)) {
+        resolvers[detailName] = resolvers[field.fieldName];
+      }
+    }
+  }
 
   if (aliases) {
     Object.entries(aliases).forEach(([alias, field]) => {

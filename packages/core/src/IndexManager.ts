@@ -205,7 +205,7 @@ class FieldIndex {
     }
     // Treat null and undefined as equivalent for unset relations
     if (value === null) value = undefined;
-    const arrayKey = this.arrayKey(value);
+    const arrayKey = this.maybeArrayKey(value);
     if (arrayKey !== undefined) return this.#arrayToEntities.get(arrayKey);
     return this.#valueToEntities.get(value);
   }
@@ -226,7 +226,7 @@ class FieldIndex {
   }
 
   private doAdd(value: any, entity: Entity): void {
-    const arrayKey = this.arrayKey(value);
+    const arrayKey = this.maybeArrayKey(value);
     const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
     const key = arrayKey ?? value;
     const set = index.get(key) ?? new Set();
@@ -235,7 +235,7 @@ class FieldIndex {
   }
 
   private doRemove(value: any, entity: Entity): void {
-    const arrayKey = this.arrayKey(value);
+    const arrayKey = this.maybeArrayKey(value);
     const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
     const key = arrayKey ?? value;
     const set = index.get(key);
@@ -248,7 +248,7 @@ class FieldIndex {
   }
 
   /** Preserves array order and element types, including bigint values that JSON cannot encode. */
-  private arrayKey(value: unknown): string | undefined {
+  private maybeArrayKey(value: unknown): string | undefined {
     return this.isArray && Array.isArray(value) ? fastWhereFilterHash(value) : undefined;
   }
 }

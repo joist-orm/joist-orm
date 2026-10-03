@@ -206,8 +206,11 @@ class FieldIndex {
     // Treat null and undefined as equivalent for unset relations
     if (value === null) value = undefined;
     const arrayKey = this.maybeArrayKey(value);
-    if (arrayKey !== undefined) return this.#arrayToEntities.get(arrayKey);
-    return this.#valueToEntities.get(value);
+    if (arrayKey !== undefined) {
+      return this.#arrayToEntities.get(arrayKey);
+    } else {
+      return this.#valueToEntities.get(value);
+    }
   }
 
   add(value: any, entity: Entity): void {
@@ -227,17 +230,35 @@ class FieldIndex {
 
   private doAdd(value: any, entity: Entity): void {
     const arrayKey = this.maybeArrayKey(value);
-    const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
-    const key = arrayKey ?? value;
+    let index: Map<FieldValue, Set<Entity>>;
+    let key: FieldValue;
+    if (arrayKey !== undefined) {
+      index = this.#arrayToEntities;
+      key = arrayKey;
+    } else {
+      index = this.#valueToEntities;
+      key = value;
+    }
+
     const set = index.get(key) ?? new Set();
-    if (set.size === 0) index.set(key, set);
+    if (set.size === 0) {
+      index.set(key, set);
+    }
     set.add(entity);
   }
 
   private doRemove(value: any, entity: Entity): void {
     const arrayKey = this.maybeArrayKey(value);
-    const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
-    const key = arrayKey ?? value;
+    let index: Map<FieldValue, Set<Entity>>;
+    let key: FieldValue;
+    if (arrayKey !== undefined) {
+      index = this.#arrayToEntities;
+      key = arrayKey;
+    } else {
+      index = this.#valueToEntities;
+      key = value;
+    }
+
     const set = index.get(key);
     if (set) {
       set.delete(entity);
@@ -249,7 +270,11 @@ class FieldIndex {
 
   /** Preserves array order and element types, including bigint values that JSON cannot encode. */
   private maybeArrayKey(value: unknown): string | undefined {
-    return this.isArray && Array.isArray(value) ? fastWhereFilterHash(value) : undefined;
+    if (this.isArray && Array.isArray(value)) {
+      return fastWhereFilterHash(value);
+    } else {
+      return undefined;
+    }
   }
 }
 

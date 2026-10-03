@@ -35,7 +35,7 @@ config.onTransition("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
 
 ## Declaring allowed changes
 
-`config.transitions(field, table)` maps each value to the values it may change to. A value that is missing from the table, or maps to `[]`, can never change.
+`config.transitions(field, table)` maps each value to the values it may change to. A value that is missing from the table, or maps to `[]`, is treated as a terminal value & cannot be changed.
 
 If a flush changes the field in a way the table doesn't list, `em.flush` fails with a validation error like `Cannot change status from Paid to Pending`.
 
@@ -43,15 +43,9 @@ Creating an entity is not a change, so a new entity may start with any value.
 
 ### Writing values
 
-Tables and `match`es accept three spellings of the same value:
+Tables and `match`es use the enum's accessors as plain strings, i.e. `"Paid"` for `AdvanceStatus.Paid`. Joist doesn't accept the codes, like `"PAID"`, or the enum members, like `AdvanceStatus.Paid`, so every table reads the same way. The values are type-checked, so a typo like `"Payed"` is a compile error.
 
-* The enum's accessor as a string, i.e. `"Paid"` for `AdvanceStatus.Paid`
-* The enum's code, i.e. `"PAID"`
-* The enum member itself, i.e. `AdvanceStatus.Paid`
-
-All three are type-checked, so a typo like `"Payed"` is a compile error.
-
-Accessor strings work because `joist-codegen` finds `config.transitions`, `config.guardTransition`, and `config.onTransition` calls in your entity files, the same way it finds `config.setDefault`. For those fields it adds the accessor names to the field's type. At runtime, Joist converts accessors to codes using the `enumType` that `metadata.ts` emits for every enum field.
+This works because `joist-codegen` finds `config.transitions`, `config.guardTransition`, and `config.onTransition` calls in your entity files, the same way it finds `config.setDefault`. For those fields it adds the accessor names to the field's type. At runtime, Joist converts accessors to codes using the `enumType` that `metadata.ts` emits for every enum field.
 
 ## Guarding changes
 

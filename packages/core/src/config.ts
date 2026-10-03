@@ -47,16 +47,15 @@ type AddReactionOpts = { runOnce?: boolean; name?: string };
 type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
 
 /**
- * The values that `transitions` tables and `match`es accept for an enum-ish field.
+ * The values that `transitions` tables and `match`es accept for an enum-ish field, i.e. `"Draft"` for
+ * `AuthorStatus.Draft`.
  *
- * Fields that use `transitions`, `guardTransition`, or `onTransition` accept the enum's accessors, i.e. `Draft`
- * for `AuthorStatus.Draft`, so tables don't repeat the enum name. Every field also accepts the codes,
- * i.e. `"DRAFT"`, and enum members, because a string enum member is assignable to its own code.
+ * We only accept the enum's accessors, not its codes or members, so every table reads the same way.
  */
-type TransitionValue<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends EntityField
-  ?
-      | (FieldsOf<T>[K] extends { accessors: infer A extends string } ? A : never)
-      | `${NonNullable<FieldsOf<T>[K]["type"]> & (string | number)}`
+type TransitionValue<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends {
+  accessors: infer A extends string;
+}
+  ? A
   : never;
 
 export const constraintNameToValidationError: Record<string, string> = {};
@@ -328,10 +327,9 @@ export class ConfigApi<T extends Entity, C> {
   /**
    * Declares which changes of the enum `fieldName` are allowed, i.e. `{ Draft: ["Open"], Open: ["Closed"] }`.
    *
-   * Keys and values are the enum's accessors (found by codegen's `scanEntityFiles`), its
-   * codes, or its members, i.e. `Draft`, `"DRAFT"`, or `AuthorStatus.Draft`.
+   * Keys and values are the enum's accessors as strings, i.e. `"Draft"` for `AuthorStatus.Draft`.
    *
-   * A value that is missing from the table, or maps to `[]`, can't change at all. Creating an entity
+   * A value that is missing from the table, or maps to `[]`, is treated as a terminal value & cannot be changed. Creating an entity
    * is not a change, so a new entity may start with any value.
    *
    * Each change is checked as `onTransition` sees it, so a flush may chain allowed changes, i.e.
@@ -810,11 +808,15 @@ async function isTransitionRejected<T extends Entity>(
   return results.some((result) => (Array.isArray(result) ? result.length > 0 : !!result));
 }
 
-/** Converts enum accessors, i.e. `Rejected`, to codes, i.e. `REJECTED`; codes and enum members pass through. */
+/** Converts an enum accessor, i.e. `Rejected`, to its code, i.e. `REJECTED`, and fails on anything else. */
 function toCode(meta: EntityMetadata, fieldName: string, value: unknown): unknown {
   const field = meta.allFields[fieldName];
-  const accessors = field?.kind === "enum" ? field.enumType : undefined;
-  return accessors && typeof value === "string" && Object.hasOwn(accessors, value) ? accessors[value] : value;
+  if (field?.kind !== "enum") fail(`${meta.type}.${fieldName} is not an enum field, so it can't have transitions`);
+  // Only accessors are accepted, even from untyped callers, so every table reads the same way
+  if (typeof value !== "string" || !Object.hasOwn(field.enumType, value)) {
+    fail(`Unknown ${meta.type}.${fieldName} accessor ${String(value)}, i.e. use "Draft" for AuthorStatus.Draft`);
+  }
+  return field.enumType[value];
 }
 
 function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unknown {

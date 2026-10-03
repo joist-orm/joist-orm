@@ -13,7 +13,7 @@ export class BookAdvance extends BookAdvanceCodegen {
   };
 }
 
-// Tables and matches take the enum's accessors as plain strings, or its codes or members
+// Tables and matches take the enum's accessors as plain strings
 config.transitions("status", {
   Pending: ["Signed"],
   Signed: ["Paid", "Pending"],
@@ -29,12 +29,12 @@ config.onTransition("status", {}, (ba) => {
   ba.transientFields.transitions.push(ba.status);
 });
 
-config.onTransition("status", { from: AdvanceStatus.Pending, to: AdvanceStatus.Signed }, "book", (ba) => {
+config.onTransition("status", { from: "Pending", to: "Signed" }, "book", (ba) => {
   ba.transientFields.signedTitle = ba.book.get.title;
   if (ba.transientFields.payWhenSigned) ba.status = AdvanceStatus.Paid;
 });
 
 // Only counts paying an existing advance, to test `onCreate: false`
-config.onTransition("status", { to: AdvanceStatus.Paid, onCreate: false, phase: "commit" }, (ba) => {
+config.onTransition("status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
   ba.transientFields.committedPaid++;
 });

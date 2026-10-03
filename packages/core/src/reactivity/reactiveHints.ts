@@ -592,7 +592,8 @@ export function convertToLoadHint<T extends Entity>(
           break;
         case "primitive":
         case "enum":
-          if (field.derived === "async") {
+          // Lazy primitives are excluded from the default SELECT, so rules need them loaded before using `.get`.
+          if (field.derived === "async" || (field.kind === "primitive" && field.lazy)) {
             mergeNormalizedHints(loadHint, { [key]: {} });
           }
           continue;

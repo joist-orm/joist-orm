@@ -262,7 +262,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
         const field = uniqueFields.find((f) => f.fieldName === name);
         if (!field) {
           logger.warn(`Found uniqueBy for non-existent or non-queryable field ${entityName}.${name}`);
-        } else if (field.kind === "primitive" && (field.derived || field.isArray || field.customSerde)) {
+        } else if (field.kind === "primitive" && (field.derived || field.customSerde)) {
           logger.warn(`Found uniqueBy for unsupported primitive field ${entityName}.${name}`);
         } else if (field.kind === "enum" && (field.derived || field.isArray)) {
           logger.warn(`Found uniqueBy for unsupported enum field ${entityName}.${name}`);

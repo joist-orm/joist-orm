@@ -160,17 +160,21 @@ describe("AuthorStat", () => {
     const em = newEntityManager();
 
     // When the shorter days array identifies a statistic to find or create.
-    await em.findOrCreate(AuthorStat, { name: "weekly", days: [1, 2] }, {
-      smallint: short.smallint,
-      integer: short.integer,
-      bigint: short.bigint,
-      decimal: short.decimal,
-      real: short.real,
-      smallserial: short.smallserial,
-      serial: short.serial,
-      bigserial: short.bigserial,
-      doublePrecision: short.doublePrecision,
-    });
+    await em.findOrCreate(
+      AuthorStat,
+      { name: "weekly", days: [1, 2] },
+      {
+        smallint: short.smallint,
+        integer: short.integer,
+        bigint: short.bigint,
+        decimal: short.decimal,
+        real: short.real,
+        smallserial: short.smallserial,
+        serial: short.serial,
+        bigserial: short.bigserial,
+        doublePrecision: short.doublePrecision,
+      },
+    );
     await em.flush();
 
     // Then only the statistic with the exact days array is resurrected.
@@ -203,17 +207,21 @@ describe("AuthorStat", () => {
     const stat = newAuthorStat(em, { name: "weekly", days: [1, 2] });
 
     // When a separate array identifies the statistic to find or create.
-    const found = await em.findOrCreate(AuthorStat, { name: "weekly", days: [1, 2] }, {
-      smallint: stat.smallint,
-      integer: stat.integer,
-      bigint: stat.bigint,
-      decimal: stat.decimal,
-      real: stat.real,
-      smallserial: stat.smallserial,
-      serial: stat.serial,
-      bigserial: stat.bigserial,
-      doublePrecision: stat.doublePrecision,
-    });
+    const found = await em.findOrCreate(
+      AuthorStat,
+      { name: "weekly", days: [1, 2] },
+      {
+        smallint: stat.smallint,
+        integer: stat.integer,
+        bigint: stat.bigint,
+        decimal: stat.decimal,
+        real: stat.real,
+        smallserial: stat.smallserial,
+        serial: stat.serial,
+        bigserial: stat.bigserial,
+        doublePrecision: stat.doublePrecision,
+      },
+    );
 
     // Then array order and contents identify the original statistic.
     expect(found).toBe(stat);

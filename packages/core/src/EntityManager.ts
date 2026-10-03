@@ -139,6 +139,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
+import { clearTransitionState } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -2241,6 +2242,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.clearSuppressedTypeErrors();
       this.#fl.releaseLock();
       resetFactoryCreated();
+      clearTransitionState(this);
     }
   }
 

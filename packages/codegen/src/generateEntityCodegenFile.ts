@@ -575,10 +575,13 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
     )}, derived: ${derived !== false}; };`;
   });
   const enums = meta.enums.map((field) => {
-    const { fieldName, enumType, notNull, isArray } = field;
+    const { fieldName, enumType, notNull, isArray, hasTransitions } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; };`;
+    } else if (hasTransitions) {
+      // Lets `config.transitions` tables use accessor names, i.e. `Draft` instead of `AuthorStatus.Draft`
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; accessors: keyof typeof ${enumType}; };`;
     } else {
       return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; };`;
     }
@@ -850,7 +853,7 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
       return code`${withName(fieldName)}?: ${fieldType}${maybeUnionNull(notNull)};`;
     });
   const enums = meta.enums
-    .filter((f) => f.derived === "async")
+    .filter((f) => f.derived === "async" || f.hasTransitions)
     .map((field) => {
       const { fieldName, enumType, notNull, isArray } = field;
       if (isArray) {

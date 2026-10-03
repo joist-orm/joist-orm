@@ -284,6 +284,10 @@ export function newTestInstance<T extends Entity>(
         if (realField && "derived" in realField && realField.derived === "async") {
           return [realName, new FactoryInitialValue(optValue)];
         }
+        // Fields with `config.transitions`/`onTransition`s accept a trusted created value, like ReactiveFields
+        if (realField?.kind === "enum" && meta.config.__data.transitionFields.has(realName)) {
+          return [realName, new FactoryInitialValue(optValue)];
+        }
       }
       throw new Error(`Unknown field ${fieldName}`);
     }

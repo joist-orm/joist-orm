@@ -21,6 +21,7 @@ import {
   isReactiveGetter,
 } from "src/relations/index.ts";
 import { ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
+import { seedTransition } from "src/transitions.ts";
 import { type OptsOf } from "src/typeMap.ts";
 import { fail } from "src/utils.ts";
 
@@ -161,6 +162,7 @@ export * from "src/RowData.ts";
 export { type JoinRowTodo, Todo } from "src/flush/Todo.ts";
 export * from "src/changes.ts";
 export { ConfigApi, type EntityHook, resetBootFlag } from "src/config.ts";
+export { type TransitionMatch, type TransitionTable } from "src/transitions.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,
@@ -402,6 +404,10 @@ export function setOpt<T extends Entity>(
     } else {
       throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
     }
+  } else if (value instanceof FactoryInitialValue) {
+    // A factory's `withStatus`-style opt: trust the created value, so its `onTransition`s don't fire
+    (entity as any)[key] = value.value;
+    seedTransition(entity, key, value.value);
   } else {
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.

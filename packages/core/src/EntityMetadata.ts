@@ -161,6 +161,8 @@ export type EnumField = {
   required: boolean;
   derived: "sync" | "async" | false;
   enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
+  /** The enum object, i.e. `{ Draft: "DRAFT" }`. */
+  enumType: Record<string, unknown>;
   serde: FieldSerde;
   immutable: boolean;
   default?: "schema" | "config";

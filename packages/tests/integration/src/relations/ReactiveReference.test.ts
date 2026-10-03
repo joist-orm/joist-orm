@@ -293,6 +293,7 @@ describe("ReactiveReference", () => {
        "    [ b:1 ] -> [ b:1 ]↩",
        "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:500) to validate↩",
        "    [ b:1 ] -> [ a:1 ]↩",
+       "  Walked 1 Book.advances paths, found 0 BookAdvance.guardTransition(BookAdvance.ts:23) to validate↩",
        "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:86) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
        "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:211) to validate↩",

@@ -14,8 +14,10 @@ import {
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
 const regex = /config\.setDefault\([\s\n]*["'](\w+)["']/g;
+// Any of the transition methods can be used on its own, so each one marks the field
+const transitionsRegex = /config\.(?:transitions|guardTransition|onTransition)\([\s\n]*["'](\w+)["']/g;
 
-/** Scans the entity files themselves for usage hints (like `setDefault` calls) to drive our codegen output. */
+/** Scans the entity files themselves for usage hints (like `setDefault` or `transitions` calls) to drive our codegen output. */
 export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
   await Promise.all(
     dbMeta.entities.map(async (entity) => {
@@ -27,6 +29,13 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
           const field = defaultableFields.find((f) => f.fieldName === match[1]);
           if (field) {
             field.hasConfigDefault = true;
+          }
+        }
+        // Transition fields get `withStatus` factory opts and accessor names, i.e. `Draft`
+        for (const match of tsCode.matchAll(transitionsRegex)) {
+          const field = defaultableFields.find((f) => f.fieldName === match[1]);
+          if (field?.kind === "enum") {
+            field.hasTransitions = true;
           }
         }
       } catch (e) {

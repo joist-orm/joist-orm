@@ -2719,9 +2719,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (!hasAnyKey(where)) {
       return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
-    // Field indexes use object identity, so array keys need the value-based matcher below.
-    const hasArrayIdentity = Object.keys(where).some((name) => meta.columns[name]?.isArray);
-    if (!hasArrayIdentity && this.#indexManager.shouldIndexType(entities.length)) {
+    if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities, where);
       // Build the final array in one pass, still filtering `instanceof cstr` to handle subtyping
       const result: T[] = [];

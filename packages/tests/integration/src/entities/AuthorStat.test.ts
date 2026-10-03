@@ -226,4 +226,44 @@ describe("AuthorStat", () => {
     // Then array order and contents identify the original statistic.
     expect(found).toBe(stat);
   });
+
+  it("updates indexed days when a statistic changes the days it covers", async () => {
+    // Given enough statistics to enable field indexing.
+    const em = newEntityManager();
+    for (let i = 0; i < 500; i++) {
+      newAuthorStat(em, { name: `stat${i}`, days: [i] });
+    }
+    // And the weekly statistic is indexed by its original days.
+    const stat = newAuthorStat(em, { name: "weekly", days: [1, 2] });
+    em.filterEntities(AuthorStat, { name: "weekly", days: [1, 2] });
+
+    // When the weekly statistic no longer covers any days.
+    stat.days = [];
+
+    // Then its original days no longer find it.
+    expect(em.filterEntities(AuthorStat, { name: "weekly", days: [1, 2] })).toEqual([]);
+
+    // When its new empty days array identifies the statistic.
+    const found = em.filterEntities(AuthorStat, { name: "weekly", days: [] });
+
+    // Then the updated statistic is found through its new index entry.
+    expect(found).toEqual([stat]);
+  });
+
+  it("indexes bigint samples by their exact values", async () => {
+    // Given enough statistics to enable field indexing.
+    const em = newEntityManager();
+    for (let i = 0; i < 500; i++) {
+      newAuthorStat(em, { bigintSamples: [BigInt(i)] });
+    }
+    // And two statistics have overlapping samples beyond JavaScript's safe integer range.
+    newAuthorStat(em, { bigintSamples: [9007199254740993n, 9007199254740994n] });
+    const stat = newAuthorStat(em, { bigintSamples: [9007199254740993n] });
+
+    // When a separate array identifies the statistic with the shorter samples array.
+    const found = em.filterEntities(AuthorStat, { bigintSamples: [9007199254740993n] });
+
+    // Then the index finds only the statistic with the exact bigint samples.
+    expect(found).toEqual([stat]);
+  });
 });

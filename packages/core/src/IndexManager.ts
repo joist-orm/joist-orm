@@ -1,3 +1,4 @@
+import { fastWhereFilterHash } from "src/dataloaders/fastWhereFilterHash.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityMetadata, type Field, getMetadata } from "src/EntityMetadata.ts";
 import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "src/relations/index.ts";
@@ -117,7 +118,7 @@ export class IndexManager {
       if (!field) continue;
       let entry = indexes.get(fieldName);
       if (!entry) {
-        entry = { field, index: new FieldIndex(), indexedCount: 0 };
+        entry = { field, index: new FieldIndex(meta.columns[fieldName]?.isArray ?? false), indexedCount: 0 };
         indexes.set(fieldName, entry);
       }
       for (const entity of entities) {
@@ -184,6 +185,10 @@ function getFieldValue(entity: Entity, fieldName: string, field: Field): any {
  */
 class FieldIndex {
   readonly #valueToEntities = new Map<FieldValue, Set<Entity>>();
+  // Keep serialized arrays separate so their keys cannot collide with scalar string values.
+  readonly #arrayToEntities = new Map<string, Set<Entity>>();
+
+  constructor(private readonly isArray: boolean) {}
 
   /** @return entities that have `value` as their current value for this field. */
   get(value: any): Set<Entity> | undefined {
@@ -200,6 +205,8 @@ class FieldIndex {
     }
     // Treat null and undefined as equivalent for unset relations
     if (value === null) value = undefined;
+    const arrayKey = this.arrayKey(value);
+    if (arrayKey !== undefined) return this.#arrayToEntities.get(arrayKey);
     return this.#valueToEntities.get(value);
   }
 
@@ -219,19 +226,30 @@ class FieldIndex {
   }
 
   private doAdd(value: any, entity: Entity): void {
-    const set = this.#valueToEntities.get(value) ?? new Set();
-    if (set.size === 0) this.#valueToEntities.set(value, set);
+    const arrayKey = this.arrayKey(value);
+    const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
+    const key = arrayKey ?? value;
+    const set = index.get(key) ?? new Set();
+    if (set.size === 0) index.set(key, set);
     set.add(entity);
   }
 
   private doRemove(value: any, entity: Entity): void {
-    const set = this.#valueToEntities.get(value);
+    const arrayKey = this.arrayKey(value);
+    const index = arrayKey === undefined ? this.#valueToEntities : this.#arrayToEntities;
+    const key = arrayKey ?? value;
+    const set = index.get(key);
     if (set) {
       set.delete(entity);
       if (set.size === 0) {
-        this.#valueToEntities.delete(value);
+        index.delete(key);
       }
     }
+  }
+
+  /** Preserves array order and element types, including bigint values that JSON cannot encode. */
+  private arrayKey(value: unknown): string | undefined {
+    return this.isArray && Array.isArray(value) ? fastWhereFilterHash(value) : undefined;
   }
 }
 

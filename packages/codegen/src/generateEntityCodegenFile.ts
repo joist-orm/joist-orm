@@ -580,7 +580,7 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; };`;
     } else if (hasTransitions) {
-      // Lets `config.transitions` tables use accessor names, i.e. `Draft` instead of `AuthorStatus.Draft`
+      // Lets transition tables and matches use accessor names, i.e. `Draft` instead of `AuthorStatus.Draft`
       return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; accessors: keyof typeof ${enumType}; };`;
     } else {
       return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; };`;

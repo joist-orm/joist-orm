@@ -49,7 +49,7 @@ type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => May
 /**
  * The values that `transitions` tables and `match`es accept for an enum-ish field.
  *
- * Fields with a `config.transitions` table accept the enum's accessors, i.e. `Draft`
+ * Fields that use `transitions`, `guardTransition`, or `onTransition` accept the enum's accessors, i.e. `Draft`
  * for `AuthorStatus.Draft`, so tables don't repeat the enum name. Every field also accepts the codes,
  * i.e. `"DRAFT"`, and enum members, because a string enum member is assignable to its own code.
  */

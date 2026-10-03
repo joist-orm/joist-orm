@@ -114,31 +114,31 @@ describe("AuthorStat", () => {
 
   it("resurrects a statistic by name and the exact days array on upsert", async () => {
     // Given two soft-deleted statistics with the same name and overlapping days.
-    const setup = newEntityManager();
-    const short = newAuthorStat(setup, { name: "weekly", days: [1, 2] });
-    const long = newAuthorStat(setup, { name: "weekly", days: [1, 2, 3] });
-    await setup.flush();
-    // And both statistics are soft-deleted.
-    short.deletedAt = jan1;
-    long.deletedAt = jan1;
-    await setup.flush();
     const em = newEntityManager();
+    const as1 = newAuthorStat(em, { name: "weekly", days: [1, 2] });
+    const as2 = newAuthorStat(em, { name: "weekly", days: [1, 2, 3] });
+    await em.flush();
+    // And both statistics are soft-deleted.
+    as1.deletedAt = jan1;
+    as2.deletedAt = jan1;
+    await em.flush();
+    const em2 = newEntityManager();
 
     // When the shorter days array identifies a statistic to upsert.
-    await em.upsert(AuthorStat, {
+    await em2.upsert(AuthorStat, {
       name: "weekly",
       days: [1, 2],
-      smallint: short.smallint,
-      integer: short.integer,
-      bigint: short.bigint,
-      decimal: short.decimal,
-      real: short.real,
-      smallserial: short.smallserial,
-      serial: short.serial,
-      bigserial: short.bigserial,
-      doublePrecision: short.doublePrecision,
+      smallint: as1.smallint,
+      integer: as1.integer,
+      bigint: as1.bigint,
+      decimal: as1.decimal,
+      real: as1.real,
+      smallserial: as1.smallserial,
+      serial: as1.serial,
+      bigserial: as1.bigserial,
+      doublePrecision: as1.doublePrecision,
     });
-    await em.flush();
+    await em2.flush();
 
     // Then only the statistic with the exact days array is resurrected.
     expect(await select("author_stats")).toMatchObject([
@@ -149,33 +149,33 @@ describe("AuthorStat", () => {
 
   it("resurrects a statistic by name and the exact days array on findOrCreate", async () => {
     // Given two soft-deleted statistics with the same name and overlapping days.
-    const setup = newEntityManager();
-    const short = newAuthorStat(setup, { name: "weekly", days: [1, 2] });
-    const long = newAuthorStat(setup, { name: "weekly", days: [1, 2, 3] });
-    await setup.flush();
-    // And both statistics are soft-deleted.
-    short.deletedAt = jan1;
-    long.deletedAt = jan1;
-    await setup.flush();
     const em = newEntityManager();
+    const as1 = newAuthorStat(em, { name: "weekly", days: [1, 2] });
+    const as2 = newAuthorStat(em, { name: "weekly", days: [1, 2, 3] });
+    await em.flush();
+    // And both statistics are soft-deleted.
+    as1.deletedAt = jan1;
+    as2.deletedAt = jan1;
+    await em.flush();
+    const em2 = newEntityManager();
 
     // When the shorter days array identifies a statistic to find or create.
-    await em.findOrCreate(
+    await em2.findOrCreate(
       AuthorStat,
       { name: "weekly", days: [1, 2] },
       {
-        smallint: short.smallint,
-        integer: short.integer,
-        bigint: short.bigint,
-        decimal: short.decimal,
-        real: short.real,
-        smallserial: short.smallserial,
-        serial: short.serial,
-        bigserial: short.bigserial,
-        doublePrecision: short.doublePrecision,
+        smallint: as1.smallint,
+        integer: as1.integer,
+        bigint: as1.bigint,
+        decimal: as1.decimal,
+        real: as1.real,
+        smallserial: as1.smallserial,
+        serial: as1.serial,
+        bigserial: as1.bigserial,
+        doublePrecision: as1.doublePrecision,
       },
     );
-    await em.flush();
+    await em2.flush();
 
     // Then only the statistic with the exact days array is resurrected.
     expect(await select("author_stats")).toMatchObject([

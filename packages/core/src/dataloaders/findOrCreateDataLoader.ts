@@ -5,7 +5,7 @@ import { type EntityConstructor, type EntityManager, TooManyError, sameEntity } 
 import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { equalArrays } from "src/fields.ts";
 import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "src/relations/index.ts";
-import { exactIdentityWhere, resurrectIfSoftDeleted } from "src/resurrection.ts";
+import { newWhereEqual, resurrectIfSoftDeleted } from "src/resurrection.ts";
 import type { OptsOf } from "src/typeMap.ts";
 import { cleanStringValue, fail } from "src/utils.ts";
 
@@ -92,7 +92,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       const entities = await em.find(
         type,
         // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
-        exactIdentityWhere(
+        newWhereEqual(
           meta,
           Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])),
         ) as any,

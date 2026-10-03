@@ -100,7 +100,7 @@ function whereAsString(where: object): string {
     .join(", ");
 }
 
-/** Builds exact identity filters for primitive fields while preserving relation filters. */
+/** Builds exact identity filters for primitives and relations. */
 export function newWhereEqual(meta: EntityMetadata, input: object): object {
   const where: Record<string, unknown> = {};
 

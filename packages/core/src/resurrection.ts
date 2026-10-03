@@ -35,7 +35,9 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     const hasNewEntityParam = Object.values(where).some((value) => isEntity(value) && value.isNewEntity);
     if (hasNewEntityParam) continue;
 
-    const entities = onlySoftDeleted(await (em as any).find(constructor, where, { softDeletes: "include" })) as T[];
+    const entities = onlySoftDeleted(
+      await (em as any).find(constructor, newWhereEqual(meta, where), { softDeletes: "include" }),
+    ) as T[];
     if (entities.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (entities.length === 1) {
@@ -96,4 +98,18 @@ function whereAsString(where: object): string {
   return Object.entries(where)
     .map(([key, value]) => `${key}=${value}`)
     .join(", ");
+}
+
+/** Builds exact identity filters for primitives and relations. */
+export function newWhereEqual(meta: EntityMetadata, input: object): object {
+  const where: Record<string, unknown> = {};
+
+  // Arrays need eq for exact equality; relations must stay as-is because eq would be a nested entity filter.
+  // Unset values must match SQL NULL, e.g. publisher: undefined must not omit the publisher filter.
+  for (const name of Object.keys(input)) {
+    const value = (input as Record<string, unknown>)[name] ?? null;
+    where[name] = meta.allFields[name]?.kind === "primitive" ? { eq: value } : value;
+  }
+
+  return where;
 }

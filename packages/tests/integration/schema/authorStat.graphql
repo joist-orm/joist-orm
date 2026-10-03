@@ -22,6 +22,8 @@ type AuthorStat {
   doublePrecision: Int!
   nullableInteger: Int
   nullableText: String
+  name: String
+  deletedAt: DateTime
 }
 
 input SaveAuthorStatInput {
@@ -37,6 +39,8 @@ input SaveAuthorStatInput {
   doublePrecision: Int
   nullableInteger: Int
   nullableText: String
+  name: String
+  deletedAt: DateTime
 }
 
 type SaveAuthorStatResult {
@@ -63,4 +67,6 @@ input AuthorStatFilter {
   updatedAt: [DateTime!]
   bigint: [BigInt!]
   bigserial: [BigInt!]
+  name: [String!]
+  deletedAt: [DateTime!]
 }

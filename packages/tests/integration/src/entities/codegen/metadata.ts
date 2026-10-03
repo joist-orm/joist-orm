@@ -178,6 +178,9 @@ const authorStatMetaColumns = {
   "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "decimalSamples": new Column("decimal_samples", true, false, false, false, true, undefined, new DecimalToNumberSerde(true)),
   "bigintSamples": new Column("bigint_samples", true, false, false, false, true, undefined, new BigIntSerde(true)),
+  "name": new Column("name", true, false, false, false, true, undefined, new PrimitiveSerde("text")),
+  "days": new Column("days", true, false, false, false, true, undefined, new PrimitiveSerde("int[]", true)),
+  "deletedAt": new Column("deleted_at", true, false, false, false, true, undefined, new DateSerde("timestamp with time zone")),
 } satisfies ColumnDescriptors;
 const bookMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => bookMeta, new KeySerde("b", "int")),
@@ -547,15 +550,19 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorStatMetaColumns["updatedAt"]), immutable: false },
     "decimalSamples": { kind: "primitive", fieldName: "decimalSamples", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new SimpleFieldSerde("decimalSamples", authorStatMetaColumns["decimalSamples"]), immutable: false },
     "bigintSamples": { kind: "primitive", fieldName: "bigintSamples", fieldIdName: undefined, derived: false, required: false, protected: false, type: "bigint", serde: new SimpleFieldSerde("bigintSamples", authorStatMetaColumns["bigintSamples"]), immutable: false },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new SimpleFieldSerde("name", authorStatMetaColumns["name"]), immutable: false },
+    "days": { kind: "primitive", fieldName: "days", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new SimpleFieldSerde("days", authorStatMetaColumns["days"]), immutable: false },
+    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: Date, serde: new SimpleFieldSerde("deletedAt", authorStatMetaColumns["deletedAt"]), immutable: false },
   },
   columns: authorStatMetaColumns,
   allFields: {},
   orderBy: undefined,
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
   config: authorStatConfig,
   factory: newAuthorStat,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["name", "days"]],
 };
 
 (AuthorStat as any).metadata = authorStatMeta;

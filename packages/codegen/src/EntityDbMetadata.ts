@@ -530,7 +530,7 @@ function inferUniqueConstraints(meta: EntityDbMetadata, table: Table): string[][
 /** Returns the queryable field name for a unique constraint column. */
 function fieldNameForColumn(meta: EntityDbMetadata, columnName: string): string | undefined {
   const primitive = meta.primitives.find((field) => field.columnName === columnName);
-  if (primitive && !primitive.derived && !primitive.isArray && !primitive.customSerde) return primitive.fieldName;
+  if (primitive && !primitive.derived && !primitive.customSerde) return primitive.fieldName;
 
   const enumField = meta.enums.find((field) => field.columnName === columnName);
   if (enumField && !enumField.derived && !enumField.isArray) return enumField.fieldName;

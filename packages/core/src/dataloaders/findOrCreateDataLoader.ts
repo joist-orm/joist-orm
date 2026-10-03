@@ -91,11 +91,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       // If we didn't find it in the EM, do the db query/em.create
       const entities = await em.find(
         type,
-        // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
-        newWhereEqual(
-          meta,
-          Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])),
-        ) as any,
+        newWhereEqual(meta, where) as any,
         // Always include soft-deleted rows so findOrCreate can resurrect them instead of creating duplicates.
         { softDeletes: "include" },
       );

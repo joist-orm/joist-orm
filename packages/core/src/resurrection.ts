@@ -102,11 +102,14 @@ function whereAsString(where: object): string {
 
 /** Builds exact identity filters for primitive fields while preserving relation filters. */
 export function newWhereEqual(meta: EntityMetadata, input: object): object {
+  const where: Record<string, unknown> = {};
+
   // Arrays need eq for exact equality; relations must stay as-is because eq would be a nested entity filter.
-  return Object.fromEntries(
-    Object.entries(input).map(([name, value]) => [
-      name,
-      meta.allFields[name]?.kind === "primitive" ? { eq: value } : value,
-    ]),
-  );
+  // Unset values must match SQL NULL, e.g. publisher: undefined must not omit the publisher filter.
+  for (const name of Object.keys(input)) {
+    const value = (input as Record<string, unknown>)[name] ?? null;
+    where[name] = meta.allFields[name]?.kind === "primitive" ? { eq: value } : value;
+  }
+
+  return where;
 }

@@ -4,6 +4,7 @@ import { type MigrationBuilder } from "node-pg-migrate";
 export function up(b: MigrationBuilder): void {
   b.addColumns("author_stats", {
     name: { type: "text", notNull: false },
+    // For testing uniqueBys that include an array column
     days: { type: "integer[]", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },
   });

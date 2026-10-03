@@ -44,7 +44,7 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
 /** Returns an error if `step` is not allowed, i.e. from a `transitions` table or a `guardTransition`. */
-type TransitionCheck<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
+type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
 
 /**
  * The values that `transitions` tables and `match`es accept for an enum-ish field.
@@ -344,7 +344,7 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.transitionFields.add(fieldName);
     // Convert accessors to codes once per entity type, since the metadata isn't ready at config time
     const tables = new Map<EntityMetadata, Map<unknown, readonly unknown[]>>();
-    const check = (entity: T, step: TransitionStep) => {
+    const rule = (entity: T, step: TransitionStep) => {
       const meta = getMetadata(entity);
       let allowed = tables.get(meta);
       if (!allowed) tables.set(meta, (allowed = toCodesTable(meta, fieldName, table)));
@@ -353,11 +353,11 @@ export class ConfigApi<T extends Entity, C> {
       const to = describeValue(entity, fieldName, step.to);
       return `Cannot change ${fieldName} from ${from} to ${to}`;
     };
-    addTransitionCheck(this.__data, fieldName, check);
+    addTransitionRule(this.__data, fieldName, rule);
     // Watch each change as a reaction, because validation only runs once the flush has settled
     const watch = (entity: T) => {
       const step = takeTransitionStep(name, entity, fieldName);
-      const error = step && check(entity, step);
+      const error = step && rule(entity, step);
       if (error) addTransitionError(name, entity, error);
     };
     this.__data.reactions.push({ name, fn: watch, hint: fieldName, runOnce: false });
@@ -399,7 +399,7 @@ export class ConfigApi<T extends Entity, C> {
     pushValidationRule(this.__data.rules, name, withFieldHint(fieldName, hint), guarded);
     // Also let `onTransition` skip changes this guard rejects, see `isTransitionRejected`
     const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-    addTransitionCheck(this.__data, fieldName, (entity: T, step: TransitionStep) => {
+    addTransitionRule(this.__data, fieldName, (entity: T, step: TransitionStep) => {
       if (step.from === created || !matches(entity, step)) return;
       if (hint === undefined) return rule(entity);
       const meta = getMetadata(entity);
@@ -632,8 +632,8 @@ export class ConfigData<T extends Entity, C> {
   reactions: ReactionInternal<T, any, C>[] = [];
   /** Fields that have `transitions`, `guardTransition`, or `onTransition`s, i.e. so factories accept `withX` opts. */
   transitionFields: Set<string> = new Set();
-  /** Field name -> the `transitions` table and `guardTransition` checks, so `onTransition` can skip rejected changes. */
-  transitionChecks: Record<string, TransitionCheck<T>[]> = {};
+  /** Field name -> the `transitions` table and `guardTransition` rules, so `onTransition` can skip rejected changes. */
+  transitionRules: Record<string, TransitionRule<T>[]> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -789,12 +789,12 @@ function describeValue(entity: Entity, fieldName: string, value: unknown): strin
   return details?.name ?? String(value);
 }
 
-function addTransitionCheck<T extends Entity>(
+function addTransitionRule<T extends Entity>(
   data: ConfigData<T, any>,
   fieldName: string,
-  check: TransitionCheck<T>,
+  rule: TransitionRule<T>,
 ): void {
-  (data.transitionChecks[fieldName] ??= []).push(check);
+  (data.transitionRules[fieldName] ??= []).push(rule);
 }
 
 /** Returns whether the `transitions` table or any `guardTransition` on `fieldName` rejects `step`. */
@@ -804,9 +804,9 @@ async function isTransitionRejected<T extends Entity>(
   fieldName: string,
   step: TransitionStep,
 ): Promise<boolean> {
-  const checks = data.transitionChecks[fieldName];
-  if (!checks) return false;
-  const results = await Promise.all(checks.map((check) => check(entity, step)));
+  const rules = data.transitionRules[fieldName];
+  if (!rules) return false;
+  const results = await Promise.all(rules.map((rule) => rule(entity, step)));
   return results.some((result) => (Array.isArray(result) ? result.length > 0 : !!result));
 }
 
@@ -822,7 +822,7 @@ function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unkn
   return Array.isArray(values) ? values.map((v) => toCode(meta, fieldName, v)) : toCode(meta, fieldName, values);
 }
 
-/** Converts a `transitions` table's keys and values to codes, so checks can compare them to field values. */
+/** Converts a `transitions` table's keys and values to codes, so rules can compare them to field values. */
 function toCodesTable(
   meta: EntityMetadata,
   fieldName: string,

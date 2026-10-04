@@ -1,33 +1,42 @@
 ---
-title: Status Transitions
+title: State Transitions
 description: Documentation for config.transitions, guardTransition, and onTransition
 sidebar:
   order: 9
 ---
 
-Many entities have a status-style [enum](./enum-tables) field, i.e. `BookAdvance.status` that moves from `Pending` to `Signed` to `Paid`. Joist has three `config` methods that make the field's state machine explicit:
+Many entities have a status-style [enum](./enum-tables) field, i.e. `BookAdvance.status` that moves from `Pending` to `Signed` to `Paid`, basically forming a state machine.
 
-| Method                       | Answers                              | Kind of logic                                    |
-|------------------------------|--------------------------------------|--------------------------------------------------|
-| `config.transitions`         | Which changes are possible?          | A static table, checked as a validation rule     |
-| `config.guardTransition`     | When is a possible change allowed?   | A validation rule that only runs for some changes |
-| `config.onTransition`        | What happens after a change?         | A [reaction](./reactions) that fires once per change |
+Joist has three `config` methods to help model the state machine & build business logic around it:
 
-Each method takes the field name first, so an entity file reads as a description of that field's state machine. You can use any of them on its own.
+| Method                   | Answers                                                                                        |
+|--------------------------|------------------------------------------------------------------------------------------------|
+| `config.transitions`     | Which changes are possible?<br/><br/>A static table, checked as a validation rule.             |
+| `config.guardTransition` | When is a possible change allowed?<br/><br/>A validation rule that only runs for some changes. |
+| `config.onTransition`    | What happens after a change?<br/><br/>A [reaction](./reactions) that fires once per change.    |
+
+Here's an example modeling `AdvanceStatus`:
 
 ```typescript
-import { AdvanceStatus, bookAdvanceConfig as config } from "./entities";
+import { bookAdvanceConfig as config } from "./entities";
 
+// Declares the allowed state transitions
 config.transitions("status", {
   Pending: ["Signed"],
   Signed: ["Paid", "Pending"],
+  // Paid is the terminal state
   Paid: [],
 });
 
+// Prevent moving to Paid when the book is `Unpublished`
 config.guardTransition("status", { to: "Paid" }, { book: "title" }, (ba) => {
-  if (ba.book.get.title === "Unpublished") return "Cannot pay an advance for an unpublished book";
+  if (ba.book.get.title === "Unpublished") {
+    return "Cannot pay an advance for an unpublished book";
+  }
 });
 
+// When we're paid & data is almost committed (we're still in the txn),
+// schedule our payment job
 config.onTransition("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
   return addPaymentJob(ctx, ba);
 });
@@ -41,21 +50,14 @@ If a flush changes the field in a way the table doesn't list, `em.flush` fails w
 
 Creating an entity is not a change, so a new entity may start with any value.
 
-### Writing values
-
-Tables and `match`es use the enum's accessors as plain strings, i.e. `"Paid"` for `AdvanceStatus.Paid`. Joist doesn't accept the codes, like `"PAID"`, or the enum members, like `AdvanceStatus.Paid`, so every table reads the same way. The values are type-checked, so a typo like `"Payed"` is a compile error.
-
-This works because `joist-codegen` finds `config.transitions`, `config.guardTransition`, and `config.onTransition` calls in your entity files, the same way it finds `config.setDefault`. For those fields it adds the accessor names to the field's type. At runtime, Joist converts accessors to codes using the `enumType` that `metadata.ts` emits for every enum field.
-
 ## Guarding changes
 
 `config.guardTransition(field, match, hint?, rule)` adds a validation rule that only runs when the field changes in a way that `match` describes. Like `addRule`, it returns an error message to reject the change, and its `hint` is a [reactive hint](./reactive-fields).
 
-Use a guard for conditions that depend on other data, which a static table can't express. Guards differ from `addRule` in a few ways:
+Guards are different from regular `addRule` validation rules in a few ways:
 
-* **Only matching changes run the rule.** Other changes of the field, or changes to only the hinted data, skip it, so the rule doesn't need exceptions for unrelated changes.
+* **Only fires on matching state transitions.** Other changes of the field, or changes to only the hinted data, skip it, so the rule doesn't need exceptions for unrelated changes.
 * **Guards never run on creation.** At creation there is no previous value, and related entities are often being created in the same flush. Use `addRule` for rules about an entity's starting value.
-* **Guards compare the value before the flush with the value being saved.** If a reaction changes related entities during the flush, read their `changes.<field>.originalValue` to see the state the flush started from.
 
 ## Reacting to changes
 

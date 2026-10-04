@@ -103,6 +103,22 @@ export class LazyFieldImpl<T extends Entity, V> extends AbstractPropertyImpl<T> 
     return this.#loaded;
   }
 
+  /**
+   * Marks this field loaded, using its value in entity data or reading it from the entity's row.
+   *
+   * The caller must know the value is present in entity data or the row; default SELECTs omit lazy columns.
+   */
+  preload(): void {
+    const { data, rowData, rowIndex } = getInstanceData(this.entity);
+    if (!(this.#fieldName in data)) {
+      const field = getMetadata(this.entity).allFields[this.#fieldName];
+      data[this.#fieldName] = field.serde!.fromRow(rowData, rowIndex);
+    }
+
+    this.#loaded = true;
+    this.#loadPromise = undefined;
+  }
+
   /** Called after em.flush to invalidate the cached value, since the db state may have changed. */
   resetAfterFlush(): void {
     this.#loaded = false;

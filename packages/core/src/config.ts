@@ -366,15 +366,15 @@ export class ConfigApi<T extends Entity, C> {
    * Adds a validation rule that only runs when `fieldName` changes in a way that matches `match`.
    *
    * Use this for "a change is allowed only when ..." checks that depend on other data, while
-   * `transitions` declares the changes that are possible at all. Like `addRule`, the `hint` is
-   * reactive, so the guard also re-runs when hinted fields on other entities change. Guards never
-   * run on creation, and compare the value before the flush with the value being flushed.
+   * `transitions` declares the changes that are possible at all. The `hint` is a load hint, like
+   * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
+   * Guards never run on creation, and compare the value before the flush with the value being flushed.
    */
-  guardTransition<K extends Settable<T>, H extends ReactiveHint<T>>(
+  guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
     match: TransitionMatch<TransitionValue<T, K>>,
     hint: H,
-    rule: ValidationRule<Reacted<T, H>>,
+    rule: ValidationRule<Loaded<T, H>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
@@ -385,28 +385,22 @@ export class ConfigApi<T extends Entity, C> {
     const name = `guardTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "guardTransition");
     this.__data.transitionFields.add(fieldName);
-    const rule = maybeRule ?? hintOrRule;
-    const hint = maybeRule ? hintOrRule : undefined;
+    const rule: ValidationRule<T> = maybeRule ?? hintOrRule;
+    const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
     const matches = newMatcher(fieldName, match);
+    const run = (entity: T) => (hint === undefined ? rule(entity) : entity.em.populate(entity, hint).then(rule));
     // Pass through to the user's rule only when this entity's own field changed in a matching way
-    const guarded = (entity: any) => {
+    const guarded = (entity: T) => {
       if (entity.isNewEntity) return;
       const step = netTransitionStep(entity, fieldName);
-      if (step && matches(entity, step)) return rule(entity);
+      if (step && matches(entity, step)) return run(entity);
     };
-    pushValidationRule(this.__data.rules, name, withFieldHint(fieldName, hint), guarded);
+    // React only to `fieldName`, so changes to only the hinted data don't re-run the guard
+    pushValidationRule(this.__data.rules, name, fieldName, guarded);
     // Also let `onTransition` skip changes this guard rejects, see `isTransitionRejected`
-    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
     addTransitionRule(this.__data, fieldName, (entity: T, step: TransitionStep) => {
       if (step.from === created || !matches(entity, step)) return;
-      if (hint === undefined) return rule(entity);
-      const meta = getMetadata(entity);
-      let loadHint = loadHints.get(meta);
-      if (loadHint === undefined) {
-        loadHint = convertToLoadHint<T>(meta, hint);
-        loadHints.set(meta, loadHint);
-      }
-      return entity.em.populate(entity, loadHint).then(rule);
+      return run(entity);
     });
   }
 
@@ -769,14 +763,6 @@ function pushValidationRule<T extends Entity>(
     };
     rules.push({ name, fn, hint });
   }
-}
-
-/** Adds `fieldName` to a reactive `hint`, so a guard re-runs when the guarded field itself changes. */
-function withFieldHint(fieldName: string, hint: any): any {
-  if (hint === undefined) return fieldName;
-  if (typeof hint === "string") return [fieldName, hint];
-  if (Array.isArray(hint)) return [fieldName, ...hint];
-  return { [fieldName]: {}, ...hint };
 }
 
 /** Uses the enum's display name in error messages when there is one, i.e. `Approved` instead of `APPROVED`. */

@@ -29,7 +29,7 @@ config.transitions("status", {
 });
 
 // Prevent moving to Paid when the book is `Unpublished`
-config.guardTransition("status", { to: "Paid" }, { book: "title" }, (ba) => {
+config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
   if (ba.book.get.title === "Unpublished") {
     return "Cannot pay an advance for an unpublished book";
   }
@@ -56,7 +56,7 @@ Creating an entity is not a change, so a new entity may start with any value.
 
 `config.guardTransition(field, match, hint?, rule)` adds a validation rule that only runs when the field changes in a way that `match` describes.
 
-Like `addRule`, it returns an error message to reject the change, and its `hint` is a [reactive hint](./reactive-fields).
+Like `addRule`, it returns an error message to reject the change. Its `hint` is a load hint, as in `beforeFlush`, so it's loaded before the rule runs, but only the field itself triggers the guard.
 
 Guards are different from regular `addRule` validation rules in a few ways:
 

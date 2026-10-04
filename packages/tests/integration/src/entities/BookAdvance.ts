@@ -20,7 +20,7 @@ config.transitions("status", {
   Paid: [],
 });
 
-config.guardTransition("status", { to: "Paid" }, { book: "title" }, (ba) => {
+config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
   if (ba.book.get.title === "Unpublished") return "Cannot pay an advance for an unpublished book";
 });
 

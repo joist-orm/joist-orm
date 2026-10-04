@@ -322,8 +322,6 @@ describe("reactiveRules", () => {
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
       // Book's read-only tags rule only depends on title
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["title"], path: [], fn },
-      // BookAdvance's "cannot pay an unpublished book" guardTransition
-      { cstr: "BookAdvance", name: sm(/BookAdvance.ts:\d+/), fields: ["title"], path: ["advances"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       {
         cstr: "Publisher",

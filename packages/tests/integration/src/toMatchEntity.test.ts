@@ -1,7 +1,8 @@
 import { expect as jestExpect } from "@jest/globals";
 import { DeepNew, getInstanceData } from "joist-orm";
 import { alignedAnsiStyleSerializer } from "src/alignedAnsiStyleSerializer";
-import { Author, Book, newAuthor, newBook, newPublisher } from "src/entities";
+import { Author, Book, ParentGroup, newAuthor, newBook, newPublisher } from "src/entities";
+import { insertParentGroup } from "src/entities/inserts";
 import { jan1 } from "src/testDates";
 import { newEntityManager } from "src/testEm";
 
@@ -432,6 +433,83 @@ describe("toMatchEntity", () => {
       - ]
       + Array []
     `);
+  });
+
+  it("can match loaded lazy JSON fields", async () => {
+    // Given a ParentGroup with lazy JSON data stored in the database
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+
+    // When its lazy JSON data is loaded
+    await pg.bulkData.load();
+
+    // Then the matcher compares the JSON value
+    expect(pg).toMatchEntity({ bulkData: { key: "value" } });
+  });
+
+  it("can match loaded nullable lazy fields with undefined", async () => {
+    // Given a ParentGroup with no optional lazy JSON data
+    await insertParentGroup({ name: "pg1" });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+
+    // When its nullable lazy field is loaded
+    await pg.bulkData.load();
+
+    // Then the matcher compares its undefined value
+    expect(pg).toMatchEntity({ bulkData: undefined });
+  });
+
+  it("diffs mismatched loaded lazy values without exposing the wrapper", async () => {
+    // Given a ParentGroup with loaded lazy JSON data
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+    // And its lazy JSON data is available synchronously
+    await pg.bulkData.load();
+
+    // When the expected lazy value is undefined
+    // Then the failure shows only the JSON value, without the LazyField or EntityManager
+    expect(() => expect(pg).toMatchEntity({ bulkData: undefined })).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 1
+      + Received  + 3
+
+        Object {
+      -   "bulkData": undefined,
+      +   "bulkData": Object {
+      +     "key": "value",
+      +   },
+        }
+    `);
+  });
+
+  it("rejects unloaded lazy fields", async () => {
+    // Given a ParentGroup whose lazy JSON data has not been loaded
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+
+    // When matching its lazy JSON data synchronously
+    // Then the field requires an explicit load, like other unloaded properties
+    expect(() => expect(pg).toMatchEntity({ bulkData: { key: "value" } })).toThrowErrorMatchingInlineSnapshot(
+      `bulkData has not been loaded yet, use '.load()' or an 'em.populate' hint`,
+    );
+  });
+
+  it("rejects unloaded async properties", async () => {
+    // Given a publisher whose author count has not been loaded
+    const em = newEntityManager();
+    const publisher = newPublisher(em, { authors: [{}] });
+    await em.flush();
+
+    // When matching its author count synchronously
+    // Then the property requires an explicit load
+    expect(() => expect(publisher).toMatchEntity({ numberOfAuthors: 1 })).toThrowErrorMatchingInlineSnapshot(
+      `AsyncProperty has not been loaded yet`,
+    );
   });
 });
 

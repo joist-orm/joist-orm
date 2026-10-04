@@ -9,6 +9,7 @@ import {
   isCollection,
   isDefined,
   isEntity,
+  isLazyField,
   isProperty,
   isReactiveField,
   isReference,
@@ -170,6 +171,7 @@ function maybeGetRelation(actualValue: unknown): unknown {
     isReference(actualValue) ||
     isCollection(actualValue) ||
     isProperty(actualValue) ||
+    isLazyField(actualValue) ||
     isReactiveField(actualValue) ||
     // hasAsyncPropertys will work if they've been already loaded, so let the user try it
     isAsyncProperty(actualValue)

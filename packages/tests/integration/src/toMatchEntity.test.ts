@@ -440,10 +440,8 @@ describe("toMatchEntity", () => {
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
     const em = newEntityManager();
     const pg = await em.load(ParentGroup, "parentGroup:1");
-
     // When its lazy JSON data is loaded
     await pg.bulkData.load();
-
     // Then the matcher compares the JSON value
     expect(pg).toMatchEntity({ bulkData: { key: "value" } });
   });
@@ -453,10 +451,8 @@ describe("toMatchEntity", () => {
     await insertParentGroup({ name: "pg1" });
     const em = newEntityManager();
     const pg = await em.load(ParentGroup, "parentGroup:1");
-
     // When its nullable lazy field is loaded
     await pg.bulkData.load();
-
     // Then the matcher compares its undefined value
     expect(pg).toMatchEntity({ bulkData: undefined });
   });
@@ -468,7 +464,6 @@ describe("toMatchEntity", () => {
     const pg = await em.load(ParentGroup, "parentGroup:1");
     // And its lazy JSON data is available synchronously
     await pg.bulkData.load();
-
     // When the expected lazy value is undefined
     // Then the failure shows only the JSON value, without the LazyField or EntityManager
     expect(() => expect(pg).toMatchEntity({ bulkData: undefined })).toThrowErrorMatchingInlineSnapshot(`
@@ -491,7 +486,6 @@ describe("toMatchEntity", () => {
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
     const em = newEntityManager();
     const pg = await em.load(ParentGroup, "parentGroup:1");
-
     // When matching its lazy JSON data synchronously
     // Then the field requires an explicit load, like other unloaded properties
     expect(() => expect(pg).toMatchEntity({ bulkData: { key: "value" } })).toThrowErrorMatchingInlineSnapshot(
@@ -504,7 +498,6 @@ describe("toMatchEntity", () => {
     const em = newEntityManager();
     const publisher = newPublisher(em, { authors: [{}] });
     await em.flush();
-
     // When matching its author count synchronously
     // Then the property requires an explicit load
     expect(() => expect(publisher).toMatchEntity({ numberOfAuthors: 1 })).toThrowErrorMatchingInlineSnapshot(

@@ -4,6 +4,7 @@ import { getEmInternalApi } from "src/EntityManager.ts";
 import { type Field, getMetadata } from "src/EntityMetadata.ts";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "src/index.ts";
 import { maybeRequireTemporal } from "src/serde/temporal.ts";
+import { maybeRecordTransition } from "src/transitions.ts";
 import { fail } from "src/utils.ts";
 
 /**
@@ -81,6 +82,10 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentValue = getField(entity, fieldName);
   const isReference = field.kind === "m2o" || field.kind === "poly";
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
+  // Check `config.transitions` tables while the change is still synchronous, before we change anything,
+  // and record the transition for `em.flush` to run its (async) guards and reactions
+  const isTransition = field.kind === "enum" && !currentEqualsNew;
+  if (isTransition) maybeRecordTransition(entity, fieldName, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
   if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);
@@ -117,6 +122,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
       fieldLogger.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
+        rm.queueDownstreamReactables(entity, fieldName);
+      } else if (isTransition && getMetadata(entity).config.__data.transitionFields.has(fieldName)) {
+        // A transition back to the original state is still a transition, so keep its reactions queued
         rm.queueDownstreamReactables(entity, fieldName);
       } else {
         // For normal reverts, the field is clean again, so any pending downstream work can be removed.

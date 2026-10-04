@@ -19,15 +19,16 @@ import {
 import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { type ValidationRule, type ValidationRuleInternal, type ValidationRuleResult } from "src/rules.ts";
 import {
+  type Transition,
   type TransitionMatch,
   type TransitionStep,
   type TransitionTable,
-  addTransitionError,
+  advanceTransitionCursor,
   created,
-  getTransitionErrors,
+  getPendingTransitionSteps,
+  getTransitionSteps,
   matchesTransition,
-  netTransitionStep,
-  takeTransitionStep,
+  toTransition,
 } from "src/transitions.ts";
 import { type MaybePromise } from "src/utils.ts";
 
@@ -43,7 +44,21 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
-/** Returns an error if `step` is not allowed, i.e. from a `transitions` table or a `guardTransition`. */
+/** A `guardTransition` rule, which also gets the transition it is checking, since the entity may have moved on. */
+type TransitionGuardRule<T extends Entity, V> = (
+  entity: T,
+  transition: Transition<V>,
+) => MaybePromise<ValidationRuleResult>;
+
+/** An `onTransition` function, which also gets the transition it is handling, since the entity may have moved on. */
+type TransitionFn<T extends Entity, C, V> = (entity: T, ctx: C, transition: Transition<V>) => MaybePromise<unknown>;
+
+/** The enum type of a transition field, i.e. `AuthorStatus`. */
+type TransitionType<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends EntityField
+  ? NonNullable<FieldsOf<T>[K]["type"]>
+  : never;
+
+/** Returns an error if a `guardTransition` rejects `step`. */
 type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
 
 /**
@@ -325,16 +340,15 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /**
-   * Declares which changes of the enum `fieldName` are allowed, i.e. `{ Draft: ["Open"], Open: ["Closed"] }`.
+   * Declares which state transitions of the enum `fieldName` are allowed, i.e. `{ Draft: ["Open"], Open: ["Closed"] }`.
    *
    * Keys and values are the enum's accessors as strings, i.e. `"Draft"` for `AuthorStatus.Draft`.
    *
-   * A value that is missing from the table, or maps to `[]`, is treated as a terminal value & cannot be changed. Creating an entity
-   * is not a change, so a new entity may start with any value.
+   * A state that is missing from the table, or maps to `[]`, is treated as a terminal state & cannot be
+   * changed. Creating an entity is not a transition, so a new entity may start in any state.
    *
-   * Each change is checked as `onTransition` sees it, so a flush may chain allowed changes, i.e.
-   * `Draft -> Open -> Closed`, even though `Draft -> Closed` is not allowed. Changes made by user code
-   * before `em.flush` count as one change.
+   * The table is checked by the field's setter, so a disallowed transition throws a `ValidationErrors`
+   * immediately, instead of failing the next `em.flush`.
    */
   transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionValue<T, K>>): void {
     const name = `transitions(${getCallerName()})`;
@@ -342,118 +356,123 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.transitionFields.add(fieldName);
     // Convert accessors to codes once per entity type, since the metadata isn't ready at config time
     const tables = new Map<EntityMetadata, Map<unknown, readonly unknown[]>>();
-    const rule = (entity: T, step: TransitionStep) => {
+    this.__data.transitionTables[fieldName] = (entity, from, to) => {
       const meta = getMetadata(entity);
       let allowed = tables.get(meta);
       if (!allowed) tables.set(meta, (allowed = toCodesTable(meta, fieldName, table)));
-      if (step.from === created || allowed.get(step.from)?.includes(step.to)) return;
-      const from = describeValue(entity, fieldName, step.from);
-      const to = describeValue(entity, fieldName, step.to);
-      return `Cannot change ${fieldName} from ${from} to ${to}`;
+      if (allowed.get(from)?.includes(to)) return undefined;
+      return `Cannot change ${fieldName} from ${describeValue(entity, fieldName, from)} to ${describeValue(entity, fieldName, to)}`;
     };
-    addTransitionRule(this.__data, fieldName, rule);
-    // Watch each change as a reaction, because validation only runs once the flush has settled
-    const watch = (entity: T) => {
-      const step = takeTransitionStep(name, entity, fieldName);
-      const error = step && rule(entity, step);
-      if (error) addTransitionError(name, entity, error);
-    };
-    this.__data.reactions.push({ name, fn: watch, hint: fieldName, runOnce: false });
-    pushValidationRule(this.__data.rules, name, (entity: T) => getTransitionErrors(name, entity), undefined);
   }
 
   /**
-   * Adds a validation rule that only runs when `fieldName` changes in a way that matches `match`.
+   * Adds a validation rule that runs for each state transition of `fieldName` that matches `match`.
    *
-   * Use this for "a change is allowed only when ..." checks that depend on other data, while
-   * `transitions` declares the changes that are possible at all. The `hint` is a load hint, like
+   * Use this for "a transition is allowed only when ..." checks that depend on other data, while
+   * `transitions` declares the transitions that are possible at all. The `hint` is a load hint, like
    * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
-   * Guards never run on creation, and compare the value before the flush with the value being flushed.
+   *
+   * Guards run during `em.flush`, once for every matching transition since the last flush, even if the
+   * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
+   * it is checking. Guards never run on creation.
    */
   guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
     match: TransitionMatch<TransitionValue<T, K>>,
     hint: H,
-    rule: ValidationRule<Loaded<T, H>>,
+    rule: TransitionGuardRule<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
     match: TransitionMatch<TransitionValue<T, K>>,
-    rule: ValidationRule<T>,
+    rule: TransitionGuardRule<T, TransitionType<T, K>>,
   ): void;
   guardTransition(fieldName: string, match: TransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
     const name = `guardTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "guardTransition");
     this.__data.transitionFields.add(fieldName);
-    const rule: ValidationRule<T> = maybeRule ?? hintOrRule;
+    const rule: TransitionGuardRule<T, any> = maybeRule ?? hintOrRule;
     const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
     const matches = newMatcher(fieldName, match);
-    const run = (entity: T) => (hint === undefined ? rule(entity) : entity.em.populate(entity, hint).then(rule));
-    // Pass through to the user's rule only when this entity's own field changed in a matching way
-    const guarded = (entity: T) => {
-      if (entity.isNewEntity) return;
-      const step = netTransitionStep(entity, fieldName);
-      if (step && matches(entity, step)) return run(entity);
+    const run = (entity: T, step: TransitionStep) => {
+      const transition = toTransition(step);
+      return hint === undefined
+        ? rule(entity, transition)
+        : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
+    };
+    // Run the rule for each matching transition since the last flush, except creation
+    const guarded = async (entity: T) => {
+      const steps = getTransitionSteps(entity, fieldName).filter((s) => s.from !== created && matches(entity, s));
+      if (steps.length === 0) return;
+      const results = await Promise.all(steps.map((step) => run(entity, step)));
+      return results.flatMap((r) => (r === undefined ? [] : Array.isArray(r) ? r : [r])) as ValidationRuleResult;
     };
     // React only to `fieldName`, so changes to only the hinted data don't re-run the guard
     pushValidationRule(this.__data.rules, name, fieldName, guarded);
-    // Also let `onTransition` skip changes this guard rejects, see `isTransitionRejected`
+    // Also let `onTransition` skip transitions this guard rejects, see `isTransitionRejected`
     addTransitionRule(this.__data, fieldName, (entity: T, step: TransitionStep) => {
       if (step.from === created || !matches(entity, step)) return;
-      return run(entity);
+      return run(entity, step);
     });
   }
 
   /**
-   * Runs `fn` when `fieldName` changes in a way that matches `match`.
+   * Runs `fn` for each state transition of `fieldName` that matches `match`.
    *
    * This is a reaction (see `addReaction`) that only reacts to `fieldName` itself; the `hint` is a
-   * load hint, like `beforeFlush`'s, so it is loaded but not reacted to. Each observed change fires
-   * once, even if the reaction is queued several times per flush, i.e. `Draft -> Open -> Closed` within one flush fires for
-   * `Draft -> Open` and then `Open -> Closed`, as long as each value is seen by a reaction loop.
+   * load hint, like `beforeFlush`'s, so it is loaded but not reacted to.
    *
-   * Changes that `transitions` or a `guardTransition` reject don't fire, because the flush will fail
-   * validation anyway, and their side effects would only add misleading errors.
+   * Reactions run during `em.flush`, once for every matching transition since the last flush, in order,
+   * even if the field has moved on since. The entity is in its current state, so `fn` also gets the
+   * `transition` it is handling. Transitions that a `guardTransition` rejects don't fire.
    *
-   * Creating an entity with a matching `to` value fires too, unless `match.from` is set or
+   * Creating an entity with a matching `to` state fires too, unless `match.from` is set or
    * `match.onCreate` is `false`. Set `match.phase: "commit"` to run in `beforeCommit` instead, i.e.
-   * for enqueueing jobs. Commit-phase transitions see the net
-   * change of the whole flush.
+   * for enqueueing jobs.
    */
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
     match: TransitionMatch<TransitionValue<T, K>>,
     hint: H,
-    fn: HookFn<Loaded<T, H>, C>,
+    fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>>(
     fieldName: K,
     match: TransitionMatch<TransitionValue<T, K>>,
-    fn: HookFn<T, C>,
+    fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
   onTransition(fieldName: string, match: TransitionMatch<any>, hintOrFn: any, maybeFn?: any): void {
     const name = `onTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "onTransition");
     this.__data.transitionFields.add(fieldName);
-    const fn: HookFn<T, C> = maybeFn ?? hintOrFn;
+    const fn: TransitionFn<T, C, any> = maybeFn ?? hintOrFn;
     const hint: LoadHint<T> | undefined = maybeFn ? hintOrFn : undefined;
     const matches = newMatcher(fieldName, match);
-    const run = (entity: T, ctx: C) =>
-      hint === undefined ? fn(entity, ctx) : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx));
+    const data = this.__data;
+    const run = (entity: T, ctx: C, step: TransitionStep) => {
+      const transition = toTransition(step);
+      return hint === undefined
+        ? fn(entity, ctx, transition)
+        : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
+    };
     if (match.phase === "commit") {
-      this.__data.hooks.beforeCommit.push((entity, ctx) => {
+      this.__data.hooks.beforeCommit.push(async (entity, ctx) => {
         if (entity.isDeletedEntity) return;
-        const step = netTransitionStep(entity, fieldName);
-        if (step && matches(entity, step)) return run(entity, ctx);
+        for (const step of getTransitionSteps(entity, fieldName)) {
+          if (matches(entity, step)) await run(entity, ctx, step);
+        }
       });
     } else {
       // React only to `fieldName`, so hinted fields changing on other entities don't requeue us
       const reaction = async (entity: T, ctx: C) => {
-        const step = takeTransitionStep(name, entity, fieldName);
-        if (!step || !matches(entity, step)) return;
-        // Validation will fail the flush anyway, so don't cascade side effects from a rejected change
-        if (await isTransitionRejected(this.__data, entity, fieldName, step)) return;
-        return run(entity, ctx);
+        for (const step of getPendingTransitionSteps(name, entity, fieldName)) {
+          if (matches(entity, step)) {
+            // Stop without marking it handled, so a retried flush handles it once the guard passes
+            if (await isTransitionRejected(data, entity, fieldName, step)) return;
+            await run(entity, ctx, step);
+          }
+          advanceTransitionCursor(name, entity);
+        }
       };
       this.__data.reactions.push({ name, fn: reaction, hint: fieldName, runOnce: false });
     }
@@ -624,7 +643,9 @@ export class ConfigData<T extends Entity, C> {
   reactions: ReactionInternal<T, any, C>[] = [];
   /** Fields that have `transitions`, `guardTransition`, or `onTransition`s, i.e. so factories accept `withX` opts. */
   transitionFields: Set<string> = new Set();
-  /** Field name -> the `transitions` table and `guardTransition` rules, so `onTransition` can skip rejected changes. */
+  /** Field name -> the `transitions` table check, called by setters with the current and new values. */
+  transitionTables: Record<string, (entity: T, from: unknown, to: unknown) => string | undefined> = {};
+  /** Field name -> the `guardTransition` rules, so `onTransition` can skip rejected transitions. */
   transitionRules: Record<string, TransitionRule<T>[]> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
@@ -781,7 +802,7 @@ function addTransitionRule<T extends Entity>(
   (data.transitionRules[fieldName] ??= []).push(rule);
 }
 
-/** Returns whether the `transitions` table or any `guardTransition` on `fieldName` rejects `step`. */
+/** Returns whether any `guardTransition` on `fieldName` rejects `step`. */
 async function isTransitionRejected<T extends Entity>(
   data: ConfigData<T, any>,
   entity: T,

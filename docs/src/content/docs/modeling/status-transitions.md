@@ -48,13 +48,13 @@ config.onTransition("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
 
 A state that is missing from the table, or maps to `[]`, is treated as a terminal state & cannot be changed.
 
-If a field transitions in a way the table doesn't list, `em.flush` fails with a validation error like `Cannot change status from Paid to Pending`.
+The field's setter checks the table, so if a field transitions in a way the table doesn't list, the assignment throws a validation error like `Cannot change status from Paid to Pending`, without waiting for `em.flush`.
 
 Creating an entity is not a change, so a new entity may start in any state.
 
 ## Guarding changes
 
-`config.guardTransition(field, match, hint?, rule)` adds a validation rule that only runs when the field changes in a way that `match` describes.
+`config.guardTransition(field, match, hint?, rule)` adds a validation rule that runs for each state transition that `match` describes.
 
 Like `addRule`, it returns an error message to reject the change. Its `hint` is a load hint, as in `beforeFlush`, so it's loaded before the rule runs, but only the field itself triggers the guard.
 
@@ -62,10 +62,11 @@ Guards are different from regular `addRule` validation rules in a few ways:
 
 * **Only fires on matching state transitions.** Other changes of the field, or changes to only the hinted data, skip it, so the rule doesn't need exceptions for unrelated changes.
 * **Guards never run on creation.** At creation there is no previous state, and related entities are often being created in the same flush. Use `addRule` for rules about an entity's starting state.
+* **Guards run for every transition, even ones the entity has moved past.** Guards run during `em.flush`, so the entity may already be in a later state. The rule's second argument is the `transition` it's checking, i.e. `{ from: AdvanceStatus.Pending, to: AdvanceStatus.Signed }`.
 
 ## Reacting to changes
 
-`config.onTransition(field, match, hint?, fn)` runs `fn` after the field changes in a way that `match` describes.
+`config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that `match` describes.
 
 Like a [reaction](./reactions), `fn` can change any entity, and those changes can trigger more transitions in the same flush. You don't need `em.touch` to make related entities react.
 
@@ -73,10 +74,10 @@ Unlike `addReaction`, the `hint` is a load hint, as in `beforeFlush`. It is load
 
 Other behavior:
 
-* **Each change fires once.** See [How changes are observed](#how-changes-are-observed).
+* **Every transition fires once, in order.** See [How transitions are recorded](#how-transitions-are-recorded).
 * **Creation fires by default.** Creating an entity with a matching `to` state fires `fn`, because entering a state by creation usually needs the same side effects as entering it by a change. Set `onCreate: false` for logic that only makes sense for a change. A `match` with a `from` state never fires on creation, because a new entity has no previous state.
 * **Only allowed transitions will fire `onTransition`.** If the table or a guard rejects a change, `fn` doesn't run for it.
-* **`phase: "commit"`** runs `fn` once in `beforeCommit`, after the entities' SQL changes have been flushed to the database. Use it for enqueueing jobs. Commit-phase transitions see the net change of the whole flush, not each step.
+* **`phase: "commit"`** runs `fn` in `beforeCommit`, after the entities' SQL changes have been flushed to the database, once for each matching transition. Use it for enqueueing jobs.
 
 ## The `match` argument
 
@@ -95,20 +96,16 @@ type TransitionMatch<V> = {
 };
 ```
 
-## How changes are observed
+## How transitions are recorded
 
-Each `onTransition` remembers the last state it saw for each entity, and fires when the field's current state differs from that state.
+Setters are synchronous, but guards and reactions can be async, so Joist splits the work:
 
-1. Setting the field, or creating the entity, queues the reaction like any other reaction.
-2. When the reaction runs, it compares the field's current state with the last state this reaction saw. The first time in a flush, that is the state from before the flush.
-3. If the states differ, it fires with that `from` and `to`, and remembers the new state. If they are the same, it does nothing.
-4. The reaction resets these remembered states when `em.flush` finishes.
+1. When the field is set, the setter checks the `transitions` table, and throws if the table doesn't allow the transition.
+2. The setter records the transition. Creating an entity records one creation transition.
+3. During `em.flush`, Joist runs each matching guard and `onTransition` once for every recorded transition, in order.
+4. Joist forgets the recorded transitions when `em.flush` succeeds.
 
-A reaction never fires twice for the same change. If the field cycles, i.e. `A -> B -> A -> B`, and the reaction runs after each assignment, it fires for each change it sees: `A -> B`, then `B -> A`, then `A -> B` again. If the whole cycle happens before the reaction runs, it only compares the start and end states, so it fires `A -> B` once. A cycle that ends where it started, i.e. `A -> B -> A`, doesn't fire at all.
-
-### Changes between reactions collapse
-
-Because a reaction only sees states when it runs, several assignments between two runs collapse into one change.
+For example:
 
 ```typescript
 // Given a persisted advance that is Pending
@@ -117,28 +114,28 @@ ba.status = AdvanceStatus.Paid;
 await em.flush();
 ```
 
-Joist sees one change, from `Pending` to `Paid`, not `Pending` to `Signed` and then `Signed` to `Paid`. The same happens when a single reaction or hook sets the field more than once before returning.
+Joist records two transitions, `Pending` to `Signed`, then `Signed` to `Paid`. The table allows both, and both a `{ to: "Signed" }` reaction and a `{ to: "Paid" }` reaction fire. A cycle like `A -> B -> A -> B` fires three times.
 
 :::caution
 
-Collapsing has two consequences to plan for:
+Guards and reactions see the entity's current state, not its state at the time of the transition. In the example above, the `{ to: "Signed" }` reaction runs while the advance is already `Paid`.
 
-* **Reactions for the intermediate state don't fire.** A `{ to: "Signed" }` reaction won't run in the example above. If its side effects must happen, move the advance to `Signed` in one flush, and to `Paid` in a later flush, or make the logic part of the `Paid` reaction.
-* **The table checks the collapsed change.** With the table above, `Pending` to `Paid` is not allowed, so this flush fails validation, even though each assignment on its own was allowed. Either flush between the assignments, or list the combined change in the table when it is a real path.
+Use the `transition` argument to see which transition is being handled, and check the current state before side effects that only make sense in that state:
+
+```typescript
+config.onTransition("status", { to: "Signed" }, (ba, ctx, transition) => {
+  // `transition` is { from: AdvanceStatus.Pending, to: AdvanceStatus.Signed }, but the advance may already be Paid
+  if (ba.status === AdvanceStatus.Signed) return addReadyToPayJob(ctx, ba);
+});
+```
 
 :::
-
-Changes made by different reactions can still collapse, depending on timing. Say one reaction moves the advance to `Signed`, and a second reaction reacts to `Signed` by moving it to `Paid`. A third reaction that is queued by the same `Signed` change runs in the same loop as the second one. If it runs first, it sees `Pending` to `Signed`, and later `Signed` to `Paid`. If it runs after the second one, it only sees `Pending` to `Paid`. Don't rely on observing a state that another reaction immediately moves past.
-
-### Why collapse instead of recording every assignment
-
-Recording every assignment would fire reactions for states the entity is no longer in. In the example above, a `{ to: "Signed" }` reaction would run after the advance is already `Paid`, and might send a "ready to pay" notification for a paid advance. Collapsing means each reaction only acts on the state the entity is actually in, which keeps side effects consistent with the data that gets saved.
 
 ## Factories
 
 [Test factories](../testing/test-factories) accept a `with` option for each transition field, like they do for [reactive fields](../testing/test-factories):
 
 * `newBookAdvance(em, { status: AdvanceStatus.Paid })` means "created as Paid, and react to that". `onTransition` reactions fire on creation, as they would in production.
-* `newBookAdvance(em, { withStatus: AdvanceStatus.Paid })` means "created as Paid, and don't ask why". Joist records the state as already seen by every `onTransition`, so creation fires nothing.
+* `newBookAdvance(em, { withStatus: AdvanceStatus.Paid })` means "created as Paid, and don't ask why". Joist doesn't record a creation transition, so creation fires nothing.
 
-Only the created state is trusted. A later change, even in the same flush, fires the guards and reactions as normal.
+Only the created state is trusted. A later transition, even in the same flush, is checked, recorded, and fires the guards and reactions as normal.

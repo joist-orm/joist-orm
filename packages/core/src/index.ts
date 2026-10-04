@@ -406,8 +406,7 @@ export function setOpt<T extends Entity>(
     }
   } else if (value instanceof FactoryInitialValue) {
     // A factory's `withStatus`-style opt: trust the created value, so its `onTransition`s don't fire
-    (entity as any)[key] = value.value;
-    seedTransition(entity, key, value.value);
+    seedTransition(entity, key, () => ((entity as any)[key] = value.value));
   } else {
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.

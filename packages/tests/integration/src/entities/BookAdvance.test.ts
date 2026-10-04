@@ -37,7 +37,7 @@ describe("BookAdvance", () => {
     expect(ba.transientFields.signedTitle).toBe("b1");
   });
 
-  it("runs commit-phase onTransition once for the net change", async () => {
+  it("runs commit-phase onTransition once for each matching transition", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -54,12 +54,13 @@ describe("BookAdvance", () => {
     expect(ba.isNewEntity).toBe(false);
   });
 
-  it("rejects a change missing from the transitions table", async () => {
+  it("rejects a transition missing from the transitions table when the field is set", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
     await em.flush();
-    ba.status = AdvanceStatus.Pending;
-    await expect(em.flush()).rejects.toThrow("Cannot change status from Paid to Pending");
+    expect(() => {
+      ba.status = AdvanceStatus.Pending;
+    }).toThrow("Cannot change status from Paid to Pending");
   });
 
   it("rejects a change that fails its guard", async () => {
@@ -120,13 +121,14 @@ describe("BookAdvance", () => {
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Signed]);
   });
 
-  it("does not fire onTransition for a change missing from the transitions table", async () => {
+  it("keeps the current state when the transitions table rejects a transition", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
     await em.flush();
-    ba.status = AdvanceStatus.Pending;
-    await expect(em.flush()).rejects.toThrow("Cannot change status from Paid to Pending");
-    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Paid]);
+    expect(() => {
+      ba.status = AdvanceStatus.Pending;
+    }).toThrow();
+    expect(ba.status).toBe(AdvanceStatus.Paid);
   });
 
   it("does not fire onTransition with onCreate: false when created", async () => {
@@ -143,24 +145,50 @@ describe("BookAdvance", () => {
     expect(ba.transientFields.signedTitle).toBeUndefined();
   });
 
-  it("does not fire onTransition when a change cycles back before the reaction runs", async () => {
+  it("fires onTransition for each transition when the state cycles back before the flush", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
     ba.status = AdvanceStatus.Signed;
     ba.status = AdvanceStatus.Pending;
     await em.flush();
-    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending]);
+    expect(ba.transientFields.transitions).toEqual([
+      AdvanceStatus.Pending,
+      AdvanceStatus.Signed,
+      AdvanceStatus.Pending,
+    ]);
   });
 
-  it("fires onTransition once when a cycle collapses into one change", async () => {
+  it("allows each transition when the field is set several times before the flush", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
     ba.status = AdvanceStatus.Signed;
-    ba.status = AdvanceStatus.Pending;
-    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Paid;
     await em.flush();
-    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed, AdvanceStatus.Paid]);
+  });
+
+  it("passes onTransition the transition it handles, even after the state moved on", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    await em.flush();
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Paid;
+    await em.flush();
+    expect(ba.transientFields.signedTransition).toEqual({
+      from: AdvanceStatus.Pending,
+      to: AdvanceStatus.Signed,
+      current: AdvanceStatus.Paid,
+    });
+  });
+
+  it("runs a guard for a transition the state has already moved past", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { book: { title: "Unpublished" } });
+    await em.flush();
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Paid;
+    await expect(em.flush()).rejects.toThrow("Cannot pay an advance for an unpublished book");
   });
 });

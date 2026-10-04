@@ -2200,6 +2200,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
+      // Only forget transitions on success, so a retried flush still runs guards and reactions for them
+      clearTransitionState(this);
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       if (e instanceof RecursiveCycleError) {
@@ -2242,7 +2244,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.clearSuppressedTypeErrors();
       this.#fl.releaseLock();
       resetFactoryCreated();
-      clearTransitionState(this);
     }
   }
 

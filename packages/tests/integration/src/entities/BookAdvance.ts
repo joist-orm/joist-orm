@@ -2,8 +2,10 @@ import { AdvanceStatus, BookAdvanceCodegen, bookAdvanceConfig as config } from "
 
 export class BookAdvance extends BookAdvanceCodegen {
   transientFields = {
-    /** Each value our `onTransition` observed, so tests can assert exactly which changes fired. */
+    /** The `to` state of each transition our `onTransition` handled, so tests can assert exactly which fired. */
     transitions: [] as AdvanceStatus[],
+    /** The transition the Signed reaction handled, and the state the advance was in when it ran. */
+    signedTransition: undefined as { from: AdvanceStatus | undefined; to: AdvanceStatus; current: AdvanceStatus } | undefined,
     /** Makes the Signed reaction immediately pay the advance, to test chained changes within one flush. */
     payWhenSigned: false,
     /** The book title the Signed reaction saw, to test that `onTransition` loads its hint. */
@@ -21,16 +23,18 @@ config.transitions("status", {
 });
 
 config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
-  if (ba.book.get.title === "Unpublished") return "Cannot pay an advance for an unpublished book";
+  if (ba.book.get.title === "Unpublished") {
+    return "Cannot pay an advance for an unpublished book";
+  }
 });
 
-// Declared before the Signed reaction, so it sees Signed before that reaction moves on to Paid
-config.onTransition("status", {}, (ba) => {
-  ba.transientFields.transitions.push(ba.status);
+config.onTransition("status", {}, (ba, _ctx, transition) => {
+  ba.transientFields.transitions.push(transition.to);
 });
 
-config.onTransition("status", { from: "Pending", to: "Signed" }, "book", (ba) => {
+config.onTransition("status", { from: "Pending", to: "Signed" }, "book", (ba, _ctx, transition) => {
   ba.transientFields.signedTitle = ba.book.get.title;
+  ba.transientFields.signedTransition = { ...transition, current: ba.status };
   if (ba.transientFields.payWhenSigned) ba.status = AdvanceStatus.Paid;
 });
 

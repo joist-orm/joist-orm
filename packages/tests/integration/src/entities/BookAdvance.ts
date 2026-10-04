@@ -15,7 +15,7 @@ export class BookAdvance extends BookAdvanceCodegen {
     /** The book title the Signed reaction saw, to test that `onTransition` loads its hint. */
     signedTitle: undefined as string | undefined,
     /** How many times the commit-phase reaction ran. */
-    committedPaid: 0,
+    onPaidCommitInvoked: 0,
   };
 }
 
@@ -56,5 +56,5 @@ config.onTransition("status", { to: "Pending" }, (ba) => {
 
 // For testing commit-phase reactions, and `onCreate: false`, since this only counts paying an existing advance
 config.onTransition("status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
-  ba.transientFields.committedPaid++;
+  ba.transientFields.onPaidCommitInvoked++;
 });

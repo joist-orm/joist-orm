@@ -44,7 +44,7 @@ describe("EntityManager.transitions", () => {
     ba.transientFields.payWhenSigned = true;
     ba.status = AdvanceStatus.Signed;
     await em.flush();
-    expect(ba.transientFields.committedPaid).toBe(1);
+    expect(ba.transientFields.onPaidCommitInvoked).toBe(1);
   });
 
   it("allows creating with any status", async () => {
@@ -135,7 +135,7 @@ describe("EntityManager.transitions", () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
     await em.flush();
-    expect(ba.transientFields.committedPaid).toBe(0);
+    expect(ba.transientFields.onPaidCommitInvoked).toBe(0);
   });
 
   it("does not fire onTransition with a from value when created", async () => {

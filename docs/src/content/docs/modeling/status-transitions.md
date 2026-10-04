@@ -9,13 +9,13 @@ Many entities have a status-style [enum](./enum-tables) field, i.e. `BookAdvance
 
 Joist has three `config` methods to help model the state machine & build business logic around it:
 
-| Method                   | Answers                                                                                        |
-|--------------------------|------------------------------------------------------------------------------------------------|
-| `config.transitions`     | Which changes are possible?<br/><br/>A static table, checked as a validation rule.             |
-| `config.guardTransition` | When is a possible change allowed?<br/><br/>A validation rule that only runs for some changes. |
-| `config.onTransition`    | What happens after a change?<br/><br/>A [reaction](./reactions) that fires once per change.    |
+| Method                   | Answers                            |
+|--------------------------|------------------------------------|
+| `config.transitions`     | Which changes are possible?        |
+| `config.guardTransition` | When is a possible change allowed? |
+| `config.onTransition`    | What happens after a change?       |
 
-Here's an example modeling `AdvanceStatus`:
+Here's an example modeling a book advance's `AdvanceStatus`, i.e. whether the advance has/has not been paid to the author:
 
 ```typescript
 import { bookAdvanceConfig as config } from "./entities";
@@ -44,15 +44,19 @@ config.onTransition("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
 
 ## Declaring allowed changes
 
-`config.transitions(field, table)` maps each value to the values it may change to. A value that is missing from the table, or maps to `[]`, is treated as a terminal value & cannot be changed.
+`config.transitions(field, table)` maps each value to the values it may change to.
 
-If a flush changes the field in a way the table doesn't list, `em.flush` fails with a validation error like `Cannot change status from Paid to Pending`.
+A value that is missing from the table, or maps to `[]`, is treated as a terminal value & cannot be changed.
+
+If a field transitions in a way the table doesn't list, `em.flush` fails with a validation error like `Cannot change status from Paid to Pending`.
 
 Creating an entity is not a change, so a new entity may start with any value.
 
 ## Guarding changes
 
-`config.guardTransition(field, match, hint?, rule)` adds a validation rule that only runs when the field changes in a way that `match` describes. Like `addRule`, it returns an error message to reject the change, and its `hint` is a [reactive hint](./reactive-fields).
+`config.guardTransition(field, match, hint?, rule)` adds a validation rule that only runs when the field changes in a way that `match` describes.
+
+Like `addRule`, it returns an error message to reject the change, and its `hint` is a [reactive hint](./reactive-fields).
 
 Guards are different from regular `addRule` validation rules in a few ways:
 
@@ -61,7 +65,9 @@ Guards are different from regular `addRule` validation rules in a few ways:
 
 ## Reacting to changes
 
-`config.onTransition(field, match, hint?, fn)` runs `fn` after the field changes in a way that `match` describes. Like a [reaction](./reactions), `fn` can change any entity, and those changes can trigger more transitions in the same flush. You don't need `em.touch` to make related entities react.
+`config.onTransition(field, match, hint?, fn)` runs `fn` after the field changes in a way that `match` describes.
+
+Like a [reaction](./reactions), `fn` can change any entity, and those changes can trigger more transitions in the same flush. You don't need `em.touch` to make related entities react.
 
 Unlike `addReaction`, the `hint` is a load hint, as in `beforeFlush`. It is loaded before `fn` runs, but changes to the hinted data don't trigger `fn`. Only the field itself does.
 
@@ -69,8 +75,8 @@ Other behavior:
 
 * **Each change fires once.** See [How changes are observed](#how-changes-are-observed).
 * **Creation fires by default.** Creating an entity with a matching `to` value fires `fn`, because entering a value by creation usually needs the same side effects as entering it by a change. Set `onCreate: false` for logic that only makes sense for a change. A `match` with a `from` value never fires on creation, because a new entity has no previous value.
-* **Rejected changes don't fire.** If the table or a guard rejects the change, `fn` doesn't run, because the flush will fail validation anyway.
-* **`phase: "commit"`** runs `fn` once in `beforeCommit`, after all SQL has been written. Use it for enqueueing jobs. Commit-phase transitions see the net change of the whole flush, not each step.
+* **Only allowed transitions will fire `onTransition`.** If the table or a guard rejects a change, `fn` doesn't run for it.
+* **`phase: "commit"`** runs `fn` once in `beforeCommit`, after the entities' SQL changes have been flushed to the database. Use it for enqueueing jobs. Commit-phase transitions see the net change of the whole flush, not each step.
 
 ## The `match` argument
 
@@ -84,23 +90,21 @@ type TransitionMatch<V> = {
   to?: V | V[];
   // onTransition only: fire when an entity is created with a matching `to` value, defaults to true
   onCreate?: boolean;
-  // onTransition only: "commit" runs in beforeCommit with the flush's net change
+  // onTransition only: "commit" runs in beforeCommit, after the entities' SQL changes have been flushed to the database
   phase?: "flush" | "commit";
 };
 ```
 
 ## How changes are observed
 
-Joist doesn't record every assignment to the field. Instead, each `onTransition` remembers the last value it saw for each entity, and fires when the field's current value differs from that value.
+Each `onTransition` remembers the last value it saw for each entity, and fires when the field's current value differs from that value.
 
 1. Setting the field, or creating the entity, queues the reaction like any other reaction.
 2. When the reaction runs, it compares the field's current value with the last value this reaction saw. The first time in a flush, that is the value from before the flush.
 3. If the values differ, it fires with that `from` and `to`, and remembers the new value. If they are the same, it does nothing.
-4. `em.flush` forgets these values when it finishes.
+4. The reaction resets these values when `em.flush` finishes.
 
-Each `onTransition` has its own memory, so one reaction firing doesn't hide a change from another reaction. A reaction never fires twice for the same change.
-
-The `transitions` table is checked the same way, by its own internal reaction.
+A reaction never fires twice for the same change. If the field cycles, i.e. `A -> B -> A -> B`, and the reaction runs after each assignment, it fires for each change it sees: `A -> B`, then `B -> A`, then `A -> B` again. If the whole cycle happens before the reaction runs, it only compares the start and end values, so it fires `A -> B` once. A cycle that ends where it started, i.e. `A -> B -> A`, doesn't fire at all.
 
 ### Changes between reactions collapse
 

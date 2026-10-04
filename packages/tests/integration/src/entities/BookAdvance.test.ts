@@ -142,4 +142,25 @@ describe("BookAdvance", () => {
     await em.flush();
     expect(ba.transientFields.signedTitle).toBeUndefined();
   });
+
+  it("does not fire onTransition when a change cycles back before the reaction runs", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    await em.flush();
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+    await em.flush();
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending]);
+  });
+
+  it("fires onTransition once when a cycle collapses into one change", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    await em.flush();
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+    ba.status = AdvanceStatus.Signed;
+    await em.flush();
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
+  });
 });

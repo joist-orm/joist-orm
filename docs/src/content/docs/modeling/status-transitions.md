@@ -79,7 +79,7 @@ Unlike `addReaction`, the `hint` is a "just load hint", as in `beforeFlush`, so 
 
 Other behavior:
 
-* **Every transition fires once, in order.** See [How transitions are recorded](#how-transitions-are-recorded).
+* **Every transition fires once, in order.**
 * **Creation fires by default.** Creating an entity with a matching `to` state fires `fn`, because entering a state by creation usually needs the same side effects as entering it by a change.
 
   To avoid this, you can either pass `onCreate: false`, or set a `from` state, as the `from` clauses never match on creation.
@@ -90,14 +90,14 @@ Other behavior:
 
 Guards and reactions see the entity's current state, not its state at the time of the transition.
 
-This means, if you have a transition that fires on `to: "Signed"`, but the advance already moved to `Paid`, then checking `bookAdvance.status` in the lambda will see `Paid`, not `Pending`.
+This means, if you have a transition that fires on `to: "Signed"`, but the advance already moved to `Paid`, then checking `bookAdvance.status` in the lambda will see `Paid`, not `Signed`.
 
 To check the at-time-of-transition state, we provide a `transition` argument:
 
 ```typescript
 config.onTransition("status", { to: "Signed" }, (ba, ctx, transition) => {
-  // `transition` is { from: AdvanceStatus.Pending, to: AdvanceStatus.Signed }, but the advance may already be Paid
-  if (ba.status === AdvanceStatus.Signed) return addReadyToPayJob(ctx, ba);
+  // `transition.to` is Signed even if `ba.status` is already Paid.
+  if (transition.to === AdvanceStatus.Signed) return addReadyToPayJob(ctx, ba);
 });
 ```
 
@@ -126,9 +126,7 @@ type TransitionMatch<V> = {
 
 It's common for a new entity to be created with a default state and then immediately be mutated to its correct initial state.
 
-Joist recognizes this pattern and doesn't start recording `from` transitions until the 1st `em.flush` / reactions pass.
-
-So in this scenario the `status` changing from `Pending` to `Paid` will not trigger any `guardTransition` or `onTransition` reactions:
+Joist recognizes this pattern and doesn't start recording `from` transitions until flush. So in this scenario:
 
 ```typescript
 // Create a new advance, initially as Pending
@@ -137,6 +135,8 @@ const ba = em.create(BookAdvance, { status: AdvanceStatus.Pending, book, publish
 ba.status = AdvanceStatus.Paid;
 await em.flush();
 ```
+
+Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `onTransition` callbacks that match creation in Paid (i.e. to Paid, with no from) still fire.
 
 This behavior is also beneficial for both `em.findOrCreate` and test factories, where it's common for an entity to be created with an initial/default status, but then very quickly set "to the right initial value", which should not be considered a true transition change.
 

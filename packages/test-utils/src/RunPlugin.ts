@@ -5,6 +5,7 @@ import {
   type FieldColumn,
   type JoinRow,
   type JoinRowTodo,
+  type LazyFieldImpl,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   type MaybeAbstractEntityConstructor,
@@ -14,6 +15,7 @@ import {
   PojoRowData,
   PolymorphicKeySerde,
   PolymorphicReferenceImpl,
+  type PrimitiveField,
   ReactiveManyToManyImpl,
   ReactiveManyToManyOtherSideImpl,
   ReactiveReferenceImpl,
@@ -28,7 +30,7 @@ import {
 } from "joist-core";
 
 /*
- * `run...` helpers use this plugin to mirror any changes made to their isolated entity manager inside to the original
+ * `run...` helpers use this plugin to mirror changes from their isolated entity manager to the original
  * entity manager they were passed.  This allows changes to be synchronously reflected between the two entity managers
  * without needing to query the database.
  */
@@ -50,7 +52,7 @@ export class RunPlugin extends Plugin {
     // Likewise, any data loaders in memory will have stale data, so we clear them out as well
     api.clearDataloaders();
     this.#syncEntityData(entityTodos);
-    this.#syncReferences(entityTodos);
+    this.#syncReferencesAndLazyFields(entityTodos);
     this.#syncManyToManys(joinRowTodos);
     this.#syncEnumCollections(joinRowTodos);
     this.#preloadUnloadedRelations(entityTodos);
@@ -61,7 +63,7 @@ export class RunPlugin extends Plugin {
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
         const row = createRowFromEntityData(newEntity, { preferOriginalData: false });
-        em.hydrate(newEntity.constructor as MaybeAbstractEntityConstructor<any>, [row]);
+        em.hydrate(newEntity.constructor as MaybeAbstractEntityConstructor<Entity>, [row]);
       });
       todo.updates.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged);
@@ -108,12 +110,20 @@ export class RunPlugin extends Plugin {
     });
   }
 
-  // Ensure m2o/rr/poly changes from the new em are reflected in the original em
-  #syncReferences(entityTodos: Record<string, Todo>) {
+  // Ensure m2o/rr/poly changes and known lazy values from the new em are loaded in the original em
+  // Run is a test helper, so we eagerly preload the test entity graph for synchronous assertions. LazyFields are an
+  // exception: they can hold large payloads, so we only preload values known from inserts or changed columns. Untouched
+  // lazy fields keep their loaded state instead of fetching data that the production code did not write.
+  #syncReferencesAndLazyFields(entityTodos: Record<string, Todo>) {
     const { em } = this;
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        // Hydration alone does not mark LazyFields loaded, even though an insert knows their values (including undefined).
+        for (const field of getLazyFields(newEntity)) {
+          preloadLazyField(oldEntity, field.fieldName);
+        }
+
         getReferences(newEntity).forEach((r) => {
           const other = r.isSet ? em.findExistingInstance(r.idTaggedMaybe) : undefined;
           preloadReference(em, r.fieldName, oldEntity, other);
@@ -122,6 +132,12 @@ export class RunPlugin extends Plugin {
       });
       todo.updates.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        for (const field of getLazyFields(newEntity)) {
+          if ((newEntity as any).changes[field.fieldName].hasChanged) {
+            preloadLazyField(oldEntity, field.fieldName);
+          }
+        }
+
         getReferences(newEntity)
           .filter((r) => (newEntity as any).changes[r.fieldName].hasChanged)
           .forEach((r) => {
@@ -252,6 +268,12 @@ type ConcreteReference =
   | ReactiveReferenceImpl<Entity, Entity, any, any>
   | PolymorphicReferenceImpl<Entity, Entity, any>;
 
+/** Preloads a mirrored lazy value without treating the database write as a test-entity mutation. */
+function preloadLazyField(entity: Entity, fieldName: string): void {
+  const field = (entity as any)[fieldName] as LazyFieldImpl<Entity, unknown>;
+  field.preload();
+}
+
 function preloadReference(em: EntityManager, fieldName: string, entity: Entity, other: Entity | undefined) {
   // Preload for concrete references doesn't make us of the global preloaded cache.  It just looks at its owner's data
   // to get a key, then checks if that entity is already in the em and uses that if so.  So we just need to set the
@@ -362,6 +384,14 @@ function processJoinRows(
       preloads.add(oldM2m);
     });
   });
+}
+
+/** Returns the lazy columns on an entity, including inherited fields. */
+function getLazyFields(entity: Entity): IteratorObject<PrimitiveField> {
+  return Object.values(getMetadata(entity).allFields)
+    .values()
+    .filter((field) => field.kind === "primitive")
+    .filter((field) => !!field.lazy);
 }
 
 function getReferences(entity: Entity): IteratorObject<ConcreteReference> {

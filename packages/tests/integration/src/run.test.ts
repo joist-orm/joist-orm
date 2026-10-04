@@ -4,6 +4,7 @@ import {
   Author,
   Comment,
   LargePublisher,
+  ParentGroup,
   User,
   newAuthor,
   newBook,
@@ -12,6 +13,7 @@ import {
   newSmallPublisher,
   newUser,
 } from "src/entities";
+import { insertParentGroup } from "src/entities/inserts";
 
 import { jan1, jan2 } from "./testDates";
 
@@ -116,5 +118,93 @@ describe("run", () => {
 
     // Then the test em sees a Date, and not the ISO string we sent to the driver
     expect(a1.graduated).toEqual(jan2);
+  });
+
+  it.withCtx("mirrors inserted lazy values for synchronous assertions", async (ctx) => {
+    // Given a test EntityManager with no ParentGroups
+    // When run creates a ParentGroup with lazy data
+    const pg = await run(ctx, async (ctx) => {
+      const pg = ctx.em.create(ParentGroup, { name: "pg1", bulkData: { key: "value" }, requiredData: {} });
+      await ctx.em.flush();
+      return pg;
+    });
+    // Then the mirrored lazy data can be synchronously asserted against
+    expect(pg).toMatchEntity({ bulkData: { key: "value" }, requiredData: {} });
+    expect(pg.isDirtyEntity).toBe(false);
+    expect(pg.transientFields.observedBulkData).toEqual([]);
+  });
+
+  it.withCtx("mirrors an inserted undefined lazy value as loaded", async (ctx) => {
+    // Given a test EntityManager with no ParentGroups
+    // When run creates a ParentGroup without optional lazy data
+    const pg = await run(ctx, async (ctx) => {
+      const pg = ctx.em.create(ParentGroup, { name: "pg1", requiredData: {} });
+      await ctx.em.flush();
+      return pg;
+    });
+    // Then the mirrored optional lazy field is loaded with undefined
+    expect(pg.bulkData.isLoaded).toBe(true);
+    expect(pg).toMatchEntity({ bulkData: undefined });
+  });
+
+  it.withCtx("mirrors an updated lazy value into the test entity", async (ctx) => {
+    // Given a ParentGroup in the test EM with unloaded lazy data
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "before" } });
+    const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+    // When run replaces the lazy data without first loading it
+    await run(ctx, async (ctx) => {
+      const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+      pg.bulkData.set({ key: "after" });
+      await ctx.em.flush();
+    });
+    // Then the synced entity exposes the new value without becoming dirty or running its rule
+    expect(pg).toMatchEntity({ bulkData: { key: "after" } });
+    expect(pg.isDirtyEntity).toBe(false);
+    expect(pg.transientFields.observedBulkData).toEqual([]);
+  });
+
+  it.withCtx("mirrors clearing a lazy value as loaded undefined", async (ctx) => {
+    // Given a ParentGroup in the test EM with loaded lazy data
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "before" } });
+    const pg = await ctx.em.load(ParentGroup, "parentGroup:1", "bulkData");
+    // When run clears the lazy data without first loading it
+    await run(ctx, async (ctx) => {
+      const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+      pg.bulkData.set(undefined);
+      await ctx.em.flush();
+    });
+    // Then the synced lazy field remains loaded with the cleared value after run completes
+    expect(pg.bulkData.isLoaded).toBe(true);
+    expect(pg.bulkData.get).toBeUndefined();
+    expect(pg.isDirtyEntity).toBe(false);
+  });
+
+  it.withCtx("does not preload an untouched lazy field when another field changes", async (ctx) => {
+    // Given a ParentGroup in the test EM whose lazy data has never been loaded
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+    // When run changes only the ParentGroup's name
+    await run(ctx, async (ctx) => {
+      const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+      pg.name = "renamed";
+      await ctx.em.flush();
+    });
+    // Then the name is mirrored while the untouched lazy field intentionally stays unloaded
+    expect(pg.name).toBe("renamed");
+    expect(pg.bulkData.isLoaded).toBe(false);
+  });
+
+  it.withCtx("preserves an untouched loaded lazy field", async (ctx) => {
+    // Given a ParentGroup in the test EM with loaded lazy data
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const pg = await ctx.em.load(ParentGroup, "parentGroup:1", "bulkData");
+    // When run changes only the ParentGroup's name
+    await run(ctx, async (ctx) => {
+      const pg = await ctx.em.load(ParentGroup, "parentGroup:1");
+      pg.name = "renamed";
+      await ctx.em.flush();
+    });
+    // Then the test entity's lazy value remains synchronously readable
+    expect(pg.bulkData.get).toEqual({ key: "value" });
   });
 });

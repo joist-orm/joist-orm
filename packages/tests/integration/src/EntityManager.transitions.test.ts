@@ -1,7 +1,7 @@
 import { AdvanceStatus, newBookAdvance } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
-describe("BookAdvance", () => {
+describe("EntityManager.transitions", () => {
   it("fires onTransition when created, by default", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);

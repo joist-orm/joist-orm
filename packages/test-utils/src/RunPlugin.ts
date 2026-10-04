@@ -119,7 +119,7 @@ export class RunPlugin extends Plugin {
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
-        // Hydration alone does not mark LazyFields loaded, even though an insert knows their values (including undefined).
+        // New entities always have the lazy field's initial value, so always preload them
         for (const field of getLazyFields(newEntity)) {
           preloadLazyField(oldEntity, field.fieldName);
         }
@@ -132,6 +132,7 @@ export class RunPlugin extends Plugin {
       });
       todo.updates.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        // Only preload lazy fields that were actively changed, b/c they're already available/loaded in the entity we're copying from
         for (const field of getLazyFields(newEntity)) {
           if ((newEntity as any).changes[field.fieldName].hasChanged) {
             preloadLazyField(oldEntity, field.fieldName);

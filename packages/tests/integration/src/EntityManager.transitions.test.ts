@@ -208,4 +208,73 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
   });
+
+  it("rejects an unapproved signature even when it is revoked before flush", async () => {
+    // Given a Pending advance for a book that is not approved
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { book: { title: "Unapproved" } });
+    await em.flush();
+
+    // When the advance is signed and its signature is revoked before flush
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+
+    // Then the signing guard rejects the transition despite no net status change
+    await expect(em.flush()).rejects.toThrow("Cannot sign an advance for an unapproved book");
+
+    // When the same unapproved signature is retried
+    // Then its recorded transition still fails the signing guard
+    await expect(em.flush()).rejects.toThrow("Cannot sign an advance for an unapproved book");
+  });
+
+  it("rejects a revoked signature when the book's approval also changes", async () => {
+    // Given a Pending advance for an approved book
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { book: { title: "Approved" } });
+    await em.flush();
+
+    // And the book's approval is withdrawn
+    ba.book.get.title = "Unapproved";
+
+    // When the advance is signed and its signature is revoked before flush
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+
+    // Then the signing guard rejects the advance even though its status is clean again
+    await expect(em.flush()).rejects.toThrow("Cannot sign an advance for an unapproved book");
+  });
+
+  it("allows an approved signature to be revoked without writing an unchanged advance", async () => {
+    // Given a Pending advance for an approved book
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { book: { title: "Approved" } });
+    await em.flush();
+
+    // When the advance is signed and its signature is revoked before flush
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+    const flushed = await em.flush();
+
+    // Then both transitions are allowed without persisting an unchanged advance
+    expect(flushed).toEqual([]);
+  });
+
+  it("forgets an approved signature after its revocation is flushed", async () => {
+    // Given an approved signature whose revocation has been flushed
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { book: { title: "Approved" } });
+    await em.flush();
+
+    // And the advance is signed and its signature is revoked
+    ba.status = AdvanceStatus.Signed;
+    ba.status = AdvanceStatus.Pending;
+    await em.flush();
+
+    // When the book's approval is withdrawn after the revocation
+    ba.book.get.title = "Unapproved";
+    await em.flush();
+
+    // Then the old signature doesn't prevent withdrawing approval
+    expect(ba.book.get.title).toBe("Unapproved");
+  });
 });

@@ -139,7 +139,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
-import { clearTransitionState } from "src/transitions.ts";
+import { clearTransitionState, getTransitionEntries } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -2014,6 +2014,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
               // that the user should see.
               if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+              await validateTransitionGuards(this);
               await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
             } finally {
               this.#findRestricted = false;
@@ -3154,6 +3155,32 @@ export class TooManyError extends Error {
   constructor(message: string) {
     super(message);
   }
+}
+
+/**
+ * Validates recorded transitions independently of net database changes.
+ *
+ * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
+ * Keep the history until flush succeeds, so retrying a rejected transition still checks its guard.
+ *
+ * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
+ * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
+ */
+async function validateTransitionGuards(em: EntityManager): Promise<void> {
+  const validations: Promise<ValidationError[]>[] = [];
+  for (const [entity, byField] of getTransitionEntries(em)) {
+    if (entity.isDeletedEntity) continue;
+    for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
+      for (const [fieldName, steps] of byField) {
+        for (const rule of meta.config.__data.transitionRules[fieldName] ?? []) {
+          validations.push(...steps.map((step) => invokeRule(entity, () => rule(entity, step))));
+        }
+      }
+    }
+  }
+
+  const errors = failIfAnyRejected(await Promise.allSettled(validations)).flat();
+  if (errors.length > 0) throw new ValidationErrors(errors);
 }
 
 /**

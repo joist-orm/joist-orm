@@ -66,7 +66,6 @@ interface TransitionState {
 
 const states = new WeakMap<EntityManager, TransitionState>();
 
-
 /**
  * Called by `setField` before changing an enum field, to check and record the transition.
  *
@@ -111,6 +110,13 @@ export function endTransitionCreations(em: EntityManager): void {
 /** Returns every transition of `fieldName` on `entity` since the last successful flush. */
 export function getTransitionSteps(entity: Entity, fieldName: string): readonly TransitionStep[] {
   return states.get(entity.em)?.steps.get(entity)?.get(fieldName) ?? noSteps;
+}
+
+/** Returns recorded transitions, including entities and fields with no net database changes. */
+export function getTransitionEntries(
+  em: EntityManager,
+): Iterable<readonly [Entity, ReadonlyMap<string, readonly TransitionStep[]>]> {
+  return states.get(em)?.steps ?? [];
 }
 
 /** Returns the transitions that `reactionName` hasn't handled yet, without marking them as handled. */
@@ -176,7 +182,8 @@ function addStep(entity: Entity, fieldName: string, step: TransitionStep): void 
 
 function getState(em: EntityManager): TransitionState {
   let state = states.get(em);
-  if (!state) states.set(em, (state = { steps: new Map(), cursors: new Map(), creating: new Set(), created: new Set() }));
+  if (!state)
+    states.set(em, (state = { steps: new Map(), cursors: new Map(), creating: new Set(), created: new Set() }));
   return state;
 }
 

@@ -372,7 +372,7 @@ export class ConfigApi<T extends Entity, C> {
    * `transitions` declares the transitions that are possible at all. The `hint` is a load hint, like
    * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
    *
-   * Guards run during `em.flush`, once for every matching transition since the last flush, even if the
+   * Guards run during `em.flush`, for every matching transition since the last flush, even if the
    * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
    * it is checking. Guards never run on creation.
    */
@@ -400,16 +400,8 @@ export class ConfigApi<T extends Entity, C> {
         ? rule(entity, transition)
         : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
     };
-    // Run the rule for each matching transition since the last flush, except creation
-    const guarded = async (entity: T) => {
-      const steps = getTransitionSteps(entity, fieldName).filter((s) => s.from !== created && matches(entity, s));
-      if (steps.length === 0) return;
-      const results = await Promise.all(steps.map((step) => run(entity, step)));
-      return results.flatMap((r) => (r === undefined ? [] : Array.isArray(r) ? r : [r])) as ValidationRuleResult;
-    };
-    // React only to `fieldName`, so changes to only the hinted data don't re-run the guard
-    pushValidationRule(this.__data.rules, name, fieldName, guarded);
-    // Also let `onTransition` skip transitions this guard rejects, see `isTransitionRejected`
+    // Validation uses the transition log, not dirty fields: Pending -> Signed -> Pending must still
+    // check the signing guard. These same rules let `onTransition` skip rejected transitions.
     addTransitionRule(this.__data, fieldName, (entity: T, step: TransitionStep) => {
       if (step.from === created || !matches(entity, step)) return;
       return run(entity, step);

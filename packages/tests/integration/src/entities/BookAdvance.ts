@@ -58,3 +58,10 @@ config.onTransition("status", { to: "Pending" }, (ba) => {
 config.onTransition("status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
   ba.transientFields.onPaidCommitInvoked++;
 });
+
+// For testing that revoking a signature doesn't bypass its guard when status is clean again.
+config.guardTransition("status", { to: "Signed" }, "book", (ba) => {
+  if (ba.book.get.title === "Unapproved") {
+    return "Cannot sign an advance for an unapproved book";
+  }
+});

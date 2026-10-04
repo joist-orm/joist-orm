@@ -8,6 +8,8 @@ export class BookAdvance extends BookAdvanceCodegen {
     signedTransition: undefined as { from: AdvanceStatus | undefined; to: AdvanceStatus; current: AdvanceStatus } | undefined,
     /** Makes the Signed reaction immediately pay the advance, to test chained changes within one flush. */
     payWhenSigned: false,
+    /** Makes the Pending reaction sign the advance, to test transitions of a new entity during its first flush. */
+    signWhenPending: false,
     /** The book title the Signed reaction saw, to test that `onTransition` loads its hint. */
     signedTitle: undefined as string | undefined,
     /** How many times the commit-phase reaction ran. */
@@ -36,6 +38,10 @@ config.onTransition("status", { from: "Pending", to: "Signed" }, "book", (ba, _c
   ba.transientFields.signedTitle = ba.book.get.title;
   ba.transientFields.signedTransition = { ...transition, current: ba.status };
   if (ba.transientFields.payWhenSigned) ba.status = AdvanceStatus.Paid;
+});
+
+config.onTransition("status", { to: "Pending" }, (ba) => {
+  if (ba.transientFields.signWhenPending) ba.status = AdvanceStatus.Signed;
 });
 
 // Only counts paying an existing advance, to test `onCreate: false`

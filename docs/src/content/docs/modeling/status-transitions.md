@@ -101,7 +101,7 @@ type TransitionMatch<V> = {
 Setters are synchronous, but guards and reactions can be async, so Joist splits the work:
 
 1. When the field is set, the setter checks the `transitions` table, and throws if the table doesn't allow the transition.
-2. The setter records the transition. Creating an entity records one creation transition.
+2. The setter records the transition. Creating an entity records one creation transition, see [Creating entities](#creating-entities).
 3. During `em.flush`, Joist runs each matching guard and `onTransition` once for every recorded transition, in order.
 4. Joist forgets the recorded transitions when `em.flush` succeeds.
 
@@ -130,6 +130,21 @@ config.onTransition("status", { to: "Signed" }, (ba, ctx, transition) => {
 ```
 
 :::
+
+### Creating entities
+
+A new entity has no previous state until Joist's reactions have seen it, so every assignment to it until then is part of its creation:
+
+```typescript
+const ba = em.create(BookAdvance, { status: AdvanceStatus.Pending, book, publisher });
+// Still creating, so the advance is just created as Paid
+ba.status = AdvanceStatus.Paid;
+await em.flush();
+```
+
+This also covers `em.findOrCreate`, which creates an entity and then applies its `upsert` values, and factories, which set a default before your opts. Creation isn't checked against the `transitions` table, since a new entity may start in any state.
+
+Once a flush's reactions have seen the entity, later assignments are transitions. I.e. if a `{ to: "Pending" }` reaction moves a just-created advance to `Signed`, Joist records `Pending` to `Signed`.
 
 ## Factories
 

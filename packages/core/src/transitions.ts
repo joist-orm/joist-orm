@@ -58,24 +58,30 @@ interface TransitionState {
   steps: Map<Entity, Map<string, TransitionStep[]>>;
   /** Reaction name -> entity -> how many of that entity's transitions the reaction has handled. */
   cursors: Map<string, Map<Entity, number>>;
+  /** New entities whose assignments still count as their creation, because reactions haven't seen them yet. */
+  creating: Set<Entity>;
+  /** New entities that reactions have seen, so their assignments are transitions. */
+  created: Set<Entity>;
 }
 
 const states = new WeakMap<EntityManager, TransitionState>();
 
-/** True while a factory sets a `withStatus` value, which is neither checked nor recorded. */
-let seeding = false;
 
 /**
  * Called by `setField` before changing an enum field, to check and record the transition.
  *
- * Setting the starting state of a new entity, i.e. from constructor opts or a default, is creation,
- * not a transition, so it isn't checked against the `transitions` table.
+ * An entity has no previous state until Joist's reactions have seen it, so every assignment to a new
+ * entity until then is part of its creation. I.e. `em.create` then `entity.status = Open`, or a factory
+ * setting a default and then a `withStatus` value, or `em.findOrCreate` creating then upserting, all
+ * create the entity as `Open`. Creation isn't checked against the `transitions` table.
  */
 export function maybeRecordTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
   const data = getMetadata(entity).config.__data;
-  if (seeding || !data.transitionFields.has(fieldName)) return;
-  if (entity.isNewEntity && from === undefined) {
-    addStep(entity, fieldName, { from: created, to });
+  if (!data.transitionFields.has(fieldName)) return;
+  const state = getState(entity.em);
+  if (entity.isNewEntity && !state.created.has(entity)) {
+    state.creating.add(entity);
+    setCreationStep(entity, fieldName, to);
     return;
   }
   const error = data.transitionTables[fieldName]?.(entity, from, to);
@@ -83,20 +89,23 @@ export function maybeRecordTransition(entity: Entity, fieldName: string, from: u
   addStep(entity, fieldName, { from, to });
 }
 
-/**
- * Sets a factory's `withStatus` value, so the entity's creation fires nothing.
- *
- * Factories create the entity with a default state first, i.e. the enum's first value, so we skip
- * checking and recording this assignment, and forget the default's creation transition.
- */
+/** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */
 export function seedTransition(entity: Entity, fieldName: string, set: () => void): void {
-  seeding = true;
-  try {
-    set();
-  } finally {
-    seeding = false;
-  }
+  set();
   getState(entity.em).steps.get(entity)?.delete(fieldName);
+}
+
+/**
+ * Ends the creation of every new entity so far, called by `em.flush` before each loop of reactions.
+ *
+ * After this, assignments to those entities are transitions, i.e. an Approval created as `Requested`
+ * that a reaction then auto-approves records `Requested -> Approved`.
+ */
+export function endTransitionCreations(em: EntityManager): void {
+  const state = states.get(em);
+  if (!state || state.creating.size === 0) return;
+  for (const entity of state.creating) state.created.add(entity);
+  state.creating.clear();
 }
 
 /** Returns every transition of `fieldName` on `entity` since the last successful flush. */
@@ -148,6 +157,14 @@ export function toTransition(step: TransitionStep): Transition<any> {
   return { from: step.from === created ? undefined : step.from, to: step.to };
 }
 
+/** Sets the `to` of `entity`'s creation step, since it may be assigned several times while being created. */
+function setCreationStep(entity: Entity, fieldName: string, to: unknown): void {
+  const { steps } = getState(entity.em);
+  let byField = steps.get(entity);
+  if (!byField) steps.set(entity, (byField = new Map()));
+  byField.set(fieldName, [{ from: created, to }]);
+}
+
 function addStep(entity: Entity, fieldName: string, step: TransitionStep): void {
   const { steps } = getState(entity.em);
   let byField = steps.get(entity);
@@ -159,7 +176,7 @@ function addStep(entity: Entity, fieldName: string, step: TransitionStep): void 
 
 function getState(em: EntityManager): TransitionState {
   let state = states.get(em);
-  if (!state) states.set(em, (state = { steps: new Map(), cursors: new Map() }));
+  if (!state) states.set(em, (state = { steps: new Map(), cursors: new Map(), creating: new Set(), created: new Set() }));
   return state;
 }
 

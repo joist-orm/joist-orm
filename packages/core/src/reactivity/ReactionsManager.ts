@@ -5,6 +5,7 @@ import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
+import { endTransitionCreations } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 
 export type ReactiveAction = { r: Reactable; entity: Entity };
@@ -140,6 +141,8 @@ export class ReactionsManager {
 
     let loops = 0;
     while (this.needsRecalc(kind)) {
+      // Reactions are about to see every new entity so far, so later assignments to them are transitions
+      if (this.em.isFlushing) endTransitionCreations(this.em);
       // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
       // AsyncReactiveFields should probably only have a single loop, after which we return and
       // let `em.flush` push the latest values to the db, so our 2nd-order AsyncReactiveFields

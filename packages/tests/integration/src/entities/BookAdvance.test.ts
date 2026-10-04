@@ -191,4 +191,21 @@ describe("BookAdvance", () => {
     ba.status = AdvanceStatus.Paid;
     await expect(em.flush()).rejects.toThrow("Cannot pay an advance for an unpublished book");
   });
+
+  it("treats assignments to a new entity before its first flush as its creation", async () => {
+    const em = newEntityManager();
+    // Pending -> Paid isn't in the table, but the advance hasn't been seen yet, so this is just its creation
+    const ba = newBookAdvance(em);
+    ba.status = AdvanceStatus.Paid;
+    await em.flush();
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Paid]);
+  });
+
+  it("records transitions of a new entity once reactions have seen it", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    ba.transientFields.signWhenPending = true;
+    await em.flush();
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
+  });
 });

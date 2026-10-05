@@ -7,6 +7,7 @@ import { type EnumMetadata } from "src/EnumMetadata.ts";
 import type { DeepNew } from "src/loading/loadHints.ts";
 import type { Column, ColumnDescriptors } from "src/serde/columns.ts";
 import type { FieldSerde, PolymorphicKeySerde } from "src/serde/fieldSerde.ts";
+import type { TransitionCallback } from "src/transitions.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
@@ -73,6 +74,8 @@ export interface EntityMetadata<T extends Entity = any> {
   transitionFields?: ReadonlySet<string>;
   /** The lazy lookup of transition guards by field, including guards from base types. */
   transitionRules?: ReadonlyMap<string, readonly TransitionGuard<Entity, unknown>[]>;
+  /** The lazy lookup of transition callbacks by field, including callbacks from base types. */
+  transitionCallbacks?: ReadonlyMap<string, readonly TransitionCallback[]>;
   /** The lazy list of non-read-only reactables for this metadata and its base types. */
   reactables?: Reactable[];
   /** The lazy lookup of non-read-only reactables by source field name. */

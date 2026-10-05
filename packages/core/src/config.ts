@@ -22,12 +22,9 @@ import {
   type GuardTransitionMatch,
   type OnTransitionMatch,
   type Transition,
+  type TransitionCallback,
   type TransitionStep,
   type TransitionTable,
-  advanceTransitionCursor,
-  created,
-  getPendingTransitionSteps,
-  getTransitionSteps,
   newMatcher,
   toCodesTable,
   toTransition,
@@ -352,7 +349,6 @@ export class ConfigApi<T extends Entity, C> {
     this.ensurePreBoot(name, "transitions");
     this.__data.transitionFields.add(fieldName);
     // Convert accessors to codes on first use, since metadata isn't ready at config time.
-    // An inherited field uses the same enum on every subtype, so one converted table is enough.
     let allowed: Map<unknown, readonly unknown[]> | undefined;
     this.__data.transitionTables[fieldName] = (entity, from, to) => {
       allowed ??= toCodesTable(getMetadata(entity), fieldName, table);
@@ -362,7 +358,7 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /**
-   * Adds a validation rule that runs for each state transition of `fieldName` that matches `match`.
+   * Checks each matching transition before its callbacks run, and rejects it if the guard returns an error.
    *
    * Use this for "a transition is allowed only when ..." checks that depend on other data, while
    * `transitions` declares the transitions that are possible at all. The `hint` is a load hint, like
@@ -370,7 +366,7 @@ export class ConfigApi<T extends Entity, C> {
    *
    * Guards run during `em.flush`, for every matching transition since the last flush, even if the
    * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
-   * it is checking. Guards never run on creation.
+   * it is checking. Guards never run on creation and are not rechecked during final validation.
    */
   guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
@@ -396,9 +392,9 @@ export class ConfigApi<T extends Entity, C> {
         ? rule(entity, transition)
         : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
     };
-    // Add the guard as a transition rule so that it uses the same log of state changes.
+    // The dispatcher evaluates these guards once before invoking any callbacks for the transition.
     (this.__data.transitionRules[fieldName] ??= []).push((entity: T, step: TransitionStep) => {
-      if (step.from === created || !matches(entity, step)) return;
+      if (!matches(entity, step)) return;
       return run(entity, step);
     });
   }
@@ -406,8 +402,8 @@ export class ConfigApi<T extends Entity, C> {
   /**
    * Runs `fn` for each state transition of `fieldName` that matches `match`.
    *
-   * This is a reaction (see `addReaction`) that only reacts to `fieldName` itself; the `hint` is a
-   * load hint, like `beforeFlush`'s, so it is loaded but not reacted to.
+   * This runs alongside reactions (see `addReaction`), but only state changes queue callbacks.
+   * The `hint` is a load hint, like `beforeFlush`'s, so it is loaded but not reacted to.
    *
    * Reactions run during `em.flush`, once for every matching transition since the last flush, in order,
    * even if the field has moved on since. The entity is in its current state, so `fn` also gets the
@@ -474,30 +470,8 @@ export class ConfigApi<T extends Entity, C> {
         : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
     };
 
-    // Now register `run` as either a beforeCommit or reaction
-    if (match.phase === "commit") {
-      this.__data.hooks.beforeCommit.push(async (entity, ctx) => {
-        if (entity.isDeletedEntity) return;
-        // The reaction below calls `checkForFailingGuards` but since we're in beforeCommit,
-        // we can assume all the transitions are valid and all guards passed.
-        for (const step of getTransitionSteps(entity, fieldName)) {
-          if (matches(entity, step)) await run(entity, ctx, step);
-        }
-      });
-    } else {
-      const reaction = async (entity: T, ctx: C) => {
-        for (const step of getPendingTransitionSteps(name, entity, fieldName)) {
-          if (matches(entity, step)) {
-            // Leave this step unhandled; validation will report the guard's error.
-            if (await checkForFailingGuards(entity, fieldName, step)) return;
-            await run(entity, ctx, step);
-          }
-          advanceTransitionCursor(name, entity);
-        }
-      };
-      // React only to `fieldName`, so hinted fields changing on other entities don't requeue us
-      this.__data.reactions.push({ name, fn: reaction, hint: fieldName, runOnce: false });
-    }
+    // Transition queues trigger callbacks; hinted data is only loaded, not watched for changes.
+    (this.__data.transitionCallbacks[fieldName] ??= []).push({ name, matches, run, phase: match.phase ?? "flush" });
   }
 
   /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
@@ -544,7 +518,7 @@ export class ConfigApi<T extends Entity, C> {
    * until the user is ready to use it. */
   placeholder(): void {}
 
-  /** Rejects names that would cause separate registrations to share reaction identity or cursors. */
+  /** Requires unique names across ordinary reactions and transition callbacks. */
   private ensureUniqueReactionName(name: string, op: string): void {
     if (this.__data.reactionNames.has(name)) {
       throw new Error(
@@ -680,11 +654,13 @@ export class ConfigData<T extends Entity, C> {
   /** Field name -> the `transitions` table check, called by setters with the current and new values. */
   transitionTables: Record<string, (entity: T, from: unknown, to: unknown) => string | undefined> = {};
   /**
-   * Field name -> guard wrappers, used for validation and to skip rejected callbacks.
+   * Field name -> guard wrappers, evaluated before a transition's callbacks.
    *
-   * Wrappers exclude creation and check matches before passing enum values to the guard.
+   * The dispatcher excludes creation; wrappers check matches before passing enum values to the guard.
    */
   transitionRules: Record<string, TransitionGuard<T, unknown>[]> = {};
+  /** Field name -> callbacks dispatched after its transition guards pass. */
+  transitionCallbacks: Record<string, TransitionCallback<T, C>[]> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -826,16 +802,8 @@ function pushValidationRule<T extends Entity>(
 
 /** Uses the enum's display name in error messages when there is one, i.e. `Approved` instead of `APPROVED`. */
 function describeValue(entity: Entity, fieldName: string, value: unknown): string {
-  if (value === created || value === undefined) return "unset";
+  if (value === undefined) return "unset";
   const field = getMetadata(entity).allFields[fieldName];
   const details = field?.kind === "enum" ? (field.enumDetailType as any).getByCode?.(value) : undefined;
   return details?.name ?? String(value);
-}
-
-/** Evaluates the guards on `fieldName` and returns whether any reject `step`. */
-async function checkForFailingGuards(entity: Entity, fieldName: string, step: TransitionStep): Promise<boolean> {
-  const rules = getMetadata(entity).transitionRules!.get(fieldName);
-  if (!rules) return false;
-  const results = await Promise.all(rules.map((rule) => rule(entity, step)));
-  return results.some((result) => (Array.isArray(result) ? result.length > 0 : !!result));
 }

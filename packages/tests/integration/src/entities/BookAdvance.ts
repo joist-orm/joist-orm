@@ -10,12 +10,21 @@ export class BookAdvance extends BookAdvanceCodegen {
       | undefined,
     /** Makes the Signed reaction immediately pay the advance, to test chained changes within one flush. */
     payWhenSigned: false,
+    /** Makes the signature callback revoke its signature, to test reaction-loop detection. */
+    revokeWhenSigned: false,
     /** Makes the Pending reaction sign the advance, to test transitions of a new entity during its first flush. */
     signWhenPending: false,
     /** The book title the Signed reaction saw, to test that `onTransition` loads its hint. */
     signedTitle: undefined as string | undefined,
     /** How many times the commit-phase reaction ran. */
     onPaidCommitInvoked: 0,
+    /** Counts payment guard evaluations independently of how many callbacks match. */
+    paidGuardInvoked: 0,
+    /** Makes the payment callback change the hinted data after its guard has passed. */
+    unpublishWhenPaid: false,
+    /** Makes a creation callback require its newly assigned id. */
+    requirePaidId: false,
+    paidId: undefined as string | undefined,
   };
 }
 
@@ -30,14 +39,17 @@ config.transitions("status", {
 // For testing that guards only run on matching transitions, load their hint, reject transitions (even
 // ones the state has moved past), and stop rejected transitions from firing `onTransition`s
 config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
+  ba.transientFields.paidGuardInvoked++;
   if (ba.book.get.title === "Unpublished") {
     return "Cannot pay an advance for an unpublished book";
   }
 });
 
 // For testing which transitions fire, and in what order, including creation (since `onCreate` defaults to true)
-config.onTransition("status", {}, (ba, _ctx, transition) => {
+config.onTransition("status", {}, "book", (ba, _ctx, transition) => {
+  if (transition.to === AdvanceStatus.Paid && ba.transientFields.requirePaidId) ba.transientFields.paidId = ba.id;
   ba.transientFields.transitions.push(transition.to);
+  if (transition.to === AdvanceStatus.Paid && ba.transientFields.unpublishWhenPaid) ba.book.get.title = "Unpublished";
 });
 
 // For testing `from` matches (which never fire on creation), loading the hint, receiving the `transition`
@@ -46,6 +58,7 @@ config.onTransition("observeSignature", "status", { from: "Pending", to: "Signed
   ba.transientFields.signedTitle = ba.book.get.title;
   ba.transientFields.signedTransition = { ...transition, current: ba.status };
   if (ba.transientFields.payWhenSigned) ba.status = AdvanceStatus.Paid;
+  if (ba.transientFields.revokeWhenSigned) ba.status = AdvanceStatus.Pending;
 });
 
 // For testing that once a flush's reactions have seen a new entity, later assignments to it are

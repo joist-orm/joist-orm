@@ -79,16 +79,6 @@ describe("reactions", () => {
       {
         kind: "reaction",
         cstr: Publisher,
-        fields: ["status"],
-        path: [],
-        source: Publisher,
-        isReadOnly: false,
-        name: "recordPublisherStatus",
-        fn,
-      },
-      {
-        kind: "reaction",
-        cstr: Publisher,
         fields: ["name"],
         path: [],
         source: Publisher,
@@ -108,7 +98,7 @@ describe("reactions", () => {
       },
     ]);
     // When SmallPublisher-specific hints are reversed
-    // Then its changes trigger user reactions and its own activation callback
+    // Then its changes trigger the user's publisher reaction
     expect(getReactions(SmallPublisher)).toMatchObject([
       {
         kind: "reaction",
@@ -118,16 +108,6 @@ describe("reactions", () => {
         source: SmallPublisher,
         isReadOnly: false,
         name: "poly",
-        fn,
-      },
-      {
-        kind: "reaction",
-        cstr: SmallPublisher,
-        fields: ["status"],
-        path: [],
-        source: SmallPublisher,
-        isReadOnly: false,
-        name: "recordSmallPublisherActivation",
         fn,
       },
     ]);

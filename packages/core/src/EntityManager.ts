@@ -139,7 +139,12 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
-import { clearTransitionState, getTransitionEntries } from "src/transitions.ts";
+import {
+  type TransitionState,
+  clearTransitionState,
+  hasPendingCommitTransitions,
+  runCommitTransitions,
+} from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -321,6 +326,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
+  /** Owns queued transitions and callbacks waiting for the commit phase. */
+  readonly #transitionState: TransitionState = {
+    pending: [],
+    creations: new Map(),
+    created: new Set(),
+    commit: [],
+  };
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
@@ -373,6 +385,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       pendingLoads: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
+      transitionState: this.#transitionState,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
       pluginManager,
@@ -2014,7 +2027,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
               // that the user should see.
               if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-              await validateTransitionGuards(this);
               await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
             } finally {
               this.#findRestricted = false;
@@ -2105,7 +2117,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
-      if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+      if (
+        Object.keys(entityTodos).length > 0 ||
+        Object.keys(joinRowTodos).length > 0 ||
+        hasPendingCommitTransitions(this)
+      ) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
@@ -2158,6 +2174,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
+          await runCommitTransitions(this);
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }
@@ -2201,7 +2218,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
-      // Only forget transitions on success, so a retried flush still runs guards and reactions for them
       clearTransitionState(this);
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
@@ -3084,6 +3100,7 @@ export interface EntityManagerInternalApi {
 
   hooks: Record<EntityManagerHook, HookFn<any>[]>;
   rm: ReactionsManager;
+  transitionState: TransitionState;
   indexManager: IndexManager;
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;
@@ -3155,31 +3172,6 @@ export class TooManyError extends Error {
   constructor(message: string) {
     super(message);
   }
-}
-
-/**
- * Validates recorded transitions independently of net database changes.
- *
- * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
- * Keep the history until flush succeeds, so validation checks every recorded transition.
- *
- * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
- * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
- */
-async function validateTransitionGuards(em: EntityManager): Promise<void> {
-  const validations: Promise<ValidationError[]>[] = [];
-  for (const [entity, byField] of getTransitionEntries(em)) {
-    if (entity.isDeletedEntity) continue;
-    const rules = getMetadata(entity).transitionRules!;
-    for (const [fieldName, steps] of byField) {
-      for (const rule of rules.get(fieldName) ?? []) {
-        validations.push(...steps.map((step) => invokeRule(entity, () => rule(entity, step))));
-      }
-    }
-  }
-
-  const errors = failIfAnyRejected(await Promise.allSettled(validations)).flat();
-  if (errors.length > 0) throw new ValidationErrors(errors);
 }
 
 /**
@@ -3315,7 +3307,7 @@ async function validateSimpleRules(
 }
 
 /** Invokes a single validation rule, coercing its result/sync throws into a promise. */
-async function invokeRule(
+export async function invokeRule(
   entity: Entity,
   fn: (entity: any) => MaybePromise<ValidationRuleResult>,
 ): Promise<ValidationError[]> {

@@ -4,6 +4,7 @@ import {
   ImageType,
   PublisherStatus,
   newAuthor,
+  newBook,
   newBookAdvance,
   newImage,
   newLargePublisher,
@@ -229,9 +230,6 @@ describe("EntityManager.transitions", () => {
     ba.status = AdvanceStatus.Pending;
     // Then the signing guard rejects the transition despite no net status change
     await expect(em.flush()).rejects.toThrow("Cannot sign an advance for an unapproved book");
-    // When the same unapproved signature is retried
-    // Then its recorded transition still fails the signing guard
-    await expect(em.flush()).rejects.toThrow("Cannot sign an advance for an unapproved book");
   });
 
   it("rejects a revoked signature when the book's approval also changes", async () => {
@@ -415,5 +413,96 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     // Then its subtype activation callback runs alongside the inherited configuration
     expect(p.transientFields.activeStatusTransitions).toBe(1);
+  });
+
+  it("keeps an advance's transitions when another EntityManager flushes", async () => {
+    // Given a Pending advance owned by one EntityManager
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    await em.flush();
+    // And another EntityManager owns a new advance
+    const otherEm = newEntityManager();
+    newBookAdvance(otherEm);
+    // When the first advance is signed and the other EntityManager flushes first
+    ba.status = AdvanceStatus.Signed;
+    await otherEm.flush();
+    await em.flush();
+    // Then the first EntityManager handles its own recorded signature
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
+  });
+
+  it("checks a payment guard once before its flush and commit callbacks", async () => {
+    // Given a Signed advance for a published book
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Signed, book: { title: "Published" } });
+    await em.flush();
+    // When the advance is paid
+    ba.status = AdvanceStatus.Paid;
+    await em.flush();
+    // Then payment eligibility is checked once for both callback phases
+    expect(ba.transientFields.paidGuardInvoked).toBe(1);
+  });
+
+  it("does not recheck a payment guard after its callback changes the book", async () => {
+    // Given a Signed advance for a published book
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Signed, book: { title: "Published" } });
+    await em.flush();
+    // And its payment callback withdraws the book from publication
+    ba.transientFields.unpublishWhenPaid = true;
+    // When the advance is paid while its book is still published
+    ba.status = AdvanceStatus.Paid;
+    await em.flush();
+    // Then the callback's later change is persisted without revisiting payment eligibility
+    expect(ba.book.get.title).toBe("Unpublished");
+  });
+
+  it("rejects a guarded derived state that has no transition callbacks", async () => {
+    // Given an author who cannot enter the Lot book range
+    const em = newEntityManager();
+    const author = newAuthor(em, { firstName: "BlockedByGuard" });
+    await em.flush();
+    // When eleven books move the author from Few to Lot
+    for (let i = 0; i < 11; i++) newBook(em, { author });
+    // Then its guard rejects the derived state without any onTransition callback
+    await expect(em.flush()).rejects.toThrow("Cannot give a blocked author a lot of books");
+  });
+
+  it("runs a commit callback even when activation is undone before flush", async () => {
+    // Given a Draft LargePublisher with a spotlight author
+    const em = newEntityManager();
+    const p = newLargePublisher(em, { status: PublisherStatus.Draft, spotlightAuthor: {} });
+    await em.flush();
+    // When activation and return to Draft leave no net status change
+    p.status = PublisherStatus.Active;
+    p.status = PublisherStatus.Draft;
+    await em.flush();
+    // Then its queued activation callback still runs in the commit phase
+    expect(p.transientFields.activeStatusCommitTransitions).toBe(1);
+  });
+
+  it("assigns ids when a creation callback needs its advance's id", async () => {
+    // Given an advance created as Paid with a callback that needs its id
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
+    ba.transientFields.requirePaidId = true;
+    // When the advance's creation is handled
+    await em.flush();
+    // Then its callback has the assigned advance id
+    expect(ba.transientFields.paidId).toBe(ba.id);
+  });
+
+  it("stops callbacks that repeatedly sign and revoke the same advance", async () => {
+    // Given an advance whose callbacks sign and revoke each other's changes
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    await em.flush();
+    // And both automatic signature changes are enabled
+    ba.transientFields.signWhenPending = true;
+    ba.transientFields.revokeWhenSigned = true;
+    // When the advance is signed
+    ba.status = AdvanceStatus.Signed;
+    // Then repeated transitions hit the existing reaction-loop limit
+    await expect(em.flush()).rejects.toThrow("recalc looped too many times");
   });
 });

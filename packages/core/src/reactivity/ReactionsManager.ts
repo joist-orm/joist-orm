@@ -5,7 +5,7 @@ import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
-import { endTransitionCreations } from "src/transitions.ts";
+import { endTransitionCreations, hasPendingTransitions, processPendingTransitions } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 
 export type ReactiveAction = { r: Reactable; entity: Entity };
@@ -235,6 +235,9 @@ export class ReactionsManager {
       }
 
       if (failures.length > 0) throw failures[0];
+      if (kind === "reactables" && this.em.isFlushing) {
+        await runInTrustedContext(() => processPendingTransitions(this.em));
+      }
       // Record any successful actions that should only run once so we don't run them again
       for (const action of actions) {
         if (action.r.runOnce) {
@@ -317,7 +320,11 @@ export class ReactionsManager {
   }
 
   needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
-    return kind === "reactables" ? this.#needsRecalc.populate || this.#needsRecalc.reaction : this.#needsRecalc.query;
+    return kind === "reactables"
+      ? this.#needsRecalc.populate ||
+          this.#needsRecalc.reaction ||
+          (this.em.isFlushing && hasPendingTransitions(this.em))
+      : this.#needsRecalc.query;
   }
 
   private getPending(r: Reactable): { todo: Set<Entity>; done: Set<Entity> } {

@@ -57,9 +57,17 @@ Creating an entity is not a change, so a new entity may start in any state.
 
 ## Guarding changes
 
-`config.guardTransition(field, match, hint?, rule)` adds a validation rule that runs for each state transition that `match` (which declaring the `from` & `to` states, potentially multiple of each) describes.
+`config.guardTransition(field, match, hint?, rule)` checks each state transition that `match` (which declares the `from` & `to` states, potentially multiple of each) describes.
 
 Like `addRule`, it returns an error message to reject the change.
+
+When Joist processes a transition during `em.flush`, it evaluates its matching guards once before
+running any matching callbacks. A failing guard immediately rejects the flush, even if no callback
+matches or the field has returned to its original value.
+
+Guards are not rechecked during final validation. A callback or later reaction can change the data a
+guard checked without revisiting that transition. Use `addRule` for invariants that must hold in the
+final entity state.
 
 The optional `hint` is a load hint, as in `beforeFlush`, so it's loaded before the rule runs.
 
@@ -67,7 +75,7 @@ Guards are different from regular `addRule` validation rules in a few ways:
 
 * **Only fired on matching state transitions.** Other state changes, or changes only to the hinted data, will not trigger the guard, so the guard doesn't need exceptions for unrelated changes.
 * **Guards never run on creation,** because there is no `from` previous state. Use `addRule` for rules about an entity's starting state.
-* **Guards run for every transition.** Even through guards "run later" during `em.flush`, if an entity has effectively done two `Pending` -> `Signed` -> `Paid` transitions by the time `em.flush` is called, guards will be called for both transitions.
+* **Every transition is checked in order.** Moving `Pending` -> `Signed` -> `Paid` queues both transitions, even before `em.flush` is called. Joist checks each transition's guards before its callbacks, and stops if a guard fails.
 
 ## Reacting to changes
 

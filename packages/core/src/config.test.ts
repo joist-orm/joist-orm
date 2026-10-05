@@ -118,7 +118,7 @@ describe("config", () => {
     const config = new ConfigApi();
     config.onTransition("payment", "status", { phase: "commit" }, () => {});
     // When another commit-phase callback requests the same name
-    // Then registration rejects the duplicate name before adding a hook
+    // Then registration rejects the duplicate callback name
     expect(() => config.onTransition("payment", "status", { phase: "commit" }, () => {})).toThrow(
       'Duplicate reaction name "payment" in config.onTransition',
     );
@@ -141,7 +141,10 @@ describe("config", () => {
     registerTransition(config, "recordPayment");
     registerTransition(config, "notifyAuthor");
     // Then both named callbacks are registered
-    expect(config.__data.reactions.map((reaction) => reaction.name)).toEqual(["recordPayment", "notifyAuthor"]);
+    expect(config.__data.transitionCallbacks.status.map((callback) => callback.name)).toEqual([
+      "recordPayment",
+      "notifyAuthor",
+    ]);
   });
 });
 

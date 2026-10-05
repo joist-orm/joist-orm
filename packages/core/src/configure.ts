@@ -20,6 +20,7 @@ import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "src/rules.ts";
 import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
 import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
+import type { TransitionCallback } from "src/transitions.ts";
 import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -104,6 +105,17 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
         for (const [fieldName, rules] of Object.entries(m.config.__data.transitionRules)) {
           const inherited = byField.get(fieldName) ?? [];
           inherited.push(...rules);
+          byField.set(fieldName, inherited);
+        }
+      }
+      return byField;
+    });
+    defineLazyGetter(meta, "transitionCallbacks", function buildTransitionCallbacks() {
+      const byField = new Map<string, TransitionCallback[]>();
+      for (const m of getBaseAndSelfMetas(meta)) {
+        for (const [fieldName, callbacks] of Object.entries(m.config.__data.transitionCallbacks)) {
+          const inherited = byField.get(fieldName) ?? [];
+          inherited.push(...callbacks);
           byField.set(fieldName, inherited);
         }
       }

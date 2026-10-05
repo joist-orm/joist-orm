@@ -15,10 +15,6 @@ Joist has three `config` methods to model these state machines:
 | `config.guardTransition` | When is a possible change allowed? |
 | `config.onTransition`    | What happens after a change?       |
 
-Like validation rules, transition configuration is inherited by entity subtypes. Subtype tables and
-guards add restrictions to the base type's configuration, and both base and subtype callbacks run
-for matching transitions.
-
 ## Quick Example
 
 Here's an example modeling a book advance's `AdvanceStatus` enum, i.e. whether the advance has/has not been paid to the author:
@@ -95,6 +91,9 @@ Other behavior:
 * **Only allowed transitions will fire `onTransition`.** If the table or a guard rejects a change, `fn` doesn't run for it.
 * **`phase: "commit"`** runs `fn` in `beforeCommit`, after the entities' SQL changes have been flushed to the database, once for each matching transition. Use it for enqueueing jobs.
 
+Transition callbacks do not support retrying a failed `em.flush` on the same `EntityManager`.
+Start a new attempt with a new `EntityManager`.
+
 :::caution
 
 Guards and reactions see the entity's current state, not its state at the time of the transition.
@@ -116,19 +115,22 @@ But this only covers the `status` field itself, and doesn't snapshot the rest of
 
 ## The `match` argument
 
-Both  `guardTransition` and `onTransition` take the same `match` object:
+`guardTransition` takes `GuardTransitionMatch`, while `onTransition` takes `OnTransitionMatch`:
 
 ```typescript
-type TransitionMatch<V> = {
+interface GuardTransitionMatch<V> {
   // The state before the transition, omitted means any state
-  from?: V | V[];
+  from?: V | readonly V[];
   // The state after the transition, omitted means any state
-  to?: V | V[];
-  // onTransition only: fire when an entity is created with a matching `to` state, defaults to true
+  to?: V | readonly V[];
+}
+
+interface OnTransitionMatch<V> extends GuardTransitionMatch<V> {
+  // Fire when an entity is created with a matching `to` state, defaults to true
   onCreate?: boolean;
-  // onTransition only: "commit" runs in beforeCommit, after the entities' SQL changes have been flushed to the database
+  // "commit" runs in beforeCommit, after the entities' SQL changes have been flushed to the database
   phase?: "flush" | "commit";
-};
+}
 ```
 
 ## New Entity Behavior
@@ -148,6 +150,12 @@ await em.flush();
 Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `onTransition` callbacks that match creation in Paid (i.e. to Paid, with no from) still fire.
 
 This behavior is also beneficial for both `em.findOrCreate` and test factories, where it's common for an entity to be created with an initial/default status, but then very quickly set "to the right initial value", which should not be considered a true transition change.
+
+## Inheritance
+
+Like validation rules, transition configuration is inherited by entity subtypes. Subtype tables and
+guards add restrictions to the base type's configuration, and both base and subtype callbacks run
+for matching transitions.
 
 ## Test Factories
 

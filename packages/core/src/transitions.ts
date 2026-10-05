@@ -4,14 +4,21 @@ import { getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
 import { ValidationErrors } from "src/rules.ts";
 
 /**
- * Which state transitions of an enum field a `guardTransition` or `onTransition` cares about.
+ * Which state transitions of an enum field a `guardTransition` cares about.
  *
- * Omitting `from` or `to` matches any state. For `onTransition`, creating an entity with a matching
- * `to` state also matches, unless `from` is set or `onCreate` is `false`. Guards never run on creation.
+ * Omitting `from` or `to` matches any state. Guards never run on creation.
  */
-export interface TransitionMatch<V> {
+export interface GuardTransitionMatch<V> {
   from?: V | readonly V[];
   to?: V | readonly V[];
+}
+
+/**
+ * Which state transitions of an enum field an `onTransition` callback handles.
+ *
+ * Creating an entity with a matching `to` state also matches, unless `from` is set or `onCreate` is `false`.
+ */
+export interface OnTransitionMatch<V> extends GuardTransitionMatch<V> {
   /**
    * Whether `onTransition` fires when an entity is created with a matching `to` state, defaults to `true`.
    *
@@ -153,7 +160,7 @@ export function clearTransitionState(em: EntityManager): void {
 }
 
 /** Returns whether `step` matches `match`'s `from`, `to`, and `onCreate` settings. */
-export function matchesTransition(match: TransitionMatch<unknown>, step: TransitionStep): boolean {
+export function matchesTransition(match: OnTransitionMatch<unknown>, step: TransitionStep): boolean {
   if (step.from === created) {
     // `from` describes a previous state, which a new entity doesn't have
     if (match.onCreate === false || match.from !== undefined) return false;

@@ -162,7 +162,7 @@ export * from "src/RowData.ts";
 export { type JoinRowTodo, Todo } from "src/flush/Todo.ts";
 export * from "src/changes.ts";
 export { ConfigApi, type EntityHook, resetBootFlag } from "src/config.ts";
-export { type TransitionMatch, type TransitionTable } from "src/transitions.ts";
+export { type GuardTransitionMatch, type OnTransitionMatch, type TransitionTable } from "src/transitions.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,

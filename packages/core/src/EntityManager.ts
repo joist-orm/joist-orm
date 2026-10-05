@@ -3161,7 +3161,7 @@ export class TooManyError extends Error {
  * Validates recorded transitions independently of net database changes.
  *
  * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
- * Keep the history until flush succeeds, so retrying a rejected transition still checks its guard.
+ * Keep the history until flush succeeds, so validation checks every recorded transition.
  *
  * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
  * have seen them. For now, each transition is meaningful, even when the final state is unchanged.

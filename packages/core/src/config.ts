@@ -19,8 +19,9 @@ import {
 import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { type ValidationRule, type ValidationRuleInternal, type ValidationRuleResult } from "src/rules.ts";
 import {
+  type GuardTransitionMatch,
+  type OnTransitionMatch,
   type Transition,
-  type TransitionMatch,
   type TransitionStep,
   type TransitionTable,
   advanceTransitionCursor,
@@ -382,16 +383,16 @@ export class ConfigApi<T extends Entity, C> {
    */
   guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: GuardTransitionMatch<TransitionValue<T, K>>,
     hint: H,
     rule: TransitionGuardRule<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: GuardTransitionMatch<TransitionValue<T, K>>,
     rule: TransitionGuardRule<T, TransitionType<T, K>>,
   ): void;
-  guardTransition(fieldName: string, match: TransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
+  guardTransition(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
     const name = `guardTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "guardTransition");
     this.__data.transitionFields.add(fieldName);
@@ -431,31 +432,31 @@ export class ConfigApi<T extends Entity, C> {
    */
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionValue<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>>(
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionValue<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     name: string,
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionValue<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>>(
     name: string,
     fieldName: K,
-    match: TransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionValue<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
   onTransition(
     nameOrFieldName: string,
-    fieldNameOrMatch: string | TransitionMatch<any>,
+    fieldNameOrMatch: string | OnTransitionMatch<any>,
     matchOrHintOrFn: any,
     hintOrFn?: any,
     maybeFn?: any,
@@ -465,7 +466,7 @@ export class ConfigApi<T extends Entity, C> {
     this.ensurePreBoot(name, "onTransition");
     this.ensureUniqueReactionName(name, "onTransition");
     const fieldName = named ? fieldNameOrMatch : nameOrFieldName;
-    const match: TransitionMatch<any> = named ? matchOrHintOrFn : fieldNameOrMatch;
+    const match: OnTransitionMatch<any> = named ? matchOrHintOrFn : fieldNameOrMatch;
     const hintOrCallback = named ? hintOrFn : matchOrHintOrFn;
     const callback = named ? maybeFn : hintOrFn;
     const fn: TransitionFn<T, C, any> = callback ?? hintOrCallback;
@@ -490,7 +491,7 @@ export class ConfigApi<T extends Entity, C> {
       const reaction = async (entity: T, ctx: C) => {
         for (const step of getPendingTransitionSteps(name, entity, fieldName)) {
           if (matches(entity, step)) {
-            // Stop without marking it handled, so a retried flush handles it once the guard passes
+            // Leave this step unhandled; validation will report the guard's error.
             if (await isTransitionRejected(entity, fieldName, step)) return;
             await run(entity, ctx, step);
           }
@@ -876,8 +877,11 @@ function toCodesTable(
 }
 
 /** Returns a `match` checker that converts the match's accessors to codes once per entity type. */
-function newMatcher(fieldName: string, match: TransitionMatch<any>): (entity: Entity, step: TransitionStep) => boolean {
-  const byMeta = new Map<EntityMetadata, TransitionMatch<unknown>>();
+function newMatcher(
+  fieldName: string,
+  match: OnTransitionMatch<any>,
+): (entity: Entity, step: TransitionStep) => boolean {
+  const byMeta = new Map<EntityMetadata, OnTransitionMatch<unknown>>();
   return (entity, step) => {
     const meta = getMetadata(entity);
     let codes = byMeta.get(meta);

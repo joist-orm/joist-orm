@@ -40,6 +40,7 @@ import {
   type Entity,
   newSmallPublisherGroup,
   PublisherGroup,
+  type PublisherGroupFactoryExtras,
   type PublisherGroupFields,
   type PublisherGroupFilter,
   type PublisherGroupGraphQLFilter,
@@ -95,7 +96,7 @@ export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
   smallName?: OrderBy;
 }
 
-export interface SmallPublisherGroupFactoryExtras {
+export interface SmallPublisherGroupFactoryExtras extends PublisherGroupFactoryExtras {
 }
 
 export interface SmallPublisherGroupScopes {

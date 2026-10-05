@@ -57,6 +57,7 @@ import {
   largePublisherMeta,
   newLargePublisher,
   Publisher,
+  type PublisherFactoryExtras,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -137,7 +138,7 @@ export interface LargePublisherOrder extends PublisherOrder {
   spotlightAuthor?: AuthorOrder;
 }
 
-export interface LargePublisherFactoryExtras {
+export interface LargePublisherFactoryExtras extends PublisherFactoryExtras {
 }
 
 export interface LargePublisherScopes {

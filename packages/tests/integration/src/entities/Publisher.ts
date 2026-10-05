@@ -37,6 +37,8 @@ export const publisherTransientFields = {
   numberOfBookAdvancesSnapshotCalcs: 0,
   logoColorsReactionInvoked: 0,
   observedLogoColors: [] as Color[],
+  statusTransitions: 0,
+  activeStatusCommitTransitions: 0,
 };
 
 export abstract class Publisher extends PublisherCodegen {
@@ -188,6 +190,18 @@ config.afterMetadata((meta) => {
 
 /** Test the types for an enum default value (even though it is already matched by the db defaultValues). */
 config.setDefault("type", () => PublisherType.Big);
+
+// For testing transition configuration inherited by both CTI subtypes.
+config.transitions("status", { Draft: ["Active"], Active: ["Draft"] });
+config.guardTransition("status", { to: "Active" }, (p) => {
+  if (p.name === "ActivationBlocked") return "Cannot activate an unapproved publisher";
+});
+config.onTransition("recordPublisherStatus", "status", {}, (p) => {
+  p.transientFields.statusTransitions++;
+});
+config.onTransition("status", { to: "Active", phase: "commit" }, (p) => {
+  p.transientFields.activeStatusCommitTransitions++;
+});
 
 /** Test that base class defaults are processed and persisted */
 config.setDefault("baseSyncDefault", () => "BaseSyncDefault");

@@ -1,4 +1,4 @@
-import { type Reactable, setAfterMetadataLocked, setBooted } from "src/config.ts";
+import { type Reactable, type TransitionRule, setAfterMetadataLocked, setBooted } from "src/config.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
 import { type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
@@ -94,6 +94,21 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
 /** Installs lazy getters for reactivity caches after reactivity has been reverse-indexed. */
 function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
   for (const meta of metas) {
+    // Config-dependent getters are installed after afterMetadata callbacks finish adding config.
+    defineLazyGetter(meta, "transitionFields", function buildTransitionFields() {
+      return new Set(getBaseAndSelfMetas(meta).flatMap((m) => [...m.config.__data.transitionFields]));
+    });
+    defineLazyGetter(meta, "transitionRules", function buildTransitionRules() {
+      const byField = new Map<string, TransitionRule<Entity>[]>();
+      for (const m of getBaseAndSelfMetas(meta)) {
+        for (const [fieldName, rules] of Object.entries(m.config.__data.transitionRules)) {
+          const inherited = byField.get(fieldName) ?? [];
+          inherited.push(...rules);
+          byField.set(fieldName, inherited);
+        }
+      }
+      return byField;
+    });
     defineLazyGetter(meta, "reactables", function buildReactables() {
       return getBaseAndSelfMetas(meta)
         .flatMap((m) => m.config.__data.reactables)

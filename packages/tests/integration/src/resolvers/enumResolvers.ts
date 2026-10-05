@@ -4,6 +4,7 @@ import {
   Colors,
   ImageTypes,
   PublisherSizes,
+  PublisherStatuses,
   PublisherTypes,
   TaskTypes,
 } from "src/entities";
@@ -15,6 +16,7 @@ type EnumDetails =
   | "ColorDetail"
   | "ImageTypeDetail"
   | "PublisherSizeDetail"
+  | "PublisherStatusDetail"
   | "PublisherTypeDetail"
   | "TaskTypeDetail";
 
@@ -34,6 +36,8 @@ export const enumResolvers: Pick<Resolvers, EnumDetails> = {
   },
 
   PublisherSizeDetail: { code: (root) => root, name: (root) => PublisherSizes.getByCode(root).name },
+
+  PublisherStatusDetail: { code: (root) => root, name: (root) => PublisherStatuses.getByCode(root).name },
 
   PublisherTypeDetail: { code: (root) => root, name: (root) => PublisherTypes.getByCode(root).name },
 

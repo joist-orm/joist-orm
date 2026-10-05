@@ -28,6 +28,7 @@ import {
   Publisher,
   PublisherGroup,
   PublisherSize,
+  PublisherStatus,
   PublisherType,
   SmallPublisher,
   SmallPublisherGroup,
@@ -68,6 +69,7 @@ export interface Resolvers {
   Publisher: PublisherResolvers;
   PublisherGroup: PublisherGroupResolvers;
   PublisherSizeDetail: PublisherSizeDetailResolvers;
+  PublisherStatusDetail: PublisherStatusDetailResolvers;
   PublisherTypeDetail: PublisherTypeDetailResolvers;
   Query: QueryResolvers;
   SmallPublisher: SmallPublisherResolvers;
@@ -375,6 +377,7 @@ export interface LargePublisherResolvers {
   rating: Resolver<LargePublisher, {}, number>;
   sharedColumn: Resolver<LargePublisher, {}, string | null | undefined>;
   size: Resolver<LargePublisher, {}, PublisherSize | null | undefined>;
+  status: Resolver<LargePublisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<LargePublisher, {}, readonly Tag[]>;
   tasks: Resolver<LargePublisher, {}, readonly Task[]>;
   type: Resolver<LargePublisher, {}, PublisherType>;
@@ -445,6 +448,7 @@ export interface PublisherResolvers {
   numberOfBookReviews: Resolver<Publisher, {}, number | null | undefined>;
   rating: Resolver<Publisher, {}, number | null | undefined>;
   size: Resolver<Publisher, {}, PublisherSize | null | undefined>;
+  status: Resolver<Publisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<Publisher, {}, readonly Tag[]>;
   tasks: Resolver<Publisher, {}, readonly Task[]>;
   type: Resolver<Publisher, {}, PublisherType | null | undefined>;
@@ -465,6 +469,11 @@ export interface PublisherGroupResolvers {
 export interface PublisherSizeDetailResolvers {
   code: Resolver<PublisherSize, {}, PublisherSize>;
   name: Resolver<PublisherSize, {}, string>;
+}
+
+export interface PublisherStatusDetailResolvers {
+  code: Resolver<PublisherStatus, {}, PublisherStatus>;
+  name: Resolver<PublisherStatus, {}, string>;
 }
 
 export interface PublisherTypeDetailResolvers {
@@ -554,6 +563,7 @@ export interface SmallPublisherResolvers {
   sharedColumn: Resolver<SmallPublisher, {}, string | null | undefined>;
   size: Resolver<SmallPublisher, {}, PublisherSize | null | undefined>;
   smallPublishers: Resolver<SmallPublisher, {}, readonly SmallPublisher[]>;
+  status: Resolver<SmallPublisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<SmallPublisher, {}, readonly Tag[]>;
   tasks: Resolver<SmallPublisher, {}, readonly Task[]>;
   type: Resolver<SmallPublisher, {}, PublisherType>;
@@ -695,6 +705,7 @@ export interface AllEnumDetailsResolvers {
   color: Resolver<AllEnumDetails, {}, readonly Color[]>;
   imageType: Resolver<AllEnumDetails, {}, readonly ImageType[]>;
   publisherSize: Resolver<AllEnumDetails, {}, readonly PublisherSize[]>;
+  publisherStatus: Resolver<AllEnumDetails, {}, readonly PublisherStatus[]>;
   publisherType: Resolver<AllEnumDetails, {}, readonly PublisherType[]>;
   taskType: Resolver<AllEnumDetails, {}, readonly TaskType[]>;
 }
@@ -1242,6 +1253,7 @@ export interface AllEnumDetails {
   color: MaybePromise<Color[]>;
   imageType: MaybePromise<ImageType[]>;
   publisherSize: MaybePromise<PublisherSize[]>;
+  publisherStatus: MaybePromise<PublisherStatus[]>;
   publisherType: MaybePromise<PublisherType[]>;
   taskType: MaybePromise<TaskType[]>;
 }
@@ -1679,6 +1691,7 @@ export interface LargePublisherFilter {
   sharedColumn?: string[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -1718,6 +1731,7 @@ export interface PublisherFilter {
   rating?: number[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -1855,6 +1869,7 @@ export interface SaveLargePublisherInput {
   rating?: number | null | undefined;
   sharedColumn?: string | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
 }
 
@@ -1888,6 +1903,7 @@ export interface SavePublisherInput {
   name?: string | null | undefined;
   rating?: number | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
   updatedAt?: Date | null | undefined;
 }
@@ -1911,6 +1927,7 @@ export interface SaveSmallPublisherInput {
   selfReferentialId?: string | null | undefined;
   sharedColumn?: string | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
 }
 
@@ -2006,6 +2023,7 @@ export interface SmallPublisherFilter {
   sharedColumn?: string[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -2115,6 +2133,8 @@ export { FavoriteShape } from "src/entities";
 export { ImageType } from "src/entities";
 
 export { PublisherSize } from "src/entities";
+
+export { PublisherStatus } from "src/entities";
 
 export { PublisherType } from "src/entities";
 

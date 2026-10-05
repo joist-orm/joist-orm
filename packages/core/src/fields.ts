@@ -84,8 +84,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
   // Check `config.transitions` tables while the change is still synchronous, before we change anything,
   // and record the transition for `em.flush` to run its (async) guards and reactions
-  const maybeTransition = field.kind === "enum" && !currentEqualsNew;
-  if (maybeTransition) maybeRecordTransition(entity, fieldName, currentValue, newValue);
+  const maybeTransition =
+    field.kind === "enum" && !currentEqualsNew && maybeRecordTransition(entity, fieldName, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
   if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);
@@ -123,7 +123,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       fieldLogger.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
         rm.queueDownstreamReactables(entity, fieldName);
-      } else if (maybeTransition && getMetadata(entity).config.__data.transitionFields.has(fieldName)) {
+      } else if (maybeTransition) {
         // A transition back to the original state is still a transition, so keep its reactions queued
         rm.queueDownstreamReactables(entity, fieldName);
       } else {

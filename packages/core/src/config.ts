@@ -59,7 +59,7 @@ type TransitionType<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>
   : never;
 
 /** Returns an error if a `guardTransition` rejects `step`. */
-type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
+export type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
 
 /**
  * The values that `transitions` tables and `match`es accept for an enum-ish field, i.e. `"Draft"` for
@@ -472,7 +472,6 @@ export class ConfigApi<T extends Entity, C> {
     const hint: LoadHint<T> | undefined = callback ? hintOrCallback : undefined;
     this.__data.transitionFields.add(fieldName);
     const matches = newMatcher(fieldName, match);
-    const data = this.__data;
     const run = (entity: T, ctx: C, step: TransitionStep) => {
       const transition = toTransition(step);
       return hint === undefined
@@ -492,7 +491,7 @@ export class ConfigApi<T extends Entity, C> {
         for (const step of getPendingTransitionSteps(name, entity, fieldName)) {
           if (matches(entity, step)) {
             // Stop without marking it handled, so a retried flush handles it once the guard passes
-            if (await isTransitionRejected(data, entity, fieldName, step)) return;
+            if (await isTransitionRejected(entity, fieldName, step)) return;
             await run(entity, ctx, step);
           }
           advanceTransitionCursor(name, entity);
@@ -839,13 +838,8 @@ function addTransitionRule<T extends Entity>(
 }
 
 /** Returns whether any `guardTransition` on `fieldName` rejects `step`. */
-async function isTransitionRejected<T extends Entity>(
-  data: ConfigData<T, any>,
-  entity: T,
-  fieldName: string,
-  step: TransitionStep,
-): Promise<boolean> {
-  const rules = data.transitionRules[fieldName];
+async function isTransitionRejected(entity: Entity, fieldName: string, step: TransitionStep): Promise<boolean> {
+  const rules = getMetadata(entity).transitionRules!.get(fieldName);
   if (!rules) return false;
   const results = await Promise.all(rules.map((rule) => rule(entity, step)));
   return results.some((result) => (Array.isArray(result) ? result.length > 0 : !!result));

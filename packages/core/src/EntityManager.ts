@@ -3170,11 +3170,10 @@ async function validateTransitionGuards(em: EntityManager): Promise<void> {
   const validations: Promise<ValidationError[]>[] = [];
   for (const [entity, byField] of getTransitionEntries(em)) {
     if (entity.isDeletedEntity) continue;
-    for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
-      for (const [fieldName, steps] of byField) {
-        for (const rule of meta.config.__data.transitionRules[fieldName] ?? []) {
-          validations.push(...steps.map((step) => invokeRule(entity, () => rule(entity, step))));
-        }
+    const rules = getMetadata(entity).transitionRules!;
+    for (const [fieldName, steps] of byField) {
+      for (const rule of rules.get(fieldName) ?? []) {
+        validations.push(...steps.map((step) => invokeRule(entity, () => rule(entity, step))));
       }
     }
   }

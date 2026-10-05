@@ -198,6 +198,9 @@ export function generateEntityCodegenFile(
     ? code`extends ${imp("t:" + baseEntity.entity.graphqlFilterName + "@./entities.ts")}`
     : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
+  const maybeBaseFactoryExtras = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.entity.factoryExtrasName + "@./entities.ts")}`
+    : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
@@ -271,7 +274,7 @@ export function generateEntityCodegenFile(
       ${generateOrderFields(meta)}
     }
 
-    export interface ${entity.factoryExtrasName} {
+    export interface ${entity.factoryExtrasName} ${maybeBaseFactoryExtras} {
       ${generateFactoryExtrasType(meta)}
     }
 

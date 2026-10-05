@@ -285,7 +285,7 @@ export function newTestInstance<T extends Entity>(
           return [realName, new FactoryInitialValue(optValue)];
         }
         // Fields with `config.transitions`/`onTransition`s accept a trusted created value, like ReactiveFields
-        if (realField?.kind === "enum" && meta.config.__data.transitionFields.has(realName)) {
+        if (realField?.kind === "enum" && meta.transitionFields!.has(realName)) {
           return [realName, new FactoryInitialValue(optValue)];
         }
       }

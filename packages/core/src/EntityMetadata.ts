@@ -1,5 +1,5 @@
 import { getInstanceData } from "src/BaseEntity.ts";
-import { type ConfigApi, type Reactable, type ReactiveRule } from "src/config.ts";
+import type { ConfigApi, Reactable, ReactiveRule, TransitionRule } from "src/config.ts";
 import { getMetadataForType } from "src/configure.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "src/EntityManager.ts";
@@ -69,6 +69,10 @@ export interface EntityMetadata<T extends Entity = any> {
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
+  /** The lazily-cached set of transition fields configured on this metadata and its base types. */
+  transitionFields?: ReadonlySet<string>;
+  /** The lazy lookup of transition guards by field, including guards from base types. */
+  transitionRules?: ReadonlyMap<string, readonly TransitionRule<Entity>[]>;
   /** The lazy list of non-read-only reactables for this metadata and its base types. */
   reactables?: Reactable[];
   /** The lazy lookup of non-read-only reactables by source field name. */

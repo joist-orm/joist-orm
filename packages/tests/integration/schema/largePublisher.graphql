@@ -1,3 +1,8 @@
+extend type Query {
+  largePublisher(id: ID!): LargePublisher!
+  largePublishers(filter: LargePublisherFilter, limit: Int, offset: Int): LargePublishersPage!
+}
+
 extend type Mutation {
   saveLargePublisher(input: SaveLargePublisherInput!): SaveLargePublisherResult!
 }
@@ -27,6 +32,7 @@ type LargePublisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int!
+  status: PublisherStatusDetail
 }
 
 input SaveLargePublisherInput {
@@ -44,15 +50,11 @@ input SaveLargePublisherInput {
   baseSyncDefault: String
   baseAsyncDefault: String
   rating: Int
+  status: PublisherStatus
 }
 
 type SaveLargePublisherResult {
   largePublisher: LargePublisher!
-}
-
-extend type Query {
-  largePublisher(id: ID!): LargePublisher!
-  largePublishers(filter: LargePublisherFilter, limit: Int, offset: Int): LargePublishersPage!
 }
 
 type LargePublishersPage {
@@ -83,4 +85,5 @@ input LargePublisherFilter {
   spotlightAuthorId: [ID!]
   sharedColumn: [String!]
   country: [String!]
+  status: [PublisherStatus!]
 }

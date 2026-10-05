@@ -15,6 +15,10 @@ Joist has three `config` methods to model these state machines:
 | `config.guardTransition` | When is a possible change allowed? |
 | `config.onTransition`    | What happens after a change?       |
 
+Like validation rules, transition configuration is inherited by entity subtypes. Subtype tables and
+guards add restrictions to the base type's configuration, and both base and subtype callbacks run
+for matching transitions.
+
 ## Quick Example
 
 Here's an example modeling a book advance's `AdvanceStatus` enum, i.e. whether the advance has/has not been paid to the author:

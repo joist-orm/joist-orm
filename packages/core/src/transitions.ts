@@ -1,6 +1,6 @@
 import type { Entity } from "src/Entity.ts";
 import type { EntityManager } from "src/EntityManager.ts";
-import { getMetadata } from "src/EntityMetadata.ts";
+import { getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
 import { ValidationErrors } from "src/rules.ts";
 
 /**
@@ -73,19 +73,24 @@ const states = new WeakMap<EntityManager, TransitionState>();
  * entity until then is part of its creation. I.e. `em.create` then `entity.status = Open`, or a factory
  * setting a default and then a `withStatus` value, or `em.findOrCreate` creating then upserting, all
  * create the entity as `Open`. Creation isn't checked against the `transitions` table.
+ * Returns whether the field has transition configuration and its change was recorded.
  */
-export function maybeRecordTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
-  const data = getMetadata(entity).config.__data;
-  if (!data.transitionFields.has(fieldName)) return;
+export function maybeRecordTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): boolean {
+  const meta = getMetadata(entity);
+  if (!meta.transitionFields!.has(fieldName)) return false;
   const state = getState(entity.em);
   if (entity.isNewEntity && !state.created.has(entity)) {
     state.creating.add(entity);
     setCreationStep(entity, fieldName, to);
-    return;
+    return true;
   }
-  const error = data.transitionTables[fieldName]?.(entity, from, to);
-  if (error) throw new ValidationErrors([{ entity, message: error }]);
+  // Like validation rules, subtype restrictions supplement the base type's restrictions.
+  for (const m of getBaseAndSelfMetas(meta)) {
+    const error = m.config.__data.transitionTables[fieldName]?.(entity, from, to);
+    if (error) throw new ValidationErrors([{ entity, message: error }]);
+  }
   addStep(entity, fieldName, { from, to });
+  return true;
 }
 
 /** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */

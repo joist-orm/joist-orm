@@ -50,6 +50,7 @@ import {
   type Tag,
   Task,
   type TaskColumns,
+  type TaskFactoryExtras,
   type TaskFields,
   type TaskFilter,
   type TaskGraphQLFilter,
@@ -131,7 +132,7 @@ export interface TaskNewOrder extends TaskOrder {
   copiedFrom?: TaskNewOrder;
 }
 
-export interface TaskNewFactoryExtras {
+export interface TaskNewFactoryExtras extends TaskFactoryExtras {
 }
 
 export interface TaskNewScopes {

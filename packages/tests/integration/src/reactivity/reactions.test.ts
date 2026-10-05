@@ -53,7 +53,10 @@ describe("reactions", () => {
   });
 
   it.withCtx("creates the right reaction targets", async () => {
+    // Given reactions configured on authors, publishers, and their subtypes
     const fn = expect.any(Function);
+    // When their hints are reversed to the entities that trigger them
+    // Then Publisher changes trigger the applicable author and publisher reactions
     expect(getReactions(Publisher)).toMatchObject([
       {
         kind: "reaction",
@@ -78,6 +81,16 @@ describe("reactions", () => {
       {
         kind: "reaction",
         cstr: Publisher,
+        fields: ["status"],
+        path: [],
+        source: Publisher,
+        isReadOnly: false,
+        name: "recordPublisherStatus",
+        fn,
+      },
+      {
+        kind: "reaction",
+        cstr: Publisher,
         fields: ["name"],
         path: [],
         source: Publisher,
@@ -96,6 +109,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When SmallPublisher-specific hints are reversed
+    // Then its changes trigger user reactions and its own activation callback
     expect(getReactions(SmallPublisher)).toMatchObject([
       {
         kind: "reaction",
@@ -107,7 +122,19 @@ describe("reactions", () => {
         name: "poly",
         fn,
       },
+      {
+        kind: "reaction",
+        cstr: SmallPublisher,
+        fields: ["status"],
+        path: [],
+        source: SmallPublisher,
+        isReadOnly: false,
+        name: "recordSmallPublisherActivation",
+        fn,
+      },
     ]);
+    // When LargePublisher-specific hints are reversed
+    // Then its name changes trigger the user's publisher reaction
     expect(getReactions(LargePublisher)).toMatchObject([
       {
         kind: "reaction",
@@ -120,6 +147,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When tag name hints are reversed
+    // Then tags trigger their authors' reactions
     expect(getReactions(Tag)).toMatchObject([
       {
         kind: "reaction",
@@ -132,6 +161,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When parent-item hints are reversed
+    // Then item changes trigger their group's reaction
     expect(getReactions(ParentItem).filter((r) => r.cstr === ParentGroup)).toMatchObject([
       {
         kind: "reaction",
@@ -145,6 +176,8 @@ describe("reactions", () => {
         runOnce: false,
       },
     ]);
+    // When author hints are reversed
+    // Then each author field triggers the applicable author reactions
     expect(getReactions(Author)).toMatchObject([
       {
         kind: "reaction",
@@ -948,10 +981,8 @@ describe("reactions", () => {
   it.withCtx("runs separately named status reactions registered through the same helper", async (ctx) => {
     // Given an advance with two separately named status reactions
     const ba = newBookAdvance(ctx.em);
-
     // When the advance is created
     await ctx.em.flush();
-
     // Then both named reactions have handled its status
     expect(ba.transientFields.namedReactions.sort()).toEqual(["notifyStatus", "recordStatus"]);
   });
@@ -960,7 +991,6 @@ describe("reactions", () => {
     // Given a status helper that registers two reactions from the same source location
     // When the second reaction is registered during entity boot
     const error = BookAdvance.reactionRegistrationErrors.unnamedReaction;
-
     // Then registration tells the caller to give the reactions unique names
     expect(() => {
       throw error;
@@ -971,7 +1001,6 @@ describe("reactions", () => {
     // Given a status reaction already named recordStatus
     // When another reaction requests the same name during entity boot
     const error = BookAdvance.reactionRegistrationErrors.namedReaction;
-
     // Then registration rejects the duplicate name
     expect(() => {
       throw error;

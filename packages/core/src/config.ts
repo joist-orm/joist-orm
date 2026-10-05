@@ -46,7 +46,7 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
 /** A `guardTransition` rule, which also gets the transition it is checking, since the entity may have moved on. */
-type TransitionGuardRule<T extends Entity, V> = (
+export type TransitionGuardRule<T extends Entity, V> = (
   entity: T,
   transition: Transition<V>,
 ) => MaybePromise<ValidationRuleResult>;
@@ -54,21 +54,18 @@ type TransitionGuardRule<T extends Entity, V> = (
 /** An `onTransition` function, which also gets the transition it is handling, since the entity may have moved on. */
 type TransitionFn<T extends Entity, C, V> = (entity: T, ctx: C, transition: Transition<V>) => MaybePromise<unknown>;
 
-/** The enum type of a transition field, i.e. `AuthorStatus`. */
+/** The enum type of a transition field, i.e. `PublisherStatus`. */
 type TransitionType<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends EntityField
   ? NonNullable<FieldsOf<T>[K]["type"]>
   : never;
 
-/** Returns an error if a `guardTransition` rejects `step`. */
-export type TransitionRule<T extends Entity> = (entity: T, step: TransitionStep) => MaybePromise<ValidationRuleResult>;
-
 /**
- * The values that `transitions` tables and `match`es accept for an enum-ish field, i.e. `"Draft"` for
- * `AuthorStatus.Draft`.
+ * The state names that `transitions` tables and `match`es accept for an enum field, i.e. `"Draft"` for
+ * `PublisherStatus.Draft`.
  *
  * We only accept the enum's accessors, not its codes or members, so every table reads the same way.
  */
-type TransitionValue<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends {
+type TransitionStates<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends {
   accessors: infer A extends string;
 }
   ? A
@@ -355,16 +352,15 @@ export class ConfigApi<T extends Entity, C> {
    * The table is checked by the field's setter, so a disallowed transition throws a `ValidationErrors`
    * immediately, instead of failing the next `em.flush`.
    */
-  transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionValue<T, K>>): void {
+  transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
     const name = `transitions(${getCallerName()})`;
     this.ensurePreBoot(name, "transitions");
     this.__data.transitionFields.add(fieldName);
-    // Convert accessors to codes once per entity type, since the metadata isn't ready at config time
-    const tables = new Map<EntityMetadata, Map<unknown, readonly unknown[]>>();
+    // Convert accessors to codes on first use, since metadata isn't ready at config time.
+    // An inherited field uses the same enum on every subtype, so one converted table is enough.
+    let allowed: Map<unknown, readonly unknown[]> | undefined;
     this.__data.transitionTables[fieldName] = (entity, from, to) => {
-      const meta = getMetadata(entity);
-      let allowed = tables.get(meta);
-      if (!allowed) tables.set(meta, (allowed = toCodesTable(meta, fieldName, table)));
+      allowed ??= toCodesTable(getMetadata(entity), fieldName, table);
       if (allowed.get(from)?.includes(to)) return undefined;
       return `Cannot change ${fieldName} from ${describeValue(entity, fieldName, from)} to ${describeValue(entity, fieldName, to)}`;
     };
@@ -383,13 +379,13 @@ export class ConfigApi<T extends Entity, C> {
    */
   guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
-    match: GuardTransitionMatch<TransitionValue<T, K>>,
+    match: GuardTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     rule: TransitionGuardRule<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
-    match: GuardTransitionMatch<TransitionValue<T, K>>,
+    match: GuardTransitionMatch<TransitionStates<T, K>>,
     rule: TransitionGuardRule<T, TransitionType<T, K>>,
   ): void;
   guardTransition(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
@@ -432,26 +428,26 @@ export class ConfigApi<T extends Entity, C> {
    */
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
-    match: OnTransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>>(
     fieldName: K,
-    match: OnTransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     name: string,
     fieldName: K,
-    match: OnTransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
   onTransition<K extends Settable<T>>(
     name: string,
     fieldName: K,
-    match: OnTransitionMatch<TransitionValue<T, K>>,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
   onTransition(
@@ -681,8 +677,12 @@ export class ConfigData<T extends Entity, C> {
   transitionFields: Set<string> = new Set();
   /** Field name -> the `transitions` table check, called by setters with the current and new values. */
   transitionTables: Record<string, (entity: T, from: unknown, to: unknown) => string | undefined> = {};
-  /** Field name -> the `guardTransition` rules, so `onTransition` can skip rejected transitions. */
-  transitionRules: Record<string, TransitionRule<T>[]> = {};
+  /**
+   * Field name -> guard wrappers, used for validation and to skip rejected callbacks.
+   *
+   * Wrappers exclude creation and check matches before passing enum values to the guard.
+   */
+  transitionRules: Record<string, TransitionGuardRule<T, unknown>[]> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -833,7 +833,7 @@ function describeValue(entity: Entity, fieldName: string, value: unknown): strin
 function addTransitionRule<T extends Entity>(
   data: ConfigData<T, any>,
   fieldName: string,
-  rule: TransitionRule<T>,
+  rule: TransitionGuardRule<T, unknown>,
 ): void {
   (data.transitionRules[fieldName] ??= []).push(rule);
 }

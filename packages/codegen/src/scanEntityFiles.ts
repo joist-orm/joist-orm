@@ -14,8 +14,9 @@ import {
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
 const regex = /config\.setDefault\([\s\n]*["'](\w+)["']/g;
-// Any of the transition methods can be used on its own, so each one marks the field
-const transitionsRegex = /config\.(?:transitions|guardTransition|onTransition)\([\s\n]*["'](\w+)["']/g;
+// Any transition method marks the field; onTransition may have a name before the field argument.
+const transitionsRegex =
+  /config\.(?:transitions|guardTransition|onTransition)\(\s*(?:(?:["'][^"']*["']|\w+)\s*,\s*(?=["']))?["'](\w+)["']/g;
 
 /** Scans the entity files themselves for usage hints (like `setDefault` or `transitions` calls) to drive our codegen output. */
 export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promise<void> {

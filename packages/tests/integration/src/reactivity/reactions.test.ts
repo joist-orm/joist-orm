@@ -3,6 +3,7 @@ import { type MaybeAbstractEntityConstructor, getInstanceData, getMetadata } fro
 import {
   Author,
   Book,
+  BookAdvance,
   Image,
   ImageType,
   LargePublisher,
@@ -14,6 +15,7 @@ import {
   User,
   newAuthor,
   newBook,
+  newBookAdvance,
   newParentGroup,
   newParentItem,
   newPublisher,
@@ -941,6 +943,39 @@ describe("reactions", () => {
         await em.flush();
       },
     );
+  });
+
+  it.withCtx("runs separately named status reactions registered through the same helper", async (ctx) => {
+    // Given an advance with two separately named status reactions
+    const ba = newBookAdvance(ctx.em);
+
+    // When the advance is created
+    await ctx.em.flush();
+
+    // Then both named reactions have handled its status
+    expect(ba.transientFields.namedReactions.sort()).toEqual(["notifyStatus", "recordStatus"]);
+  });
+
+  it("rejects duplicate unnamed status reactions during registration", () => {
+    // Given a status helper that registers two reactions from the same source location
+    // When the second reaction is registered during entity boot
+    const error = BookAdvance.reactionRegistrationErrors.unnamedReaction;
+
+    // Then registration tells the caller to give the reactions unique names
+    expect(() => {
+      throw error;
+    }).toThrow(/Duplicate reaction name .*config.addReaction.*Pass a unique name/);
+  });
+
+  it("rejects duplicate explicit status reaction names during registration", () => {
+    // Given a status reaction already named recordStatus
+    // When another reaction requests the same name during entity boot
+    const error = BookAdvance.reactionRegistrationErrors.namedReaction;
+
+    // Then registration rejects the duplicate name
+    expect(() => {
+      throw error;
+    }).toThrow('Duplicate reaction name "recordStatus" in config.addReaction');
   });
 });
 

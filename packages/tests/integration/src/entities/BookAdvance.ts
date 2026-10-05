@@ -1,6 +1,7 @@
 import { AdvanceStatus, BookAdvanceCodegen, bookAdvanceConfig as config } from "./entities";
 
 export class BookAdvance extends BookAdvanceCodegen {
+  static reactionRegistrationErrors: Record<string, Error | undefined> = {};
   transientFields = {
     /** The `to` state of each transition our `onTransition` handled, so tests can assert exactly which fired. */
     transitions: [] as AdvanceStatus[],
@@ -16,6 +17,9 @@ export class BookAdvance extends BookAdvanceCodegen {
     signedTitle: undefined as string | undefined,
     /** How many times the commit-phase reaction ran. */
     onPaidCommitInvoked: 0,
+    /** Named callbacks registered through shared helpers must retain separate identities. */
+    namedPayments: [] as string[],
+    namedReactions: [] as string[],
   };
 }
 
@@ -42,7 +46,7 @@ config.onTransition("status", {}, (ba, _ctx, transition) => {
 
 // For testing `from` matches (which never fire on creation), loading the hint, receiving the `transition`
 // after the state has moved on, and chained transitions within one flush (with `payWhenSigned`)
-config.onTransition("status", { from: "Pending", to: "Signed" }, "book", (ba, _ctx, transition) => {
+config.onTransition("observeSignature", "status", { from: "Pending", to: "Signed" }, "book", (ba, _ctx, transition) => {
   ba.transientFields.signedTitle = ba.book.get.title;
   ba.transientFields.signedTransition = { ...transition, current: ba.status };
   if (ba.transientFields.payWhenSigned) ba.status = AdvanceStatus.Paid;
@@ -55,7 +59,7 @@ config.onTransition("status", { to: "Pending" }, (ba) => {
 });
 
 // For testing commit-phase reactions, and `onCreate: false`, since this only counts paying an existing advance
-config.onTransition("status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
+config.onTransition("countPaidCommit", "status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
   ba.transientFields.onPaidCommitInvoked++;
 });
 
@@ -65,3 +69,54 @@ config.guardTransition("status", { to: "Signed" }, "book", (ba) => {
     return "Cannot sign an advance for an unapproved book";
   }
 });
+
+registerNamedPayment("recordPayment");
+registerNamedPayment("notifyAuthor");
+registerNamedReaction("recordStatus");
+registerNamedReaction("notifyStatus");
+
+// Invalid registrations cannot be left uncaught in the fixture, because that would prevent boot.
+registerUnnamedReaction();
+captureRegistrationError("unnamedReaction", registerUnnamedReaction);
+registerUnnamedPayment();
+captureRegistrationError("unnamedTransition", registerUnnamedPayment);
+captureRegistrationError("namedReaction", () => registerNamedReaction("recordStatus"));
+captureRegistrationError("namedTransition", () => registerNamedPayment("recordPayment"));
+captureRegistrationError("sharedName", () => registerNamedPayment("recordStatus"));
+captureRegistrationError("commitTransition", () => {
+  config.onTransition("countPaidCommit", "status", { to: "Paid", phase: "commit" }, () => {});
+});
+
+/** Registers a named payment callback through a shared application helper. */
+function registerNamedPayment(name: string): void {
+  config.onTransition(name, "status", { to: "Paid" }, (ba) => {
+    ba.transientFields.namedPayments.push(name);
+  });
+}
+
+/** Registers a named status reaction through a shared application helper. */
+function registerNamedReaction(name: string): void {
+  config.addReaction(name, "status", (ba) => {
+    ba.transientFields.namedReactions.push(name);
+  });
+}
+
+/** Reuses a source location to test duplicate unnamed reaction registrations. */
+function registerUnnamedReaction(): void {
+  config.addReaction("status", () => {});
+}
+
+/** Reuses a source location to test duplicate unnamed transition registrations. */
+function registerUnnamedPayment(): void {
+  config.onTransition("status", { to: "Paid" }, () => {});
+}
+
+/** Records a rejected registration so tests can assert the boot-time error through the real entity. */
+function captureRegistrationError(key: string, register: () => void): void {
+  try {
+    register();
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    BookAdvance.reactionRegistrationErrors[key] = error;
+  }
+}

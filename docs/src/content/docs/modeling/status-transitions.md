@@ -73,6 +73,11 @@ Guards are different from regular `addRule` validation rules in a few ways:
 
 `config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that `match` describes.
 
+Like `addReaction`, callbacks are named by their source location unless you pass an explicit name:
+`config.onTransition(name, field, match, hint?, fn)`. Names must be unique within an entity's config,
+including `addReaction` and commit-phase callbacks. If a helper or loop registers multiple callbacks
+from the same source location, Joist throws during registration and asks you to pass unique names.
+
 Like [reactions](./reactions), `fn` can change any entity, and those changes can trigger more transitions in the same flush.
 
 Unlike `addReaction`, the `hint` is a "just load hint", as in `beforeFlush`, so it is used to preload data before `fn` is invoked, but data referenced by the hint itself does not trigger the `fn`.

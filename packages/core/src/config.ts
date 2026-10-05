@@ -269,6 +269,9 @@ export class ConfigApi<T extends Entity, C> {
    * 4. Can run multiple times per flush, like an RF/RF.  Be careful to avoid creating
    *    circular dependencies in the hint and to make the function idempotent.
    *
+   * Names default to the registration's source location. Pass unique names when registering multiple
+   * reactions from a shared helper or loop; duplicate names on the same config are rejected.
+   *
    * @param hint The fields to watch for changes and load before running the reaction
    * @param fn The reaction function to run
    */
@@ -321,6 +324,7 @@ export class ConfigApi<T extends Entity, C> {
       : {};
     const { name = getCallerName(), runOnce = false } = opts;
     this.ensurePreBoot(name, "addReaction");
+    this.ensureUniqueReactionName(name, "addReaction");
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
     const loadHints = new Map<EntityMetadata, LoadHint<T>>();
@@ -421,6 +425,9 @@ export class ConfigApi<T extends Entity, C> {
    * Creating an entity with a matching `to` state fires too, unless `match.from` is set or
    * `match.onCreate` is `false`. Set `match.phase: "commit"` to run in `beforeCommit` instead, i.e.
    * for enqueueing jobs.
+   *
+   * Pass a unique name as the first argument when registering multiple callbacks from a shared
+   * helper or loop. Duplicate names on the same config are rejected when registered.
    */
   onTransition<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
@@ -433,12 +440,37 @@ export class ConfigApi<T extends Entity, C> {
     match: TransitionMatch<TransitionValue<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
-  onTransition(fieldName: string, match: TransitionMatch<any>, hintOrFn: any, maybeFn?: any): void {
-    const name = `onTransition(${getCallerName()})`;
+  onTransition<K extends Settable<T>, H extends LoadHint<T>>(
+    name: string,
+    fieldName: K,
+    match: TransitionMatch<TransitionValue<T, K>>,
+    hint: H,
+    fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
+  ): void;
+  onTransition<K extends Settable<T>>(
+    name: string,
+    fieldName: K,
+    match: TransitionMatch<TransitionValue<T, K>>,
+    fn: TransitionFn<T, C, TransitionType<T, K>>,
+  ): void;
+  onTransition(
+    nameOrFieldName: string,
+    fieldNameOrMatch: string | TransitionMatch<any>,
+    matchOrHintOrFn: any,
+    hintOrFn?: any,
+    maybeFn?: any,
+  ): void {
+    const named = typeof fieldNameOrMatch === "string";
+    const name = named ? nameOrFieldName : `onTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "onTransition");
+    this.ensureUniqueReactionName(name, "onTransition");
+    const fieldName = named ? fieldNameOrMatch : nameOrFieldName;
+    const match: TransitionMatch<any> = named ? matchOrHintOrFn : fieldNameOrMatch;
+    const hintOrCallback = named ? hintOrFn : matchOrHintOrFn;
+    const callback = named ? maybeFn : hintOrFn;
+    const fn: TransitionFn<T, C, any> = callback ?? hintOrCallback;
+    const hint: LoadHint<T> | undefined = callback ? hintOrCallback : undefined;
     this.__data.transitionFields.add(fieldName);
-    const fn: TransitionFn<T, C, any> = maybeFn ?? hintOrFn;
-    const hint: LoadHint<T> | undefined = maybeFn ? hintOrFn : undefined;
     const matches = newMatcher(fieldName, match);
     const data = this.__data;
     const run = (entity: T, ctx: C, step: TransitionStep) => {
@@ -513,6 +545,16 @@ export class ConfigApi<T extends Entity, C> {
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
    * until the user is ready to use it. */
   placeholder(): void {}
+
+  /** Rejects names that would cause separate registrations to share reaction identity or cursors. */
+  private ensureUniqueReactionName(name: string, op: string): void {
+    if (this.__data.reactionNames.has(name)) {
+      throw new Error(
+        `Duplicate reaction name "${name}" in config.${op}. Pass a unique name when registering reactions from a shared helper or loop.`,
+      );
+    }
+    this.__data.reactionNames.add(name);
+  }
 
   private ensurePreBoot(name: string, op: string): void {
     if (booted) {
@@ -633,6 +675,8 @@ export class ConfigData<T extends Entity, C> {
   commitRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
+  /** Names shared by addReaction and onTransition, including commit-phase callbacks. */
+  reactionNames: Set<string> = new Set();
   /** Fields that have `transitions`, `guardTransition`, or `onTransition`s, i.e. so factories accept `withX` opts. */
   transitionFields: Set<string> = new Set();
   /** Field name -> the `transitions` table check, called by setters with the current and new values. */

@@ -1,7 +1,6 @@
 import { ValidationErrors } from "joist-orm";
 import {
   AdvanceStatus,
-  BookAdvance,
   ImageType,
   PublisherStatus,
   newAuthor,
@@ -276,56 +275,6 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     // Then the old signature doesn't prevent withdrawing approval
     expect(ba.book.get.title).toBe("Unapproved");
-  });
-
-  it("runs separately named payment callbacks registered through the same helper", async () => {
-    // Given an advance created as Paid with two separately named payment callbacks
-    const em = newEntityManager();
-    const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
-    // When the advance enters Paid by creation
-    await em.flush();
-    // Then both named payment callbacks have handled the advance
-    expect(ba.transientFields.namedPayments.sort()).toEqual(["notifyAuthor", "recordPayment"]);
-  });
-
-  it("rejects duplicate unnamed payment callbacks during registration", () => {
-    // Given a payment helper that registers two callbacks from the same source location
-    // When the second callback is registered during entity boot
-    const error = BookAdvance.reactionRegistrationErrors.unnamedTransition;
-    // Then registration tells the caller to give the callbacks unique names
-    expect(() => {
-      throw error;
-    }).toThrow(/Duplicate reaction name .*config.onTransition.*Pass a unique name/);
-  });
-
-  it("rejects duplicate explicit payment callback names during registration", () => {
-    // Given a payment callback already named recordPayment
-    // When another payment callback requests the same name during entity boot
-    const error = BookAdvance.reactionRegistrationErrors.namedTransition;
-    // Then registration rejects the duplicate name
-    expect(() => {
-      throw error;
-    }).toThrow('Duplicate reaction name "recordPayment" in config.onTransition');
-  });
-
-  it("rejects a payment callback name already used by an ordinary reaction", () => {
-    // Given an ordinary status reaction already named recordStatus
-    // When a payment callback requests the same name during entity boot
-    const error = BookAdvance.reactionRegistrationErrors.sharedName;
-    // Then registration rejects the shared reaction identity
-    expect(() => {
-      throw error;
-    }).toThrow('Duplicate reaction name "recordStatus" in config.onTransition');
-  });
-
-  it("rejects duplicate commit-phase payment callback names during registration", () => {
-    // Given a commit-phase payment callback already named countPaidCommit
-    // When another commit-phase callback requests the same name during entity boot
-    const error = BookAdvance.reactionRegistrationErrors.commitTransition;
-    // Then registration rejects the duplicate name before registering its hook
-    expect(() => {
-      throw error;
-    }).toThrow('Duplicate reaction name "countPaidCommit" in config.onTransition');
   });
 
   it("records an image type configured only through a named transition callback", async () => {

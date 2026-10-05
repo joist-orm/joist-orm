@@ -39,6 +39,7 @@ config.addRule((image) => {
   }
 });
 
+// For testing that named-only onTransitions are recognized by scanEntityFiles.
 config.onTransition("recordImageType", "type", { to: "AuthorImage" }, (image, _ctx, transition) => {
   image.transientFields.typeTransitions.push(transition.to);
 });

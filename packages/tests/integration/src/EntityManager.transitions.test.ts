@@ -367,9 +367,9 @@ describe("EntityManager.transitions", () => {
   });
 
   it("validates an inherited guard on a Publisher subtype", async () => {
-    // Given a Draft LargePublisher with a spotlight author that has not been approved for activation
+    // Given a Draft LargePublisher with a spotlight author, blocked by the base Publisher guard
     const em = newEntityManager();
-    const p = newLargePublisher(em, { name: "ActivationBlocked", status: PublisherStatus.Draft, spotlightAuthor: {} });
+    const p = newLargePublisher(em, { name: "BlockedByBaseType", status: PublisherStatus.Draft, spotlightAuthor: {} });
     await em.flush();
     // When it is activated
     p.status = PublisherStatus.Active;
@@ -378,9 +378,9 @@ describe("EntityManager.transitions", () => {
   });
 
   it("skips a subtype callback when an inherited guard rejects activation", async () => {
-    // Given a Draft SmallPublisher that has not been approved for activation
+    // Given a Draft SmallPublisher blocked by the base Publisher guard
     const em = newEntityManager();
-    const p = newSmallPublisher(em, { name: "ActivationBlocked", status: PublisherStatus.Draft });
+    const p = newSmallPublisher(em, { name: "BlockedByBaseType", status: PublisherStatus.Draft });
     await em.flush();
     // When it is activated
     p.status = PublisherStatus.Active;
@@ -392,9 +392,9 @@ describe("EntityManager.transitions", () => {
   });
 
   it("skips an inherited callback when a subtype guard rejects activation", async () => {
-    // Given a Draft SmallPublisher in a city where activation is restricted
+    // Given a Draft SmallPublisher blocked by its own subtype guard
     const em = newEntityManager();
-    const p = newSmallPublisher(em, { city: "Restricted", status: PublisherStatus.Draft });
+    const p = newSmallPublisher(em, { city: "BlockedBySubType", status: PublisherStatus.Draft });
     await em.flush();
     // When it is activated
     p.status = PublisherStatus.Active;

@@ -194,7 +194,7 @@ config.setDefault("type", () => PublisherType.Big);
 // For testing transition configuration inherited by both CTI subtypes.
 config.transitions("status", { Draft: ["Active"], Active: ["Draft"] });
 config.guardTransition("status", { to: "Active" }, (p) => {
-  if (p.name === "ActivationBlocked") return "Cannot activate an unapproved publisher";
+  if (p.name === "BlockedByBaseType") return "Cannot activate an unapproved publisher";
 });
 config.onTransition("recordPublisherStatus", "status", {}, (p) => {
   p.transientFields.statusTransitions++;

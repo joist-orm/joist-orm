@@ -97,7 +97,7 @@ config.addRule(cannotBeUpdated("group"));
 // Subtype transition restrictions supplement the base Publisher's table and guards.
 config.transitions("status", { Draft: ["Active"], Active: [] });
 config.guardTransition("status", { to: "Active" }, (sp) => {
-  if (sp.city === "Restricted") return "Cannot activate a publisher in a restricted city";
+  if (sp.city === "BlockedBySubType") return "Cannot activate a publisher in a restricted city";
 });
 config.onTransition("recordSmallPublisherActivation", "status", { to: "Active" }, (sp) => {
   sp.transientFields.activeStatusTransitions++;

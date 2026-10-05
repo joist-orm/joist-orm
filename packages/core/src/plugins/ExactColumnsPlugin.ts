@@ -1,5 +1,8 @@
 import { AsyncLocalStorage } from "async_hooks";
 
+import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import { kq, kqDot } from "src/queries/sql/keywords.ts";
+
 import { getInstanceData } from "../BaseEntity.ts";
 import { loadOperation } from "../batchloaders/loadBatchLoader.ts";
 import { oneToManyLoadOperation } from "../batchloaders/oneToManyBatchLoader.ts";
@@ -10,8 +13,6 @@ import { type Entity } from "../Entity.ts";
 import { type FindOperation, type MaybeAbstractEntityConstructor } from "../EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
 import { Plugin } from "../PluginManager.ts";
-import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
-import { kq, kqDot } from "src/queries/sql/keywords.ts";
 
 export interface ExactColumnsPluginOpts {
   /** Called when a narrowed endpoint reads an un-fetched column, i.e. for telemetry, before the retry/rethrow. */

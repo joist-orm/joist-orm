@@ -1,4 +1,4 @@
-import { type Reactable, type TransitionGuardRule, setAfterMetadataLocked, setBooted } from "src/config.ts";
+import { type Reactable, type TransitionGuard, setAfterMetadataLocked, setBooted } from "src/config.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
 import { type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
@@ -99,7 +99,7 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
       return new Set(getBaseAndSelfMetas(meta).flatMap((m) => [...m.config.__data.transitionFields]));
     });
     defineLazyGetter(meta, "transitionRules", function buildTransitionRules() {
-      const byField = new Map<string, TransitionGuardRule<Entity, unknown>[]>();
+      const byField = new Map<string, TransitionGuard<Entity, unknown>[]>();
       for (const m of getBaseAndSelfMetas(meta)) {
         for (const [fieldName, rules] of Object.entries(m.config.__data.transitionRules)) {
           const inherited = byField.get(fieldName) ?? [];

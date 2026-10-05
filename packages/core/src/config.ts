@@ -28,25 +28,20 @@ import {
   created,
   getPendingTransitionSteps,
   getTransitionSteps,
-  matchesTransition,
+  newMatcher,
+  toCodesTable,
   toTransition,
 } from "src/transitions.ts";
 import { type MaybePromise } from "src/utils.ts";
 
 export type EntityHook =
-  | "beforeFlush"
-  | "beforeCreate"
-  | "beforeUpdate"
-  | "beforeDelete"
-  | "afterValidation"
-  | "beforeCommit"
-  | "afterCommit";
+  "beforeFlush" | "beforeCreate" | "beforeUpdate" | "beforeDelete" | "afterValidation" | "beforeCommit" | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
 /** A `guardTransition` rule, which also gets the transition it is checking, since the entity may have moved on. */
-export type TransitionGuardRule<T extends Entity, V> = (
+export type TransitionGuard<T extends Entity, V> = (
   entity: T,
   transition: Transition<V>,
 ) => MaybePromise<ValidationRuleResult>;
@@ -381,18 +376,18 @@ export class ConfigApi<T extends Entity, C> {
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
     hint: H,
-    rule: TransitionGuardRule<Loaded<T, H>, TransitionType<T, K>>,
+    rule: TransitionGuard<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
-    rule: TransitionGuardRule<T, TransitionType<T, K>>,
+    rule: TransitionGuard<T, TransitionType<T, K>>,
   ): void;
   guardTransition(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
     const name = `guardTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "guardTransition");
     this.__data.transitionFields.add(fieldName);
-    const rule: TransitionGuardRule<T, any> = maybeRule ?? hintOrRule;
+    const rule: TransitionGuard<T, any> = maybeRule ?? hintOrRule;
     const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
     const matches = newMatcher(fieldName, match);
     const run = (entity: T, step: TransitionStep) => {
@@ -401,9 +396,8 @@ export class ConfigApi<T extends Entity, C> {
         ? rule(entity, transition)
         : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
     };
-    // Validation uses the transition log, not dirty fields: Pending -> Signed -> Pending must still
-    // check the signing guard. These same rules let `onTransition` skip rejected transitions.
-    addTransitionRule(this.__data, fieldName, (entity: T, step: TransitionStep) => {
+    // Add the guard as a transition rule so that it uses the same log of state changes.
+    (this.__data.transitionRules[fieldName] ??= []).push((entity: T, step: TransitionStep) => {
       if (step.from === created || !matches(entity, step)) return;
       return run(entity, step);
     });
@@ -461,12 +455,16 @@ export class ConfigApi<T extends Entity, C> {
     const name = named ? nameOrFieldName : `onTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "onTransition");
     this.ensureUniqueReactionName(name, "onTransition");
+
+    // Resolve the overloads
     const fieldName = named ? fieldNameOrMatch : nameOrFieldName;
     const match: OnTransitionMatch<any> = named ? matchOrHintOrFn : fieldNameOrMatch;
     const hintOrCallback = named ? hintOrFn : matchOrHintOrFn;
     const callback = named ? maybeFn : hintOrFn;
     const fn: TransitionFn<T, C, any> = callback ?? hintOrCallback;
     const hint: LoadHint<T> | undefined = callback ? hintOrCallback : undefined;
+
+    // Create the shared `run` function
     this.__data.transitionFields.add(fieldName);
     const matches = newMatcher(fieldName, match);
     const run = (entity: T, ctx: C, step: TransitionStep) => {
@@ -475,25 +473,29 @@ export class ConfigApi<T extends Entity, C> {
         ? fn(entity, ctx, transition)
         : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
     };
+
+    // Now register `run` as either a beforeCommit or reaction
     if (match.phase === "commit") {
       this.__data.hooks.beforeCommit.push(async (entity, ctx) => {
         if (entity.isDeletedEntity) return;
+        // The reaction below calls `checkForFailingGuards` but since we're in beforeCommit,
+        // we can assume all the transitions are valid and all guards passed.
         for (const step of getTransitionSteps(entity, fieldName)) {
           if (matches(entity, step)) await run(entity, ctx, step);
         }
       });
     } else {
-      // React only to `fieldName`, so hinted fields changing on other entities don't requeue us
       const reaction = async (entity: T, ctx: C) => {
         for (const step of getPendingTransitionSteps(name, entity, fieldName)) {
           if (matches(entity, step)) {
             // Leave this step unhandled; validation will report the guard's error.
-            if (await isTransitionRejected(entity, fieldName, step)) return;
+            if (await checkForFailingGuards(entity, fieldName, step)) return;
             await run(entity, ctx, step);
           }
           advanceTransitionCursor(name, entity);
         }
       };
+      // React only to `fieldName`, so hinted fields changing on other entities don't requeue us
       this.__data.reactions.push({ name, fn: reaction, hint: fieldName, runOnce: false });
     }
   }
@@ -682,7 +684,7 @@ export class ConfigData<T extends Entity, C> {
    *
    * Wrappers exclude creation and check matches before passing enum values to the guard.
    */
-  transitionRules: Record<string, TransitionGuardRule<T, unknown>[]> = {};
+  transitionRules: Record<string, TransitionGuard<T, unknown>[]> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -830,65 +832,10 @@ function describeValue(entity: Entity, fieldName: string, value: unknown): strin
   return details?.name ?? String(value);
 }
 
-function addTransitionRule<T extends Entity>(
-  data: ConfigData<T, any>,
-  fieldName: string,
-  rule: TransitionGuardRule<T, unknown>,
-): void {
-  (data.transitionRules[fieldName] ??= []).push(rule);
-}
-
-/** Returns whether any `guardTransition` on `fieldName` rejects `step`. */
-async function isTransitionRejected(entity: Entity, fieldName: string, step: TransitionStep): Promise<boolean> {
+/** Evaluates the guards on `fieldName` and returns whether any reject `step`. */
+async function checkForFailingGuards(entity: Entity, fieldName: string, step: TransitionStep): Promise<boolean> {
   const rules = getMetadata(entity).transitionRules!.get(fieldName);
   if (!rules) return false;
   const results = await Promise.all(rules.map((rule) => rule(entity, step)));
   return results.some((result) => (Array.isArray(result) ? result.length > 0 : !!result));
-}
-
-/** Converts an enum accessor, i.e. `Rejected`, to its code, i.e. `REJECTED`, and fails on anything else. */
-function toCode(meta: EntityMetadata, fieldName: string, value: unknown): unknown {
-  const field = meta.allFields[fieldName];
-  if (field?.kind !== "enum") fail(`${meta.type}.${fieldName} is not an enum field, so it can't have transitions`);
-  // Only accessors are accepted, even from untyped callers, so every table reads the same way
-  if (typeof value !== "string" || !Object.hasOwn(field.enumType, value)) {
-    fail(`Unknown ${meta.type}.${fieldName} accessor ${String(value)}, i.e. use "Draft" for AuthorStatus.Draft`);
-  }
-  return field.enumType[value];
-}
-
-function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unknown {
-  if (values === undefined) return undefined;
-  return Array.isArray(values) ? values.map((v) => toCode(meta, fieldName, v)) : toCode(meta, fieldName, values);
-}
-
-/** Converts a `transitions` table's keys and values to codes, so rules can compare them to field values. */
-function toCodesTable(
-  meta: EntityMetadata,
-  fieldName: string,
-  table: Record<string, readonly unknown[] | undefined>,
-): Map<unknown, readonly unknown[]> {
-  return new Map(
-    Object.entries(table).map(([from, tos]) => [
-      toCode(meta, fieldName, from),
-      toCodes(meta, fieldName, tos ?? []) as unknown[],
-    ]),
-  );
-}
-
-/** Returns a `match` checker that converts the match's accessors to codes once per entity type. */
-function newMatcher(
-  fieldName: string,
-  match: OnTransitionMatch<any>,
-): (entity: Entity, step: TransitionStep) => boolean {
-  const byMeta = new Map<EntityMetadata, OnTransitionMatch<unknown>>();
-  return (entity, step) => {
-    const meta = getMetadata(entity);
-    let codes = byMeta.get(meta);
-    if (!codes) {
-      codes = { ...match, from: toCodes(meta, fieldName, match.from), to: toCodes(meta, fieldName, match.to) };
-      byMeta.set(meta, codes);
-    }
-    return matchesTransition(codes, step);
-  };
 }

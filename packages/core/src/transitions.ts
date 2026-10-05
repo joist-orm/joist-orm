@@ -1,7 +1,8 @@
 import type { Entity } from "src/Entity.ts";
 import type { EntityManager } from "src/EntityManager.ts";
-import { getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
+import { type EntityMetadata, getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
 import { ValidationErrors } from "src/rules.ts";
+import { fail } from "src/utils.ts";
 
 /**
  * Which state transitions of an enum field a `guardTransition` cares about.
@@ -173,6 +174,56 @@ export function matchesTransition(match: OnTransitionMatch<unknown>, step: Trans
 /** Converts an internal step to the `Transition` that guards and reactions receive. */
 export function toTransition(step: TransitionStep): Transition<any> {
   return { from: step.from === created ? undefined : step.from, to: step.to };
+}
+
+/** Converts a `transitions` table's keys and values to codes, so rules can compare them to field values. */
+export function toCodesTable(
+  meta: EntityMetadata,
+  fieldName: string,
+  table: Record<string, readonly unknown[] | undefined>,
+): Map<unknown, readonly unknown[]> {
+  return new Map(
+    Object.entries(table).map(([from, tos]) => [
+      accessorToCode(meta, fieldName, from),
+      toCodes(meta, fieldName, tos ?? []) as unknown[],
+    ]),
+  );
+}
+
+/** Returns a `match` checker that converts the match's accessors to codes once per entity type. */
+export function newMatcher(
+  fieldName: string,
+  match: OnTransitionMatch<any>,
+): (entity: Entity, step: TransitionStep) => boolean {
+  const byMeta = new Map<EntityMetadata, OnTransitionMatch<unknown>>();
+  return (entity, step) => {
+    const meta = getMetadata(entity);
+    let codes = byMeta.get(meta);
+    if (!codes) {
+      codes = { ...match, from: toCodes(meta, fieldName, match.from), to: toCodes(meta, fieldName, match.to) };
+      byMeta.set(meta, codes);
+    }
+    return matchesTransition(codes, step);
+  };
+}
+
+/** Converts an enum accessor, i.e. `Rejected`, to its code, i.e. `REJECTED`, and fails on anything else. */
+function accessorToCode(meta: EntityMetadata, fieldName: string, value: unknown): unknown {
+  const field = meta.allFields[fieldName];
+  if (field?.kind !== "enum") fail(`${meta.type}.${fieldName} is not an enum field, so it can't have transitions`);
+  // Only accessors are accepted, even from untyped callers, so every table reads the same way
+  if (typeof value !== "string" || !Object.hasOwn(field.enumType, value)) {
+    fail(`Unknown ${meta.type}.${fieldName} accessor ${String(value)}, i.e. use "Draft" for AuthorStatus.Draft`);
+  }
+  return field.enumType[value];
+}
+
+/** Converts one or more enum accessors to codes, preserving an omitted match. */
+function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unknown {
+  if (values === undefined) return undefined;
+  return Array.isArray(values)
+    ? values.map((v) => accessorToCode(meta, fieldName, v))
+    : accessorToCode(meta, fieldName, values);
 }
 
 /** Sets the `to` of `entity`'s creation step, since it may be assigned several times while being created. */

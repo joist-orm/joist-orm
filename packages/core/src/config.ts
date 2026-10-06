@@ -26,7 +26,7 @@ import {
   type TransitionStep,
   type TransitionTable,
   type TransitionTableCheck,
-  newMatcher,
+  newTransitionMatcher,
   toCodesTable,
   toTransition,
 } from "src/transitions.ts";
@@ -386,7 +386,7 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.transitionFields.add(fieldName);
     const rule: TransitionGuard<T, any> = maybeRule ?? hintOrRule;
     const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
-    const matches = newMatcher(fieldName, match);
+    const matches = newTransitionMatcher(fieldName, match);
     const run = (entity: T, step: TransitionStep) => {
       const transition = toTransition(step);
       return hint === undefined
@@ -463,7 +463,7 @@ export class ConfigApi<T extends Entity, C> {
 
     // Create the shared `run` function
     this.__data.transitionFields.add(fieldName);
-    const matches = newMatcher(fieldName, match);
+    const matches = newTransitionMatcher(fieldName, match);
     const run = (entity: T, ctx: C, step: TransitionStep) => {
       const transition = toTransition(step);
       return hint === undefined

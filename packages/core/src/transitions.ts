@@ -97,18 +97,16 @@ export function toCodesTable(
   );
 }
 
-/** Returns a `match` checker that converts the match's accessors to codes once per entity type. */
-export function newMatcher(
+/** Returns a `match` checker that converts accessors to codes on first use. */
+export function newTransitionMatcher(
   fieldName: string,
   match: OnTransitionMatch<any>,
 ): (entity: Entity, step: TransitionStep) => boolean {
-  const byMeta = new Map<EntityMetadata, OnTransitionMatch<unknown>>();
+  let codes: OnTransitionMatch<unknown> | undefined;
   return (entity, step) => {
-    const meta = getMetadata(entity);
-    let codes = byMeta.get(meta);
     if (!codes) {
+      const meta = getMetadata(entity);
       codes = { ...match, from: toCodes(meta, fieldName, match.from), to: toCodes(meta, fieldName, match.to) };
-      byMeta.set(meta, codes);
     }
     return matchesTransition(codes, step);
   };

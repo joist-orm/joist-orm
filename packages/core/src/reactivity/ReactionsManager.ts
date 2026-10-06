@@ -27,7 +27,7 @@ export class ReactionsManager {
   /** Initial assignments are collapsed until reactions first see the entity. */
   private transitionCreations: Map<Entity, Map<string, TransitionStep>> = new Map();
   /** New entities that reactions have seen, so their assignments are transitions. */
-  private observedTransitionEntities: Set<Entity> = new Set();
+  private postCreationWindowEntities: Set<Entity> = new Set();
   /** Only matching callbacks are retained until SQL and final validation finish. */
   private pendingCommitTransitions: PendingCommitCallback[] = [];
   /** Failed actions to retry post-hooks, deduped by target field name -> entity (rare error path). */
@@ -73,18 +73,18 @@ export class ReactionsManager {
   queueTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
     const meta = getMetadata(entity);
     if (!meta.transitionFields!.has(fieldName)) return;
-    if (entity.isNewEntity && !this.observedTransitionEntities.has(entity)) {
+    // If this is a new entity still within its creation window, only keep the last step
+    if (entity.isNewEntity && !this.postCreationWindowEntities.has(entity)) {
       let byField = this.transitionCreations.get(entity);
       if (!byField) this.transitionCreations.set(entity, (byField = new Map()));
-      // Several initial assignments still enter just the final state by creation.
       byField.set(fieldName, { from: created, to });
-      return;
+    } else {
+      for (const check of meta.transitionTables!.get(fieldName) ?? []) {
+        const error = check(entity, from, to);
+        if (error) throw new ValidationErrors([{ entity, message: error }]);
+      }
+      this.pendingTransitions.push({ entity, fieldName, step: { from, to } });
     }
-    for (const check of meta.transitionTables!.get(fieldName) ?? []) {
-      const error = check(entity, from, to);
-      if (error) throw new ValidationErrors([{ entity, message: error }]);
-    }
-    this.pendingTransitions.push({ entity, fieldName, step: { from, to } });
   }
 
   /** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */
@@ -348,7 +348,7 @@ export class ReactionsManager {
     this.processedActions.clear();
     this.pendingTransitions.length = 0;
     this.transitionCreations.clear();
-    this.observedTransitionEntities.clear();
+    this.postCreationWindowEntities.clear();
     this.pendingCommitTransitions.length = 0;
     this.#needsRecalc = { populate: false, query: false, reaction: false };
   }
@@ -396,7 +396,7 @@ export class ReactionsManager {
    */
   private endTransitionCreations(): void {
     for (const [entity, byField] of this.transitionCreations) {
-      this.observedTransitionEntities.add(entity);
+      this.postCreationWindowEntities.add(entity);
       for (const [fieldName, step] of byField) this.pendingTransitions.push({ entity, fieldName, step });
     }
     this.transitionCreations.clear();

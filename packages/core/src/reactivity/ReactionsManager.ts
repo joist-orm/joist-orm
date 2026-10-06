@@ -1,7 +1,7 @@
 import type { Reactable } from "src/config.ts";
 import type { Entity } from "src/Entity.ts";
 import { type EntityManager, getEmInternalApi, invokeRule } from "src/EntityManager.ts";
-import { type EntityMetadata, getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
@@ -22,7 +22,7 @@ export type ReactiveAction = { r: Reactable; entity: Entity };
 export class ReactionsManager {
   /** Stores all source `Reactables`s that have been marked for later traversal. */
   private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
-  /** Transitions are consumed once; callbacks that change state append work for the next pass. */
+  /** Queued state changes, including changes made by callbacks, are processed in reaction passes. */
   private pendingTransitions: PendingTransition[] = [];
   /** Initial assignments are collapsed until reactions first see the entity. */
   private transitionCreations: Map<Entity, Map<string, TransitionStep>> = new Map();
@@ -80,9 +80,8 @@ export class ReactionsManager {
       byField.set(fieldName, { from: created, to });
       return;
     }
-    // Like validation rules, subtype restrictions supplement the base type's restrictions.
-    for (const m of getBaseAndSelfMetas(meta)) {
-      const error = m.config.__data.transitionTables[fieldName]?.(entity, from, to);
+    for (const check of meta.transitionTables!.get(fieldName) ?? []) {
+      const error = check(entity, from, to);
       if (error) throw new ValidationErrors([{ entity, message: error }]);
     }
     this.pendingTransitions.push({ entity, fieldName, step: { from, to } });
@@ -198,7 +197,7 @@ export class ReactionsManager {
     let loops = 0;
     while (this.needsRecalc(kind)) {
       // Reactions are about to see every new entity so far, so later assignments to them are transitions
-      if (this.em.isFlushing) this.endTransitionCreations();
+      this.endTransitionCreations();
       // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
       // AsyncReactiveFields should probably only have a single loop, after which we return and
       // let `em.flush` push the latest values to the db, so our 2nd-order AsyncReactiveFields
@@ -291,7 +290,7 @@ export class ReactionsManager {
       }
 
       if (failures.length > 0) throw failures[0];
-      if (kind === "reactables" && this.em.isFlushing) {
+      if (kind === "reactables") {
         await runInTrustedContext(() => this.processPendingTransitions());
       }
       // Record any successful actions that should only run once so we don't run them again
@@ -384,7 +383,8 @@ export class ReactionsManager {
     return kind === "reactables"
       ? this.#needsRecalc.populate ||
           this.#needsRecalc.reaction ||
-          (this.em.isFlushing && (this.pendingTransitions.length > 0 || this.transitionCreations.size > 0))
+          this.pendingTransitions.length > 0 ||
+          this.transitionCreations.size > 0
       : this.#needsRecalc.query;
   }
 

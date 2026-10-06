@@ -20,7 +20,7 @@ import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "src/rules.ts";
 import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
 import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
-import type { TransitionCallback } from "src/transitions.ts";
+import type { TransitionCallback, TransitionTableCheck } from "src/transitions.ts";
 import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -98,6 +98,17 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
     // Config-dependent getters are installed after afterMetadata callbacks finish adding config.
     defineLazyGetter(meta, "transitionFields", function buildTransitionFields() {
       return new Set(getBaseAndSelfMetas(meta).flatMap((m) => [...m.config.__data.transitionFields]));
+    });
+    defineLazyGetter(meta, "transitionTables", function buildTransitionTables() {
+      const byField = new Map<string, TransitionTableCheck[]>();
+      for (const m of getBaseAndSelfMetas(meta)) {
+        for (const [fieldName, check] of Object.entries(m.config.__data.transitionTables)) {
+          const inherited = byField.get(fieldName) ?? [];
+          inherited.push(check);
+          byField.set(fieldName, inherited);
+        }
+      }
+      return byField;
     });
     defineLazyGetter(meta, "transitionRules", function buildTransitionRules() {
       const byField = new Map<string, TransitionGuard<Entity, unknown>[]>();

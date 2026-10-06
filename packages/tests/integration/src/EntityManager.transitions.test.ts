@@ -505,4 +505,63 @@ describe("EntityManager.transitions", () => {
     // Then repeated transitions hit the existing reaction-loop limit
     await expect(em.flush()).rejects.toThrow("recalc looped too many times");
   });
+
+  it("handles creation during explicit recalculation before flush", async () => {
+    // Given a new Pending advance
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    // When reactions are recalculated before the advance is flushed
+    await em.recalc(ba);
+    // Then its creation callback handles Pending
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending]);
+  });
+
+  it("handles transitions produced by creation callbacks during explicit recalculation", async () => {
+    // Given a new Pending advance whose opening callback signs it
+    const em = newEntityManager();
+    const ba = newBookAdvance(em);
+    // And automatic signing is enabled
+    ba.transientFields.signWhenPending = true;
+    // When reactions are recalculated before flush
+    await em.recalc(ba);
+    // Then creation and the resulting signature are both handled
+    expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
+  });
+
+  it("evaluates guard-only transitions during explicit recalculation", async () => {
+    // Given an author who cannot enter the Lot book range
+    const em = newEntityManager();
+    const author = newAuthor(em, { firstName: "BlockedByGuard" });
+    await em.flush();
+    // When eleven books move the author to Lot during recalculation
+    for (let i = 0; i < 11; i++) newBook(em, { author });
+    // Then its guard rejects Lot before any SQL flush
+    await expect(em.recalc(author)).rejects.toThrow("Cannot give a blocked author a lot of books");
+  });
+
+  it("does not run commit callbacks during explicit recalculation", async () => {
+    // Given a Signed advance
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Signed });
+    await em.flush();
+    // When payment is handled by recalculation without flushing
+    ba.status = AdvanceStatus.Paid;
+    await em.recalc(ba);
+    // Then its payment commit callback is still deferred
+    expect(ba.transientFields.onPaidCommitInvoked).toBe(0);
+  });
+
+  it("retains commit callbacks queued by explicit recalculation until flush", async () => {
+    // Given a Signed advance
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Signed });
+    await em.flush();
+    // And payment has been handled by recalculation
+    ba.status = AdvanceStatus.Paid;
+    await em.recalc(ba);
+    // When the advance is flushed
+    await em.flush();
+    // Then its previously queued payment commit callback runs once
+    expect(ba.transientFields.onPaidCommitInvoked).toBe(1);
+  });
 });

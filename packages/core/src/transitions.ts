@@ -32,10 +32,17 @@ export interface OnTransitionMatch<V> extends GuardTransitionMatch<V> {
 /** Maps each state to the states it may transition to, i.e. `{ Draft: ["Open"], Open: ["Closed"] }`. */
 export type TransitionTable<V extends PropertyKey> = Partial<Record<V, readonly V[]>>;
 
+/** Checks a transition table against field values and returns an error for a disallowed change. */
+export type TransitionTableCheck<T extends Entity = Entity> = (
+  entity: T,
+  from: unknown,
+  to: unknown,
+) => string | undefined;
+
 /**
  * The transition a guard or reaction is handling, i.e. `{ from: "DRAFT", to: "OPEN" }`.
  *
- * Guards and reactions run during `em.flush`, after the assignment, so the entity may already be in a
+ * Guards and callbacks run during reaction passes, after the assignment, so the entity may already be in a
  * later state. This tells them which transition they're handling. `from` is `undefined` for creation.
  */
 export interface Transition<V> {

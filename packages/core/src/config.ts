@@ -25,6 +25,7 @@ import {
   type TransitionCallback,
   type TransitionStep,
   type TransitionTable,
+  type TransitionTableCheck,
   newMatcher,
   toCodesTable,
   toTransition,
@@ -364,7 +365,7 @@ export class ConfigApi<T extends Entity, C> {
    * `transitions` declares the transitions that are possible at all. The `hint` is a load hint, like
    * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
    *
-   * Guards run during `em.flush`, for every matching transition since the last flush, even if the
+   * Guards run with reactions, for every matching transition, even if the
    * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
    * it is checking. Guards never run on creation and are not rechecked during final validation.
    */
@@ -405,7 +406,7 @@ export class ConfigApi<T extends Entity, C> {
    * This runs alongside reactions (see `addReaction`), but only state changes queue callbacks.
    * The `hint` is a load hint, like `beforeFlush`'s, so it is loaded but not reacted to.
    *
-   * Reactions run during `em.flush`, once for every matching transition since the last flush, in order,
+   * Callbacks run with reactions, once for every matching transition, in order,
    * even if the field has moved on since. The entity is in its current state, so `fn` also gets the
    * `transition` it is handling. Transitions that a `guardTransition` rejects don't fire.
    *
@@ -652,7 +653,7 @@ export class ConfigData<T extends Entity, C> {
   /** Fields that have `transitions`, `guardTransition`, or `onTransition`s, i.e. so factories accept `withX` opts. */
   transitionFields: Set<string> = new Set();
   /** Field name -> the `transitions` table check, called by setters with the current and new values. */
-  transitionTables: Record<string, (entity: T, from: unknown, to: unknown) => string | undefined> = {};
+  transitionTables: Record<string, TransitionTableCheck<T>> = {};
   /**
    * Field name -> guard wrappers, evaluated before a transition's callbacks.
    *

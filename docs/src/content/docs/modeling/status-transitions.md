@@ -61,8 +61,8 @@ Creating an entity is not a change, so a new entity may start in any state.
 
 Like `addRule`, it returns an error message to reject the change.
 
-When Joist processes a transition during `em.flush`, it evaluates its matching guards once before
-running any matching callbacks. A failing guard immediately rejects the flush, even if no callback
+When Joist processes a transition during a reaction pass, it evaluates its matching guards once before
+running any matching callbacks. A failing guard immediately stops processing, even if no callback
 matches or the field has returned to its original value.
 
 Guards are not rechecked during final validation. A callback or later reaction can change the data a
@@ -80,6 +80,9 @@ Guards are different from regular `addRule` validation rules in a few ways:
 ## Reacting to changes
 
 `config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that `match` describes.
+
+Flush-phase callbacks run whenever reactions are recalculated, including explicit `em.recalc`,
+without waiting for `em.flush`. Commit-phase callbacks still wait for the flush's commit phase.
 
 Like `addReaction`, callbacks are named by their source location unless you pass an explicit name:
 `config.onTransition(name, field, match, hint?, fn)`. Names must be unique within an entity's config,
@@ -145,7 +148,8 @@ interface OnTransitionMatch<V> extends GuardTransitionMatch<V> {
 
 It's common for a new entity to be created with a default state and then immediately be mutated to its correct initial state.
 
-Joist recognizes this pattern and doesn't start recording `from` transitions until flush. So in this scenario:
+Joist recognizes this pattern and doesn't start recording `from` transitions until the first reaction
+pass, whether triggered by `em.flush` or `em.recalc`. So in this scenario:
 
 ```typescript
 // Create a new advance, initially as Pending

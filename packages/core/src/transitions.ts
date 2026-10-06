@@ -67,17 +67,6 @@ export interface TransitionCallback<T extends Entity = Entity, C = unknown> {
   run(entity: T, ctx: C, step: TransitionStep): MaybePromise<unknown>;
 }
 
-/** Returns whether `step` matches `match`'s `from`, `to`, and `onCreate` settings. */
-export function matchesTransition(match: OnTransitionMatch<unknown>, step: TransitionStep): boolean {
-  if (step.from === created) {
-    // `from` describes a previous state, which a new entity doesn't have
-    if (match.onCreate === false || match.from !== undefined) return false;
-  } else if (!matchesValue(match.from, step.from)) {
-    return false;
-  }
-  return matchesValue(match.to, step.to);
-}
-
 /** Converts an internal step to the `Transition` that guards and reactions receive. */
 export function toTransition(step: TransitionStep): Transition<any> {
   return { from: step.from === created ? undefined : step.from, to: step.to };
@@ -112,6 +101,22 @@ export function newTransitionMatcher(
   };
 }
 
+/** Returns whether `step` matches `match`'s `from`, `to`, and `onCreate` settings. */
+function matchesTransition(match: OnTransitionMatch<unknown>, step: TransitionStep): boolean {
+  if (step.from === created) {
+    // `from` describes a previous state, which a new entity doesn't have
+    if (match.onCreate === false || match.from !== undefined) return false;
+  } else if (!matchesMaybeArray(match.from, step.from)) {
+    return false;
+  }
+  return matchesMaybeArray(match.to, step.to);
+}
+
+function matchesMaybeArray(trigger: unknown, state: unknown): boolean {
+  if (trigger === undefined) return true;
+  return Array.isArray(trigger) ? trigger.includes(state) : trigger === state;
+}
+
 /** Converts an enum accessor, i.e. `Rejected`, to its code, i.e. `REJECTED`, and fails on anything else. */
 function accessorToCode(meta: EntityMetadata, fieldName: string, value: unknown): unknown {
   const field = meta.allFields[fieldName];
@@ -129,9 +134,4 @@ function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unkn
   return Array.isArray(values)
     ? values.map((v) => accessorToCode(meta, fieldName, v))
     : accessorToCode(meta, fieldName, values);
-}
-
-function matchesValue(expected: unknown, value: unknown): boolean {
-  if (expected === undefined) return true;
-  return Array.isArray(expected) ? expected.includes(value) : expected === value;
 }

@@ -4,7 +4,6 @@ import { getEmInternalApi } from "src/EntityManager.ts";
 import { type Field, getMetadata } from "src/EntityMetadata.ts";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "src/index.ts";
 import { maybeRequireTemporal } from "src/serde/temporal.ts";
-import { maybeRecordTransition } from "src/transitions.ts";
 import { fail } from "src/utils.ts";
 
 /**
@@ -84,7 +83,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
   // Check `config.transitions` tables while the change is still synchronous, before we change anything,
   // and record the transition for `em.flush` to run its (async) guards and reactions
-  if (field.kind === "enum" && !currentEqualsNew) maybeRecordTransition(entity, fieldName, currentValue, newValue);
+  if (field.kind === "enum" && !currentEqualsNew) rm.queueTransition(entity, fieldName, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
   if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);

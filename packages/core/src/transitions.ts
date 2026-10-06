@@ -1,9 +1,6 @@
 import type { Entity } from "src/Entity.ts";
-import { type EntityManager, getEmInternalApi, invokeRule } from "src/EntityManager.ts";
-import { type EntityMetadata, getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
-import { NoIdError } from "src/index.ts";
-import { ValidationErrors } from "src/rules.ts";
-import { type MaybePromise, fail, failIfAnyRejected } from "src/utils.ts";
+import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { type MaybePromise, fail } from "src/utils.ts";
 
 /**
  * Which state transitions of an enum field a `guardTransition` cares about.
@@ -61,140 +58,6 @@ export interface TransitionCallback<T extends Entity = Entity, C = unknown> {
   phase: "flush" | "commit";
   matches(entity: T, step: TransitionStep): boolean;
   run(entity: T, ctx: C, step: TransitionStep): MaybePromise<unknown>;
-}
-
-/** A transition awaiting its guards and callbacks. */
-interface PendingTransition {
-  entity: Entity;
-  fieldName: string;
-  step: TransitionStep;
-}
-
-/** A matching commit callback whose transition's guards have already passed. */
-interface PendingCommitCallback {
-  entity: Entity;
-  callback: TransitionCallback;
-  step: TransitionStep;
-}
-
-/** Owns an EntityManager's unprocessed transitions and deferred commit callbacks. */
-export interface TransitionState {
-  /** Transitions are consumed once; callbacks that change state append work for the next pass. */
-  pending: PendingTransition[];
-  /** Initial assignments are collapsed until reactions first see the entity. */
-  creations: Map<Entity, Map<string, TransitionStep>>;
-  /** New entities that reactions have seen, so their assignments are transitions. */
-  created: Set<Entity>;
-  /** Only matching callbacks are retained until SQL and final validation finish. */
-  commit: PendingCommitCallback[];
-}
-
-/**
- * Called by `setField` before changing an enum field, to check and record the transition.
- *
- * An entity has no previous state until Joist's reactions have seen it, so every assignment to a new
- * entity until then is part of its creation. I.e. `em.create` then `entity.status = Open`, or a factory
- * setting a default and then a `withStatus` value, or `em.findOrCreate` creating then upserting, all
- * create the entity as `Open`. Creation isn't checked against the `transitions` table.
- */
-export function maybeRecordTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
-  const meta = getMetadata(entity);
-  if (!meta.transitionFields!.has(fieldName)) return;
-  const state = getEmInternalApi(entity.em).transitionState;
-  if (entity.isNewEntity && !state.created.has(entity)) {
-    setCreationStep(entity, fieldName, to);
-    return;
-  }
-  // Like validation rules, subtype restrictions supplement the base type's restrictions.
-  for (const m of getBaseAndSelfMetas(meta)) {
-    const error = m.config.__data.transitionTables[fieldName]?.(entity, from, to);
-    if (error) throw new ValidationErrors([{ entity, message: error }]);
-  }
-  state.pending.push({ entity, fieldName, step: { from, to } });
-}
-
-/** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */
-export function seedTransition(entity: Entity, fieldName: string, set: () => void): void {
-  set();
-  getEmInternalApi(entity.em).transitionState.creations.get(entity)?.delete(fieldName);
-}
-
-/**
- * Ends the creation of every new entity so far, called by `em.flush` before each loop of reactions.
- *
- * After this, assignments to those entities are transitions, i.e. an Approval created as `Requested`
- * that a reaction then auto-approves records `Requested -> Approved`.
- */
-export function endTransitionCreations(em: EntityManager): void {
-  const state = getEmInternalApi(em).transitionState;
-  for (const [entity, byField] of state.creations) {
-    state.created.add(entity);
-    for (const [fieldName, step] of byField) state.pending.push({ entity, fieldName, step });
-  }
-  state.creations.clear();
-}
-
-/** Returns whether a reaction pass needs to process transitions or finalize initial states. */
-export function hasPendingTransitions(em: EntityManager): boolean {
-  const state = getEmInternalApi(em).transitionState;
-  return state.pending.length > 0 || state.creations.size > 0;
-}
-
-/**
- * Evaluates each pending transition's guards once, then dispatches its matching callbacks.
- *
- * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
- * Callbacks can append more transitions; taking one batch leaves those for the next reaction pass.
- *
- * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
- * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
- */
-export async function processPendingTransitions(em: EntityManager): Promise<void> {
-  // Ordinary reactions may have created more entities during this pass.
-  endTransitionCreations(em);
-  const state = getEmInternalApi(em).transitionState;
-  const batch = state.pending.splice(0);
-  for (const { entity, fieldName, step } of batch) {
-    if (entity.isDeletedEntity) continue;
-    const meta = getMetadata(entity);
-    if (step.from !== created) {
-      const guards = meta.transitionRules!.get(fieldName) ?? [];
-      const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard(entity, step))));
-      const errors = failIfAnyRejected(results).flat();
-      if (errors.length > 0) throw new ValidationErrors(errors);
-    }
-    for (const callback of meta.transitionCallbacks!.get(fieldName) ?? []) {
-      if (entity.isDeletedEntity) break;
-      if (!callback.matches(entity, step)) continue;
-      if (callback.phase === "commit") {
-        state.commit.push({ entity, callback, step });
-      } else {
-        await runTransitionCallback(em, entity, callback, step);
-      }
-    }
-  }
-}
-
-/** Returns whether callbacks need a commit phase, even if there are no net SQL changes. */
-export function hasPendingCommitTransitions(em: EntityManager): boolean {
-  return getEmInternalApi(em).transitionState.commit.some((pending) => !pending.entity.isDeletedEntity);
-}
-
-/** Runs the queued callbacks after all SQL and validation succeed, without rechecking guards. */
-export async function runCommitTransitions(em: EntityManager): Promise<void> {
-  const batch = getEmInternalApi(em).transitionState.commit.splice(0);
-  for (const { entity, callback, step } of batch) {
-    if (!entity.isDeletedEntity) await callback.run(entity, em.ctx, step);
-  }
-}
-
-/** Clears pending transitions and creation bookkeeping when `em.flush` succeeds. */
-export function clearTransitionState(em: EntityManager): void {
-  const state = getEmInternalApi(em).transitionState;
-  state.pending.length = 0;
-  state.creations.clear();
-  state.created.clear();
-  state.commit.length = 0;
 }
 
 /** Returns whether `step` matches `match`'s `from`, `to`, and `onCreate` settings. */
@@ -261,30 +124,6 @@ function toCodes(meta: EntityMetadata, fieldName: string, values: unknown): unkn
   return Array.isArray(values)
     ? values.map((v) => accessorToCode(meta, fieldName, v))
     : accessorToCode(meta, fieldName, values);
-}
-
-/** Sets the `to` of `entity`'s creation step, since it may be assigned several times while being created. */
-function setCreationStep(entity: Entity, fieldName: string, to: unknown): void {
-  const { creations } = getEmInternalApi(entity.em).transitionState;
-  let byField = creations.get(entity);
-  if (!byField) creations.set(entity, (byField = new Map()));
-  byField.set(fieldName, { from: created, to });
-}
-
-/** Assigns ids if a creation callback needs them, as ordinary reactions do. */
-async function runTransitionCallback(
-  em: EntityManager,
-  entity: Entity,
-  callback: TransitionCallback,
-  step: TransitionStep,
-): Promise<void> {
-  try {
-    await callback.run(entity, em.ctx, step);
-  } catch (error) {
-    if (!(error instanceof NoIdError)) throw error;
-    await em.assignNewIds();
-    await callback.run(entity, em.ctx, step);
-  }
 }
 
 function matchesValue(expected: unknown, value: unknown): boolean {

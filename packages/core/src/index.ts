@@ -1,7 +1,7 @@
 import { getInstanceData } from "src/BaseEntity.ts";
 import { getDefaultDependencies } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
-import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { type EntityConstructor, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
 import { type EntityMetadata, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
 import { getField, setField } from "src/fields.ts";
 import { getProperties } from "src/getProperties.ts";
@@ -21,7 +21,6 @@ import {
   isReactiveGetter,
 } from "src/relations/index.ts";
 import { ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
-import { seedTransition } from "src/transitions.ts";
 import { type OptsOf } from "src/typeMap.ts";
 import { fail } from "src/utils.ts";
 
@@ -406,7 +405,7 @@ export function setOpt<T extends Entity>(
     }
   } else if (value instanceof FactoryInitialValue) {
     // A factory's `withStatus`-style opt: trust the created value, so its `onTransition`s don't fire
-    seedTransition(entity, key, () => ((entity as any)[key] = value.value));
+    getEmInternalApi(entity.em).rm.seedTransition(entity, key, () => ((entity as any)[key] = value.value));
   } else {
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.

@@ -1,12 +1,14 @@
 import type { Reactable } from "src/config.ts";
 import type { Entity } from "src/Entity.ts";
-import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
-import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { type EntityManager, getEmInternalApi, invokeRule } from "src/EntityManager.ts";
+import { type EntityMetadata, getBaseAndSelfMetas, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
-import { endTransitionCreations, hasPendingTransitions, processPendingTransitions } from "src/transitions.ts";
+import { ValidationErrors } from "src/rules.ts";
+import { type TransitionCallback, type TransitionStep, created } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
+import { failIfAnyRejected } from "src/utils.ts";
 
 export type ReactiveAction = { r: Reactable; entity: Entity };
 /**
@@ -15,10 +17,19 @@ export type ReactiveAction = { r: Reactable; entity: Entity };
  *
  * Source fields are usually regular/dumb primitives, i.e. `Author.age` is a source field
  * of `Book.isPublic`, but derived fields can themselves be source fields as well.
+ * Guarded state transitions share this loop; their commit callbacks wait until SQL has been flushed.
  */
 export class ReactionsManager {
   /** Stores all source `Reactables`s that have been marked for later traversal. */
   private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
+  /** Transitions are consumed once; callbacks that change state append work for the next pass. */
+  private pendingTransitions: PendingTransition[] = [];
+  /** Initial assignments are collapsed until reactions first see the entity. */
+  private transitionCreations: Map<Entity, Map<string, TransitionStep>> = new Map();
+  /** New entities that reactions have seen, so their assignments are transitions. */
+  private observedTransitionEntities: Set<Entity> = new Set();
+  /** Only matching callbacks are retained until SQL and final validation finish. */
+  private pendingCommitTransitions: PendingCommitCallback[] = [];
   /** Failed actions to retry post-hooks, deduped by target field name -> entity (rare error path). */
   private actionsPendingTypeErrors: Map<string, Map<Entity, ReactiveAction>> = new Map();
   /**
@@ -49,6 +60,51 @@ export class ReactionsManager {
 
   constructor(em: EntityManager) {
     this.em = em;
+  }
+
+  /**
+   * Called by `setField` before changing an enum field, to check and queue the transition.
+   *
+   * An entity has no previous state until Joist's reactions have seen it, so every assignment to a new
+   * entity until then is part of its creation. I.e. `em.create` then `entity.status = Open`, or a factory
+   * setting a default and then a `withStatus` value, or `em.findOrCreate` creating then upserting, all
+   * create the entity as `Open`. Creation isn't checked against the `transitions` table.
+   */
+  queueTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
+    const meta = getMetadata(entity);
+    if (!meta.transitionFields!.has(fieldName)) return;
+    if (entity.isNewEntity && !this.observedTransitionEntities.has(entity)) {
+      let byField = this.transitionCreations.get(entity);
+      if (!byField) this.transitionCreations.set(entity, (byField = new Map()));
+      // Several initial assignments still enter just the final state by creation.
+      byField.set(fieldName, { from: created, to });
+      return;
+    }
+    // Like validation rules, subtype restrictions supplement the base type's restrictions.
+    for (const m of getBaseAndSelfMetas(meta)) {
+      const error = m.config.__data.transitionTables[fieldName]?.(entity, from, to);
+      if (error) throw new ValidationErrors([{ entity, message: error }]);
+    }
+    this.pendingTransitions.push({ entity, fieldName, step: { from, to } });
+  }
+
+  /** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */
+  seedTransition(entity: Entity, fieldName: string, set: () => void): void {
+    set();
+    this.transitionCreations.get(entity)?.delete(fieldName);
+  }
+
+  /** Returns whether callbacks need a commit phase, even if there are no net SQL changes. */
+  hasPendingCommitTransitions(): boolean {
+    return this.pendingCommitTransitions.some((pending) => !pending.entity.isDeletedEntity);
+  }
+
+  /** Runs the queued callbacks after all SQL and validation succeed, without rechecking guards. */
+  async runCommitTransitions(): Promise<void> {
+    const batch = this.pendingCommitTransitions.splice(0);
+    for (const { entity, callback, step } of batch) {
+      if (!entity.isDeletedEntity) await callback.run(entity, this.em.ctx, step);
+    }
   }
 
   /**
@@ -142,7 +198,7 @@ export class ReactionsManager {
     let loops = 0;
     while (this.needsRecalc(kind)) {
       // Reactions are about to see every new entity so far, so later assignments to them are transitions
-      if (this.em.isFlushing) endTransitionCreations(this.em);
+      if (this.em.isFlushing) this.endTransitionCreations();
       // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
       // AsyncReactiveFields should probably only have a single loop, after which we return and
       // let `em.flush` push the latest values to the db, so our 2nd-order AsyncReactiveFields
@@ -236,7 +292,7 @@ export class ReactionsManager {
 
       if (failures.length > 0) throw failures[0];
       if (kind === "reactables" && this.em.isFlushing) {
-        await runInTrustedContext(() => processPendingTransitions(this.em));
+        await runInTrustedContext(() => this.processPendingTransitions());
       }
       // Record any successful actions that should only run once so we don't run them again
       for (const action of actions) {
@@ -287,10 +343,15 @@ export class ReactionsManager {
     return this.actionsPendingTypeErrors.size > 0;
   }
 
-  /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
+  /** Clears pending reaction and transition work after a successful flush, including flushes with no SQL. */
   clear(): void {
     this.pendingReactables = new Map();
     this.processedActions.clear();
+    this.pendingTransitions.length = 0;
+    this.transitionCreations.clear();
+    this.observedTransitionEntities.clear();
+    this.pendingCommitTransitions.length = 0;
+    this.#needsRecalc = { populate: false, query: false, reaction: false };
   }
 
   setLogger(logger: ReactionLogger | undefined): void {
@@ -323,8 +384,71 @@ export class ReactionsManager {
     return kind === "reactables"
       ? this.#needsRecalc.populate ||
           this.#needsRecalc.reaction ||
-          (this.em.isFlushing && hasPendingTransitions(this.em))
+          (this.em.isFlushing && (this.pendingTransitions.length > 0 || this.transitionCreations.size > 0))
       : this.#needsRecalc.query;
+  }
+
+  /**
+   * Ends the creation of every new entity so far, before each loop of reactions.
+   *
+   * After this, assignments to those entities are transitions, i.e. an Approval created as `Requested`
+   * that a reaction then auto-approves records `Requested -> Approved`.
+   */
+  private endTransitionCreations(): void {
+    for (const [entity, byField] of this.transitionCreations) {
+      this.observedTransitionEntities.add(entity);
+      for (const [fieldName, step] of byField) this.pendingTransitions.push({ entity, fieldName, step });
+    }
+    this.transitionCreations.clear();
+  }
+
+  /**
+   * Evaluates each pending transition's guards once, then dispatches its matching callbacks.
+   *
+   * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
+   * Callbacks can append more transitions; taking one batch leaves those for the next reaction pass.
+   *
+   * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
+   * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
+   */
+  private async processPendingTransitions(): Promise<void> {
+    // Ordinary reactions may have created more entities during this pass.
+    this.endTransitionCreations();
+    const batch = this.pendingTransitions.splice(0);
+    for (const { entity, fieldName, step } of batch) {
+      if (entity.isDeletedEntity) continue;
+      const meta = getMetadata(entity);
+      if (step.from !== created) {
+        const guards = meta.transitionRules!.get(fieldName) ?? [];
+        const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard(entity, step))));
+        const errors = failIfAnyRejected(results).flat();
+        if (errors.length > 0) throw new ValidationErrors(errors);
+      }
+      for (const callback of meta.transitionCallbacks!.get(fieldName) ?? []) {
+        if (entity.isDeletedEntity) break;
+        if (!callback.matches(entity, step)) continue;
+        if (callback.phase === "commit") {
+          this.pendingCommitTransitions.push({ entity, callback, step });
+        } else {
+          await this.runTransitionCallback(entity, callback, step);
+        }
+      }
+    }
+  }
+
+  /** Assigns ids if a creation callback needs them, as ordinary reactions do. */
+  private async runTransitionCallback(
+    entity: Entity,
+    callback: TransitionCallback,
+    step: TransitionStep,
+  ): Promise<void> {
+    try {
+      await callback.run(entity, this.em.ctx, step);
+    } catch (error) {
+      if (!(error instanceof NoIdError)) throw error;
+      await this.em.assignNewIds();
+      await callback.run(entity, this.em.ctx, step);
+    }
   }
 
   private getPending(r: Reactable): { todo: Set<Entity>; done: Set<Entity> } {
@@ -363,6 +487,20 @@ export class ReactionsManager {
     // Most fields have no reactables, so return a shared empty array instead of allocating one per set
     return byField.get(fieldName) ?? noReactables;
   }
+}
+
+/** A transition awaiting its guards and callbacks. */
+interface PendingTransition {
+  entity: Entity;
+  fieldName: string;
+  step: TransitionStep;
+}
+
+/** A matching commit callback whose transition's guards have already passed. */
+interface PendingCommitCallback {
+  entity: Entity;
+  callback: TransitionCallback;
+  step: TransitionStep;
 }
 
 /** A shared frozen array for fields with no downstream reactables. */

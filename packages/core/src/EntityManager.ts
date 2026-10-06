@@ -139,12 +139,6 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
-import {
-  type TransitionState,
-  clearTransitionState,
-  hasPendingCommitTransitions,
-  runCommitTransitions,
-} from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -326,13 +320,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
-  /** Owns queued transitions and callbacks waiting for the commit phase. */
-  readonly #transitionState: TransitionState = {
-    pending: [],
-    creations: new Map(),
-    created: new Set(),
-    commit: [],
-  };
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
@@ -385,7 +372,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       pendingLoads: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
-      transitionState: this.#transitionState,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
       pluginManager,
@@ -2120,7 +2106,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (
         Object.keys(entityTodos).length > 0 ||
         Object.keys(joinRowTodos).length > 0 ||
-        hasPendingCommitTransitions(this)
+        this.#rm.hasPendingCommitTransitions()
       ) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
@@ -2174,7 +2160,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
-          await runCommitTransitions(this);
+          await this.#rm.runCommitTransitions();
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }
@@ -2211,14 +2197,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         this.#dataloaders = {};
         this.#batchLoaders = {};
         this.#preloadedRelations = new Map();
-        this.#rm.clear();
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
-      clearTransitionState(this);
+      this.#rm.clear();
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       if (e instanceof RecursiveCycleError) {
@@ -3100,7 +3085,6 @@ export interface EntityManagerInternalApi {
 
   hooks: Record<EntityManagerHook, HookFn<any>[]>;
   rm: ReactionsManager;
-  transitionState: TransitionState;
   indexManager: IndexManager;
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;

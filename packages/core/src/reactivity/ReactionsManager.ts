@@ -87,9 +87,8 @@ export class ReactionsManager {
     }
   }
 
-  /** Sets a factory's `withStatus` value, and forgets the entity's creation, so creating it fires nothing. */
-  seedTransition(entity: Entity, fieldName: string, set: () => void): void {
-    set();
+  /** Forgets a field's creation transition after a factory assigns its trusted initial value. */
+  forgetCreationTransition(entity: Entity, fieldName: string): void {
     this.transitionCreations.get(entity)?.delete(fieldName);
   }
 

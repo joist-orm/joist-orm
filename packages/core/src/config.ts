@@ -33,7 +33,13 @@ import {
 import { type MaybePromise } from "src/utils.ts";
 
 export type EntityHook =
-  "beforeFlush" | "beforeCreate" | "beforeUpdate" | "beforeDelete" | "afterValidation" | "beforeCommit" | "afterCommit";
+  | "beforeFlush"
+  | "beforeCreate"
+  | "beforeUpdate"
+  | "beforeDelete"
+  | "afterValidation"
+  | "beforeCommit"
+  | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 type AddReactionOpts = { runOnce?: boolean; name?: string };

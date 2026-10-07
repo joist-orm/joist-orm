@@ -80,7 +80,7 @@ Unlike `addReaction`, the `hint` is a "just load hint", as in `beforeFlush`, so 
 Other behavior:
 
 * **Each entity's transitions fire once, in order.** Different entities are processed in parallel waves,
-  with guards finishing before callbacks begin in each wave. This lets hinted data loads batch across entities.
+  with guards finishing before flush-phase callbacks begin in each wave. This lets hinted data loads batch across entities.
 * **Creation fires by default.** Creating an entity with a matching `to` state fires `fn`, because entering a state by creation usually needs the same side effects as entering it by a change.
 
   To avoid this, you can either pass `onCreate: false`, or set a `from` state, as the `from` clauses never match on creation.

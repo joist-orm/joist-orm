@@ -109,8 +109,15 @@ export class ReactionsManager {
   /** Runs the queued callbacks after all SQL and validation succeed, without rechecking guards. */
   async runCommitTransitions(): Promise<void> {
     const batch = this.pendingCommitTransitions.splice(0);
-    for (const { entity, callback, step } of batch) {
-      if (!entity.isDeletedEntity) await callback.run(entity, this.em.ctx, step);
+    for (const wave of groupIntoEntityWaves(batch)) {
+      const results = await Promise.allSettled(
+        wave.map(async (pending) => {
+          if (!pending.entity.isDeletedEntity) {
+            await pending.callback.run(pending.entity, this.em.ctx, pending.step);
+          }
+        }),
+      );
+      failIfAnyRejected(results);
     }
   }
 
@@ -426,15 +433,7 @@ export class ReactionsManager {
     this.endTransitionCreations();
     if (this.pendingTransitions.length === 0) return;
     const batch = this.pendingTransitions.splice(0);
-    const waves: PendingTransition[][] = [];
-    const waveByEntity = new Map<Entity, number>();
-    // I.e. [ba1 Signed, ba1 Paid, ba2 Signed] becomes [[ba1 Signed, ba2 Signed], [ba1 Paid]].
-    for (const pending of batch) {
-      const wave = waveByEntity.get(pending.entity) ?? 0;
-      (waves[wave] ??= []).push(pending);
-      waveByEntity.set(pending.entity, wave + 1);
-    }
-    for (const wave of waves) {
+    for (const wave of groupIntoEntityWaves(batch)) {
       const guardResults = await Promise.allSettled(wave.map((pending) => this.evaluateTransitionGuards(pending)));
       const errors = failIfAnyRejected(guardResults).flat();
       if (errors.length > 0) throw new ValidationErrors(errors);
@@ -534,6 +533,19 @@ interface PendingCommitCallback {
   entity: Entity;
   callback: TransitionCallback;
   step: TransitionStep;
+}
+
+/** Groups queued work into parallel waves while preserving each entity's input order. */
+function groupIntoEntityWaves<T extends { entity: Entity }>(batch: readonly T[]): T[][] {
+  const waves: T[][] = [];
+  const waveByEntity = new Map<Entity, number>();
+  // I.e. [ba1 Signed, ba1 Paid, ba2 Signed] becomes [[ba1 Signed, ba2 Signed], [ba1 Paid]].
+  for (const pending of batch) {
+    const wave = waveByEntity.get(pending.entity) ?? 0;
+    (waves[wave] ??= []).push(pending);
+    waveByEntity.set(pending.entity, wave + 1);
+  }
+  return waves;
 }
 
 /** A shared frozen array for fields with no downstream reactables. */

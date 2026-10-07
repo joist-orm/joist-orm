@@ -18,6 +18,8 @@ export class BookAdvance extends BookAdvanceCodegen {
     signedTitle: undefined as string | undefined,
     /** How many times the commit-phase reaction ran. */
     onPaidCommitInvoked: 0,
+    /** The publisher loaded by the payment commit callback. */
+    paidPublisherName: undefined as string | undefined,
     /** Counts payment guard evaluations independently of how many callbacks match. */
     paidGuardInvoked: 0,
     /** Makes the payment callback change the hinted data after its guard has passed. */
@@ -68,9 +70,16 @@ config.onTransition("status", { to: "Pending" }, (ba) => {
 });
 
 // For testing commit-phase reactions, and `onCreate: false`, since this only counts paying an existing advance
-config.onTransition("countPaidCommit", "status", { to: "Paid", onCreate: false, phase: "commit" }, (ba) => {
-  ba.transientFields.onPaidCommitInvoked++;
-});
+config.onTransition(
+  "countPaidCommit",
+  "status",
+  { to: "Paid", onCreate: false, phase: "commit" },
+  "publisher",
+  (ba) => {
+    ba.transientFields.onPaidCommitInvoked++;
+    ba.transientFields.paidPublisherName = ba.publisher.get.name;
+  },
+);
 
 // For testing that revoking a signature doesn't bypass its guard when status is clean again.
 config.guardTransition("status", { to: "Signed" }, "book", (ba) => {

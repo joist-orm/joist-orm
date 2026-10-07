@@ -630,4 +630,24 @@ describe("EntityManager.transitions", () => {
       AdvanceStatus.Paid,
     ]);
   });
+
+  it("batches hinted publishers across payment commit callbacks", async () => {
+    // Given three Signed advances for different publishers
+    await insertAuthor({ first_name: "a1" });
+    for (let i = 1; i <= 3; i++) {
+      await insertPublisher({ id: i, name: `p${i}` });
+      await insertBook({ title: `b${i}`, author_id: 1 });
+      await insertBookAdvance({ book_id: i, publisher_id: i, status_id: 2 });
+    }
+    // And payment is handled before commit without loading the publishers
+    const em = newEntityManager();
+    const advances = await em.find(BookAdvance, {});
+    for (const advance of advances) advance.status = AdvanceStatus.Paid;
+    await em.recalc(advances);
+    // When the payment commit callbacks run
+    resetQueryCount();
+    await em.flush();
+    // Then the commit callbacks load their publishers with one batched query
+    expect(queries.filter((sql) => sql.startsWith("SELECT"))).toHaveLength(1);
+  });
 });

@@ -30,8 +30,14 @@ export class ReactionsManager {
   private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
   /** Queued state changes, including changes made by callbacks, are processed in reaction passes. */
   private pendingTransitions: PendingTransition[] = [];
-  /** Initial assignments are collapsed until reactions first see the entity. */
-  private transitionCreations: Map<Entity, Map<string, TransitionStep>> = new Map();
+  /**
+   * Initial assignments are collapsed until reactions first see the entity.
+   *
+   * Each entity keeps one creation step per transition field. Each step is also in `pendingTransitions`, and
+   * later assignments update its `to` in place. An entity usually has one or two transition fields, so a
+   * short array is cheaper than a nested Map.
+   */
+  private transitionCreations: Map<Entity, PendingTransition[]> = new Map();
   /** New entities that reactions have seen, so their assignments are transitions. */
   private postCreationWindowEntities: Set<Entity> = new Set();
   /** Only matching callbacks are retained until SQL and final validation finish. */
@@ -82,9 +88,16 @@ export class ReactionsManager {
     if (!transitions) return;
     // If this is a new entity still within its creation window, only keep the last step
     if (entity.isNewEntity && !this.postCreationWindowEntities.has(entity)) {
-      let byField = this.transitionCreations.get(entity);
-      if (!byField) this.transitionCreations.set(entity, (byField = new Map()));
-      byField.set(fieldName, { from: created, to });
+      let creations = this.transitionCreations.get(entity);
+      if (!creations) this.transitionCreations.set(entity, (creations = []));
+      const existing = creations.find((pending) => pending.fieldName === fieldName);
+      if (existing) {
+        existing.step.to = to;
+      } else {
+        const pending = { entity, fieldName, step: { from: created, to } };
+        creations.push(pending);
+        this.pendingTransitions.push(pending);
+      }
     } else {
       // Base and subtype tables are all checked, so each type can only restrict its base type's changes
       for (const table of transitions.tables) {
@@ -98,7 +111,12 @@ export class ReactionsManager {
 
   /** Forgets a field's creation transition after a factory assigns its trusted initial value. */
   forgetCreationTransition(entity: Entity, fieldName: string): void {
-    this.transitionCreations.get(entity)?.delete(fieldName);
+    const creations = this.transitionCreations.get(entity);
+    const i = creations?.findIndex((pending) => pending.fieldName === fieldName) ?? -1;
+    if (i === -1) return;
+    // Remove it from both lists, so `needsRecalc` doesn't run an empty reaction pass for it
+    const [pending] = creations!.splice(i, 1);
+    this.pendingTransitions.splice(this.pendingTransitions.lastIndexOf(pending), 1);
   }
 
   /** Returns whether callbacks need a commit phase, even if there are no net SQL changes. */
@@ -396,10 +414,7 @@ export class ReactionsManager {
 
   needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
     return kind === "reactables"
-      ? this.#needsRecalc.populate ||
-          this.#needsRecalc.reaction ||
-          this.pendingTransitions.length > 0 ||
-          this.transitionCreations.size > 0
+      ? this.#needsRecalc.populate || this.#needsRecalc.reaction || this.pendingTransitions.length > 0
       : this.#needsRecalc.query;
   }
 
@@ -410,10 +425,7 @@ export class ReactionsManager {
    * that a reaction then auto-approves records `Requested -> Approved`.
    */
   private endTransitionCreations(): void {
-    for (const [entity, byField] of this.transitionCreations) {
-      this.postCreationWindowEntities.add(entity);
-      for (const [fieldName, step] of byField) this.pendingTransitions.push({ entity, fieldName, step });
-    }
+    for (const entity of this.transitionCreations.keys()) this.postCreationWindowEntities.add(entity);
     this.transitionCreations.clear();
   }
 

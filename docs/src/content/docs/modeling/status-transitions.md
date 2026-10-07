@@ -53,43 +53,27 @@ A state that is missing from the table, or maps to `[]`, is treated as a termina
 
 The field's setter immediately validates state changes, so an invalid transition immediately throws an error like `Cannot change status from Paid to Pending`, without waiting for `em.flush`.
 
-Creating an entity is not a change, so a new entity may start in any state.
+Creating an entity is not a change, so a new entity may start in any state. If you want to prevent this, you can use a regular `addRule` validation rule.
 
 ## Guarding changes
 
-`config.guardTransition(field, match, hint?, rule)` checks each state transition that `match` (which declares the `from` & `to` states, potentially multiple of each) describes.
+`config.guardTransition(field, match, hint?, rule)` checks whether to allow each state transition that its `match` parameter matches against.
 
-Like `addRule`, it returns an error message to reject the change.
+Like `addRule` validation rules, it returns an error message to reject the change.
 
-When Joist processes a transition during a reaction pass, it evaluates its matching guards once before
-running any matching callbacks. A failing guard immediately stops processing, even if no callback
-matches or the field has returned to its original value.
+Unlike `addRule`s, which are ran as the final phase of `em.flush` after all changes have settled, guards are ran immediately before `onTransition` callbacks, so that they can evaluate "should we have allowed this change state to happen?".
 
-Guards are not rechecked during final validation. A callback or later reaction can change the data a
-guard checked without revisiting that transition. Use `addRule` for invariants that must hold in the
-final entity state.
+Note that technically this is _after_ the state change was made, during the reactions phase `em.flush`, so it might have to use `changes` or `originalValue`s to evaluate any "existing/previous state" business logic.
 
-The optional `hint` is a load hint, as in `beforeFlush`, so it's loaded before the rule runs.
-
-Guards are different from regular `addRule` validation rules in a few ways:
-
-* **Only fired on matching state transitions.** Other state changes, or changes only to the hinted data, will not trigger the guard, so the guard doesn't need exceptions for unrelated changes.
-* **Guards never run on creation,** because there is no `from` previous state. Use `addRule` for rules about an entity's starting state.
-* **Every transition is checked in order.** Moving `Pending` -> `Signed` -> `Paid` queues both transitions, even before `em.flush` is called. Joist checks each transition's guards before its callbacks, and stops if a guard fails.
+Also unlike regular `addRule`s, guards do not run on creation, because there is no `from` previous state. Use `addRule` for rules about an entity's starting state.
 
 ## Reacting to changes
 
-`config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that `match` describes.
+`config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that its `match` parameter matches against.
 
-Flush-phase callbacks run whenever reactions are recalculated, including explicit `em.recalc`,
-without waiting for `em.flush`. Commit-phase callbacks still wait for the flush's commit phase.
+The default behavior is for `onTransition` callsback to run whenever reactions are recalculated, either during an explicit `em.recalc`, or waiting for `em.flush`. Alternatively, see the `phase` param below, to run during the flush's commit phase.
 
-Like `addReaction`, callbacks are named by their source location unless you pass an explicit name:
-`config.onTransition(name, field, match, hint?, fn)`. Names must be unique within an entity's config,
-including `addReaction` and commit-phase callbacks. If a helper or loop registers multiple callbacks
-from the same source location, Joist throws during registration and asks you to pass unique names.
-
-Like [reactions](./reactions), `fn` can change any entity, and those changes can trigger more transitions in the same flush.
+Like [reactions](./reactions), the transititon's `fn` lambda can change any entity, and those changes can trigger more transitions in the same flush.
 
 Unlike `addReaction`, the `hint` is a "just load hint", as in `beforeFlush`, so it is used to preload data before `fn` is invoked, but data referenced by the hint itself does not trigger the `fn`.
 
@@ -157,9 +141,20 @@ ba.status = AdvanceStatus.Paid;
 await em.flush();
 ```
 
-Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `onTransition` callbacks that match creation in Paid (i.e. to Paid, with no from) still fire.
+Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `onTransition` callbacks that match creation in Paid (i.e. to Paid, with no `from`) still fire.
 
 This behavior is also beneficial for both `em.findOrCreate` and test factories, where it's common for an entity to be created with an initial/default status, but then very quickly set "to the right initial value", which should not be considered a true transition change.
+
+## Design Rationale
+
+In terms of "earning their keep", we've justified implementing transitions as a first-class Joist feature because:
+
+* Reactions and validation rules fundamentally observe "the state of the entity right now", and for flush cycles that trigger multiple state changes, we usually want a strict log of "the status was pending then signed then paid", and to make sure we trigger guards & transitions for each step.
+
+  Doing this bookkeeping by hand would be tedious.
+
+* Usually validation rules don't run until the last phase of `em.flush`, but flush cycles that trigger multiple state changes benefit from `guardTransition`s running as part of reactions.
+
 
 ## Modeling Tip
 

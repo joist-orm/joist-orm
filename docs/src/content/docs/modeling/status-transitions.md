@@ -161,6 +161,44 @@ Joist treats this as creation in Paid, rather than a Pending → Paid transition
 
 This behavior is also beneficial for both `em.findOrCreate` and test factories, where it's common for an entity to be created with an initial/default status, but then very quickly set "to the right initial value", which should not be considered a true transition change.
 
+## Modeling Tip
+
+Joist doesn't order reactions and transitions when invoking them, so if a `status` change triggers multiple reactions & transitions that are actually dependent on each other, they will race each other and likely cause bugs.
+
+The best way to solve these race conditions is **give each step its own state**, and represent the dependency between each state as a first-class notion directly in your domain model.
+
+For example, an `Approval` entity might currently have an initial `Pending` state that needs both:
+
+1. Create its list of `Approver`s, and
+2. Move itself to `Approved` once every `Approver` has approved.
+
+If both of these watch the single Approval `Pending` state change, the second reaction might run before the first one has created any
+approvers, see that "every approver has approved" (because there are none), and approve too early.
+
+We can fix this by modeling each step as its own state, so each piece of logic knows when to run:
+
+```typescript
+ // Split the old singular `Pending` state into two: `Opening` and `PendingDecision`
+config.transitions("status", {
+  Opening: ["PendingDecision"],
+  PendingDecision: ["Approved", "Rejected"],
+});
+
+// Opening only prepares the approvers, and then hands off to PendingDecision
+config.onTransition("status", { to: "Opening" }, (approval) => {
+  createApprovers(approval);
+  approval.status = ApprovalStatus.PendingDecision;
+});
+
+// PendingDecision only watches the approvers, which now exist
+config.addReaction({ status: {}, approvers: "status" }, (approval) => {
+  if (!approval.isPendingDecision) return;
+  if (approval.approvers.get.every((a) => a.isApproved)) approval.status = ApprovalStatus.Approved;
+});
+```
+
+Now our the `onTransition` and `addReaction` know exactly when each should run.
+
 ## Inheritance
 
 Like validation rules, transition configuration is inherited by entity subtypes. Subtype tables and

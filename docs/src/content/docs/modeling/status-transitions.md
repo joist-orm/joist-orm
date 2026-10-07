@@ -95,15 +95,13 @@ Unlike `addReaction`, the `hint` is a "just load hint", as in `beforeFlush`, so 
 
 Other behavior:
 
-* **Every transition fires once, in order.**
+* **Each entity's transitions fire once, in order.** Different entities are processed in parallel waves,
+  with guards finishing before callbacks begin in each wave. This lets hinted data loads batch across entities.
 * **Creation fires by default.** Creating an entity with a matching `to` state fires `fn`, because entering a state by creation usually needs the same side effects as entering it by a change.
 
   To avoid this, you can either pass `onCreate: false`, or set a `from` state, as the `from` clauses never match on creation.
 * **Only allowed transitions will fire `onTransition`.** If the table or a guard rejects a change, `fn` doesn't run for it.
 * **`phase: "commit"`** runs `fn` in `beforeCommit`, after the entities' SQL changes have been flushed to the database, once for each matching transition. Use it for enqueueing jobs.
-
-Transition callbacks do not support retrying a failed `em.flush` on the same `EntityManager`.
-Start a new attempt with a new `EntityManager`.
 
 :::caution
 

@@ -88,7 +88,7 @@ export function insertBook(row: {
   return testDriver.insert("books", { notes: "notes", ...row });
 }
 
-export function insertBookAdvance(row: { id?: number; book_id: number; publisher_id: number }) {
+export function insertBookAdvance(row: { id?: number; book_id: number; publisher_id: number; status_id?: number }) {
   return testDriver.insert("book_advances", {
     status_id: 1,
     ...row,

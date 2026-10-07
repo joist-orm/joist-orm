@@ -5,7 +5,7 @@ import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
-import { ValidationErrors } from "src/rules.ts";
+import { type ValidationError, ValidationErrors } from "src/rules.ts";
 import { type TransitionCallback, type TransitionStep, created } from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { failIfAnyRejected } from "src/utils.ts";
@@ -406,6 +406,8 @@ export class ReactionsManager {
    *
    * I.e. Pending -> Signed -> Pending restores an advance's original status, but the Signed guard must still run.
    * Callbacks can append more transitions; taking one batch leaves those for the next reaction pass.
+   * Each wave processes one step per entity, so populate requests batch across entities without
+   * allowing an entity's next transition to overtake its previous callbacks.
    *
    * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
    * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
@@ -413,24 +415,45 @@ export class ReactionsManager {
   private async processPendingTransitions(): Promise<void> {
     // Ordinary reactions may have created more entities during this pass.
     this.endTransitionCreations();
+    if (this.pendingTransitions.length === 0) return;
     const batch = this.pendingTransitions.splice(0);
-    for (const { entity, fieldName, step } of batch) {
-      if (entity.isDeletedEntity) continue;
-      const meta = getMetadata(entity);
-      if (step.from !== created) {
-        const guards = meta.transitionRules!.get(fieldName) ?? [];
-        const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard(entity, step))));
-        const errors = failIfAnyRejected(results).flat();
-        if (errors.length > 0) throw new ValidationErrors(errors);
-      }
-      for (const callback of meta.transitionCallbacks!.get(fieldName) ?? []) {
-        if (entity.isDeletedEntity) break;
-        if (!callback.matches(entity, step)) continue;
-        if (callback.phase === "commit") {
-          this.pendingCommitTransitions.push({ entity, callback, step });
-        } else {
-          await this.runTransitionCallback(entity, callback, step);
-        }
+    const waves: PendingTransition[][] = [];
+    const waveByEntity = new Map<Entity, number>();
+    // I.e. [ba1 Signed, ba1 Paid, ba2 Signed] becomes [[ba1 Signed, ba2 Signed], [ba1 Paid]].
+    for (const pending of batch) {
+      const wave = waveByEntity.get(pending.entity) ?? 0;
+      (waves[wave] ??= []).push(pending);
+      waveByEntity.set(pending.entity, wave + 1);
+    }
+    for (const wave of waves) {
+      const guardResults = await Promise.allSettled(wave.map((pending) => this.evaluateTransitionGuards(pending)));
+      const errors = failIfAnyRejected(guardResults).flat();
+      if (errors.length > 0) throw new ValidationErrors(errors);
+      const callbackResults = await Promise.allSettled(wave.map((pending) => this.runTransitionCallbacks(pending)));
+      failIfAnyRejected(callbackResults);
+    }
+  }
+
+  /** Evaluates one transition's matching guards before any callbacks in its wave run. */
+  private async evaluateTransitionGuards(pending: PendingTransition): Promise<ValidationError[]> {
+    const { entity, fieldName, step } = pending;
+    if (entity.isDeletedEntity || step.from === created) return [];
+    const guards = getMetadata(entity).transitionRules!.get(fieldName) ?? [];
+    const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard(entity, step))));
+    return failIfAnyRejected(results).flat();
+  }
+
+  /** Runs one entity's callbacks in registration order after all guards in the wave have passed. */
+  private async runTransitionCallbacks(pending: PendingTransition): Promise<void> {
+    const { entity, fieldName, step } = pending;
+    if (entity.isDeletedEntity) return;
+    for (const callback of getMetadata(entity).transitionCallbacks!.get(fieldName) ?? []) {
+      if (entity.isDeletedEntity) break;
+      if (!callback.matches(entity, step)) continue;
+      if (callback.phase === "commit") {
+        this.pendingCommitTransitions.push({ entity, callback, step });
+      } else {
+        await this.runTransitionCallback(entity, callback, step);
       }
     }
   }

@@ -1,6 +1,7 @@
 import { ValidationErrors } from "joist-orm";
 import {
   AdvanceStatus,
+  BookAdvance,
   ImageType,
   PublisherStatus,
   newAuthor,
@@ -10,7 +11,8 @@ import {
   newLargePublisher,
   newSmallPublisher,
 } from "src/entities";
-import { newEntityManager } from "src/testEm";
+import { insertAuthor, insertBook, insertBookAdvance, insertPublisher } from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("EntityManager.transitions", () => {
   it("fires onTransition when created, by default", async () => {
@@ -563,5 +565,69 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     // Then its previously queued payment commit callback runs once
     expect(ba.transientFields.onPaidCommitInvoked).toBe(1);
+  });
+
+  it("batches hinted books across payment guards on different advances", async () => {
+    // Given three Signed advances for different books
+    await insertAuthor({ first_name: "a1" });
+    await insertPublisher({ name: "p1" });
+    for (let i = 1; i <= 3; i++) {
+      await insertBook({ title: `b${i}`, author_id: 1 });
+      await insertBookAdvance({ book_id: i, publisher_id: 1, status_id: 2 });
+    }
+    // And the advances are loaded without their books
+    const em = newEntityManager();
+    const advances = await em.find(BookAdvance, {});
+    // When all three advances are paid together
+    for (const advance of advances) advance.status = AdvanceStatus.Paid;
+    resetQueryCount();
+    await em.recalc(advances);
+    // Then the guards load their books with one batched query
+    expect(queries).toHaveLength(1);
+  });
+
+  it("batches hinted books across callbacks when no matching guard loads them", async () => {
+    // Given three Signed advances for different books
+    await insertAuthor({ first_name: "a1" });
+    await insertPublisher({ name: "p1" });
+    for (let i = 1; i <= 3; i++) {
+      await insertBook({ title: `b${i}`, author_id: 1 });
+      await insertBookAdvance({ book_id: i, publisher_id: 1, status_id: 2 });
+    }
+    // And the advances are loaded without their books
+    const em = newEntityManager();
+    const advances = await em.find(BookAdvance, {});
+    // When all three signatures are revoked together
+    for (const advance of advances) advance.status = AdvanceStatus.Pending;
+    resetQueryCount();
+    await em.recalc(advances);
+    // Then the callbacks load their books with one batched query
+    expect(queries).toHaveLength(1);
+  });
+
+  it("preserves each advance's transition order across waves of different lengths", async () => {
+    // Given two existing Pending advances
+    const em = newEntityManager();
+    const advances = [newBookAdvance(em), newBookAdvance(em)];
+    await em.flush();
+    // When one advance cycles through three changes and the other is signed and paid
+    advances[0].status = AdvanceStatus.Signed;
+    advances[0].status = AdvanceStatus.Pending;
+    advances[0].status = AdvanceStatus.Signed;
+    advances[1].status = AdvanceStatus.Signed;
+    advances[1].status = AdvanceStatus.Paid;
+    await em.flush();
+    // Then each advance's callbacks keep its own recorded order
+    expect(advances[0].transientFields.transitions).toEqual([
+      AdvanceStatus.Pending,
+      AdvanceStatus.Signed,
+      AdvanceStatus.Pending,
+      AdvanceStatus.Signed,
+    ]);
+    expect(advances[1].transientFields.transitions).toEqual([
+      AdvanceStatus.Pending,
+      AdvanceStatus.Signed,
+      AdvanceStatus.Paid,
+    ]);
   });
 });

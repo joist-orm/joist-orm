@@ -68,7 +68,8 @@ export interface TransitionCallbackConfig<T extends Entity = Entity, C = unknown
 
 /** One field's `transitions`, `guardTransition`, and `onTransition` config on a single entity type. */
 export interface FieldTransitionsConfig<T extends Entity = Entity, C = unknown> {
-  tables: TransitionTable<string>[];
+  /** The `transitions` table, if any; subtypes add their own tables on their own configs. */
+  table?: TransitionTable<string>;
   guards: TransitionGuardConfig<T>[];
   callbacks: TransitionCallbackConfig<T, C>[];
 }
@@ -121,7 +122,7 @@ export function buildFieldTransitions(meta: EntityMetadata): Map<string, FieldTr
     for (const [fieldName, config] of Object.entries(m.config.__data.transitions)) {
       let merged = byField.get(fieldName);
       if (!merged) byField.set(fieldName, (merged = { tables: [], guards: [], callbacks: [] }));
-      for (const table of config.tables) merged.tables.push(toCodesTable(meta, fieldName, table));
+      if (config.table) merged.tables.push(toCodesTable(meta, fieldName, config.table));
       for (const { match, run } of config.guards) {
         merged.guards.push({ matcher: toMatcher(meta, fieldName, match), run });
       }

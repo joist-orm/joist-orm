@@ -146,6 +146,17 @@ describe("config", () => {
       "notifyAuthor",
     ]);
   });
+
+  it("rejects a second transitions table for the same field", () => {
+    // Given a config with a status transitions table
+    const config = new ConfigApi();
+    config.transitions("status", { Draft: ["Open"] });
+    // When another table is declared for status
+    // Then registration rejects the second table
+    expect(() => config.transitions("status", { Open: ["Closed"] })).toThrow(
+      "config.transitions was already called for status, use one table per field",
+    );
+  });
 });
 
 /** Registers payment reactions through one source location, optionally with their own names. */

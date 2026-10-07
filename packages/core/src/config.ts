@@ -350,8 +350,11 @@ export class ConfigApi<T extends Entity, C> {
   transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
     const name = `transitions(${getCallerName()})`;
     this.ensurePreBoot(name, "transitions");
+    const config = this.fieldTransitions(fieldName);
+    // Subtypes add their own tables on their own configs, so a 2nd table on this config is a mistake
+    if (config.table) fail(`config.transitions was already called for ${fieldName}, use one table per field`);
     // Accessors are converted to codes after boot, see `buildFieldTransitions`
-    this.fieldTransitions(fieldName).tables.push(table);
+    config.table = table;
   }
 
   /**
@@ -513,7 +516,7 @@ export class ConfigApi<T extends Entity, C> {
 
   /** Returns `fieldName`'s transition config, creating it on first use. */
   private fieldTransitions(fieldName: string): FieldTransitionsConfig<T, C> {
-    return (this.__data.transitions[fieldName] ??= { tables: [], guards: [], callbacks: [] });
+    return (this.__data.transitions[fieldName] ??= { guards: [], callbacks: [] });
   }
 
   /** Requires unique names across ordinary reactions and transition callbacks. */

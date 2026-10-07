@@ -410,6 +410,10 @@ export class ConfigApi<T extends Entity, C> {
    * `match.onCreate` is `false`. Set `match.phase: "commit"` to run in `beforeCommit` instead, i.e.
    * for enqueueing jobs.
    *
+   * Callbacks that read a new entity's `id` should use `match.phase: "commit"`. Other callbacks may run
+   * before ids are assigned, and Joist does not rerun them on a `NoIdError` because their side effects
+   * could repeat.
+   *
    * Pass a unique name as the first argument when registering multiple callbacks from a shared
    * helper or loop. Duplicate names on the same config are rejected when registered.
    */

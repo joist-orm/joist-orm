@@ -483,17 +483,6 @@ describe("EntityManager.transitions", () => {
     expect(p.transientFields.activeStatusCommitTransitions).toBe(1);
   });
 
-  it("assigns ids when a creation callback needs its advance's id", async () => {
-    // Given an advance created as Paid with a callback that needs its id
-    const em = newEntityManager();
-    const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
-    ba.transientFields.requirePaidId = true;
-    // When the advance's creation is handled
-    await em.flush();
-    // Then its callback has the assigned advance id
-    expect(ba.transientFields.paidId).toBe(ba.id);
-  });
-
   it("stops callbacks that repeatedly sign and revoke the same advance", async () => {
     // Given an advance whose callbacks sign and revoke each other's changes
     const em = newEntityManager();
@@ -649,5 +638,17 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     // Then the commit callbacks load their publishers with one batched query
     expect(queries.filter((sql) => sql.startsWith("SELECT"))).toHaveLength(1);
+  });
+
+  it("lets a commit callback read a new advance's id", async () => {
+    // Given an advance created as Paid
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
+    // And its payment commit callback reads its id
+    ba.transientFields.readPaidIdAtCommit = true;
+    // When the advance is flushed
+    await em.flush();
+    // Then the commit callback has the assigned id
+    expect(ba.transientFields.paidId).toBe("ba:1");
   });
 });

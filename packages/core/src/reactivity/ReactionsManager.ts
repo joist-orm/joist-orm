@@ -463,23 +463,8 @@ export class ReactionsManager {
       if (callback.phase === "commit") {
         this.pendingCommitTransitions.push({ entity, callback, step });
       } else {
-        await this.runTransitionCallback(entity, callback, step);
+        await callback.run(entity, this.em.ctx, step);
       }
-    }
-  }
-
-  /** Assigns ids if a creation callback needs them, as ordinary reactions do. */
-  private async runTransitionCallback(
-    entity: Entity,
-    callback: TransitionCallback,
-    step: TransitionStep,
-  ): Promise<void> {
-    try {
-      await callback.run(entity, this.em.ctx, step);
-    } catch (error) {
-      if (!(error instanceof NoIdError)) throw error;
-      await this.em.assignNewIds();
-      await callback.run(entity, this.em.ctx, step);
     }
   }
 

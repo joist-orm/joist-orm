@@ -24,8 +24,9 @@ export class BookAdvance extends BookAdvanceCodegen {
     paidGuardInvoked: 0,
     /** Makes the payment callback change the hinted data after its guard has passed. */
     unpublishWhenPaid: false,
-    /** Makes a creation callback require its newly assigned id. */
-    requirePaidId: false,
+    /** Makes the payment commit callback read the advance's id. */
+    readPaidIdAtCommit: false,
+    /** The advance id that the payment commit callback read. */
     paidId: undefined as string | undefined,
   };
 }
@@ -49,7 +50,6 @@ config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
 
 // For testing which transitions fire, and in what order, including creation (since `onCreate` defaults to true)
 config.onTransition("status", {}, "book", (ba, _ctx, transition) => {
-  if (transition.to === AdvanceStatus.Paid && ba.transientFields.requirePaidId) ba.transientFields.paidId = ba.id;
   ba.transientFields.transitions.push(transition.to);
   if (transition.to === AdvanceStatus.Paid && ba.transientFields.unpublishWhenPaid) ba.book.get.title = "Unpublished";
 });
@@ -80,6 +80,11 @@ config.onTransition(
     ba.transientFields.paidPublisherName = ba.publisher.get.name;
   },
 );
+
+// For testing that commit callbacks can read the ids of new entities
+config.onTransition("readPaidIdAtCommit", "status", { to: "Paid", phase: "commit" }, (ba) => {
+  if (ba.transientFields.readPaidIdAtCommit) ba.transientFields.paidId = ba.id;
+});
 
 // For testing that revoking a signature doesn't bypass its guard when status is clean again.
 config.guardTransition("status", { to: "Signed" }, "book", (ba) => {

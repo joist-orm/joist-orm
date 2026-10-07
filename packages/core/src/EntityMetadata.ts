@@ -163,7 +163,7 @@ export type EnumField = {
   fieldIdName: undefined;
   required: boolean;
   derived: "sync" | "async" | false;
-  enumDetailType: EnumMetadata<any, { name: string }, number>;
+  enumDetailType: EnumMetadata<any, { name: string }>;
   /** The enum object, i.e. `{ Draft: "DRAFT" }`. */
   enumType: Record<string, unknown>;
   serde: FieldSerde;

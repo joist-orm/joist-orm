@@ -141,7 +141,7 @@ describe("config", () => {
     registerTransition(config, "recordPayment");
     registerTransition(config, "notifyAuthor");
     // Then both named callbacks are registered
-    expect(config.__data.transitionCallbacks.status.map((callback) => callback.name)).toEqual([
+    expect(config.__data.transitions.status.callbacks.map((callback) => callback.name)).toEqual([
       "recordPayment",
       "notifyAuthor",
     ]);

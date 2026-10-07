@@ -1,4 +1,4 @@
-import { type Reactable, type TransitionGuard, setAfterMetadataLocked, setBooted } from "src/config.ts";
+import { type Reactable, setAfterMetadataLocked, setBooted } from "src/config.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
 import { type MaybeAbstractEntityConstructor, type TaggedId } from "src/EntityManager.ts";
@@ -20,7 +20,7 @@ import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "src/rules.ts";
 import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
 import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
-import type { TransitionCallback, TransitionTableCheck } from "src/transitions.ts";
+import { buildFieldTransitions } from "src/transitions.ts";
 import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -96,41 +96,8 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
 function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     // Config-dependent getters are installed after afterMetadata callbacks finish adding config.
-    defineLazyGetter(meta, "transitionFields", function buildTransitionFields() {
-      return new Set(getBaseAndSelfMetas(meta).flatMap((m) => [...m.config.__data.transitionFields]));
-    });
-    defineLazyGetter(meta, "transitionTables", function buildTransitionTables() {
-      const byField = new Map<string, TransitionTableCheck[]>();
-      for (const m of getBaseAndSelfMetas(meta)) {
-        for (const [fieldName, check] of Object.entries(m.config.__data.transitionTables)) {
-          const inherited = byField.get(fieldName) ?? [];
-          inherited.push(check);
-          byField.set(fieldName, inherited);
-        }
-      }
-      return byField;
-    });
-    defineLazyGetter(meta, "transitionRules", function buildTransitionRules() {
-      const byField = new Map<string, TransitionGuard<Entity, unknown>[]>();
-      for (const m of getBaseAndSelfMetas(meta)) {
-        for (const [fieldName, rules] of Object.entries(m.config.__data.transitionRules)) {
-          const inherited = byField.get(fieldName) ?? [];
-          inherited.push(...rules);
-          byField.set(fieldName, inherited);
-        }
-      }
-      return byField;
-    });
-    defineLazyGetter(meta, "transitionCallbacks", function buildTransitionCallbacks() {
-      const byField = new Map<string, TransitionCallback[]>();
-      for (const m of getBaseAndSelfMetas(meta)) {
-        for (const [fieldName, callbacks] of Object.entries(m.config.__data.transitionCallbacks)) {
-          const inherited = byField.get(fieldName) ?? [];
-          inherited.push(...callbacks);
-          byField.set(fieldName, inherited);
-        }
-      }
-      return byField;
+    defineLazyGetter(meta, "transitions", function buildTransitions() {
+      return buildFieldTransitions(meta);
     });
     defineLazyGetter(meta, "reactables", function buildReactables() {
       return getBaseAndSelfMetas(meta)

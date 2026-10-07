@@ -6,7 +6,13 @@ import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
 import { type ValidationError, ValidationErrors } from "src/rules.ts";
-import { type TransitionCallback, type TransitionStep, created } from "src/transitions.ts";
+import {
+  type TransitionCallback,
+  type TransitionStep,
+  created,
+  describeValue,
+  matchesTransition,
+} from "src/transitions.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { failIfAnyRejected } from "src/utils.ts";
 
@@ -72,16 +78,19 @@ export class ReactionsManager {
    */
   queueTransition(entity: Entity, fieldName: string, from: unknown, to: unknown): void {
     const meta = getMetadata(entity);
-    if (!meta.transitionFields!.has(fieldName)) return;
+    const transitions = meta.transitions!.get(fieldName);
+    if (!transitions) return;
     // If this is a new entity still within its creation window, only keep the last step
     if (entity.isNewEntity && !this.postCreationWindowEntities.has(entity)) {
       let byField = this.transitionCreations.get(entity);
       if (!byField) this.transitionCreations.set(entity, (byField = new Map()));
       byField.set(fieldName, { from: created, to });
     } else {
-      for (const check of meta.transitionTables!.get(fieldName) ?? []) {
-        const error = check(entity, from, to);
-        if (error) throw new ValidationErrors([{ entity, message: error }]);
+      // Base and subtype tables are all checked, so each type can only restrict its base type's changes
+      for (const table of transitions.tables) {
+        if (table.get(from)?.includes(to)) continue;
+        const message = `Cannot change ${fieldName} from ${describeValue(meta, fieldName, from)} to ${describeValue(meta, fieldName, to)}`;
+        throw new ValidationErrors([{ entity, message }]);
       }
       this.pendingTransitions.push({ entity, fieldName, step: { from, to } });
     }
@@ -438,8 +447,10 @@ export class ReactionsManager {
   private async evaluateTransitionGuards(pending: PendingTransition): Promise<ValidationError[]> {
     const { entity, fieldName, step } = pending;
     if (entity.isDeletedEntity || step.from === created) return [];
-    const guards = getMetadata(entity).transitionRules!.get(fieldName) ?? [];
-    const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard(entity, step))));
+    const guards = getMetadata(entity)
+      .transitions!.get(fieldName)!
+      .guards.filter((guard) => matchesTransition(guard.matcher, step));
+    const results = await Promise.allSettled(guards.map((guard) => invokeRule(entity, () => guard.run(entity, step))));
     return failIfAnyRejected(results).flat();
   }
 
@@ -447,9 +458,9 @@ export class ReactionsManager {
   private async runTransitionCallbacks(pending: PendingTransition): Promise<void> {
     const { entity, fieldName, step } = pending;
     if (entity.isDeletedEntity) return;
-    for (const callback of getMetadata(entity).transitionCallbacks!.get(fieldName) ?? []) {
+    for (const callback of getMetadata(entity).transitions!.get(fieldName)!.callbacks) {
       if (entity.isDeletedEntity) break;
-      if (!callback.matches(entity, step)) continue;
+      if (!matchesTransition(callback.matcher, step)) continue;
       if (callback.phase === "commit") {
         this.pendingCommitTransitions.push({ entity, callback, step });
       } else {

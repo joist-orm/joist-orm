@@ -19,15 +19,11 @@ import {
 import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { type ValidationRule, type ValidationRuleInternal, type ValidationRuleResult } from "src/rules.ts";
 import {
+  type FieldTransitionsConfig,
   type GuardTransitionMatch,
   type OnTransitionMatch,
   type Transition,
-  type TransitionCallback,
-  type TransitionStep,
   type TransitionTable,
-  type TransitionTableCheck,
-  newTransitionMatcher,
-  toCodesTable,
   toTransition,
 } from "src/transitions.ts";
 import { type MaybePromise } from "src/utils.ts";
@@ -45,7 +41,7 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
 /** A `guardTransition` rule, which also gets the transition it is checking, since the entity may have moved on. */
-export type TransitionGuard<T extends Entity, V> = (
+export type TransitionGuardFn<T extends Entity, V> = (
   entity: T,
   transition: Transition<V>,
 ) => MaybePromise<ValidationRuleResult>;
@@ -354,14 +350,8 @@ export class ConfigApi<T extends Entity, C> {
   transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
     const name = `transitions(${getCallerName()})`;
     this.ensurePreBoot(name, "transitions");
-    this.__data.transitionFields.add(fieldName);
-    // Convert accessors to codes on first use, since metadata isn't ready at config time.
-    let allowed: Map<unknown, readonly unknown[]> | undefined;
-    this.__data.transitionTables[fieldName] = (entity, from, to) => {
-      allowed ??= toCodesTable(getMetadata(entity), fieldName, table);
-      if (allowed.get(from)?.includes(to)) return undefined;
-      return `Cannot change ${fieldName} from ${describeValue(entity, fieldName, from)} to ${describeValue(entity, fieldName, to)}`;
-    };
+    // Accessors are converted to codes after boot, see `buildFieldTransitions`
+    this.fieldTransitions(fieldName).tables.push(table);
   }
 
   /**
@@ -379,30 +369,27 @@ export class ConfigApi<T extends Entity, C> {
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
     hint: H,
-    rule: TransitionGuard<Loaded<T, H>, TransitionType<T, K>>,
+    rule: TransitionGuardFn<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
   guardTransition<K extends Settable<T>>(
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
-    rule: TransitionGuard<T, TransitionType<T, K>>,
+    rule: TransitionGuardFn<T, TransitionType<T, K>>,
   ): void;
   guardTransition(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
     const name = `guardTransition(${getCallerName()})`;
     this.ensurePreBoot(name, "guardTransition");
-    this.__data.transitionFields.add(fieldName);
-    const rule: TransitionGuard<T, any> = maybeRule ?? hintOrRule;
+    const rule: TransitionGuardFn<T, any> = maybeRule ?? hintOrRule;
     const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
-    const matches = newTransitionMatcher(fieldName, match);
-    const run = (entity: T, step: TransitionStep) => {
-      const transition = toTransition(step);
-      return hint === undefined
-        ? rule(entity, transition)
-        : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
-    };
-    // The dispatcher evaluates these guards once before invoking any callbacks for the transition.
-    (this.__data.transitionRules[fieldName] ??= []).push((entity: T, step: TransitionStep) => {
-      if (!matches(entity, step)) return;
-      return run(entity, step);
+    // The dispatcher evaluates matching guards once before invoking any callbacks for the transition.
+    this.fieldTransitions(fieldName).guards.push({
+      match,
+      run(entity, step) {
+        const transition = toTransition(step);
+        return hint === undefined
+          ? rule(entity, transition)
+          : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
+      },
     });
   }
 
@@ -467,18 +454,17 @@ export class ConfigApi<T extends Entity, C> {
     const fn: TransitionFn<T, C, any> = callback ?? hintOrCallback;
     const hint: LoadHint<T> | undefined = callback ? hintOrCallback : undefined;
 
-    // Create the shared `run` function
-    this.__data.transitionFields.add(fieldName);
-    const matches = newTransitionMatcher(fieldName, match);
-    const run = (entity: T, ctx: C, step: TransitionStep) => {
-      const transition = toTransition(step);
-      return hint === undefined
-        ? fn(entity, ctx, transition)
-        : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
-    };
-
     // Transition queues trigger callbacks; hinted data is only loaded, not watched for changes.
-    (this.__data.transitionCallbacks[fieldName] ??= []).push({ name, matches, run, phase: match.phase ?? "flush" });
+    this.fieldTransitions(fieldName).callbacks.push({
+      name,
+      match,
+      run(entity, ctx, step) {
+        const transition = toTransition(step);
+        return hint === undefined
+          ? fn(entity, ctx, transition)
+          : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
+      },
+    });
   }
 
   /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
@@ -524,6 +510,11 @@ export class ConfigApi<T extends Entity, C> {
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
    * until the user is ready to use it. */
   placeholder(): void {}
+
+  /** Returns `fieldName`'s transition config, creating it on first use. */
+  private fieldTransitions(fieldName: string): FieldTransitionsConfig<T, C> {
+    return (this.__data.transitions[fieldName] ??= { tables: [], guards: [], callbacks: [] });
+  }
 
   /** Requires unique names across ordinary reactions and transition callbacks. */
   private ensureUniqueReactionName(name: string, op: string): void {
@@ -656,18 +647,12 @@ export class ConfigData<T extends Entity, C> {
   reactions: ReactionInternal<T, any, C>[] = [];
   /** Names shared by addReaction and onTransition, including commit-phase callbacks. */
   reactionNames: Set<string> = new Set();
-  /** Fields that have `transitions`, `guardTransition`, or `onTransition`s, i.e. so factories accept `withX` opts. */
-  transitionFields: Set<string> = new Set();
-  /** Field name -> the `transitions` table check, called by setters with the current and new values. */
-  transitionTables: Record<string, TransitionTableCheck<T>> = {};
   /**
-   * Field name -> guard wrappers, evaluated before a transition's callbacks.
+   * Field name -> its `transitions`, `guardTransition`, and `onTransition` config, with accessors not yet converted.
    *
-   * The dispatcher excludes creation; wrappers check matches before passing enum values to the guard.
+   * The keys are also the fields whose factories accept `withX` opts.
    */
-  transitionRules: Record<string, TransitionGuard<T, unknown>[]> = {};
-  /** Field name -> callbacks dispatched after its transition guards pass. */
-  transitionCallbacks: Record<string, TransitionCallback<T, C>[]> = {};
+  transitions: Record<string, FieldTransitionsConfig<T, C>> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -805,12 +790,4 @@ function pushValidationRule<T extends Entity>(
     };
     rules.push({ name, fn, hint });
   }
-}
-
-/** Uses the enum's display name in error messages when there is one, i.e. `Approved` instead of `APPROVED`. */
-function describeValue(entity: Entity, fieldName: string, value: unknown): string {
-  if (value === undefined) return "unset";
-  const field = getMetadata(entity).allFields[fieldName];
-  const details = field?.kind === "enum" ? (field.enumDetailType as any).getByCode?.(value) : undefined;
-  return details?.name ?? String(value);
 }

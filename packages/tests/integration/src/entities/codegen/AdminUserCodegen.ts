@@ -41,6 +41,7 @@ import {
   type Entity,
   newAdminUser,
   User,
+  type UserFactoryExtras,
   type UserFields,
   type UserFilter,
   type UserGraphQLFilter,
@@ -80,7 +81,7 @@ export interface AdminUserOrder extends UserOrder {
   role?: OrderBy;
 }
 
-export interface AdminUserFactoryExtras {
+export interface AdminUserFactoryExtras extends UserFactoryExtras {
 }
 
 export interface AdminUserScopes {

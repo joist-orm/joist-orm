@@ -54,6 +54,16 @@ type PublisherSizeDetail {
   name: String!
 }
 
+enum PublisherStatus {
+  DRAFT
+  ACTIVE
+}
+
+type PublisherStatusDetail {
+  code: PublisherStatus!
+  name: String!
+}
+
 enum PublisherType {
   SMALL
   BIG
@@ -81,6 +91,7 @@ type AllEnumDetails {
   color: [ColorDetail!]!
   imageType: [ImageTypeDetail!]!
   publisherSize: [PublisherSizeDetail!]!
+  publisherStatus: [PublisherStatusDetail!]!
   publisherType: [PublisherTypeDetail!]!
   taskType: [TaskTypeDetail!]!
 }

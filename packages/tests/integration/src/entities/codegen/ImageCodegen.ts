@@ -69,7 +69,7 @@ export interface ImageFields {
   fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: ImageType; nullable: never };
+  type: { kind: "enum"; type: ImageType; nullable: never; accessors: keyof typeof ImageType };
   author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
@@ -165,6 +165,7 @@ export interface ImageOrder {
 }
 
 export interface ImageFactoryExtras {
+  withType?: ImageType;
 }
 
 export interface ImageScopes {

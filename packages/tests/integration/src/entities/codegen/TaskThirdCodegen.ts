@@ -44,6 +44,7 @@ import {
   type Tag,
   Task,
   type TaskColumns,
+  type TaskFactoryExtras,
   type TaskFields,
   type TaskFilter,
   type TaskGraphQLFilter,
@@ -90,7 +91,7 @@ export interface TaskThirdOrder extends TaskOrder {
   copiedFrom?: TaskThirdOrder;
 }
 
-export interface TaskThirdFactoryExtras {
+export interface TaskThirdFactoryExtras extends TaskFactoryExtras {
 }
 
 export interface TaskThirdScopes {

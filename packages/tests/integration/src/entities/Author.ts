@@ -672,3 +672,7 @@ config.afterCommit((author) => {
 });
 
 config.addConstraintMessage("authors_publisher_id_unique_index", "There is already a publisher with a Jim");
+// For testing guards on a derived enum field that has no transition callbacks.
+config.guardTransition("rangeOfBooks", { to: "Lot" }, (a) => {
+  if (a.firstName === "BlockedByGuard") return "Cannot give a blocked author a lot of books";
+});

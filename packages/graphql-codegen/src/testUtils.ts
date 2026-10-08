@@ -135,6 +135,7 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
     enumRows: [],
     isArray: false,
     hasConfigDefault: false,
+    hasTransitions: false,
     ...opts,
   };
 }

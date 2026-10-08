@@ -81,6 +81,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentValue = getField(entity, fieldName);
   const isReference = field.kind === "m2o" || field.kind === "poly";
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
+  // Check `config.transitions` tables while the change is still synchronous, before we change anything,
+  // and record the transition for `em.flush` to run its (async) guards and reactions
+  if (field.kind === "enum" && !currentEqualsNew) rm.queueTransition(entity, fieldName, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
   if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);

@@ -8,6 +8,7 @@ export * from "./enums/BookRange";
 export * from "./enums/Color";
 export * from "./enums/ImageType";
 export * from "./enums/PublisherSize";
+export * from "./enums/PublisherStatus";
 export * from "./enums/PublisherType";
 export * from "./enums/TaskType";
 export * from "./enums/FavoriteShape";

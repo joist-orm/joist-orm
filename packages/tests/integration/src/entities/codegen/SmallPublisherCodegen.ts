@@ -53,6 +53,7 @@ import {
   type Image,
   newSmallPublisher,
   Publisher,
+  type PublisherFactoryExtras,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
@@ -157,7 +158,7 @@ export interface SmallPublisherOrder extends PublisherOrder {
   group?: SmallPublisherGroupOrder;
 }
 
-export interface SmallPublisherFactoryExtras {
+export interface SmallPublisherFactoryExtras extends PublisherFactoryExtras {
   withAllAuthorNames?: string | null;
 }
 

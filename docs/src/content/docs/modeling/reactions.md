@@ -68,6 +68,10 @@ config.addReaction(
 
 The name will appear in error messages and logs, making it easier to trace which reaction is executing or causing issues.
 
+Without an explicit name, Joist uses the registration's source location. Names must be unique within
+an entity's config, including `onTransition` callbacks. Duplicate names throw during registration,
+so shared helpers or loops that register multiple reactions must pass a unique name for each one.
+
 Named reactions can also be run explicitly for one or more entities:
 
 ```typescript

@@ -318,6 +318,7 @@
     "sharedColumn",
     "size",
     "spotlightAuthor",
+    "status",
     "tags",
     "tasks",
     "titlesOfFavoriteBooks",
@@ -346,6 +347,7 @@
     "sharedColumn",
     "size",
     "spotlightAuthorId",
+    "status",
     "titlesOfFavoriteBooks",
     "type",
     "updatedAt"
@@ -419,6 +421,7 @@
     "size",
     "smallPublisher",
     "spotlightAuthor",
+    "status",
     "tag",
     "tags",
     "tasks",
@@ -445,6 +448,7 @@
     "rating",
     "size",
     "spotlightAuthorId",
+    "status",
     "titlesOfFavoriteBooks",
     "type",
     "updatedAt"
@@ -673,6 +677,7 @@
     "sharedColumn",
     "size",
     "spotlightAuthorId",
+    "status",
     "titlesOfFavoriteBooks",
     "type"
   ],
@@ -705,6 +710,7 @@
     "rating",
     "size",
     "spotlightAuthorId",
+    "status",
     "tagId",
     "titlesOfFavoriteBooks",
     "type",
@@ -735,6 +741,7 @@
     "sharedColumn",
     "size",
     "spotlightAuthorId",
+    "status",
     "titlesOfFavoriteBooks",
     "type"
   ],
@@ -845,6 +852,7 @@
     "size",
     "smallPublishers",
     "spotlightAuthor",
+    "status",
     "tags",
     "tasks",
     "titlesOfFavoriteBooks",
@@ -875,6 +883,7 @@
     "sharedColumn",
     "size",
     "spotlightAuthorId",
+    "status",
     "titlesOfFavoriteBooks",
     "type",
     "updatedAt"

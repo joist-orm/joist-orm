@@ -303,6 +303,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
+  /** The error that failed a previous `em.flush`, after which this EntityManager can't flush again. */
+  #flushError: unknown = undefined;
   // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
   #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
@@ -1867,6 +1869,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     if (this.mode === "read-only") throw new ReadOnlyError();
+    if (this.#flushError !== undefined) throw new FailedFlushError(this.#flushError);
 
     const { skipValidation = false } = flushOptions;
 
@@ -2103,7 +2106,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
-      if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+      if (
+        Object.keys(entityTodos).length > 0 ||
+        Object.keys(joinRowTodos).length > 0 ||
+        this.#rm.hasPendingCommitTransitions()
+      ) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
@@ -2156,6 +2163,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
+          await this.#rm.runCommitTransitions();
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }
@@ -2192,15 +2200,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         this.#dataloaders = {};
         this.#batchLoaders = {};
         this.#preloadedRelations = new Map();
-        this.#rm.clear();
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
+      this.#rm.clear();
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
+      // A failed flush may have already run reactions, hooks, or SQL, so we don't try to resume from it
+      if (!(e instanceof InMemoryRollbackError)) this.#flushError = e;
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
         // Look up a custom cycle message — check both the exact field name and its opposite
@@ -2707,6 +2717,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
+    // Don't hide the original flush error behind a `SuppressedError` of our `FailedFlushError`
+    if (this.#flushError !== undefined) return;
     await this.flush();
   }
 
@@ -3286,7 +3298,7 @@ async function validateSimpleRules(
 }
 
 /** Invokes a single validation rule, coercing its result/sync throws into a promise. */
-async function invokeRule(
+export async function invokeRule(
   entity: Entity,
   fn: (entity: any) => MaybePromise<ValidationRuleResult>,
 ): Promise<ValidationError[]> {
@@ -3648,6 +3660,13 @@ function hasPaginationSettings(options: object): boolean {
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */
 class InMemoryRollbackError extends Error {}
+
+/** An error thrown by `em.flush` after a previous `em.flush` on the same EntityManager failed. */
+export class FailedFlushError extends Error {
+  constructor(cause: unknown) {
+    super("EntityManager cannot flush after a previous flush failed, use a new EntityManager", { cause });
+  }
+}
 
 /** An error thrown when `em.mode === "read-only"` but entities are mutated/flushed. */
 export class ReadOnlyError extends Error {

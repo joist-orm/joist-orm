@@ -65,7 +65,7 @@ export interface BookAdvanceFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  status: { kind: "enum"; type: AdvanceStatus; nullable: never };
+  status: { kind: "enum"; type: AdvanceStatus; nullable: never; accessors: keyof typeof AdvanceStatus };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
 }
@@ -148,6 +148,7 @@ export interface BookAdvanceOrder {
 }
 
 export interface BookAdvanceFactoryExtras {
+  withStatus?: AdvanceStatus;
 }
 
 export interface BookAdvanceScopes {

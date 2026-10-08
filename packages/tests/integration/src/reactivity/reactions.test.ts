@@ -51,7 +51,10 @@ describe("reactions", () => {
   });
 
   it.withCtx("creates the right reaction targets", async () => {
+    // Given reactions configured on authors, publishers, and their subtypes
     const fn = expect.any(Function);
+    // When their hints are reversed to the entities that trigger them
+    // Then Publisher changes trigger the applicable author and publisher reactions
     expect(getReactions(Publisher)).toMatchObject([
       {
         kind: "reaction",
@@ -94,6 +97,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When SmallPublisher-specific hints are reversed
+    // Then its changes trigger the user's publisher reaction
     expect(getReactions(SmallPublisher)).toMatchObject([
       {
         kind: "reaction",
@@ -106,6 +111,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When LargePublisher-specific hints are reversed
+    // Then its name changes trigger the user's publisher reaction
     expect(getReactions(LargePublisher)).toMatchObject([
       {
         kind: "reaction",
@@ -118,6 +125,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When tag name hints are reversed
+    // Then tags trigger their authors' reactions
     expect(getReactions(Tag)).toMatchObject([
       {
         kind: "reaction",
@@ -130,6 +139,8 @@ describe("reactions", () => {
         fn,
       },
     ]);
+    // When parent-item hints are reversed
+    // Then item changes trigger their group's reaction
     expect(getReactions(ParentItem).filter((r) => r.cstr === ParentGroup)).toMatchObject([
       {
         kind: "reaction",
@@ -143,6 +154,8 @@ describe("reactions", () => {
         runOnce: false,
       },
     ]);
+    // When author hints are reversed
+    // Then each author field triggers the applicable author reactions
     expect(getReactions(Author)).toMatchObject([
       {
         kind: "reaction",

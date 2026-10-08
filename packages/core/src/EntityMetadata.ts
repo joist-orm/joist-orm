@@ -1,5 +1,5 @@
 import { getInstanceData } from "src/BaseEntity.ts";
-import { type ConfigApi, type Reactable, type ReactiveRule } from "src/config.ts";
+import type { ConfigApi, Reactable, ReactiveRule } from "src/config.ts";
 import { getMetadataForType } from "src/configure.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "src/EntityManager.ts";
@@ -7,6 +7,7 @@ import { type EnumMetadata } from "src/EnumMetadata.ts";
 import type { DeepNew } from "src/loading/loadHints.ts";
 import type { Column, ColumnDescriptors } from "src/serde/columns.ts";
 import type { FieldSerde, PolymorphicKeySerde } from "src/serde/fieldSerde.ts";
+import type { FieldTransitions } from "src/transitions.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
@@ -69,6 +70,8 @@ export interface EntityMetadata<T extends Entity = any> {
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
+  /** The lazy lookup of transition config by field, including config from base types. */
+  transitions?: ReadonlyMap<string, FieldTransitions>;
   /** The lazy list of non-read-only reactables for this metadata and its base types. */
   reactables?: Reactable[];
   /** The lazy lookup of non-read-only reactables by source field name. */
@@ -160,7 +163,9 @@ export type EnumField = {
   fieldIdName: undefined;
   required: boolean;
   derived: "sync" | "async" | false;
-  enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
+  enumDetailType: EnumMetadata<any, { name: string }>;
+  /** The enum object, i.e. `{ Draft: "DRAFT" }`. */
+  enumType: Record<string, unknown>;
   serde: FieldSerde;
   immutable: boolean;
   default?: "schema" | "config";

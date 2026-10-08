@@ -1,7 +1,7 @@
 import { getInstanceData } from "src/BaseEntity.ts";
 import { getDefaultDependencies } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
-import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { type EntityConstructor, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
 import { type EntityMetadata, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
 import { getField, setField } from "src/fields.ts";
 import { getProperties } from "src/getProperties.ts";
@@ -161,6 +161,7 @@ export * from "src/RowData.ts";
 export { type JoinRowTodo, Todo } from "src/flush/Todo.ts";
 export * from "src/changes.ts";
 export { ConfigApi, type EntityHook, resetBootFlag } from "src/config.ts";
+export { type GuardTransitionMatch, type OnTransitionMatch, type TransitionTable } from "src/transitions.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,
@@ -402,6 +403,10 @@ export function setOpt<T extends Entity>(
     } else {
       throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
     }
+  } else if (value instanceof FactoryInitialValue) {
+    // A factory's `withStatus`-style opt: trust the created value, so its `onTransition`s don't fire
+    (entity as any)[key] = value.value;
+    getEmInternalApi(entity.em).rm.forgetCreationTransition(entity, key);
   } else {
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.

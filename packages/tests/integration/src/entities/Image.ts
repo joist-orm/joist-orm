@@ -5,6 +5,10 @@ import { Author, Book, ImageCodegen, ImageType, Publisher, imageConfig as config
 type ImageOwner = Book | Publisher | Author;
 
 export class Image extends ImageCodegen {
+  transientFields = {
+    /** A named-only onTransition config must still generate enum accessors and trusted factory opts. */
+    typeTransitions: [] as ImageType[],
+  };
   // We don't use hasOneThrough or hasOneDerived b/c we use the ImageType to do a
   // selective .load instead of a load hint that probes every possible table.
   readonly owner: Reference<Image, ImageOwner, undefined> = hasCustomReference<Image, ImageOwner, undefined>({
@@ -33,4 +37,9 @@ config.addRule((image) => {
   if (set.filter((t) => t).length !== 1) {
     return "One and only one owner must be set";
   }
+});
+
+// For testing that named-only onTransitions are recognized by scanEntityFiles.
+config.onTransition("recordImageType", "type", { to: "AuthorImage" }, (image, _ctx, transition) => {
+  image.transientFields.typeTransitions.push(transition.to);
 });

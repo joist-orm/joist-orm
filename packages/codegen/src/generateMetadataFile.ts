@@ -161,7 +161,7 @@ function generateFields(
   });
 
   dbMetadata.enums.forEach((field) => {
-    const { fieldName, enumDetailType, notNull, isArray, columnType, derived } = field;
+    const { fieldName, enumDetailType, enumType, notNull, isArray, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
     fields[fieldName] = code`
@@ -172,6 +172,7 @@ function generateFields(
         required: ${notNull},
         derived: ${!derived ? false : `"${derived}"`},
         enumDetailType: ${enumDetailType},
+        enumType: ${enumType},
         serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(field, code`new ${serdeType}("${columnTypeWithArray}", ${enumDetailType})`, columnArgs(field, dbMetadata))}),
         immutable: false,
         ${maybeDefault(field)}

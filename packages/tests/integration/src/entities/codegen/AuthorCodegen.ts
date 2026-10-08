@@ -132,7 +132,7 @@ export interface AuthorFields {
   certificate: { kind: "primitive"; type: Uint8Array; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
+  rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined; accessors: keyof typeof BookRange };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };

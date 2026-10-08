@@ -81,19 +81,21 @@ describe("AuthorStat", () => {
   });
 
   describe("rangeValueRule", () => {
-    it("can limit a numeric field to a range", async () => {
+    it("can limit a numeric field to a minimum", async () => {
       const em = newEntityManager();
-
       // Given a new AuthorStat with an nullableInteger value of -1
-      const as = newAuthorStat(em, { nullableInteger: -1 });
+      newAuthorStat(em, { nullableInteger: -1 });
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(
         "Validation error: AuthorStat#1 nullableInteger must be greater than or equal to 0",
       );
+    });
 
+    it("can limit a numeric field to a maximum", async () => {
+      const em = newEntityManager();
       // Given a new AuthorStat with an nullableInteger value of 101
-      as.nullableInteger = 101;
+      newAuthorStat(em, { nullableInteger: 101 });
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(

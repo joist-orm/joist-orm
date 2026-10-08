@@ -188,6 +188,8 @@ export type EnumField = Field & {
   notNull: boolean;
   isArray: boolean;
   hasConfigDefault: boolean;
+  /** Whether the entity file calls `config.transitions`, `guardTransition`, or `onTransition` on this field, set by `scanEntityFiles`. */
+  hasTransitions: boolean;
 };
 
 export type PgEnumField = Field & {
@@ -700,6 +702,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     enumRows: enums[r.targetTable.name].rows,
     isArray: false,
     hasConfigDefault, // can be set to true by scanEntityFiles
+    hasTransitions: false, // can be set to true by scanEntityFiles
   };
 }
 
@@ -735,6 +738,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     enumRows: enums[enumTable].rows,
     isArray: true,
     hasConfigDefault, // can be set to true by scanEntityFiles
+    hasTransitions: false,
   };
 }
 

@@ -71,6 +71,9 @@ import {
   PublisherSize,
   PublisherSizeDetails,
   PublisherSizes,
+  PublisherStatus,
+  PublisherStatusDetails,
+  PublisherStatuses,
   PublisherType,
   PublisherTypeDetails,
   PublisherTypes,
@@ -103,6 +106,7 @@ export interface PublisherFields {
   favoriteAuthorName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   rating: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
+  status: { kind: "enum"; type: PublisherStatus; nullable: undefined; accessors: keyof typeof PublisherStatus };
   type: { kind: "enum"; type: PublisherType; nullable: never };
   favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
@@ -164,6 +168,7 @@ export interface PublisherColumns {
   };
   rating: { type: number; fieldName: "rating"; nullable: true; insert: "optional"; update: true };
   sizeId: { type: PublisherSize; fieldName: "size"; nullable: true; insert: "optional"; update: true };
+  statusId: { type: PublisherStatus; fieldName: "status"; nullable: true; insert: "optional"; update: true };
   typeId: { type: PublisherType; fieldName: "type"; nullable: false; insert: "optional"; update: true };
   favoriteAuthorId: {
     type: IdOf<Author>;
@@ -201,6 +206,7 @@ export interface PublisherOpts {
   baseAsyncDefault?: string;
   rating?: number | null;
   size?: PublisherSize | null;
+  status?: PublisherStatus | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
   spotlightAuthor?: Author | AuthorId | null;
@@ -242,6 +248,7 @@ export interface PublisherFilter {
   favoriteAuthorName?: ValueFilter<string, null>;
   rating?: ValueFilter<number, null>;
   size?: ValueFilter<PublisherSize, null>;
+  status?: ValueFilter<PublisherStatus, null>;
   type?: ValueFilter<PublisherType, never>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
@@ -279,6 +286,7 @@ export interface PublisherGraphQLFilter {
   favoriteAuthorName?: ValueGraphQLFilter<string>;
   rating?: ValueGraphQLFilter<number>;
   size?: ValueGraphQLFilter<PublisherSize>;
+  status?: ValueGraphQLFilter<PublisherStatus>;
   type?: ValueGraphQLFilter<PublisherType>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   favoriteAuthorId?: ValueGraphQLFilter<AuthorId>;
@@ -319,6 +327,7 @@ export interface PublisherOrder {
   favoriteAuthorName?: OrderBy;
   rating?: OrderBy;
   size?: OrderBy;
+  status?: OrderBy;
   type?: OrderBy;
   favoriteAuthor?: AuthorOrder;
   group?: PublisherGroupOrder;
@@ -331,6 +340,7 @@ export interface PublisherFactoryExtras {
   withBookAdvanceTitlesSnapshot?: string | null;
   withNumberOfBookAdvancesSnapshot?: string | null;
   withFavoriteAuthorName?: string | null;
+  withStatus?: PublisherStatus | null;
 }
 
 export interface PublisherScopes {
@@ -523,6 +533,26 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get isSizeLarge(): boolean {
     return getField(this, "size") === PublisherSize.Large;
+  }
+
+  get status(): PublisherStatus | undefined {
+    return getField(this, "status");
+  }
+
+  get statusDetails(): PublisherStatusDetails | undefined {
+    return this.status ? PublisherStatuses.getByCode(this.status) : undefined;
+  }
+
+  set status(status: PublisherStatus | undefined) {
+    setField(this, "status", status);
+  }
+
+  get isDraft(): boolean {
+    return getField(this, "status") === PublisherStatus.Draft;
+  }
+
+  get isActive(): boolean {
+    return getField(this, "status") === PublisherStatus.Active;
   }
 
   get type(): PublisherType {

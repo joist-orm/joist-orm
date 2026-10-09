@@ -30,7 +30,9 @@ Authoritative references:
 5. Use `run` or the project's `makeRun` wrapper when production code needs an
    isolated `EntityManager`; it flushes Given state and mirrors the callback's
    flushed Joist writes into the original test graph.
-6. Assert entity state and relationships with `toMatchEntity`.
+6. Assert entity state and relationships with `toMatchEntity`. Prefer checking
+   side effects through retained entities and their relations instead of using
+   `em.getEntities` to discover what the action created or changed.
 7. Prefer focused tests for one behavior over a single scenario that exercises
    unrelated updates at several graph levels.
 
@@ -338,6 +340,39 @@ expect((await author.books.load()).map((book) => ({ id: book.id, title: book.tit
 ]);
 ```
 
+## Assert Side Effects Through the Domain Graph
+
+Avoid `em.getEntities(Entity).filter(...)` or `.find(...)` to look up side
+effects for assertions. `getEntities` inspects the `EntityManager`'s tracked
+entities; finding a new child there does not prove that the action attached it
+to the correct parent. Assert through the retained Given graph instead, so the
+test describes the resulting domain state and checks relationship membership.
+
+```ts
+// Less useful: finds a book without proving which author owns it.
+const [createdBook] = ctx.em.getEntities(Book).filter((book) => book.title === "New book");
+expect(createdBook).toMatchEntity({ title: "New book" });
+```
+
+```ts
+it.withCtx("adds a book to the existing author", async (ctx) => {
+  // Given an author with an existing book
+  const author = newAuthor(ctx.em, { books: [{}] });
+  const [existingBook] = author.books.get;
+
+  // When we add another book to that author
+  await run(ctx, (ctx) => addBook(ctx, { authorId: author.id, title: "New book" }));
+
+  // Then the author keeps the existing book and owns the new book
+  expect(author).toMatchEntity({ books: [existingBook, { title: "New book" }] });
+});
+```
+
+Use the action result when a new entity has no natural path from the Given
+graph. If neither a relation nor the result exposes it, use an intentional
+domain query. Reserve `getEntities` assertions for tests whose behavior under
+test is specifically which entities the `EntityManager` tracks.
+
 ## Keep Tests Focused
 
 One test should describe one coherent boundary. Split a large graph mutation
@@ -392,6 +427,8 @@ reuse decisions instead of replacing factories with manual setup.
 - Important entities have direct, role-based `const` names.
 - Separate production units of work use `run`/`makeRun` and flush normally.
 - Assertions reuse loaded factory entities with `toMatchEntity`.
+- Side-effect assertions follow domain relations or action results instead of
+  scanning `em.getEntities` for created or changed entities.
 - No unnecessary reloads, `load()` calls, assertion awaits, or direct flushes
   remain.
 - Each test covers one coherent boundary.

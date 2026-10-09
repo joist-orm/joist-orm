@@ -40,13 +40,13 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 type AddReactionOpts = { runOnce?: boolean; name?: string };
 
-/** A `guardTransition` rule, which also gets the transition it is checking, since the entity may have moved on. */
+/** An `addTransitionRule` rule, which also gets the transition it is checking, since the entity may have moved on. */
 export type TransitionGuardFn<T extends Entity, V> = (
   entity: T,
   transition: Transition<V>,
 ) => MaybePromise<ValidationRuleResult>;
 
-/** An `onTransition` function, which also gets the transition it is handling, since the entity may have moved on. */
+/** An `addTransitionReaction` function, which also gets the transition it is handling, since the entity may have moved on. */
 type TransitionFn<T extends Entity, C, V> = (entity: T, ctx: C, transition: Transition<V>) => MaybePromise<unknown>;
 
 /** The enum type of a transition field, i.e. `PublisherStatus`. */
@@ -347,12 +347,12 @@ export class ConfigApi<T extends Entity, C> {
    * The table is checked by the field's setter, so a disallowed transition throws a `ValidationErrors`
    * immediately, instead of failing the next `em.flush`.
    */
-  transitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
-    const name = `transitions(${getCallerName()})`;
-    this.ensurePreBoot(name, "transitions");
+  setTransitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
+    const name = `setTransitions(${getCallerName()})`;
+    this.ensurePreBoot(name, "setTransitions");
     const config = this.fieldTransitions(fieldName);
     // Subtypes add their own tables on their own configs, so a 2nd table on this config is a mistake
-    if (config.table) fail(`config.transitions was already called for ${fieldName}, use one table per field`);
+    if (config.table) fail(`config.setTransitions was already called for ${fieldName}, use one table per field`);
     // Accessors are converted to codes after boot, see `buildFieldTransitions`
     config.table = table;
   }
@@ -361,27 +361,27 @@ export class ConfigApi<T extends Entity, C> {
    * Checks each matching transition before its callbacks run, and rejects it if the guard returns an error.
    *
    * Use this for "a transition is allowed only when ..." checks that depend on other data, while
-   * `transitions` declares the transitions that are possible at all. The `hint` is a load hint, like
+   * `setTransitions` declares the transitions that are possible at all. The `hint` is a load hint, like
    * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
    *
    * Guards run with reactions, for every matching transition, even if the
    * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
    * it is checking. Guards never run on creation and are not rechecked during final validation.
    */
-  guardTransition<K extends Settable<T>, H extends LoadHint<T>>(
+  addTransitionRule<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     rule: TransitionGuardFn<Loaded<T, H>, TransitionType<T, K>>,
   ): void;
-  guardTransition<K extends Settable<T>>(
+  addTransitionRule<K extends Settable<T>>(
     fieldName: K,
     match: GuardTransitionMatch<TransitionStates<T, K>>,
     rule: TransitionGuardFn<T, TransitionType<T, K>>,
   ): void;
-  guardTransition(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
-    const name = `guardTransition(${getCallerName()})`;
-    this.ensurePreBoot(name, "guardTransition");
+  addTransitionRule(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
+    const name = `addTransitionRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addTransitionRule");
     const rule: TransitionGuardFn<T, any> = maybeRule ?? hintOrRule;
     const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
     // The dispatcher evaluates matching guards once before invoking any callbacks for the transition.
@@ -404,7 +404,7 @@ export class ConfigApi<T extends Entity, C> {
    *
    * Callbacks run with reactions, once for every matching transition, in order,
    * even if the field has moved on since. The entity is in its current state, so `fn` also gets the
-   * `transition` it is handling. Transitions that a `guardTransition` rejects don't fire.
+   * `transition` it is handling. Transitions that an `addTransitionRule` rejects don't fire.
    *
    * Creating an entity with a matching `to` state fires too, unless `match.from` is set or
    * `match.onCreate` is `false`. Set `match.phase: "commit"` to run in `beforeCommit` instead, i.e.
@@ -417,31 +417,31 @@ export class ConfigApi<T extends Entity, C> {
    * Pass a unique name as the first argument when registering multiple callbacks from a shared
    * helper or loop. Duplicate names on the same config are rejected when registered.
    */
-  onTransition<K extends Settable<T>, H extends LoadHint<T>>(
+  addTransitionReaction<K extends Settable<T>, H extends LoadHint<T>>(
     fieldName: K,
     match: OnTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
-  onTransition<K extends Settable<T>>(
+  addTransitionReaction<K extends Settable<T>>(
     fieldName: K,
     match: OnTransitionMatch<TransitionStates<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
-  onTransition<K extends Settable<T>, H extends LoadHint<T>>(
+  addTransitionReaction<K extends Settable<T>, H extends LoadHint<T>>(
     name: string,
     fieldName: K,
     match: OnTransitionMatch<TransitionStates<T, K>>,
     hint: H,
     fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
   ): void;
-  onTransition<K extends Settable<T>>(
+  addTransitionReaction<K extends Settable<T>>(
     name: string,
     fieldName: K,
     match: OnTransitionMatch<TransitionStates<T, K>>,
     fn: TransitionFn<T, C, TransitionType<T, K>>,
   ): void;
-  onTransition(
+  addTransitionReaction(
     nameOrFieldName: string,
     fieldNameOrMatch: string | OnTransitionMatch<any>,
     matchOrHintOrFn: any,
@@ -449,9 +449,9 @@ export class ConfigApi<T extends Entity, C> {
     maybeFn?: any,
   ): void {
     const named = typeof fieldNameOrMatch === "string";
-    const name = named ? nameOrFieldName : `onTransition(${getCallerName()})`;
-    this.ensurePreBoot(name, "onTransition");
-    this.ensureUniqueReactionName(name, "onTransition");
+    const name = named ? nameOrFieldName : `addTransitionReaction(${getCallerName()})`;
+    this.ensurePreBoot(name, "addTransitionReaction");
+    this.ensureUniqueReactionName(name, "addTransitionReaction");
 
     // Resolve the overloads
     const fieldName = named ? fieldNameOrMatch : nameOrFieldName;
@@ -652,10 +652,11 @@ export class ConfigData<T extends Entity, C> {
   commitRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
-  /** Names shared by addReaction and onTransition, including commit-phase callbacks. */
+  /** Names shared by addReaction and addTransitionReaction, including commit-phase callbacks. */
   reactionNames: Set<string> = new Set();
   /**
-   * Field name -> its `transitions`, `guardTransition`, and `onTransition` config, with accessors not yet converted.
+   * Field name -> its `setTransitions`, `addTransitionRule`, and `addTransitionReaction` config, with
+   * accessors not yet converted.
    *
    * The keys are also the fields whose factories accept `withX` opts.
    */

@@ -15,14 +15,14 @@ import { insertAuthor, insertBook, insertBookAdvance, insertPublisher } from "sr
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("EntityManager.transitions", () => {
-  it("fires onTransition when created, by default", async () => {
+  it("fires addTransitionReaction when created, by default", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending]);
   });
 
-  it("fires onTransition once per flushed change", async () => {
+  it("fires addTransitionReaction once per flushed change", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -31,7 +31,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed]);
   });
 
-  it("fires onTransition for each change chained within one flush", async () => {
+  it("fires addTransitionReaction for each change chained within one flush", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -41,7 +41,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed, AdvanceStatus.Paid]);
   });
 
-  it("loads the onTransition hint", async () => {
+  it("loads the addTransitionReaction hint", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { book: { title: "b1" } });
     await em.flush();
@@ -50,7 +50,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.transientFields.signedTitle).toBe("b1");
   });
 
-  it("runs commit-phase onTransition once for each matching transition", async () => {
+  it("runs commit-phase addTransitionReaction once for each matching transition", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -116,7 +116,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.status).toBe(AdvanceStatus.Paid);
   });
 
-  it("fires onTransition for changes after a withStatus factory value", async () => {
+  it("fires addTransitionReaction for changes after a withStatus factory value", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { withStatus: AdvanceStatus.Pending });
     await em.flush();
@@ -125,7 +125,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Signed]);
   });
 
-  it("does not fire onTransition for a change its guard rejects", async () => {
+  it("does not fire addTransitionReaction for a change its guard rejects", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Signed, book: { title: "Unpublished" } });
     await em.flush();
@@ -144,21 +144,21 @@ describe("EntityManager.transitions", () => {
     expect(ba.status).toBe(AdvanceStatus.Paid);
   });
 
-  it("does not fire onTransition with onCreate: false when created", async () => {
+  it("does not fire addTransitionReaction with onCreate: false when created", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Paid });
     await em.flush();
     expect(ba.transientFields.onPaidCommitInvoked).toBe(0);
   });
 
-  it("does not fire onTransition with a from value when created", async () => {
+  it("does not fire addTransitionReaction with a from value when created", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em, { status: AdvanceStatus.Signed });
     await em.flush();
     expect(ba.transientFields.signedTitle).toBeUndefined();
   });
 
-  it("fires onTransition for each transition when the state cycles back before the flush", async () => {
+  it("fires addTransitionReaction for each transition when the state cycles back before the flush", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -182,7 +182,7 @@ describe("EntityManager.transitions", () => {
     expect(ba.transientFields.transitions).toEqual([AdvanceStatus.Pending, AdvanceStatus.Signed, AdvanceStatus.Paid]);
   });
 
-  it("passes onTransition the transition it handles, even after the state moved on", async () => {
+  it("passes addTransitionReaction the transition it handles, even after the state moved on", async () => {
     const em = newEntityManager();
     const ba = newBookAdvance(em);
     await em.flush();
@@ -466,7 +466,7 @@ describe("EntityManager.transitions", () => {
     await em.flush();
     // When eleven books move the author from Few to Lot
     for (let i = 0; i < 11; i++) newBook(em, { author });
-    // Then its guard rejects the derived state without any onTransition callback
+    // Then its guard rejects the derived state without any addTransitionReaction callback
     await expect(em.flush()).rejects.toThrow("Cannot give a blocked author a lot of books");
   });
 

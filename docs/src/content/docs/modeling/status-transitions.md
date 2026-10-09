@@ -9,11 +9,11 @@ Many entities have a status-style [enum](./enum-tables) field, i.e. `BookAdvance
 
 Joist has three `config` methods to model these state machines:
 
-| Method                   | Answers                            |
-|--------------------------|------------------------------------|
-| `config.transitions`     | Which changes are possible?        |
-| `config.guardTransition` | When is a possible change allowed? |
-| `config.onTransition`    | What happens after a change?       |
+| Method                         | Answers                            |
+|--------------------------------|------------------------------------|
+| `config.setTransitions`        | Which changes are possible?        |
+| `config.addTransitionRule`     | When is a possible change allowed? |
+| `config.addTransitionReaction` | What happens after a change?       |
 
 ## Quick Example
 
@@ -23,7 +23,7 @@ Here's an example modeling a book advance's `AdvanceStatus` enum, i.e. whether t
 import { bookAdvanceConfig as config } from "./entities";
 
 // Declares the allowed state transitions
-config.transitions("status", {
+config.setTransitions("status", {
   Pending: ["Signed"],
   // Allow Signed back to Pending for signature revoking
   Signed: ["Paid", "Pending"],
@@ -32,7 +32,7 @@ config.transitions("status", {
 });
 
 // Prevent moving to Paid when the book is `Unpublished`
-config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
+config.addTransitionRule("status", { to: "Paid" }, "book", (ba) => {
   if (ba.book.get.title === "Unpublished") {
     return "Cannot pay an advance for an unpublished book";
   }
@@ -40,14 +40,14 @@ config.guardTransition("status", { to: "Paid" }, "book", (ba) => {
 
 // When we're paid & data is almost committed (we're still in the txn),
 // schedule our payment job
-config.onTransition("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
+config.addTransitionReaction("status", { to: "Paid", phase: "commit" }, (ba, ctx) => {
   return addPaymentJob(ctx, ba);
 });
 ```
 
 ## Declaring allowed changes
 
-`config.transitions(field, table)` maps each "from" state to the "to" states it may transition to.
+`config.setTransitions(field, table)` maps each "from" state to the "to" states it may transition to.
 
 A state that is missing from the table, or maps to `[]`, is treated as a terminal state & cannot be changed.
 
@@ -57,11 +57,11 @@ Creating an entity is not a change, so a new entity may start in any state. If y
 
 ## Guarding changes
 
-`config.guardTransition(field, match, hint?, rule)` checks whether to allow each state transition that its `match` parameter matches against.
+`config.addTransitionRule(field, match, hint?, rule)` checks whether to allow each state transition that its `match` parameter matches against.
 
 Like `addRule` validation rules, it returns an error message to reject the change.
 
-Unlike `addRule`s, which are ran as the final phase of `em.flush` after all changes have settled, guards are ran immediately before `onTransition` callbacks, so that they can evaluate "should we have allowed this change state to happen?".
+Unlike `addRule`s, which are ran as the final phase of `em.flush` after all changes have settled, guards are ran immediately before `addTransitionReaction` callbacks, so that they can evaluate "should we have allowed this change state to happen?".
 
 Note that technically this is _after_ the state change was made, during the reactions phase `em.flush`, so it might have to use `changes` or `originalValue`s to evaluate any "existing/previous state" business logic.
 
@@ -69,9 +69,9 @@ Also unlike regular `addRule`s, guards do not run on creation, because there is 
 
 ## Reacting to changes
 
-`config.onTransition(field, match, hint?, fn)` runs `fn` for each state transition that its `match` parameter matches against.
+`config.addTransitionReaction(field, match, hint?, fn)` runs `fn` for each state transition that its `match` parameter matches against.
 
-The default behavior is for `onTransition` callsback to run whenever reactions are recalculated, either during an explicit `em.recalc`, or waiting for `em.flush`. Alternatively, see the `phase` param below, to run during the flush's commit phase.
+The default behavior is for `addTransitionReaction` callbacks to run whenever reactions are recalculated, either during an explicit `em.recalc`, or waiting for `em.flush`. Alternatively, see the `phase` param below, to run during the flush's commit phase.
 
 Like [reactions](./reactions), the transititon's `fn` lambda can change any entity, and those changes can trigger more transitions in the same flush.
 
@@ -84,7 +84,7 @@ Other behavior:
 * **Creation fires by default.** Creating an entity with a matching `to` state fires `fn`, because entering a state by creation usually needs the same side effects as entering it by a change.
 
   To avoid this, you can either pass `onCreate: false`, or set a `from` state, as the `from` clauses never match on creation.
-* **Only allowed transitions will fire `onTransition`.** If the table or a guard rejects a change, `fn` doesn't run for it.
+* **Only allowed transitions will fire `addTransitionReaction`.** If the table or a guard rejects a change, `fn` doesn't run for it.
 * **`phase: "commit"`** runs `fn` in `beforeCommit`, after the entities' SQL changes have been flushed to the database, once for each matching transition. Use it for enqueueing jobs.
 
 :::caution
@@ -96,7 +96,7 @@ This means, if you have a transition that fires on `to: "Signed"`, but the advan
 To check the at-time-of-transition state, we provide a `transition` argument:
 
 ```typescript
-config.onTransition("status", { to: "Signed" }, (ba, ctx, transition) => {
+config.addTransitionReaction("status", { to: "Signed" }, (ba, ctx, transition) => {
   // `transition.to` is Signed even if `ba.status` is already Paid.
   if (transition.to === AdvanceStatus.Signed) return addReadyToPayJob(ctx, ba);
 });
@@ -108,7 +108,7 @@ But this only covers the `status` field itself, and doesn't snapshot the rest of
 
 ## The `match` argument
 
-`guardTransition` takes `GuardTransitionMatch`, while `onTransition` takes `OnTransitionMatch`:
+`addTransitionRule` takes `GuardTransitionMatch`, while `addTransitionReaction` takes `OnTransitionMatch`:
 
 ```typescript
 interface GuardTransitionMatch<V> {
@@ -141,7 +141,7 @@ ba.status = AdvanceStatus.Paid;
 await em.flush();
 ```
 
-Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `onTransition` callbacks that match creation in Paid (i.e. to Paid, with no `from`) still fire.
+Joist treats this as creation in Paid, rather than a Pending → Paid transition. No guards run, but `addTransitionReaction` callbacks that match creation in Paid (i.e. to Paid, with no `from`) still fire.
 
 This behavior is also beneficial for both `em.findOrCreate` and test factories, where it's common for an entity to be created with an initial/default status, but then very quickly set "to the right initial value", which should not be considered a true transition change.
 
@@ -153,7 +153,7 @@ In terms of "earning their keep", we've justified implementing transitions as a 
 
   Doing this bookkeeping by hand would be tedious.
 
-* Usually validation rules don't run until the last phase of `em.flush`, but flush cycles that trigger multiple state changes benefit from `guardTransition`s running as part of reactions.
+* Usually validation rules don't run until the last phase of `em.flush`, but flush cycles that trigger multiple state changes benefit from `addTransitionRule`s running as part of reactions.
 
 
 ## Modeling Tip
@@ -174,13 +174,13 @@ We can fix this by modeling each step as its own state, so each piece of logic k
 
 ```typescript
  // Split the old singular `Pending` state into two: `Opening` and `PendingDecision`
-config.transitions("status", {
+config.setTransitions("status", {
   Opening: ["PendingDecision"],
   PendingDecision: ["Approved", "Rejected"],
 });
 
 // Opening only prepares the approvers, and then hands off to PendingDecision
-config.onTransition("status", { to: "Opening" }, (approval) => {
+config.addTransitionReaction("status", { to: "Opening" }, (approval) => {
   createApprovers(approval);
   approval.status = ApprovalStatus.PendingDecision;
 });
@@ -192,7 +192,7 @@ config.addReaction({ status: {}, approvers: "status" }, (approval) => {
 });
 ```
 
-Now our the `onTransition` and `addReaction` know exactly when each should run.
+Now our the `addTransitionReaction` and `addReaction` know exactly when each should run.
 
 ## Inheritance
 
@@ -202,9 +202,9 @@ for matching transitions.
 
 ## Test Factories
 
-By default, test factories that set `status: Paid` still trigger the `onTransition`s that have a `to: Paid` match.
+By default, test factories that set `status: Paid` still trigger the `addTransitionReaction`s that have a `to: Paid` match.
 
-Usually this is desirable, i.e. to keep test data as production-like as possible, however if you'd like to disable it, factories also have a `withStatus` (or similarly named opt) that will not trigger `onTransition` reactions on creation:
+Usually this is desirable, i.e. to keep test data as production-like as possible, however if you'd like to disable it, factories also have a `withStatus` (or similarly named opt) that will not trigger `addTransitionReaction` reactions on creation:
 
-* `newBookAdvance(em, { status: AdvanceStatus.Paid })` means "created as Paid, and react to that". `onTransition` reactions fire, as they would in production.
-* `newBookAdvance(em, { withStatus: AdvanceStatus.Paid })` means "created as Paid, and don't ask why". Joist doesn't record a creation transition, so no `onTransition` reactions fire.
+* `newBookAdvance(em, { status: AdvanceStatus.Paid })` means "created as Paid, and react to that". `addTransitionReaction` reactions fire, as they would in production.
+* `newBookAdvance(em, { withStatus: AdvanceStatus.Paid })` means "created as Paid, and don't ask why". Joist doesn't record a creation transition, so no `addTransitionReaction` reactions fire.

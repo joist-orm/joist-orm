@@ -76,7 +76,7 @@ describe("config", () => {
     // When another callback uses the same registration location
     // Then registration tells the caller to pass a unique name
     expect(() => registerTransition(config)).toThrow(
-      /Duplicate reaction name .*config.onTransition.*Pass a unique name/,
+      /Duplicate reaction name .*config.addTransitionReaction.*Pass a unique name/,
     );
   });
 
@@ -98,7 +98,7 @@ describe("config", () => {
     // When another callback requests the same name
     // Then registration rejects the duplicate name
     expect(() => registerTransition(config, "payment")).toThrow(
-      'Duplicate reaction name "payment" in config.onTransition',
+      'Duplicate reaction name "payment" in config.addTransitionReaction',
     );
   });
 
@@ -109,18 +109,18 @@ describe("config", () => {
     // When a transition callback requests the same name
     // Then registration rejects the shared reaction identity
     expect(() => registerTransition(config, "payment")).toThrow(
-      'Duplicate reaction name "payment" in config.onTransition',
+      'Duplicate reaction name "payment" in config.addTransitionReaction',
     );
   });
 
   it("rejects duplicate commit-phase transition names", () => {
     // Given a commit-phase callback named payment
     const config = new ConfigApi();
-    config.onTransition("payment", "status", { phase: "commit" }, () => {});
+    config.addTransitionReaction("payment", "status", { phase: "commit" }, () => {});
     // When another commit-phase callback requests the same name
     // Then registration rejects the duplicate callback name
-    expect(() => config.onTransition("payment", "status", { phase: "commit" }, () => {})).toThrow(
-      'Duplicate reaction name "payment" in config.onTransition',
+    expect(() => config.addTransitionReaction("payment", "status", { phase: "commit" }, () => {})).toThrow(
+      'Duplicate reaction name "payment" in config.addTransitionReaction',
     );
   });
 
@@ -150,11 +150,11 @@ describe("config", () => {
   it("rejects a second transitions table for the same field", () => {
     // Given a config with a status transitions table
     const config = new ConfigApi();
-    config.transitions("status", { Draft: ["Open"] });
+    config.setTransitions("status", { Draft: ["Open"] });
     // When another table is declared for status
     // Then registration rejects the second table
-    expect(() => config.transitions("status", { Open: ["Closed"] })).toThrow(
-      "config.transitions was already called for status, use one table per field",
+    expect(() => config.setTransitions("status", { Open: ["Closed"] })).toThrow(
+      "config.setTransitions was already called for status, use one table per field",
     );
   });
 });
@@ -167,8 +167,8 @@ function registerReaction(config: ConfigApi<Entity, unknown>, name?: string): vo
 /** Registers payment callbacks through one source location, optionally with their own names. */
 function registerTransition(config: ConfigApi<Entity, unknown>, name?: string): void {
   if (name === undefined) {
-    config.onTransition("status", {}, () => {});
+    config.addTransitionReaction("status", {}, () => {});
   } else {
-    config.onTransition(name, "status", {}, () => {});
+    config.addTransitionReaction(name, "status", {}, () => {});
   }
 }

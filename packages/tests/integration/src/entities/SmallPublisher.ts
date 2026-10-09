@@ -95,11 +95,11 @@ config.addRule("authors", (sp) => {
 config.addRule(cannotBeUpdated("group"));
 
 // Subtype transition restrictions supplement the base Publisher's table and guards.
-config.transitions("status", { Draft: ["Active"], Active: [] });
-config.guardTransition("status", { to: "Active" }, (sp) => {
+config.setTransitions("status", { Draft: ["Active"], Active: [] });
+config.addTransitionRule("status", { to: "Active" }, (sp) => {
   if (sp.city === "BlockedBySubType") return "Cannot activate a publisher in a restricted city";
 });
-config.onTransition("recordSmallPublisherActivation", "status", { to: "Active" }, (sp) => {
+config.addTransitionReaction("recordSmallPublisherActivation", "status", { to: "Active" }, (sp) => {
   sp.transientFields.activeStatusTransitions++;
 });
 

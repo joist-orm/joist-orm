@@ -192,14 +192,14 @@ config.afterMetadata((meta) => {
 config.setDefault("type", () => PublisherType.Big);
 
 // For testing transition configuration inherited by both CTI subtypes.
-config.transitions("status", { Draft: ["Active"], Active: ["Draft"] });
-config.guardTransition("status", { to: "Active" }, (p) => {
+config.setTransitions("status", { Draft: ["Active"], Active: ["Draft"] });
+config.addTransitionRule("status", { to: "Active" }, (p) => {
   if (p.name === "BlockedByBaseType") return "Cannot activate an unapproved publisher";
 });
-config.onTransition("recordPublisherStatus", "status", {}, (p) => {
+config.addTransitionReaction("recordPublisherStatus", "status", {}, (p) => {
   p.transientFields.statusTransitions++;
 });
-config.onTransition("status", { to: "Active", phase: "commit" }, (p) => {
+config.addTransitionReaction("status", { to: "Active", phase: "commit" }, (p) => {
   p.transientFields.activeStatusCommitTransitions++;
 });
 

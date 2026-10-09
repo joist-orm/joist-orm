@@ -188,7 +188,7 @@ export type EnumField = Field & {
   notNull: boolean;
   isArray: boolean;
   hasConfigDefault: boolean;
-  /** Whether the entity file calls `config.transitions`, `guardTransition`, or `onTransition` on this field, set by `scanEntityFiles`. */
+  /** Whether the entity file calls `config.setTransitions`, `addTransitionRule`, or `addTransitionReaction` on this field, set by `scanEntityFiles`. */
   hasTransitions: boolean;
 };
 

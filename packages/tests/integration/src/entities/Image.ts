@@ -6,7 +6,7 @@ type ImageOwner = Book | Publisher | Author;
 
 export class Image extends ImageCodegen {
   transientFields = {
-    /** A named-only onTransition config must still generate enum accessors and trusted factory opts. */
+    /** A named-only addTransitionReaction config must still generate enum accessors and trusted factory opts. */
     typeTransitions: [] as ImageType[],
   };
   // We don't use hasOneThrough or hasOneDerived b/c we use the ImageType to do a
@@ -39,7 +39,7 @@ config.addRule((image) => {
   }
 });
 
-// For testing that named-only onTransitions are recognized by scanEntityFiles.
-config.onTransition("recordImageType", "type", { to: "AuthorImage" }, (image, _ctx, transition) => {
+// For testing that named-only addTransitionReactions are recognized by scanEntityFiles.
+config.addTransitionReaction("recordImageType", "type", { to: "AuthorImage" }, (image, _ctx, transition) => {
   image.transientFields.typeTransitions.push(transition.to);
 });

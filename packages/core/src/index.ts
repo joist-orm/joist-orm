@@ -404,7 +404,7 @@ export function setOpt<T extends Entity>(
       throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
     }
   } else if (value instanceof FactoryInitialValue) {
-    // A factory's `withStatus`-style opt: trust the created value, so its `onTransition`s don't fire
+    // A factory's `withStatus`-style opt: trust the created value, so its `addTransitionReaction`s don't fire
     (entity as any)[key] = value.value;
     getEmInternalApi(entity.em).rm.forgetCreationTransition(entity, key);
   } else {

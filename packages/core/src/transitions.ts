@@ -4,7 +4,7 @@ import type { ValidationRuleResult } from "src/rules.ts";
 import { type MaybePromise, fail } from "src/utils.ts";
 
 /**
- * Which state transitions of an enum field a `guardTransition` cares about.
+ * Which state transitions of an enum field an `addTransitionRule` cares about.
  *
  * Omitting `from` or `to` matches any state. Guards never run on creation.
  */
@@ -14,13 +14,13 @@ export interface GuardTransitionMatch<V> {
 }
 
 /**
- * Which state transitions of an enum field an `onTransition` callback handles.
+ * Which state transitions of an enum field an `addTransitionReaction` callback handles.
  *
  * Creating an entity with a matching `to` state also matches, unless `from` is set or `onCreate` is `false`.
  */
 export interface OnTransitionMatch<V> extends GuardTransitionMatch<V> {
   /**
-   * Whether `onTransition` fires when an entity is created with a matching `to` state, defaults to `true`.
+   * Whether `addTransitionReaction` fires when an entity is created with a matching `to` state, defaults to `true`.
    *
    * Entering a state by creation usually needs the same side effects as entering it by a transition, and
    * forgetting them is easy to miss. Set `false` for reactions that only make sense for a transition.
@@ -53,20 +53,20 @@ export interface TransitionStep {
   to: unknown;
 }
 
-/** A `guardTransition` as registered in config, with its `match` still using accessors. */
+/** An `addTransitionRule` as registered in config, with its `match` still using accessors. */
 export interface TransitionGuardConfig<T extends Entity = Entity> {
   match: GuardTransitionMatch<string>;
   run(entity: T, step: TransitionStep): MaybePromise<ValidationRuleResult>;
 }
 
-/** An `onTransition` as registered in config, with its `match` still using accessors. */
+/** An `addTransitionReaction` as registered in config, with its `match` still using accessors. */
 export interface TransitionCallbackConfig<T extends Entity = Entity, C = unknown> {
   name: string;
   match: OnTransitionMatch<string>;
   run(entity: T, ctx: C, step: TransitionStep): MaybePromise<unknown>;
 }
 
-/** One field's `transitions`, `guardTransition`, and `onTransition` config on a single entity type. */
+/** One field's `setTransitions`, `addTransitionRule`, and `addTransitionReaction` config on a single entity type. */
 export interface FieldTransitionsConfig<T extends Entity = Entity, C = unknown> {
   /** The `transitions` table, if any; subtypes add their own tables on their own configs. */
   table?: TransitionTable<string>;

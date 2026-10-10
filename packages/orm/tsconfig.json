@@ -9,6 +9,7 @@
     { "path": "../codegen" },
     { "path": "../core" },
     { "path": "../graphql-codegen" },
+    { "path": "../graphql-plugins" },
     { "path": "../graphql-resolver-utils" },
     { "path": "../knex" },
     { "path": "../migration-utils" },

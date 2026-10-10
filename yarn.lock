@@ -192,22 +192,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/internal-helpers@npm:0.10.4":
-  version: 0.10.4
-  resolution: "@astrojs/internal-helpers@npm:0.10.4"
-  dependencies:
-    "@types/hast": "npm:^3.0.4"
-    "@types/mdast": "npm:^4.0.4"
-    js-yaml: "npm:^4.3.0"
-    picomatch: "npm:^4.0.4"
-    retext-smartypants: "npm:^6.2.0"
-    shiki: "npm:^4.0.2"
-    smol-toml: "npm:^1.6.0"
-    unified: "npm:^11.0.5"
-  checksum: 10/adf4c58e569158702ac504e1f22165e0172893b4de9eae932c5e0f515d1f7e634e5407ffd5e4466f93934fed02b16c1dcf3b76f7ae148a3fe5ce43b2de1d69a0
-  languageName: node
-  linkType: hard
-
 "@astrojs/internal-helpers@npm:0.11.0":
   version: 0.11.0
   resolution: "@astrojs/internal-helpers@npm:0.11.0"
@@ -249,14 +233,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/markdown-remark@npm:7.2.4":
-  version: 7.2.4
-  resolution: "@astrojs/markdown-remark@npm:7.2.4"
+"@astrojs/markdown-remark@npm:7.3.1":
+  version: 7.3.1
+  resolution: "@astrojs/markdown-remark@npm:7.3.1"
   dependencies:
-    "@astrojs/internal-helpers": "npm:0.10.4"
+    "@astrojs/internal-helpers": "npm:0.11.0"
     "@astrojs/prism": "npm:4.0.2"
+    "@mdx-js/mdx": "npm:^3.1.1"
+    acorn: "npm:^8.16.0"
+    estree-util-visit: "npm:^2.0.0"
     github-slugger: "npm:^2.0.0"
     hast-util-from-html: "npm:^2.0.3"
+    hast-util-to-html: "npm:^9.0.5"
     hast-util-to-text: "npm:^4.0.2"
     mdast-util-definitions: "npm:^6.0.0"
     rehype-raw: "npm:^7.0.0"
@@ -265,12 +253,13 @@ __metadata:
     remark-parse: "npm:^11.0.0"
     remark-rehype: "npm:^11.1.2"
     remark-smartypants: "npm:^3.0.2"
+    source-map: "npm:^0.7.6"
     unified: "npm:^11.0.5"
     unist-util-remove-position: "npm:^5.0.0"
     unist-util-visit: "npm:^5.1.0"
     unist-util-visit-parents: "npm:^6.0.2"
     vfile: "npm:^6.0.3"
-  checksum: 10/810fd1986a3c9a430498eeb0955e1e16ebd38ef1287841d93ea5c99ced07cff3168df7389b4e9b898717da21ad0ca55a8e9abb6e53c8006074a800c3d4348ae8
+  checksum: 10/25430772e721463199b5fa144cfac5e698fe7a25f3b09511aa5e58e1ff5b8665d6ee4b88b9616a17381ad5a1bfc717a834db6e7ab5403920efd01a71cd46b339
   languageName: node
   linkType: hard
 
@@ -10691,7 +10680,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-docs@workspace:docs"
   dependencies:
-    "@astrojs/markdown-remark": "npm:7.2.4"
+    "@astrojs/markdown-remark": "npm:7.3.1"
     "@astrojs/starlight": "npm:0.42.5"
     "@astrojs/starlight-tailwind": "npm:5.0.0"
     "@tailwindcss/vite": "npm:^4.3.3"

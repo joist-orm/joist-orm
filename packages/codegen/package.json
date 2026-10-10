@@ -54,8 +54,8 @@
   },
   "dependencies": {
     "@dprint/formatter": "^0.5.1",
-    "@dprint/json": "^0.21.3",
-    "@inquirer/prompts": "^8.6.0",
+    "@dprint/json": "^0.25.1",
+    "@inquirer/prompts": "^8.7.2",
     "@types/jscodeshift": "^17.3.0",
     "@types/pluralize": "^0.0.33",
     "change-case": "^4.1.2",
@@ -63,9 +63,9 @@
     "jscodeshift": "^17.4.0",
     "jsonc-parser": "^3.3.1",
     "pluralize": "^8.0.0",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.9",
     "ts-poet": "^6.12.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",

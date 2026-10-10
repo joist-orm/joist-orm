@@ -42,7 +42,7 @@
     "joist-core": "workspace:*"
   },
   "dependencies": {
-    "bun-types": "^1.3.14"
+    "bun-types": "^1.4.2"
   },
   "devDependencies": {
     "tsconfig-paths": "^4.2.0",

@@ -146,7 +146,7 @@
 }
 
 /* The blog plugin ships unlayered styles, so its overrides also live outside the layers. */
-.posts .preview {
+.sl-blog-posts .sl-blog-preview {
   border: 1px solid var(--sl-color-hairline-light);
   border-radius: 0.9rem;
   padding: clamp(1.25rem, 3vw, 2rem);
@@ -154,16 +154,16 @@
   box-shadow: 0 8px 24px -20px rgba(7, 16, 37, 0.5);
 }
 
-.posts .preview-link h2 {
+.sl-blog-posts .sl-blog-preview-link .sl-blog-preview-title {
   color: var(--sl-color-white);
   letter-spacing: -0.025em;
 }
 
-.posts .preview-link:hover h2 {
+.sl-blog-posts .sl-blog-preview-link:hover .sl-blog-preview-title {
   color: var(--sl-color-text-accent);
 }
 
-.posts .preview .metadata {
+.sl-blog-posts .sl-blog-preview .sl-blog-metadata {
   color: var(--sl-color-gray-3);
 }
 

@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@types/pluralize": "^0.0.33",
-    "node-pg-migrate": "^8.0.4",
+    "node-pg-migrate": "^9.0.0",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {

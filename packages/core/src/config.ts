@@ -730,11 +730,16 @@ export function findUserCodeLine(lines: string[]): string {
       const withinWorkingCopyJoist = line.includes("/packages/orm/") || line.includes("/packages/core");
       // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
       const withinProductionJoist =
-        !withinWorkingCopyJoist && (line.includes("/joist-orm/src/") || line.includes("/joist-core/src"));
+        !withinWorkingCopyJoist &&
+        (line.includes("/joist-orm/src/") ||
+          line.includes("/joist-core/src") ||
+          line.includes("/joist-orm/build/") ||
+          line.includes("/joist-core/build/"));
       const nodeInternals = line.includes("node:internal/") || line.includes("Promise.all");
       const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
       // const isRecalc = line.includes(".recalcPending");
-      const isDefault = line.includes("/defaults.ts");
+      const isDefault =
+        line.includes("/defaults.ts") || line.includes("/defaults.js") || line.includes("/defaults.cjs");
       // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
       const isDataloader = line.includes("/dataloaders/");
       // If this is the `newTestInstance` call

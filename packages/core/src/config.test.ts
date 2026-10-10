@@ -26,6 +26,21 @@ describe("config", () => {
       );
     });
 
+    it("finds synchronous defaults in compiled stacks", () => {
+      const lines = [
+        "    at getFuzzyCallerName (/home/node/app/node_modules/joist-core/src/config.ts:338:15)",
+        "    at FieldLogger.logSet (/home/node/app/node_modules/joist-core/src/logging/FieldLogger.ts:52:36)",
+        "    at setField (/home/node/app/node_modules/joist-core/src/fields.ts:113:16)",
+        "    at Author.set isFunny [as isFunny] (/home/node/app/node_modules/joist-orm/src/entities/Author.ts:719:13)",
+        "    at setSyncDefaults (/home/node/app/node_modules/joist-core/build/defaults.cjs:33:46)",
+        "    at EntityManager.create (/home/node/app/node_modules/joist-core/build/EntityManager.cjs:493:24)",
+        "    at Object.newAuthor (/home/node/app/src/entities/factories/newAuthor.ts:14:25)",
+      ];
+      expect(findUserCodeLine(lines)).toBe(
+        "    at setSyncDefaults (/home/node/app/node_modules/joist-core/build/defaults.cjs:33:46)",
+      );
+    });
+
     it("works on cascadeDeletes", () => {
       const lines = [
         "    at getStackFromCapture (/home/node/app/node_modules/joist-orm/src/config.ts:393:9)",

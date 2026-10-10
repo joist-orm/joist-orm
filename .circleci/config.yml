@@ -11,8 +11,8 @@ workflows:
           matrix:
             parameters:
               node-version:
+                - "22"
                 - "24" # EOL 30 Apr 2028
-                - "25" # EOL 01 Jun 2026
                 - "26" # Current
                 - "bun"
 
@@ -25,6 +25,8 @@ jobs:
     machine:
       image: ubuntu-2404:current
     resource_class: large
+    environment:
+      SWC_NATIVE_BINDING_CACHE: /tmp/swc-native-binding-cache
     steps:
       - checkout
 

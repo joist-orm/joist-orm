@@ -691,13 +691,17 @@ export class ConfigData<T extends Entity, C> {
 }
 
 export function getCallerName(extraFrames: number = 0): string {
-  const err = getStack();
-  // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
-  // (Make sure to drop lines that don't start with 'at' b/c the stack format can differ
-  // slightly i.e. if running via tsx/using a node loader (probably?)
-  const line = err.stack!.split("\n").filter((line) => line.includes(" at "))[3 + extraFrames];
+  const lines = getStack()
+    .stack!.split("\n")
+    .filter((line) => line.includes(" at "));
+  const lineIndex = 3 + extraFrames;
+  // Jest's async test runner can add a node_modules frame before the requested
+  // caller frame. In that case, use the last application frame instead.
+  const line = lines[lineIndex]?.includes("/node_modules/")
+    ? findUserCodeLine(lines.slice(0, lineIndex))
+    : lines[lineIndex];
   const parts = line.split("/");
-  // Get the last part, which will be the file name, i.e. Activity.ts:86:8
+  // Get the last part, which is the file name, i.e. Activity.ts:86:8
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
@@ -708,7 +712,7 @@ export function getFuzzyCallerName(): string {
     // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
     .filter((line) => line.includes(" at "));
   const line = findUserCodeLine(lines);
-  return getFilePath(line);
+  return line.includes("/defaults.cjs:") ? "defaults.ts" : getFilePath(line);
 }
 
 /**
@@ -734,7 +738,7 @@ export function findUserCodeLine(lines: string[]): string {
       const nodeInternals = line.includes("node:internal/") || line.includes("Promise.all");
       const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
       // const isRecalc = line.includes(".recalcPending");
-      const isDefault = line.includes("/defaults.ts");
+      const isDefault = line.includes("/defaults.ts") || line.includes("/defaults.cjs");
       // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
       const isDataloader = line.includes("/dataloaders/");
       // If this is the `newTestInstance` call

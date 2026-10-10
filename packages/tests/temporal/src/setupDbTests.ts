@@ -60,9 +60,17 @@ it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWit
 };
 
 export function areTemporalsEqual(a: unknown, b: unknown) {
-  if (a instanceof Temporal.ZonedDateTime && b instanceof Temporal.ZonedDateTime) return a.equals(b);
-  if (a instanceof Temporal.PlainDateTime && b instanceof Temporal.PlainDateTime) return a.equals(b);
-  if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);
+  const aTag = Object.prototype.toString.call(a);
+  const bTag = Object.prototype.toString.call(b);
+  if (aTag === "[object Temporal.ZonedDateTime]" && bTag === aTag) {
+    return (a as Temporal.ZonedDateTime).equals(b as Temporal.ZonedDateTime);
+  }
+  if (aTag === "[object Temporal.PlainDateTime]" && bTag === aTag) {
+    return (a as Temporal.PlainDateTime).equals(b as Temporal.PlainDateTime);
+  }
+  if (aTag === "[object Temporal.PlainDate]" && bTag === aTag) {
+    return (a as Temporal.PlainDate).equals(b as Temporal.PlainDate);
+  }
   return undefined;
 }
 

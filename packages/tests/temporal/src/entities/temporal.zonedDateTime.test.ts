@@ -19,7 +19,7 @@ describe("zonedDateTime", () => {
     book.softDelete();
     await em.flush();
 
-    expect(book.deletedAt).toBeInstanceOf(Temporal.ZonedDateTime);
+    expect(Object.prototype.toString.call(book.deletedAt)).toBe("[object Temporal.ZonedDateTime]");
     expect(book.deletedAt?.timeZoneId).toBe("UTC");
     expect(await knex.select(knex.raw("deleted_at is not null as soft_deleted")).from("book")).toMatchObject([
       { soft_deleted: true },

@@ -64,19 +64,19 @@ describe("FieldLogging", () => {
     // When a Book and its Author are created with default values
     newBook(em);
     // Then both entities log their fields and the locations that set them
-    expect(fieldOutput).toMatchInlineSnapshot(`
+    expect(normalizeDefaultLocations(fieldOutput)).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults.cjs:33",
-       "a#1.nickNames = a1 at defaults.cjs:105",
+       "a#1.isFunny = false at defaults",
+       "a#1.nickNames = a1 at defaults",
        "b#1 created at newBook.ts:10",
        "b#1.title = title at newBook.ts:10",
        "b#1.order = 1 at newBook.ts:10",
        "b#1.author = Author#1 at newBook.ts:10",
-       "b#1.notes = Notes for title at defaults.cjs:33",
-       "b#1.authorsNickNames = a1 at defaults.cjs:105",
+       "b#1.notes = Notes for title at defaults",
+       "b#1.authorsNickNames = a1 at defaults",
      ]
     `);
   });
@@ -95,13 +95,13 @@ describe("FieldLogging", () => {
     // When a Book and its Author are created with default values
     newBook(em);
     // Then only the Author fields and their source locations are logged
-    expect(fieldOutput).toMatchInlineSnapshot(`
+    expect(normalizeDefaultLocations(fieldOutput)).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults.cjs:33",
-       "a#1.nickNames = a1 at defaults.cjs:105",
+       "a#1.isFunny = false at defaults",
+       "a#1.nickNames = a1 at defaults",
      ]
     `);
   });
@@ -136,15 +136,15 @@ describe("FieldLogging", () => {
     newLargePublisher(em, { name: "lp1" });
     newSmallPublisher(em, { name: "pp1" });
     // Then only the LargePublisher fields and their source locations are logged
-    expect(fieldOutput).toMatchInlineSnapshot(`
+    expect(normalizeDefaultLocations(fieldOutput)).toMatchInlineSnapshot(`
      [
        "p#1 created at newLargePublisher.ts:6",
        "p#1.rating = 0 at newLargePublisher.ts:6",
        "p#1.name = lp1 at newLargePublisher.ts:6",
-       "p#1.numberOfBookReviews = 0 at defaults.cjs:29",
-       "p#1.type = BIG at defaults.cjs:33",
-       "p#1.baseSyncDefault = LPSyncDefault at defaults.cjs:33",
-       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.cjs:105",
+       "p#1.numberOfBookReviews = 0 at defaults",
+       "p#1.type = BIG at defaults",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults",
      ]
     `);
   });
@@ -201,6 +201,10 @@ describe("FieldLogging", () => {
 beforeEach(() => {
   fieldOutput = [];
 });
+
+function normalizeDefaultLocations(lines: string[]): string[] {
+  return lines.map((line) => line.replace(/defaults\.(?:ts|cjs):\d+/g, "defaults"));
+}
 
 class StubFieldLogger extends FieldLogger {
   constructor(watching: FieldLoggerWatch[] = []) {

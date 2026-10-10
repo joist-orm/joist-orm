@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.4"
+    "node-pg-migrate": "^9.0.0"
   },
   "devDependencies": {
     "@swc/core": "^1.16.1",

@@ -48,6 +48,19 @@ describe("config", () => {
         `"    at async Object.savePersonalizationOptionGroup (/home/stephen/homebound/graphql-service/src/resolvers/mutations/designPackage/savePersonalizationOptionGroupResolver.ts:46:5)"`,
       );
     });
+
+    it("finds defaults in compiled package output", () => {
+      const lines = [
+        "    at getStackFromCapture (/app/node_modules/joist-core/build/config.cjs:762:9)",
+        "    at getFuzzyCallerName (/app/node_modules/joist-core/build/config.cjs:705:15)",
+        "    at FieldLogger.logSet (/app/node_modules/joist-core/build/logging/FieldLogger.cjs:29:136)",
+        "    at setField (/app/node_modules/joist-core/build/fields.cjs:88:14)",
+        "    at Module.setSyncDefaults (/app/node_modules/joist-core/build/defaults.cjs:33:25)",
+        "    at EntityManager.create (/app/node_modules/joist-core/build/EntityManager.cjs:493:24)",
+        "    at Object.newAuthor (/app/src/entities/factories/newAuthor.ts:14:25)",
+      ];
+      expect(getFilePath(findUserCodeLine(lines))).toBe("defaults.cjs:33");
+    });
   });
 
   describe("getFilePath", () => {

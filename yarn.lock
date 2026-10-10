@@ -7834,10 +7834,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^17.4.2":
-  version: 17.4.2
-  resolution: "dotenv@npm:17.4.2"
-  checksum: 10/ca1b6f54d58e39914901e1518958e86083aca8deb5aa2e7f2a51acd53291d97852479b0ab26ed949b6a45a0e9adcc7b0d1c3c72375e8ea670f7005e341c6daba
+"dotenv@npm:^18.0.5":
+  version: 18.0.5
+  resolution: "dotenv@npm:18.0.5"
+  bin:
+    dotenv: dist/index.cjs
+  checksum: 10/5abe69bda2c7517b11712b59eed47f4c1da329397df52fa502aee706d7b7fea7ac5b27234932887a6fc1a4fe06cd40bae1608e38115fc732f28cdb900e262b48
   languageName: node
   linkType: hard
 
@@ -10864,7 +10866,7 @@ __metadata:
     "@swc/core": "npm:^1.16.1"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    dotenv: "npm:^17.4.2"
+    dotenv: "npm:^18.0.5"
     jest: "npm:30.4.2"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
@@ -11150,7 +11152,7 @@ __metadata:
   resolution: "joist-tests-vitest@workspace:packages/tests/vitest"
   dependencies:
     "@types/node": "npm:^26.2.0"
-    dotenv: "npm:^17.4.2"
+    dotenv: "npm:^18.0.5"
     env-cmd: "npm:^11.0.0"
     joist-codegen: "workspace:*"
     joist-core: "workspace:*"

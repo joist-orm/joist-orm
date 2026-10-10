@@ -391,6 +391,7 @@ describe("ExactColumnsPlugin", () => {
   });
 
   it("re-fetches full rows on em.refresh", async () => {
+    // Given an author with an age that the endpoint has not read
     await insertAuthor({ first_name: "a1", last_name: "l1", age: 40 });
     const { plugin, outcomes } = observe();
     async function endpoint(em: EntityManager, readAge: boolean): Promise<void> {
@@ -400,15 +401,20 @@ describe("ExactColumnsPlugin", () => {
       // The refresh re-fetched the full row, so even never-recorded columns are readable
       if (readAge) expect(a.age).toBe(40);
     }
+    // And a stable profile that omits the author's age
     await settle(plugin, "get-author", (em) => endpoint(em, false));
+
+    // When the endpoint refreshes the narrowed author and reads its age
     resetQueryCount();
     await invoke(plugin, "get-author", (em) => endpoint(em, true));
+
+    // Then the refresh makes the author's age readable without a retry
     // The initial load is narrowed (including refresh-read FKs like mentor_id), then the refresh
     // re-fetches full rows; its SQL differs under join-preloading (laterals), so only snapshot stock
     if (!isPreloadingEnabled) {
       expect(queries).toMatchInlineSnapshot(`
        [
-         "SELECT a.id, a.first_name, a.deleted_at, a.created_at, a.updated_at, a.mentor_id, a.current_draft_book_id, a.publisher_id FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
+         "SELECT a.id, a.first_name, a.deleted_at, a.created_at, a.updated_at, a.current_draft_book_id, a.mentor_id, a.publisher_id FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
          "SELECT "a".* FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
          "WITH RECURSIVE a_cte AS (SELECT b.id, b.mentor_id FROM authors b WHERE b.id = ANY($1) UNION SELECT r.id, r.mentor_id FROM authors r JOIN a_cte ON r.id = a_cte.mentor_id) SELECT "a".* FROM authors AS a JOIN a_cte AS a_cte ON a.id = a_cte.id ORDER BY a.id ASC LIMIT $2",
        ]

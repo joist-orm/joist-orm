@@ -20,12 +20,12 @@
     "node-pg-migrate": "^8.0.4"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.4",
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "7.0.2"
   }
 }

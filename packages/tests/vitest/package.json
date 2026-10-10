@@ -17,7 +17,7 @@
     "joist-orm": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.4",
     "dotenv": "^17.4.2",
     "env-cmd": "^11.0.0",
     "joist-codegen": "workspace:*",
@@ -25,7 +25,7 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"
   }

@@ -50,11 +50,11 @@
     "temporal-spec": "^1.0.1"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.1",
+    "@swc/core": "^1.16.13",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.2.0",
-    "jest": "30.4.2",
+    "@types/node": "^26.6.4",
+    "jest": "30.5.2",
     "temporal-polyfill": "^1.0.4",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"

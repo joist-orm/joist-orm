@@ -54,6 +54,9 @@ export interface SqliteTransaction {
  * - No native array types - arrays stored as JSON
  */
 export class SqliteDriver implements Driver<SqliteTransaction> {
+  // SQLite has no network round trips to amortize, and the combined find queries use PostgreSQL-only SQL.
+  readonly batchQueries = false;
+
   readonly #db: Database.Database;
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;

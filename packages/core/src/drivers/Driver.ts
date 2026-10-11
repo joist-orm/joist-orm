@@ -10,6 +10,9 @@ import { type RowData } from "src/RowData.ts";
  * @typeParam TX - the connection library-specific `Transaction` type, i.e. `Knex.Transaction`
  */
 export interface Driver<TX = unknown> {
+  /** Set to false for in-process drivers to disable loader batching while retaining caching. Defaults to true. */
+  readonly batchQueries?: boolean;
+
   /** Executes a low-level `ParsedFindQuery` against the database and returns the rows. */
   executeFind(
     em: EntityManager,

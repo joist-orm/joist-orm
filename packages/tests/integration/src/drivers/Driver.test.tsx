@@ -27,14 +27,17 @@ describe("Driver", () => {
 
   describe("flush", () => {
     it("can insert", async () => {
-      // Given an author with the derived fields normally prepared by EntityManager.flush
+      // Given an author whose derived values and timestamps are ready to persist
       const em = newEntityManager();
       const author = em.create(Author, { firstName: "a1" });
       // Pretend EntityManager.flush ran
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      // When the selected driver inserts it within its own native transaction
+      setField(author, "createdAt", new Date());
+      setField(author, "updatedAt", new Date());
+
+      // When the driver inserts the author within its own transaction
       await em.driver.transaction(em, async () => {
         await em.driver.flush(
           em,
@@ -49,12 +52,10 @@ describe("Driver", () => {
           {},
         );
       });
-      // Then the author is committed with its generated identifier and database defaults
+
+      // Then the database contains the author with an assigned id and an unset graduation date
       const authors = await select("authors");
-      expect(authors.length).toEqual(1);
-      expect(authors[0].id).toEqual(1);
-      expect(authors[0].first_name).toEqual("a1");
-      expect(authors[0].graduated).toEqual(null);
+      expect(authors).toMatchObject([{ id: 1, first_name: "a1", graduated: null }]);
     });
 
     // This is currently not passing in the main pg driver tests due to an op-lock error

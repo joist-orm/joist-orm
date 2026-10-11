@@ -3,7 +3,7 @@ import { PostgresDriver } from "joist-orm/pg";
 import { PostgreJsDriver } from "joist-orm/postgrejs";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
-import { newEntityManager, pool, queries, recordQuery, resetQueryCount } from "src/testEm";
+import { getPostgresPool, newEntityManager, queries, recordQuery, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("em.execute / execution", () => {
@@ -226,8 +226,8 @@ describe("em.execute / execution", () => {
         const em = newEntityManager();
         const t = table(Tag);
         // And this node-pg boundary test injects only its native response, retaining real EM validation
-        em.driver = new PostgresDriver(pool, { onQuery: recordQuery });
-        const native = jest.spyOn(pool, "query").mockImplementationOnce(async () => ({
+        em.driver = new PostgresDriver(getPostgresPool(), { onQuery: recordQuery });
+        const native = jest.spyOn(getPostgresPool(), "query").mockImplementationOnce(async () => ({
           command: "UPDATE",
           rowCount,
           oid: 0,
@@ -264,7 +264,7 @@ describe("em.execute / execution", () => {
       const em = newEntityManager();
       const t = table(Tag);
       // And the native pool and transaction entry point are observed without replacing their behavior
-      const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : pool;
+      const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : getPostgresPool();
       const native = jest.spyOn(nativePool, "query");
       const transaction = jest.spyOn(em.driver, "transaction");
       resetQueryCount();
@@ -318,7 +318,7 @@ describe("em.execute / execution", () => {
       const result = await em.transaction(async (txn) => {
         // And native routing is observed only after the explicit transaction has begun
         const native = jest.spyOn(txn, "query");
-        const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : pool;
+        const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : getPostgresPool();
         const autocommit = jest.spyOn(nativePool, "query");
         try {
           const updated = await em.execute({

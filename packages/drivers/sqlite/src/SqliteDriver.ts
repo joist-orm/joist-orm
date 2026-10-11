@@ -48,9 +48,9 @@ export interface SqliteTransaction {
  * Implements the `Driver` interface for SQLite using better-sqlite3.
  *
  * Key differences from PostgreSQL:
- * - Uses json_each instead of UNNEST for bulk operations
+ * - Uses prepared row statements inside a transaction for bulk writes
  * - Foreign keys are disabled by default; use PRAGMA foreign_keys = ON
- * - No deferred constraints - relies on topological ordering from generateOps
+ * - Supports deferred foreign keys when declared by the schema
  * - No native array types - arrays stored as JSON
  */
 export class SqliteDriver implements Driver<SqliteTransaction> {
@@ -155,59 +155,55 @@ export class SqliteDriver implements Driver<SqliteTransaction> {
   }
 }
 
-/**
- * Batch insert using json_each to pass columnar data.
- *
- * INSERT INTO table (col1, col2) SELECT c1.value, c2.value
- * FROM json_each(?1) c1 JOIN json_each(?2) c2 ON c2.key = c1.key
- */
+/** Inserts each row with native bindings, reusing one prepared statement within the flush transaction. */
 function batchInsert(db: Database.Database, op: InsertOp): void {
   const { tableName, columns, columnValues } = op;
   if (columnValues.length === 0 || columnValues[0].length === 0) return;
 
-  const sql = cleanSql(`
+  // Joining one json_each per column can produce a combinatorial scan for wide entities such as Author.
+  const stmt = db.prepare(
+    cleanSql(`
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
-    SELECT ${columns.map((c) => `${kq(c.columnName)}.value`).join(", ")}
-    ${jsonEachFrom(columns)}
-  `);
-  db.prepare(sql).run(...columnValues.map(jsonColumn));
+    VALUES (${columns.map(() => "?").join(", ")})
+  `),
+  );
+  for (let row = 0; row < columnValues[0].length; row++) {
+    stmt.run(...columnValues.map((values) => adaptBinding(values[row])));
+  }
 }
 
 /**
- * Batch update using json_each to pass columnar data.
+ * Updates each row with a reused prepared statement and checks its optimistic lock.
  *
- * Each column's values are passed as a JSON array, then joined by key index:
- * UPDATE table SET col = data.col FROM (
- *   SELECT ids.value AS id, c1.value AS col1, ...
- *   FROM json_each(?1) ids
- *   JOIN json_each(?2) c1 ON c1.key = ids.key
- *   ...
- * ) AS data WHERE table.id = data.id
+ * The enclosing flush transaction rolls back all rows if any original timestamp no longer matches.
  */
 function batchUpdate(db: Database.Database, op: UpdateOp): void {
   const { tableName, columns, columnValues, updatedAt } = op;
   if (columnValues.length === 0 || columnValues[0].length === 0) return;
 
-  const setClause = columns
-    .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
-    .map((c) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
-    .join(", ");
-  const maybeUpdatedAt = updatedAt ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at` : "";
-
-  const sql = cleanSql(`
+  const idIndex = columns.findIndex((column) => column.columnName === "id");
+  const originalUpdatedAtIndex = columns.findIndex((column) => column.columnName === "__original_updated_at");
+  const fields = columns
+    .map((column, index) => ({ column, index }))
+    .filter((field) => field.index !== idIndex && field.index !== originalUpdatedAtIndex);
+  const stmt = db.prepare(
+    cleanSql(`
     UPDATE ${kq(tableName)}
-    SET ${setClause}
-    FROM (
-      SELECT ${columns.map((c) => `${kq(c.columnName)}.value AS ${kq(c.columnName)}`).join(", ")}
-      ${jsonEachFrom(columns)}
-    ) AS data
-    WHERE ${kq(tableName)}.id = data.id${maybeUpdatedAt}
-  `);
-  const result = db.prepare(sql).run(...columnValues.map(jsonColumn));
+    SET ${fields.map((field) => `${kq(field.column.columnName)} = ?`).join(", ")}
+    WHERE id = ?${updatedAt ? ` AND ${kqDot(tableName, updatedAt)} = ?` : ""}
+  `),
+  );
 
-  const ids = columnValues[0]; // assume id is the 1st column
-  if (result.changes !== ids.length) {
-    throw new Error(`Oplock failure for ${tableName}: expected ${ids.length} updates, got ${result.changes}`);
+  let changes = 0;
+  const ids = columnValues[idIndex];
+  for (let row = 0; row < ids.length; row++) {
+    const bindings = fields.map((field) => adaptBinding(columnValues[field.index][row]));
+    bindings.push(adaptBinding(ids[row]));
+    if (updatedAt) bindings.push(adaptBinding(columnValues[originalUpdatedAtIndex][row]));
+    changes += stmt.run(...bindings).changes;
+  }
+  if (changes !== ids.length) {
+    throw new Error(`Oplock failure for ${tableName}: expected ${ids.length} updates, got ${changes}`);
   }
 }
 
@@ -294,20 +290,6 @@ function m2mBatchDelete(db: Database.Database, joinTableName: string, todo: Join
   }
 }
 
-/** Builds the `FROM json_each(?) ... JOIN json_each(?) ...` clause that zips each column's JSON array by index. */
-function jsonEachFrom(columns: InsertOp["columns"]): string {
-  const first = kq(columns[0].columnName);
-  const joins = columns
-    .slice(1)
-    .map((c) => `JOIN json_each(?) ${kq(c.columnName)} ON ${kq(c.columnName)}.key = ${first}.key`);
-  return [`FROM json_each(?) ${first}`, ...joins].join(" ");
-}
-
-/** Encodes one column's values as the JSON array that `json_each` reads. */
-function jsonColumn(values: any[]): string {
-  return JSON.stringify(values.map(adaptBinding));
-}
-
 /**
  * Adapt JavaScript values for SQLite binding.
  */
@@ -316,7 +298,9 @@ function adaptBinding(value: any): any {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "boolean") return value ? 1 : 0;
   // Arrays and jsonb objects are stored as JSON text; Buffers are BLOBs, which SQLite binds natively
-  if (typeof value === "object" && value !== null && !Buffer.isBuffer(value)) return JSON.stringify(value);
+  if (typeof value === "object" && value !== null && !Buffer.isBuffer(value)) {
+    return JSON.stringify(value, (_, item) => (typeof item === "bigint" ? item.toString() : item));
+  }
   return value;
 }
 
@@ -346,6 +330,8 @@ function parseRows(stmt: Database.Statement, rows: any[]): void {
 
 /** Returns the parser for a declared column type, or undefined if SQLite already returns the right JS type. */
 function columnParser(declaredType: string): ((value: any) => unknown) | undefined {
+  // Shared schemas can retain declared array types while storing the array itself as JSON text.
+  if (declaredType.endsWith("[]")) return JSON.parse;
   if (declaredType.startsWith("bool")) return (value) => value === 1;
   if (declaredType.startsWith("json")) return JSON.parse;
   // With Temporal, the serdes parse the strings themselves, the same as with `pg`

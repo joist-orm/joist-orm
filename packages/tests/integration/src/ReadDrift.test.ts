@@ -1,7 +1,7 @@
 import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
 import { Author, AuthorSchedule, Book, FavoriteShape, PublisherStatus, SmallPublisher, newAuthor } from "src/entities";
 import { insertAuthor, insertAuthorSchedule, insertBook, insertSmallPublisher } from "src/entities/inserts";
-import { knex, newEntityManager, pool, queries, resetQueryCount } from "src/testEm";
+import { getPostgresPool, knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("ReadDrift", () => {
   it("batches read locks per table", async () => {
@@ -180,7 +180,7 @@ describe("ReadDrift", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const author = await em.load(Author, "a:1");
-    const writer = await pool.connect();
+    const writer = await getPostgresPool().connect();
     try {
       // When the read assertion is flushed inside a still-open transaction
       await em.transaction(async () => {
@@ -271,7 +271,7 @@ describe("ReadDrift", () => {
     const author = book.author.get;
     em.assertUnchanged([book, author]);
     // And another transaction holds a conflicting lock on the author
-    const writer = await pool.connect();
+    const writer = await getPostgresPool().connect();
     try {
       await writer.query("BEGIN");
       await writer.query("SELECT id FROM authors WHERE id = $1 FOR UPDATE", [author.idUntagged]);

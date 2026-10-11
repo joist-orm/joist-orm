@@ -90,6 +90,91 @@ describe("Author", () => {
     // Then only its book is returned
     expect(books).toMatchEntity([{ title: "b2" }]);
   });
+
+  it("can find authors with concurrent filters", async () => {
+    // Given two authors with different first names
+    const em1 = newEntityManager();
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a2" });
+    await em1.flush();
+
+    // When we find each author concurrently in the same EntityManager
+    const em2 = newEntityManager();
+    const results = await Promise.all([em2.find(Author, { firstName: "a1" }), em2.find(Author, { firstName: "a2" })]);
+
+    // Then each filter returns only its matching author
+    expect(results.map((authors) => authors.map((author) => author.firstName))).toEqual([["a1"], ["a2"]]);
+  });
+
+  it("can paginate concurrent author filters", async () => {
+    // Given each first name matches two authors
+    const em1 = newEntityManager();
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a2" });
+    newAuthor(em1, { firstName: "a2" });
+    await em1.flush();
+
+    // When we request the second author for each first name concurrently
+    const em2 = newEntityManager();
+    const options = { limit: 1, offset: 1, orderBy: { id: "ASC" as const } };
+    const results = await Promise.all([
+      em2.find(Author, { firstName: "a1" }, options),
+      em2.find(Author, { firstName: "a2" }, options),
+    ]);
+
+    // Then each page contains the second matching author
+    expect(results.map((authors) => authors.map((author) => author.id))).toEqual([["a:2"], ["a:4"]]);
+  });
+
+  it("can count authors with concurrent filters", async () => {
+    // Given two authors share one first name and another has a different first name
+    const em1 = newEntityManager();
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a2" });
+    await em1.flush();
+
+    // When we count the authors for each first name concurrently
+    const em2 = newEntityManager();
+    const results = await Promise.all([
+      em2.findCount(Author, { firstName: "a1" }),
+      em2.findCount(Author, { firstName: "a2" }),
+    ]);
+
+    // Then each count includes only its matching authors
+    expect(results).toEqual([2, 1]);
+  });
+
+  it("can find author ids with concurrent filters", async () => {
+    // Given two authors with different first names
+    const em1 = newEntityManager();
+    newAuthor(em1, { firstName: "a1" });
+    newAuthor(em1, { firstName: "a2" });
+    await em1.flush();
+
+    // When we find the ids for each first name concurrently
+    const em2 = newEntityManager();
+    const results = await Promise.all([
+      em2.findIds(Author, { firstName: "a1" }),
+      em2.findIds(Author, { firstName: "a2" }),
+    ]);
+
+    // Then each filter returns only its matching author id
+    expect(results).toEqual([["a:1"], ["a:2"]]);
+  });
+
+  it("shares cached results for identical concurrent author filters", async () => {
+    // Given an author in the database
+    await flushAuthor("a1");
+
+    // When we find that author twice concurrently in the same EntityManager
+    const em = newEntityManager();
+    const results = await Promise.all([em.find(Author, { firstName: "a1" }), em.find(Author, { firstName: "a1" })]);
+
+    // Then both requests share the cached result
+    expect(results[0]).toBe(results[1]);
+  });
 });
 
 async function flushAuthor(firstName: string): Promise<void> {

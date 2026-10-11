@@ -2611,7 +2611,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
     // https://github.com/joist-orm/joist-orm/issues/629
     const loadersForKind = (this.#dataloaders[operation] ??= {});
-    return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
+    // In-process drivers can use single-request queries without losing DataLoader's request-scoped cache.
+    return getOrSet(
+      loadersForKind,
+      batchKey,
+      () => new DataLoader(fn, { ...opts, batch: this.driver.batchQueries === false ? false : opts?.batch }),
+    );
   }
 
   /**

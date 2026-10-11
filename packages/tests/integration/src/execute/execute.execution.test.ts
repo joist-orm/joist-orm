@@ -2,7 +2,7 @@ import { Deferred, ReadOnlyError, query, table } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
-import { newEntityManager, pool, queries, recordQuery, resetQueryCount } from "src/testEm";
+import { getPostgresPool, newEntityManager, queries, recordQuery, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("em.execute / execution", () => {
@@ -176,7 +176,7 @@ describe("em.execute / execution", () => {
       // And a separate driver records this EntityManager's result envelopes
       const em = newEntityManager();
       const t = table(Tag);
-      em.driver = new PostgresDriver(pool, { onQuery: recordQuery });
+      em.driver = new PostgresDriver(getPostgresPool(), { onQuery: recordQuery });
       const execute = jest.spyOn(em.driver, "executeQuery");
       resetQueryCount();
 
@@ -226,7 +226,7 @@ describe("em.execute / execution", () => {
         const em = newEntityManager();
         const t = table(Tag);
         // And only the native response is replaced, leaving the real EM and PostgresDriver checks in place
-        const native = jest.spyOn(pool, "query").mockImplementationOnce(async () => ({
+        const native = jest.spyOn(getPostgresPool(), "query").mockImplementationOnce(async () => ({
           command: "UPDATE",
           rowCount,
           oid: 0,
@@ -263,7 +263,7 @@ describe("em.execute / execution", () => {
       const em = newEntityManager();
       const t = table(Tag);
       // And the native pool and transaction entry point are observed without replacing their behavior
-      const native = jest.spyOn(pool, "query");
+      const native = jest.spyOn(getPostgresPool(), "query");
       const transaction = jest.spyOn(em.driver, "transaction");
       resetQueryCount();
 
@@ -316,7 +316,7 @@ describe("em.execute / execution", () => {
       const result = await em.transaction(async (txn) => {
         // And native routing is observed only after the explicit transaction has begun
         const native = jest.spyOn(txn, "query");
-        const autocommit = jest.spyOn(pool, "query");
+        const autocommit = jest.spyOn(getPostgresPool(), "query");
         try {
           const updated = await em.execute({
             update: t,

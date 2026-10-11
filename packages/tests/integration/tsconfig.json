@@ -6,9 +6,10 @@
       "src/*": ["./src/*"]
     }
   },
-  "include": ["./src", "./migrations"],
+  "include": ["./src", "./migrations", "./sqlite"],
   "references": [
     { "path": "../../core" },
+    { "path": "../../drivers/sqlite" },
     { "path": "../../graphql-resolver-utils" },
     { "path": "../../knex" },
     { "path": "../../migration-utils" },

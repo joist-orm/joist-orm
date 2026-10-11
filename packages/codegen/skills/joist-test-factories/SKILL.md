@@ -30,6 +30,8 @@ Authoritative references:
 5. Use `run` or the project's `makeRun` wrapper when production code needs an
    isolated `EntityManager`; it flushes Given state and mirrors the callback's
    flushed Joist writes into the original test graph.
+   Do not `await em.flush()` right before `run` or a `makeRun` helper: it
+   already flushes the Given graph, use as few `em.flush()` calls as possible.
 6. Assert entity state and relationships with `toMatchEntity`. Prefer checking
    side effects through retained entities and their relations instead of using
    `em.getEntities` to discover what the action created or changed.
@@ -280,8 +282,9 @@ const books = await savedBook.author.load().then((author) => author.books.load()
 Keep using `author` and `book`. They are the stable test references.
 
 Call `em.flush()` directly only when the test intentionally needs a persistence
-boundary and its helper does not provide one. Pure entity tests should usually
-avoid unnecessary flushes.
+boundary and its helper does not provide one, e.g. to persist one Given state
+before changing it into the next one. Pure entity tests should usually avoid
+unnecessary flushes.
 
 ## Register toMatchEntity
 

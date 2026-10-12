@@ -1,13 +1,17 @@
 ---
 name: joist-test-factories
-description: Use when writing or refactoring Joist ORM tests with newTestInstance factories, DeepNew, run or makeRun, toMatchEntity, and nested Given graphs.
+description: Use when writing or refactoring Joist ORM entity or API-layer tests with newTestInstance factories, DeepNew, toMatchEntity, and nested Given graphs, or deciding whether EntityManager isolation with run, makeRun, or RunPlugin is needed.
 ---
 
 # Joist Test Factories
 
-Write isolated, succinct tests that use Joist's factories for setup, retain
+Write focused, succinct tests that use Joist's factories for setup, retain
 typed entity references through the action, and assert those same entities
 with `toMatchEntity`.
+
+Entity tests normally use one `EntityManager` for Given, When, and Then.
+Use `run` for API-layer tests and other production boundaries that need a
+separate `EntityManager`, not as a default wrapper around every test action.
 
 Authoritative references:
 
@@ -27,7 +31,9 @@ Authoritative references:
 4. Keep using the factory-created `DeepNew` graph after same-`EntityManager`
    actions or actions run through Joist's test `run` helper. Do not reload the
    same rows merely to assert against them.
-5. Use `run` or the project's `makeRun` wrapper when production code needs an
+5. Keep entity tests in the original test `EntityManager`; they normally do not
+   need EM isolation or `RunPlugin`. Use `run` or the project's `makeRun` wrapper
+   for API/request-layer tests or another production boundary that needs an
    isolated `EntityManager`; it flushes Given state and mirrors the callback's
    flushed Joist writes into the original test graph.
    Do not `await em.flush()` right before `run` or a `makeRun` helper: it
@@ -44,6 +50,23 @@ Structure every test as "Given the state of the world is X, When action Y
 happens, Then the state of the world is Z": the factory-created graph is the
 Given, the code under test is the When, and `toMatchEntity` proves the Then.
 Mark the three phases with `// Given`, `// When`, `// Then` comments:
+
+For an entity test, act directly on the factory-created entity:
+
+```ts
+it.withCtx("updates a book's title", async (ctx) => {
+  // Given a book with its original title
+  const book = newBook(ctx.em, { title: "Before" });
+
+  // When we change the book's title
+  book.title = "After";
+
+  // Then the book has the new title
+  expect(book).toMatchEntity({ title: "After" });
+});
+```
+
+For an API-layer test, use `run` to model its separate production unit of work:
 
 ```ts
 it.withCtx("updates a book", async (ctx) => {
@@ -245,12 +268,34 @@ test-only loads.
 
 ## Use run for Production Isolation
 
+Choose isolation based on the behavior under test:
+
+- **Entity tests:** Test entity methods, properties, relationships, and domain
+  logic directly with the test's `ctx.em` and factory-created entities. These
+  normally do not need `run`, a second EM, or a manually installed `RunPlugin`.
+  Flush only when the behavior requires it, such as validation, flush hooks,
+  persisted reactive fields, or database constraints. Needing a flush does not
+  by itself mean the test needs EM isolation.
+- **API/request-layer tests:** Use `run` or an existing project wrapper such as
+  `runMutation` when testing a resolver, endpoint, or service entry point whose
+  production unit of work uses a fresh EM. This ensures the action loads its
+  own entities rather than inheriting the test's loaded factory graph.
+- **Other boundaries:** Use `run` when a fresh production unit of work is part
+  of the behavior being tested. A service/helper that operates on existing
+  entities or the caller's EM does not need isolation merely because it is
+  production code.
+
 Joist's `run(ctx, fn)` executes `fn` with a fresh production-style context and
 `EntityManager`. Before the callback, it flushes the test factory graph. As the
 callback flushes Joist writes, `RunPlugin` mirrors those writes into the
 original test `EntityManager`. It does not call `EntityManager.refresh`. The
 callback result is also mapped back to entities from the original test
 `EntityManager`.
+
+`run` installs `RunPlugin` automatically on the isolated EM. The plugin bridges
+that production unit of work back to the retained test entities; it is not
+needed when Given, When, and Then already share one EM. Prefer `run` or the
+project's wrapper over manually wiring the plugin.
 
 ```ts
 const author = newAuthor(ctx.em, { books: [{ title: "Before" }] });
@@ -428,6 +473,8 @@ reuse decisions instead of replacing factories with manual setup.
 - Given state uses minimal factory opts and does not invoke the behavior under
   test.
 - Important entities have direct, role-based `const` names.
+- Entity tests use the original test EM unless the behavior specifically needs
+  a separate production unit of work; a flush alone does not require `run`.
 - Separate production units of work use `run`/`makeRun` and flush normally.
 - Assertions reuse loaded factory entities with `toMatchEntity`.
 - Side-effect assertions follow domain relations or action results instead of

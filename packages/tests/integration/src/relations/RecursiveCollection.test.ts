@@ -1,6 +1,6 @@
 import { RecursiveCycleError, withLoaded } from "joist-orm";
 import { insertAuthor, insertBook, insertUser, insertUserToParent, select, update } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 import { Author, Book, User, newAuthor, newBook, newUser } from "../entities";
 
@@ -13,9 +13,10 @@ describe("RecursiveCollection", () => {
       resetQueryCount();
       const em = newEntityManager();
       const a3 = await em.load(Author, "a:3", "mentorsRecursive");
-      expect(queries[1]).toMatchInlineSnapshot(
-        `"WITH RECURSIVE a_cte AS (SELECT b.id, b.mentor_id FROM authors b WHERE b.id = ANY($1) UNION SELECT r.id, r.mentor_id FROM authors r JOIN a_cte ON r.id = a_cte.mentor_id) SELECT "a".* FROM authors AS a JOIN a_cte AS a_cte ON a.id = a_cte.id ORDER BY a.id ASC LIMIT $2"`,
-      );
+      if (!isSqlite)
+        expect(queries[1]).toMatchInlineSnapshot(
+          `"WITH RECURSIVE a_cte AS (SELECT b.id, b.mentor_id FROM authors b WHERE b.id = ANY($1) UNION SELECT r.id, r.mentor_id FROM authors r JOIN a_cte ON r.id = a_cte.mentor_id) SELECT "a".* FROM authors AS a JOIN a_cte AS a_cte ON a.id = a_cte.id ORDER BY a.id ASC LIMIT $2"`,
+        );
       expect(a3.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
     });
 
@@ -523,17 +524,24 @@ describe("RecursiveCollection", () => {
       expect(u2.parentsRecursive.get).toMatchEntity([{ name: "u1" }, { name: "u0" }]);
     });
 
-    it("snapshots the CTE query", async () => {
+    it("loads parents with a recursive query", async () => {
+      // Given u1 is a parent of u2
       await insertUser({ name: "u1" });
       await insertUser({ name: "u2" });
       await insertUserToParent({ child_id: 2, parent_id: 1 });
       resetQueryCount();
       const em = newEntityManager();
-      await em.load(User, "u:2", "parentsRecursive");
+
+      // When u2 is loaded with its recursive parents
+      const user = await em.load(User, "u:2", "parentsRecursive");
+
+      // Then the parent is available on either backend
+      expect(user.parentsRecursive.get).toMatchEntity([{ name: "u1" }]);
       // queries[0] is the load of u:2, queries[1] is the CTE
-      expect(queries[1]).toMatchInlineSnapshot(
-        `"WITH RECURSIVE cte AS (SELECT b.* FROM users_to_parents b WHERE b.child_id = ANY($1) UNION SELECT r.* FROM users_to_parents r JOIN cte ON r.child_id = cte.parent_id) SELECT utp.* FROM cte AS utp ORDER BY utp.id ASC"`,
-      );
+      if (!isSqlite)
+        expect(queries[1]).toMatchInlineSnapshot(
+          `"WITH RECURSIVE cte AS (SELECT b.* FROM users_to_parents b WHERE b.child_id = ANY($1) UNION SELECT r.* FROM users_to_parents r JOIN cte ON r.child_id = cte.parent_id) SELECT utp.* FROM cte AS utp ORDER BY utp.id ASC"`,
+        );
     });
 
     it("can batch multiple seed entities", async () => {

@@ -8,7 +8,7 @@ import {
   insertTag,
   select,
 } from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
 import { jan1 } from "../testDates";
@@ -636,15 +636,16 @@ describe("ManyToManyCollection", () => {
     expect(includes2).toBe(false);
     expect(includes3).toBe(true);
     expect(includes4).toBe(false);
-    // And we used only a single query
-    expect(numberOfQueries).toEqual(1);
+    // And PostgreSQL batches the four checks while SQLite executes each check separately
+    expect(numberOfQueries).toEqual(isSqlite ? 4 : 1);
     // And we did not load the other tags
     expect(em.entities.length).toEqual(3);
-    // And if we redo a .includes
+    // When we redo a .includes with query recording reset
+    resetQueryCount();
     const includes1_2 = await t1.books.includes(book);
     // Then it was cached
     expect(includes1_2).toBe(true);
-    expect(numberOfQueries).toEqual(1);
+    expect(numberOfQueries).toEqual(0);
   });
 
   it("can include just added entities on new entities", async () => {
@@ -887,7 +888,8 @@ describe("ManyToManyCollection", () => {
     });
   });
 
-  it("fails when m2m includes hits the entityLimit", async () => {
+  it("applies the m2m includes entityLimit per SQL query", async () => {
+    // Given four Book-to-Tag links that fill one PostgreSQL batched query
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
@@ -904,16 +906,24 @@ describe("ManyToManyCollection", () => {
     const [t1, t2, t3, t4] = await em.loadAll(Tag, ["t:1", "t:2", "t:3", "t:4"]);
     // Set limit so the batched includes query (4 concurrent checks = 4 join rows) hits it
     em.entityLimit = 4;
+
+    // When all four includes checks execute concurrently
     const result = Promise.all([
       b1.tags.includes(t1),
       b1.tags.includes(t2),
       b2.tags.includes(t3),
       b2.tags.includes(t4),
     ]);
-    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    // Then PostgreSQL hits the combined-query limit, while each SQLite query stays below it
+    if (isSqlite) {
+      await expect(result).resolves.toEqual([true, true, true, true]);
+    } else {
+      await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    }
   });
 
   it("m2m join table query does not use LIMIT", async () => {
+    // Given a Book linked to three Tags
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertTag({ name: "t1" });
@@ -925,11 +935,17 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     resetQueryCount();
+
+    // When the Book's Tags are loaded
     const tags = await book.tags.load();
+
+    // Then both drivers load all links without a LIMIT clause
+    expect(/\bLIMIT\b/i.test(queries[0])).toBe(false);
     // The m2m join table query should not have a LIMIT clause
-    expect(queries[0]).toEqual(
-      `SELECT "btt".* FROM books_to_tags AS btt WHERE btt.book_id = ANY($1) ORDER BY btt.id ASC`,
-    );
+    if (!isSqlite)
+      expect(queries[0]).toEqual(
+        `SELECT "btt".* FROM books_to_tags AS btt WHERE btt.book_id = ANY($1) ORDER BY btt.id ASC`,
+      );
     expect(tags).toMatchEntity([{ name: "t1" }, { name: "t2" }, { name: "t3" }]);
   });
 

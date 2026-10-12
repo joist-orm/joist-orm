@@ -1,6 +1,6 @@
 import { run } from "joist-test-utils";
 import { insertPublisher, insertPublisherLogoColor, select } from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 
 import { Color, Publisher, SmallPublisher, newSmallPublisher } from "../entities";
 
@@ -107,7 +107,8 @@ describe("EnumCollection", () => {
     const p = await em.load(SmallPublisher, "p:1");
     resetQueryCount();
     expect(await p.logoColors.load()).toEqual([Color.Red, Color.Blue]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT "plc".* FROM publisher_logo_colors AS plc WHERE plc.publisher_id = ANY($1) ORDER BY plc.id ASC",
      ]
@@ -115,12 +116,22 @@ describe("EnumCollection", () => {
   });
 
   it("filters via the join table", async () => {
+    // Given one Publisher has a red logo
     await insertPublisher({ id: 1, name: "p1" });
     await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+
+    // And another Publisher has only a blue logo
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertPublisherLogoColor({ publisher_id: 2, logo_color_id: 3 });
     const em = newEntityManager();
     resetQueryCount();
-    await em.find(SmallPublisher, { logoColors: Color.Red });
-    expect(queries).toMatchInlineSnapshot(`
+    // When filtering Publishers by their logo color
+    const publishers = await em.find(SmallPublisher, { logoColors: Color.Red });
+
+    // Then only the red-logo Publisher is returned
+    expect(publishers).toMatchEntity([{ name: "p1" }]);
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT sp.*, sp_b0.*, sp.id as id FROM small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id WHERE EXISTS (SELECT 1 FROM publisher_logo_colors AS plc WHERE sp.id = plc.publisher_id AND plc.logo_color_id = $1) ORDER BY sp.id ASC LIMIT $2",
      ]

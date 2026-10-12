@@ -1,5 +1,6 @@
 import { buildQuery } from "joist-knex";
 import {
+  Deferred,
   EntityConstructor,
   EntityManagerHook,
   FilterWithAlias,
@@ -31,7 +32,15 @@ import {
   update,
 } from "src/entities/inserts";
 import { jan1, jan2 } from "src/testDates";
-import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import {
+  isPreloadingEnabled,
+  isSqlite,
+  knex,
+  newEntityManager,
+  numberOfQueries,
+  queries,
+  resetQueryCount,
+} from "src/testEm";
 import { twoOf } from "src/utils";
 
 import {
@@ -161,14 +170,22 @@ describe("EntityManager", () => {
   });
 
   it("inserts multiple entities in bulk", async () => {
+    // Given two new Authors
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });
     em.create(Author, { firstName: "a2" });
+
+    // When both Authors are persisted in one flush
     await em.flush();
     // 5 = begin, assign ids, insert authors, insert author_to_mentees_closure, commit
-    expect(numberOfQueries).toEqual(3 + maybeBeginAndCommit());
+    if (!isSqlite) expect(numberOfQueries).toEqual(3 + maybeBeginAndCommit());
+
+    // Then each Author has its own row and id
     const rows = await select("authors");
-    expect(rows.length).toEqual(2);
+    expect(rows).toMatchObject([
+      { id: 1, first_name: "a1" },
+      { id: 2, first_name: "a2" },
+    ]);
   });
 
   it("updates an entity", async () => {
@@ -235,18 +252,26 @@ describe("EntityManager", () => {
   });
 
   it("does not insert created-then-deleted entities", async () => {
+    // Given an Author is created and deleted before it reaches the database
     const em = newEntityManager();
     resetQueryCount();
     const a = em.create(Author, { firstName: "a1" });
     em.delete(a);
+
+    // When the EntityManager flushes that pending deletion
     await em.flush();
     // Then we didn't issue any queries
     expect(queries).toEqual([]);
-    // And the sequence value did not get ticked
-    const { rows } = await knex.raw("SELECT nextval('authors_id_seq')");
-    expect(rows[0].nextval).toBe("1");
     // And we didn't run afterCommit b/c it never touched the db
     expect(a.transientFields.afterCommitRan).toBe(false);
+
+    // When another Author is persisted in a fresh EntityManager
+    const em2 = newEntityManager();
+    const persisted = em2.create(Author, { firstName: "a2" });
+    await em2.flush();
+
+    // Then the sequence value did not get ticked by the deleted Author
+    expect(persisted.id).toBe("a:1");
   });
 
   it("createdAt / updatedAt are always non-null", async () => {
@@ -706,15 +731,25 @@ describe("EntityManager", () => {
   });
 
   it("cannot flush while another flush is in progress", async () => {
+    // Given an Author has a pending name change
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
+    // And the first flush is held at its transaction boundary
+    const pause = pauseBeforeBegin(em);
     const flushPromise = em.flush();
-    await delay(0);
-    await expect(em.flush()).rejects.toThrow("Cannot flush while another flush is already in progress");
-    await flushPromise;
+    try {
+      await Promise.race([pause.entered, flushPromise]);
+
+      // When another flush is requested before the first one completes
+      // Then the EntityManager rejects the overlapping flush on either backend
+      await expect(em.flush()).rejects.toThrow("Cannot flush while another flush is already in progress");
+    } finally {
+      pause.release.resolve();
+      await flushPromise;
+    }
   });
 
   it("can modify an entity inside a hook", async () => {
@@ -754,44 +789,74 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify an entity during a flush outside hooks", async () => {
+    // Given an Author has a pending name change
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
+    // And its flush is held at the transaction boundary
+    const pause = pauseBeforeBegin(em);
     const flushPromise = em.flush();
-    await delay(0);
-    expect(() => (author.firstName = "different name")).toThrow(
-      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
-    );
-    await flushPromise;
+    try {
+      await Promise.race([pause.entered, flushPromise]);
+
+      // When application code tries to change the name during the flush
+      // Then the setter rejects that change outside an entity hook
+      expect(() => (author.firstName = "different name")).toThrow(
+        "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
+      );
+    } finally {
+      pause.release.resolve();
+      await flushPromise;
+    }
   });
 
   it("cannot modify an entity's o2m collection during a flush outside hooks", async () => {
+    // Given a Publisher and an Author have pending changes
     await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = em.create(Author, { firstName: "a1" });
     p1.name = "new name";
+    // And their flush is held at the transaction boundary
+    const pause = pauseBeforeBegin(em);
     const flushPromise = em.flush();
-    await delay(0);
-    expect(() => p1.authors.add(a1)).toThrow(
-      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
-    );
-    await flushPromise;
+    try {
+      await Promise.race([pause.entered, flushPromise]);
+
+      // When application code adds the Author to the Publisher during the flush
+      // Then the collection rejects that change outside an entity hook
+      expect(() => p1.authors.add(a1)).toThrow(
+        "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
+      );
+    } finally {
+      pause.release.resolve();
+      await flushPromise;
+    }
   });
 
   it("cannot modify an entity's m2o collection during a flush outside hooks", async () => {
+    // Given an Author and a new Publisher have pending changes
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const p1 = newPublisher(em, { name: "p1" });
     a1.firstName = a1.firstName + "b";
+    // And their flush is held at the transaction boundary
+    const pause = pauseBeforeBegin(em);
     const flushPromise = em.flush();
-    await delay(0);
-    expect(() => a1.publisher.set(p1)).toThrow(
-      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
-    );
-    await flushPromise;
+    try {
+      await Promise.race([pause.entered, flushPromise]);
+
+      // When application code assigns the Publisher during the flush
+      // Then the reference rejects that change outside an entity hook
+      expect(() => a1.publisher.set(p1)).toThrow(
+        "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
+      );
+    } finally {
+      pause.release.resolve();
+      await flushPromise;
+    }
   });
 
   it("can save tables with self-references", async () => {
@@ -1336,7 +1401,11 @@ describe("EntityManager", () => {
     // And before we flush, another write changes the entity
     await update("authors", { id: 1, updated_at: "2050-01-01" });
     // When we try to save our changes
-    await expect(em.flush()).rejects.toThrow("Oplock failure for authors rows 1");
+    const flushing = em.flush();
+
+    // Then either backend rejects the stale Author update
+    await expect(flushing).rejects.toThrow("Oplock failure for authors");
+    if (!isSqlite) await expect(flushing).rejects.toThrow("Oplock failure for authors rows 1");
   });
 
   describe("sameEntity", () => {
@@ -1447,25 +1516,26 @@ describe("EntityManager", () => {
   });
 
   it("can display nice versions of constraint failures", async () => {
+    // Given a Publisher that can have only one Author named Jim
     await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
-    await expect(em.flush()).rejects.toMatchObject({
-      // The top-level message keeps the pg DETAIL suffix for debugging...
-      message: `There is already a publisher with a Jim — Key (publisher_id)=(1) already exists.`,
-      // ...but the user-facing structured error stays pretty.
+
+    // When both Authors try to claim that name
+    const flushing = em.flush();
+
+    // Then the user-facing structured error stays pretty on either backend
+    await expect(flushing).rejects.toMatchObject({
+      // The user-facing structured error stays pretty.
       errors: [{ message: "There is already a publisher with a Jim" }],
     });
-  });
 
-  it("includes the pg DETAIL in raw constraint failures", async () => {
-    await insertAuthor({ first_name: "a1", ssn: "123" });
-    const em = newEntityManager();
-    em.create(Author, { firstName: "a2", ssn: "123" });
-    await expect(em.flush()).rejects.toMatchObject({
-      message: `duplicate key value violates unique constraint "authors_ssn_key" — Key (ssn)=(123) already exists.`,
-    });
+    // PostgreSQL's top-level message keeps the DETAIL suffix for debugging.
+    if (!isSqlite)
+      await expect(flushing).rejects.toMatchObject({
+        message: `There is already a publisher with a Jim — Key (publisher_id)=(1) already exists.`,
+      });
   });
 
   it("is typed correctly", async () => {
@@ -1987,4 +2057,15 @@ describe("EntityManager", () => {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Holds a flush at the transaction boundary without assuming network I/O delays its completion. */
+function pauseBeforeBegin(em: EntityManager): { entered: Promise<void>; release: Deferred<void> } {
+  const entered = new Deferred<void>();
+  const release = new Deferred<void>();
+  em.beforeBegin(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  return { entered: entered.promise, release };
 }

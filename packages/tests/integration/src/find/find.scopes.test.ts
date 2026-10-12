@@ -2,7 +2,7 @@ import { isScope, resolveScope } from "joist-orm";
 import { Author, Book } from "src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertLargePublisher } from "src/entities/inserts";
 import { jan1, jan2, jan3 } from "src/testDates";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("em.find / scopes", () => {
   describe("declaration forms", () => {
@@ -447,17 +447,20 @@ describe("em.find / scopes", () => {
 
   describe("batching", () => {
     it("does not dedupe distinct scopes that share a query structure", async () => {
+      // Given Authors with adult, senior, and underage ages
       await insertAuthor({ first_name: "a1", age: 20 }); // adult, not senior
       await insertAuthor({ first_name: "a2", age: 70 }); // adult and senior
       await insertAuthor({ first_name: "a3", age: 10 }); // neither
       resetQueryCount();
       const em = newEntityManager();
       // `adult` (age>=18) and `senior` (age>=65) compile to the same `age >= ?` structure, so they
-      // land in the same dataloader batch (one SQL). The cache key hashes the *parsed* query (incl. the
+      // land in the same PostgreSQL dataloader batch (one SQL). The cache key hashes the *parsed* query (incl. the
       // 18 vs 65 values), not the opaque scope proxy, so they must stay distinct entries — if they
       // deduped, both finds would return the same rows.
+      // When adult and senior scopes execute concurrently
       const [adults, seniors] = await Promise.all([em.find(Author, Author.adult), em.find(Author, Author.senior)]);
-      expect(numberOfQueries).toEqual(1);
+      // Then the scopes stay distinct using the backend's query policy
+      expect(numberOfQueries).toEqual(isSqlite ? 2 : 1);
       expect(adults).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
       expect(seniors).toMatchEntity([{ firstName: "a2" }]);
     });

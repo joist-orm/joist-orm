@@ -14,7 +14,7 @@ import {
 import { Author, Book, Comment, SmallPublisher, Tag } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag } from "src/entities/inserts";
 import { jan1 } from "src/testDates";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query / join trees", () => {
   it("combines root and nested domain filters with explicit SQL conditions", async () => {
@@ -40,7 +40,8 @@ describe("em.query / join trees", () => {
 
     // Then the inline conditions filter rows rather than only restricting the join's ON
     expect(rows).toEqual([{ name: "Alice", title: "Database design" }]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS name, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE (((a.first_name = $1) AND (b.title ILIKE $2)) AND b.id != $3) AND a.deleted_at IS NULL",
      ]
@@ -113,7 +114,8 @@ describe("em.query / join trees", () => {
 
     // Then the bridge links only the tagged Book
     expect(rows).toEqual(["One"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT b.title AS value FROM books AS b LEFT OUTER JOIN books_to_tags AS btt ON btt.book_id = b.id LEFT OUTER JOIN tags AS t ON t.id = btt.tag_id WHERE (((t.name = $1))) AND b.deleted_at IS NULL",
      ]
@@ -138,7 +140,8 @@ describe("em.query / join trees", () => {
 
     // Then the result needs neither an Author join nor a reviewer join
     expect(rows).toEqual(["One"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT b.title AS value FROM books AS b WHERE (((b.author_id = $1))) AND b.deleted_at IS NULL",
      ]
@@ -198,7 +201,8 @@ describe("em.query / join trees", () => {
     const rows = await em.query({ from: a, join: { books: "b:1" }, select: a.firstName });
     // Then only the Book's Author matches
     expect(rows).toEqual(["Alice"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE ((b.id = $1)) AND a.deleted_at IS NULL",
      ]
@@ -220,7 +224,8 @@ describe("em.query / join trees", () => {
     const rows = await em.query({ from: a, join: { books: true }, select: a.firstName });
     // Then the joined primary key supplies the existence test
     expect(rows).toEqual(["Alice"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE ((b.id IS NOT NULL)) AND a.deleted_at IS NULL",
      ]
@@ -242,7 +247,8 @@ describe("em.query / join trees", () => {
     const rows = await em.query({ from: a, join: { books: null }, select: a.firstName });
     // Then unmatched collection rows are selected
     expect(rows).toEqual(["Bob"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE ((b.id IS NULL)) AND a.deleted_at IS NULL",
      ]
@@ -264,7 +270,8 @@ describe("em.query / join trees", () => {
     const rows = await em.query({ from: a, join: { books: { ne: null } }, select: a.firstName });
     // Then the exclusion also keeps the collection join alive
     expect(rows).toEqual(["Alice"]);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE ((b.id IS NOT NULL)) AND a.deleted_at IS NULL",
      ]

@@ -1,7 +1,7 @@
 import { getInstanceData } from "joist-orm";
 import { ParentGroup } from "src/entities";
 import { insertParentGroup } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("LazyField", () => {
   it("distinguishes an unloaded column from a loaded SQL NULL", async () => {
@@ -31,12 +31,19 @@ describe("LazyField", () => {
   });
 
   it("is excluded from the entity's default SELECT", async () => {
+    // Given a ParentGroup whose bulk data is stored but lazy
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
     const em = newEntityManager();
     resetQueryCount();
-    await em.load(ParentGroup, "parentGroup:1");
+
+    // When the ParentGroup is loaded without its bulk data
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+
+    // Then the bulk-data column remains absent from the hydrated row
+    expect("bulkData" in getInstanceData(pg).data).toBe(false);
     // The load lists columns explicitly and omits `bulk_data`
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT pg.id, pg.name, pg.created_at, pg.updated_at FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2",
      ]
@@ -53,13 +60,17 @@ describe("LazyField", () => {
   });
 
   it("can lazy load the column on demand", async () => {
+    // Given a ParentGroup whose bulk data has not been loaded
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
     const em = newEntityManager();
     const pg = await em.load(ParentGroup, "parentGroup:1");
     resetQueryCount();
+    // When its bulk data is requested
+    // Then the persisted value becomes available
     expect(await pg.bulkData.load()).toEqual({ key: "value" });
     // Which was a single SELECT of just the id + column
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT pg.id as id, pg.bulk_data FROM parent_groups AS pg WHERE pg.id = ANY($1) LIMIT $2",
      ]
@@ -84,15 +95,22 @@ describe("LazyField", () => {
   });
 
   it("batches lazy loads across multiple entities into one query", async () => {
+    // Given two ParentGroups with different unloaded bulk data
     await insertParentGroup({ name: "pg1", bulk_data: { a: 1 } });
     await insertParentGroup({ name: "pg2", bulk_data: { a: 2 } });
     const em = newEntityManager();
     const [pg1, pg2] = await em.loadAll(ParentGroup, ["parentGroup:1", "parentGroup:2"]);
     resetQueryCount();
+    // When both lazy columns are requested concurrently
     const [d1, d2] = await Promise.all([pg1.bulkData.load(), pg2.bulkData.load()]);
+
+    // Then each ParentGroup receives its own bulk data
     expect(d1).toEqual({ a: 1 });
     expect(d2).toEqual({ a: 2 });
-    expect(queries).toMatchInlineSnapshot(`
+    // And the lazy-column batch loader uses one query on either backend
+    expect(queries).toHaveLength(1);
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT pg.id as id, pg.bulk_data FROM parent_groups AS pg WHERE pg.id = ANY($1) LIMIT $2",
      ]

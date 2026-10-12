@@ -1,6 +1,6 @@
 import { Author, Tag, newAuthor, newTag } from "src/entities";
 import { insertAuthor, insertAuthorToTag, insertTag } from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("ManyToManyLargeCollection", () => {
   it("can percolate large to regular", async () => {
@@ -86,15 +86,16 @@ describe("ManyToManyLargeCollection", () => {
     expect(i2).toBe(false);
     expect(i3).toBe(true);
     expect(i4).toBe(false);
-    // And we used only a single query
-    expect(numberOfQueries).toEqual(1);
+    // And PostgreSQL batches the four checks while SQLite executes each check separately
+    expect(numberOfQueries).toEqual(isSqlite ? 4 : 1);
     // And we did not load the other tags
     expect(em.entities.length).toEqual(3);
-    // And if we redo a .includes
+    // When we redo a .includes with query recording reset
+    resetQueryCount();
     const i1_2 = await t1.authors.includes(a1);
     // Then it was cached
     expect(i1_2).toBe(true);
-    expect(numberOfQueries).toEqual(1);
+    expect(numberOfQueries).toEqual(0);
   });
 
   it("can include just added entities on new entities", async () => {

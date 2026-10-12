@@ -53,7 +53,7 @@ import {
   update,
 } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
-import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 /**
@@ -281,7 +281,8 @@ describe("em.query", () => {
       resetQueryCount();
       const authors = await em.query({ from: a, where: { and: [a.firstName.eq("a1")] }, select: a });
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.* FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL",
        ]
@@ -446,7 +447,8 @@ describe("em.query", () => {
         orderBy: [{ sort: p.id, order: "ASC" }],
       });
       expect(publishers).toEqual([{ name: "small" }, { name: "large" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.name AS name FROM publishers AS p WHERE p.deleted_at IS NULL ORDER BY p.id ASC",
        ]
@@ -465,7 +467,8 @@ describe("em.query", () => {
         select: { name: p.name, city: sp.city },
       });
       expect(rows).toEqual([{ name: "p1", city: "sf" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.name AS name, sp.city AS city FROM small_publishers AS sp JOIN publishers AS p ON sp.id = p.id",
        ]
@@ -487,7 +490,8 @@ describe("em.query", () => {
         select: { name: p.name, city: sp.city },
       });
       expect(rows).toEqual([{ name: "p2", city: "sf" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.name AS name, sp.city AS city FROM publishers AS p JOIN small_publishers AS sp ON p.id = sp.id WHERE p.name = $1 AND p.deleted_at IS NULL",
        ]
@@ -528,7 +532,8 @@ describe("em.query", () => {
       expect((publishers[0] as SmallPublisher).sharedColumn).toBe("small-shared");
       expect((publishers[1] as LargePublisher).country).toBe("US");
       expect((publishers[1] as LargePublisher).sharedColumn).toBe("large-shared");
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.*, p_s0.*, p_s1.*, p.id AS id, COALESCE(p_s0.shared_column, p_s1.shared_column) AS shared_column, CASE WHEN p_s0.id IS NOT NULL THEN $1 WHEN p_s1.id IS NOT NULL THEN $2 ELSE '_' END AS __class FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id WHERE p.deleted_at IS NULL ORDER BY p.id ASC",
        ]
@@ -549,7 +554,8 @@ describe("em.query", () => {
       // Then hydration receives both tables' fields and retains the requested subtype
       expect(publishers).toMatchEntity([{ name: "small", city: "Austin" }]);
       expect(publishers[0]).toBeInstanceOf(SmallPublisher);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT sp.*, sp_b0.*, sp.id AS id FROM small_publishers AS sp LEFT OUTER JOIN publishers AS sp_b0 ON sp.id = sp_b0.id",
        ]
@@ -577,7 +583,8 @@ describe("em.query", () => {
       expect(publishers).toMatchEntity([{ name: "small" }]);
       expect(publishers[0]).toBeInstanceOf(SmallPublisher);
       expect((publishers[0] as SmallPublisher).city).toBe("Austin");
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.*, p_s0.*, p_s1.*, p.id AS id, COALESCE(p_s0.shared_column, p_s1.shared_column) AS shared_column, CASE WHEN p_s0.id IS NOT NULL THEN $1 WHEN p_s1.id IS NOT NULL THEN $2 ELSE '_' END AS __class FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN small_publishers AS sp ON p.id = sp.id WHERE p.deleted_at IS NULL",
        ]
@@ -625,7 +632,8 @@ describe("em.query", () => {
       });
       expect(star).toEqual([{ name: "a1" }]);
       expect(column).toEqual([{ n: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT "x"" --".name AS name FROM (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) AS "x"" --"",
          "SELECT "x"" --".name AS n FROM (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) AS "x"" --" ORDER BY "x"" --".name ASC",
@@ -698,7 +706,8 @@ describe("em.query", () => {
         select: { city: sp.city },
       });
       expect(viaSubtype).toEqual([{ city: "sf" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT p.name AS name FROM authors AS a JOIN publishers AS p ON a.publisher_id = p.id WHERE a.deleted_at IS NULL",
          "SELECT sp.city AS city FROM authors AS a JOIN small_publishers AS sp ON a.publisher_id = sp.id WHERE a.deleted_at IS NULL",
@@ -744,7 +753,8 @@ describe("em.query", () => {
         { author: "a1", title: "b1" },
         { author: "a2", title: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
        ]
@@ -815,7 +825,8 @@ describe("em.query", () => {
           fallback: string;
         }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT b.title AS title, b1.title AS "reviewedTitle", a.first_name AS author, coalesce(a.first_name, $1) AS fallback FROM books AS b LEFT OUTER JOIN book_reviews AS br ON br.book_id = b.id LEFT OUTER JOIN books AS b1 ON br.book_id = b1.id LEFT OUTER JOIN authors AS a ON b1.author_id = a.id WHERE b.deleted_at IS NULL ORDER BY title ASC",
        ]
@@ -886,7 +897,8 @@ describe("em.query", () => {
         { text: "book comment", author: "writer" },
       ]);
       expectTypeOf(rows).toEqualTypeOf<{ text: string | undefined; author: string | undefined }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT c.text AS text, a.first_name AS author FROM comments AS c LEFT OUTER JOIN books AS b ON c.parent_book_id = b.id LEFT OUTER JOIN authors AS a ON b.author_id = a.id ORDER BY text ASC",
        ]
@@ -937,7 +949,8 @@ describe("em.query", () => {
         { author: "large", publisher: "large", city: undefined },
         { author: "none", publisher: undefined, city: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS author, p.name AS publisher, sp.city AS city FROM authors AS a LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id LEFT OUTER JOIN small_publishers AS sp ON p.id = sp.id WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -953,7 +966,8 @@ describe("em.query", () => {
       // A large o2m only restricts the in-memory collection (no full .load); its SQL join is a plain o2m
       const rows = await em.query({ from: pg, join: [pg.critics.as(c)], select: { group: pg.name, critic: c.name } });
       expect(rows).toEqual([{ group: "pg1", critic: "c1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT pg.name AS "group", c.name AS critic FROM publisher_groups AS pg LEFT OUTER JOIN critics AS c ON c.group_id = pg.id",
        ]
@@ -979,7 +993,8 @@ describe("em.query", () => {
         { author: "a1", title: "b1" },
         { author: "a2", title: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS author, b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY author ASC",
        ]
@@ -1016,7 +1031,8 @@ describe("em.query", () => {
         select: { title: b.title, author: a.firstName, authorId: b.authorId },
       });
       expect(rows).toEqual([{ title: "b1", author: "a1", authorId: "a:1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT b.title AS title, a.first_name AS author, b.author_id AS "authorId" FROM books AS b JOIN authors AS a ON b.author_id = a.id WHERE b.deleted_at IS NULL",
        ]
@@ -1042,7 +1058,8 @@ describe("em.query", () => {
         { name: "mentee", mentor: "mentor" },
         { name: "mentor", mentor: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, a1.first_name AS mentor FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id WHERE a.deleted_at IS NULL ORDER BY name ASC",
        ]
@@ -1069,7 +1086,8 @@ describe("em.query", () => {
         { title: "b1", sequel: "b2" },
         { title: "b2", sequel: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT b.title AS title, b1.title AS sequel FROM books AS b LEFT OUTER JOIN books AS b1 ON b1.prequel_id = b.id WHERE b.deleted_at IS NULL ORDER BY title ASC",
        ]
@@ -1096,7 +1114,8 @@ describe("em.query", () => {
         { author: "a1", tag: "t1" },
         { author: "a2", tag: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS author, t.name AS tag FROM authors AS a LEFT OUTER JOIN authors_to_tags AS att ON att.author_id = a.id LEFT OUTER JOIN tags AS t ON t.id = att.tag_id WHERE a.deleted_at IS NULL ORDER BY author ASC",
        ]
@@ -1112,7 +1131,8 @@ describe("em.query", () => {
       resetQueryCount();
       const rows = await em.query({ from: c, join: [c.parent.as(a)], select: { text: c.text, author: a.firstName } });
       expect(rows).toEqual([{ text: "c1", author: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT c.text AS text, a.first_name AS author FROM comments AS c JOIN authors AS a ON c.parent_author_id = a.id",
        ]
@@ -1134,7 +1154,8 @@ describe("em.query", () => {
         select: { name: a.firstName },
       });
       expect(rows).toEqual([{ name: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -1197,7 +1218,8 @@ describe("em.query", () => {
       // Then both omitted conditions contribute no SQL restriction
       expect(existsOmitted).toEqual(["optional"]);
       expect(notExistsOmitted).toEqual(["optional"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL",
@@ -1243,7 +1265,8 @@ describe("em.query", () => {
       // Then both adult alternatives survive, but the underage Author does not
       expect(adults).toEqual(["published", "unpublished"]);
       expect(em.entities).toEqual([]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE (a.age >= $1 AND (NOT EXISTS (SELECT b.* FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) OR (a.first_name = $2 AND EXISTS (SELECT b1.* FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL)))) AND a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -1292,7 +1315,8 @@ describe("em.query", () => {
       // Then either Book supplies a row without hydrating entities
       expect(unionAuthors).toEqual(["published"]);
       expect(em.entities).toEqual([]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE (EXISTS (SELECT b.id AS id, b.title AS title FROM books AS b WHERE (b.author_id = a.id AND b.title = $1) AND b.deleted_at IS NULL) AND NOT EXISTS ((SELECT b1.id AS id, b1.title AS title FROM books AS b1 WHERE (b1.author_id = a.id AND b1.title = $2) AND b1.deleted_at IS NULL) INTERSECT (SELECT b2.id AS id, b2.title AS title FROM books AS b2 WHERE (b2.author_id = a.id AND b2.title = $3) AND b2.deleted_at IS NULL))) AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS ((SELECT b.id AS id, b.title AS title FROM books AS b WHERE (b.author_id = a.id AND b.title = $1) AND b.deleted_at IS NULL) UNION (SELECT b1.id AS id, b1.title AS title FROM books AS b1 WHERE (b1.author_id = a.id AND b1.title = $2) AND b1.deleted_at IS NULL)) AND a.deleted_at IS NULL",
@@ -1377,7 +1401,8 @@ describe("em.query", () => {
       });
       // Then empty input has no group and the one-Book group fails HAVING
       expect(grouped).toEqual(["two"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE EXISTS (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL ORDER BY a.id ASC",
          "SELECT a.first_name AS value FROM authors AS a WHERE NOT EXISTS (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
@@ -1480,7 +1505,8 @@ describe("em.query", () => {
       });
       // Then Authors without mentors survive the left join and satisfy NOT EXISTS
       expect(others).toEqual(["mentor", "alone"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id WHERE EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a1.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN authors AS a1 ON a.mentor_id = a1.id WHERE NOT EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a1.id AND b.deleted_at IS NULL) AND a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -1540,7 +1566,8 @@ describe("em.query", () => {
         select: { name: a.firstName, bookCount: b.id.count() },
       });
       expect(rows).toEqual([{ name: "a1", bookCount: 2 }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL GROUP BY a.first_name",
        ]
@@ -1776,7 +1803,8 @@ describe("em.query", () => {
 
       // Then the aggregate order and Book join are both absent
       expect(rows).toEqual([{ names: ["Alice"] }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT array_agg(a.first_name) AS names FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -1908,7 +1936,8 @@ describe("em.query", () => {
       });
       // Then the empty condition is pruned instead of filtering every Author
       expect(unfiltered).toEqual(["Selected", "Other"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE a.id = ANY($1) AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -1935,7 +1964,8 @@ describe("em.query", () => {
         orderBy: [{ sort: a.id, order: "ASC" }],
       });
       expect(rows).toEqual(["Alice Mary Smith", "ALICE SMITH"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE (a.range_of_books BETWEEN $1 AND $2 AND a.first_name ILIKE $3) AND a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -2009,7 +2039,8 @@ describe("em.query", () => {
       expect(notContainingMentor).toEqual(["Red", "Empty"]);
       expect(overlappingMentor).toEqual(["Red"]);
       expect(notOverlappingMentor).toEqual(["Empty"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE a.favorite_colors @> $1 AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE NOT (a.favorite_colors @> $1) AND a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -2038,7 +2069,8 @@ describe("em.query", () => {
         select: a.firstName,
       });
       expect(rows).toEqual(["Both"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE a.favorite_colors @> $1 AND a.deleted_at IS NULL",
        ]
@@ -2082,7 +2114,8 @@ describe("em.query", () => {
       expect(isTrue).toEqual(["Selected"]);
       expect(contains).toEqual(["Selected"]);
       expect(ncontains).toEqual(["Other"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE a.business_address @? $1 AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.business_address @@ $1 AND a.deleted_at IS NULL",
@@ -2125,7 +2158,8 @@ describe("em.query", () => {
       expect(filtered).toEqual(["Published"]);
       expect(omitted).toEqual(["Published", "Unpublished"]);
       expect(prunedGroup).toEqual(["Published", "Unpublished"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id LEFT OUTER JOIN small_publishers AS sp ON p.id = sp.id WHERE sp.city = $1 AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -2174,7 +2208,8 @@ describe("em.query", () => {
       expect(empty).toEqual([]);
       expect(notEmpty).toEqual([3]);
       expect(omitted).toEqual([3]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books IS NULL AND a.deleted_at IS NULL",
          "SELECT a.first_name AS value FROM authors AS a WHERE a.range_of_books IS NOT NULL AND a.deleted_at IS NULL ORDER BY a.id ASC",
@@ -2213,7 +2248,8 @@ describe("em.query", () => {
       expect(included).toEqual(["Selected", "Unset"]);
       expect(excluded).toEqual(["Other"]);
       expect(absent).toEqual(["Unset"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT u.name AS value FROM users AS u WHERE u.password IS NULL OR u.password = ANY($1) ORDER BY u.id ASC",
          "SELECT u.name AS value FROM users AS u WHERE u.password != ALL($1)",
@@ -2239,7 +2275,8 @@ describe("em.query", () => {
       // Then neither scope captures the other's SQL alias or double-encodes the tagged id
       expect(nested).toEqual([{ id: "a:1", count: 1 }]);
       expect(again).toEqual(["a:1"]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.id AS id, (SELECT count(a1.id)::int AS value FROM authors AS a1 WHERE a1.id = ANY($1) AND a1.deleted_at IS NULL) AS "count" FROM authors AS a WHERE a.id = ANY($2) AND a.deleted_at IS NULL",
          "SELECT a.id AS value FROM authors AS a WHERE a.id = ANY($1) AND a.deleted_at IS NULL",
@@ -2401,7 +2438,8 @@ describe("em.query", () => {
         select: { name: a.firstName },
       });
       expect(rows).toEqual([{ name: "a2" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.age >= $1 AND a.deleted_at IS NULL GROUP BY a.first_name HAVING count(b.id)::int > $2",
        ]
@@ -2470,7 +2508,8 @@ describe("em.query", () => {
         orderBy: [{ sort: a.firstName, order: "ASC" }],
       });
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
        ]
@@ -2497,7 +2536,8 @@ describe("em.query", () => {
         orderBy: [{ sort: a.firstName, order: "ASC" }],
       });
       expect(rows).toEqual([{ name: "a1" }, { name: "a2" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
        ]
@@ -2511,7 +2551,8 @@ describe("em.query", () => {
         select: { name: a.firstName },
       });
       expect(filtered).toEqual([{ name: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a JOIN books AS b ON b.author_id = a.id WHERE (b.title = $1) AND a.deleted_at IS NULL",
        ]
@@ -2641,7 +2682,8 @@ describe("em.query", () => {
       });
       expect(rows).toEqual([{ name: "a1" }]);
       // `c` pruned with its condition; `br` kept, and `b` kept because `br`'s ON needs it
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT DISTINCT a.first_name AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id LEFT OUTER JOIN book_reviews AS br ON br.book_id = b.id WHERE (br.rating >= $1) AND a.deleted_at IS NULL",
        ]
@@ -2681,7 +2723,8 @@ describe("em.query", () => {
         { name: "a0", bookCount: 1 },
         { name: "a2", bookCount: 1 },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, count(b.id)::int AS "bookCount" FROM authors AS a JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL GROUP BY a.first_name ORDER BY "bookCount" DESC, name ASC NULLS LAST",
        ]
@@ -2720,7 +2763,8 @@ describe("em.query", () => {
         { name: "a1", age: undefined },
         { name: "a2", age: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, a.age AS age FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY name ASC",
        ]
@@ -2821,7 +2865,8 @@ describe("em.query", () => {
         { name: "a1", age: 20 },
         { name: "a3", age: 30 },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, a.age AS age FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL ORDER BY age ASC, b.title ASC",
        ]
@@ -2846,7 +2891,8 @@ describe("em.query", () => {
 
       // Then the order and the Book join are both absent
       expect(rows).toEqual([{ name: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -2895,7 +2941,8 @@ describe("em.query", () => {
         { asc: 20, desc: "a2", nulls: "a:3", sort: 20, order: "a2" },
         { asc: 10, desc: "a0", nulls: "a:4", sort: 10, order: "a0" },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.age AS "asc", a.first_name AS "desc", a.id AS nulls, a.age AS sort, a.first_name AS "order" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "asc" DESC, "desc" ASC, nulls DESC, sort DESC, "order" ASC",
        ]
@@ -3034,7 +3081,8 @@ describe("em.query", () => {
         { authorId: "a:2", name: "a1", age: 30 },
         { authorId: "a:3", name: "a0", age: 20 },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT author_page."authorId" AS "authorId", author_page.name AS name, author_page.age AS age FROM (SELECT a.id AS "authorId", a.first_name AS name, a.age AS age FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY name ASC LIMIT $1) AS author_page ORDER BY age DESC",
        ]
@@ -3068,7 +3116,8 @@ describe("em.query", () => {
         { name: "a1", bookCount: 2, lastTitle: "b2" },
         { name: "a2", bookCount: 0, lastTitle: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, coalesce(book_stats."bookCount", $1) AS "bookCount", book_stats."lastTitle" AS "lastTitle" FROM authors AS a LEFT OUTER JOIN (SELECT b.author_id AS "authorId", count(b.id)::int AS "bookCount", max(b.title) AS "lastTitle" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id) AS book_stats ON book_stats."authorId" = a.id WHERE a.deleted_at IS NULL ORDER BY a.first_name ASC",
        ]
@@ -3119,7 +3168,8 @@ describe("em.query", () => {
       const two = await em.query({ from: a, join: [a.books.as(b2)], where: b2.title.ne("x"), select: { n: cnt } });
       expect(one).toEqual([{ n: 1 }]);
       expect(two).toEqual([{ n: 1 }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (SELECT count(b.id)::int AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) AS n FROM authors AS a WHERE a.deleted_at IS NULL",
          "SELECT (SELECT count(b1.id)::int AS value FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL) AS n FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE b.title != $1 AND a.deleted_at IS NULL",
@@ -3238,7 +3288,8 @@ describe("em.query", () => {
         select: { text: c.text },
       });
       expect(rows).toEqual([{ text: "on a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT c.text AS text FROM comments AS c WHERE c.parent_author_id IN (SELECT a.id AS value FROM authors AS a WHERE (a.first_name = $1) AND a.deleted_at IS NULL)",
        ]
@@ -3305,7 +3356,8 @@ describe("em.query", () => {
         { id: "task:1", special: 1 },
         { id: "task:2", special: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT t.id AS id, t.special_new_field AS special FROM tasks AS t WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
        ]
@@ -3337,7 +3389,8 @@ describe("em.query", () => {
         { item: "ti:2", task: undefined },
         { item: "ti:3", task: "task:2" },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT ti.id AS item, t.id AS task FROM task_items AS ti LEFT OUTER JOIN tasks AS t ON ti.new_task_id = t.id ORDER BY item ASC",
        ]
@@ -3362,7 +3415,8 @@ describe("em.query", () => {
         { id: "task:1", newId: "task:1" },
         { id: "task:2", newId: undefined },
       ]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT t.id AS id, t1.id AS "newId" FROM tasks AS t LEFT OUTER JOIN tasks AS t1 ON t.id = t1.id AND t1.type_id = $1 WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
        ]
@@ -3381,7 +3435,8 @@ describe("em.query", () => {
       resetQueryCount();
       const rows = await em.query({ from: a, select: { name: a.firstName } });
       expect(rows).toEqual([{ name: "a1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -3462,7 +3517,8 @@ describe("em.query", () => {
       resetQueryCount();
       expect(await em.query({ from: t, select: { name: t.name } })).toEqual([]);
       expect(await em.query({ from: lp, select: { country: lp.country } })).toEqual([{ country: "us" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT t.name AS name FROM tags AS t",
          "SELECT lp.country AS country FROM large_publishers AS lp",
@@ -3739,7 +3795,8 @@ describe("em.query", () => {
       // Then PostgreSQL removes duplicates within and across branches in one query
       expect(rows).toEqual([{ authorId: "a:1" }, { authorId: "a:2" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.id AS "authorId" FROM books AS b JOIN authors AS a ON b.author_id = a.id WHERE b.deleted_at IS NULL) UNION (SELECT a1.id AS "authorId" FROM comments AS c JOIN authors AS a1 ON c.parent_author_id = a1.id) ORDER BY "authorId" ASC",
        ]
@@ -3921,7 +3978,8 @@ describe("em.query", () => {
     const rows = await em.query({ from: a, select: [a.firstName, a.lastName], orderBy: { firstName: "ASC" } });
 
     // Then each column is aliased to its field name on the wire, which is what keys the rows
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS "firstName", a.last_name AS "lastName" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY "firstName" ASC",
      ]

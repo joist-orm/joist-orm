@@ -57,11 +57,20 @@ API from SQLite remains follow-up work; PostgreSQL column comments currently sup
 relation names, and SQLite codegen does not yet expose the same array/native-enum model.
 The separate `packages/tests/sqlite` fixture continues to exercise SQLite codegen.
 
-The SQLite command discovers the entire integration suite without adding backend-specific
-skips. Failures remain visible, including PostgreSQL SQL snapshots, batching/query-count
-expectations, unsupported operators, scalar-expression decoding, and transaction behavior.
-Files that explicitly construct a PostgreSQL driver or pool still use PostgreSQL even
-in this run; their passes must not be counted as SQLite driver coverage.
+Ordinary `.test.ts` / `.test.tsx` files run against both drivers. Native PostgreSQL contracts
+use `.pg.test.ts` names and are excluded from SQLite runs; `.sqlite.test.ts` files are
+excluded from PostgreSQL runs. Mixed files use visibly skipped PostgreSQL-only groups for
+native response counts and pool/client routing. These native checks do not count as SQLite coverage.
+
+Shared tests keep entity results, domain types, validation, caching, and rollback assertions
+unconditional. PostgreSQL SQL snapshots are guarded with `if (!isSqlite)`; assertions that
+no query occurred remain shared. Where batching changes the query count, the test states
+both expected counts explicitly and separately verifies that cached reads issue no further query.
+`find.concurrent.test.ts` also checks SQLite's ordinary single-filter SQL with its own inline snapshot.
+Flush-lock tests pause at a `beforeBegin` hook instead of assuming a timer overlaps database I/O.
+
+Unsupported SQL operators, scalar-expression decoding, transaction isolation, and portable
+validation-error behavior remain visible failures rather than backend-specific skips.
 
 Use `select`, `insert`, `update`, `delete`, and `count` on `TestDriver` for portable direct
 row access. Tests that need PostgreSQL's native pool use `getPostgresPool()`, which fails

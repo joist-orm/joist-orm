@@ -1,7 +1,7 @@
 import { query, table } from "joist-orm";
 import { Task, TaskNew, TaskOld, TaskType } from "src/entities";
 import { insertTask } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query STI entity mode", () => {
   it("hydrates concrete subtypes from an STI root", async () => {
@@ -23,7 +23,8 @@ describe("em.query STI entity mode", () => {
     expect(tasks[1]).toBeInstanceOf(TaskOld);
     expect((tasks[0] as TaskNew).specialNewField).toBe(10);
     expect((tasks[1] as TaskOld).specialOldField).toBe(20);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL ORDER BY t.id ASC",
      ]
@@ -46,7 +47,8 @@ describe("em.query STI entity mode", () => {
     // Then the discriminator predicate excludes sibling subtype rows
     expect(tasks).toMatchEntity([{ type: TaskType.New, specialNewField: 10 }]);
     expect(tasks[0]).toBeInstanceOf(TaskNew);
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT t.* FROM tasks AS t WHERE t.deleted_at IS NULL AND t.type_id = $1",
      ]

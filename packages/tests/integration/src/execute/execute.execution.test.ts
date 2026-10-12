@@ -1,8 +1,7 @@
 import { Deferred, ReadOnlyError, query, table } from "joist-orm";
-import { PostgresDriver } from "joist-orm/pg";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
-import { getPostgresPool, newEntityManager, queries, recordQuery, resetQueryCount } from "src/testEm";
+import { getPostgresPool, isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("em.execute / execution", () => {
@@ -130,7 +129,8 @@ describe("em.execute / execution", () => {
         // Then the immediate SQL write reaches the database without changing the pending Author
         expect(updated).toEqual({ rowCount: 1, rows: [] });
         expect(hook).toHaveBeenCalledWith("Author.beforeFlush");
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
           [
             "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
           ]
@@ -141,7 +141,8 @@ describe("em.execute / execution", () => {
 
         // Then it sees persisted state without flushing the pending name
         expect(read).toEqual({ rowCount: 1, rows: ["Original"] });
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
           [
             "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
             "SELECT a.first_name AS value FROM authors AS a WHERE a.deleted_at IS NULL",
@@ -159,7 +160,8 @@ describe("em.execute / execution", () => {
 
       // Then ordinary immediate writes work again after the flush completes
       expect(inserted).toEqual({ rowCount: 1, rows: [] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "INSERT INTO tags AS t (name) VALUES ($1)",
         ]
@@ -173,10 +175,9 @@ describe("em.execute / execution", () => {
     it("keeps query rows-only while the driver returns native command metadata", async () => {
       // Given a persisted Tag
       await insertTag({ name: "Readable" });
-      // And a separate driver records this EntityManager's result envelopes
+      // And the selected driver records this EntityManager's result envelopes
       const em = newEntityManager();
       const t = table(Tag);
-      em.driver = new PostgresDriver(getPostgresPool(), { onQuery: recordQuery });
       const execute = jest.spyOn(em.driver, "executeQuery");
       resetQueryCount();
 
@@ -202,85 +203,88 @@ describe("em.execute / execution", () => {
       }
     });
 
-    it("preserves native null command counts for DDL", async () => {
-      // Given an EntityManager connected to PostgreSQL
-      const em = newEntityManager();
-
-      // When DDL runs inside a transaction so the temporary table is removed at commit
-      await em.transaction(async () => {
-        const result = await em.driver.executeQuery(
-          em,
-          "CREATE TEMP TABLE driver_result_test (id int) ON COMMIT DROP",
-          [],
-        );
-
-        // Then commands without counts remain valid through the driver API
-        expect(result).toEqual({ rowCount: null, rows: [] });
-      });
-    });
-
-    it.each([null, undefined, "1", -1, 1.5, NaN, Infinity, -Infinity])(
-      "rejects an invalid native command count of %s even when RETURNING has a row",
-      async (rowCount) => {
-        // Given a native PostgreSQL response whose count is invalid despite returning one Tag name
+    (isSqlite ? describe.skip : describe)("PostgreSQL native counts", () => {
+      it("preserves native null command counts for DDL", async () => {
+        // Given an EntityManager connected to PostgreSQL
         const em = newEntityManager();
-        const t = table(Tag);
-        // And only the native response is replaced, leaving the real EM and PostgresDriver checks in place
-        const native = jest.spyOn(getPostgresPool(), "query").mockImplementationOnce(async () => ({
-          command: "UPDATE",
-          rowCount,
-          oid: 0,
-          fields: [],
-          rows: [{ value: "Changed" }],
-        }));
-        resetQueryCount();
 
-        try {
-          // When execute receives the malformed count through the native driver path
-          await expect(
-            em.execute({ update: t, set: { name: "Changed" }, where: t.id.eq("t:1"), returning: t.name }),
-          ).rejects.toThrow("The driver did not return a numeric command rowCount");
+        // When DDL runs inside a transaction so the temporary table is removed at commit
+        await em.transaction(async () => {
+          const result = await em.driver.executeQuery(
+            em,
+            "CREATE TEMP TABLE driver_result_test (id int) ON COMMIT DROP",
+            [],
+          );
 
-          // Then returned rows cannot manufacture a successful command count
-          expect(native).toHaveBeenCalledTimes(1);
-          expect(queries).toMatchInlineSnapshot(`
+          // Then commands without counts remain valid through the driver API
+          expect(result).toEqual({ rowCount: null, rows: [] });
+        });
+      });
+
+      it.each([null, undefined, "1", -1, 1.5, NaN, Infinity, -Infinity])(
+        "rejects an invalid native command count of %s even when RETURNING has a row",
+        async (rowCount) => {
+          // Given a native PostgreSQL response whose count is invalid despite returning one Tag name
+          const em = newEntityManager();
+          const t = table(Tag);
+          // And only the native response is replaced, leaving the real EM and PostgresDriver checks in place
+          const native = jest.spyOn(getPostgresPool(), "query").mockImplementationOnce(async () => ({
+            command: "UPDATE",
+            rowCount,
+            oid: 0,
+            fields: [],
+            rows: [{ value: "Changed" }],
+          }));
+          resetQueryCount();
+
+          try {
+            // When execute receives the malformed count through the native driver path
+            await expect(
+              em.execute({ update: t, set: { name: "Changed" }, where: t.id.eq("t:1"), returning: t.name }),
+            ).rejects.toThrow("The driver did not return a numeric command rowCount");
+
+            // Then returned rows cannot manufacture a successful command count
+            expect(native).toHaveBeenCalledTimes(1);
+            expect(queries).toMatchInlineSnapshot(`
             [
               "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
             ]
           `);
-          expect(em.entities).toEqual([]);
-        } finally {
-          native.mockRestore();
-        }
-      },
-    );
+            expect(em.entities).toEqual([]);
+          } finally {
+            native.mockRestore();
+          }
+        },
+      );
+    });
   });
 
   describe("transactions", () => {
-    it("routes autocommit through the pool without starting a hidden transaction", async () => {
-      // Given a persisted Tag and an EntityManager without an active transaction
-      await insertTag({ name: "Original" });
-      const em = newEntityManager();
-      const t = table(Tag);
-      // And the native pool and transaction entry point are observed without replacing their behavior
-      const native = jest.spyOn(getPostgresPool(), "query");
-      const transaction = jest.spyOn(em.driver, "transaction");
-      resetQueryCount();
+    (isSqlite ? describe.skip : describe)("PostgreSQL native routing", () => {
+      it("routes autocommit through the pool without starting a hidden transaction", async () => {
+        // Given a persisted Tag and an EntityManager without an active transaction
+        await insertTag({ name: "Original" });
+        const em = newEntityManager();
+        const t = table(Tag);
+        // And the native pool and transaction entry point are observed without replacing their behavior
+        const native = jest.spyOn(getPostgresPool(), "query");
+        const transaction = jest.spyOn(em.driver, "transaction");
+        resetQueryCount();
 
-      try {
-        // When an immediate write executes outside em.transaction
-        const result = await em.execute({
-          update: t,
-          set: { name: "Committed" },
-          where: t.id.eq("t:1"),
-          returning: t.name,
-        });
+        try {
+          // When an immediate write executes outside em.transaction
+          const result = await em.execute({
+            update: t,
+            set: { name: "Committed" },
+            where: t.id.eq("t:1"),
+            returning: t.name,
+          });
 
-        // Then the pool receives exactly one parameterized command without BEGIN or SAVEPOINT
-        expect(result).toEqual({ rowCount: 1, rows: ["Committed"] });
-        expect(transaction).not.toHaveBeenCalled();
-        expect(em.txn).toBeUndefined();
-        expect(native.mock.calls).toMatchInlineSnapshot(`
+          // Then the pool receives exactly one parameterized command without BEGIN or SAVEPOINT
+          expect(result).toEqual({ rowCount: 1, rows: ["Committed"] });
+          expect(transaction).not.toHaveBeenCalled();
+          expect(em.txn).toBeUndefined();
+          expect(native.mock.calls).toMatchInlineSnapshot(`
           [
             [
               "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
@@ -291,48 +295,48 @@ describe("em.execute / execution", () => {
             ],
           ]
         `);
-        expect(queries).toMatchInlineSnapshot(`
+          expect(queries).toMatchInlineSnapshot(`
           [
             "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
           ]
         `);
-      } finally {
-        native.mockRestore();
-        transaction.mockRestore();
-      }
-      expect(await newEntityManager().query({ from: t, select: t.name })).toEqual(["Committed"]);
-    });
+        } finally {
+          native.mockRestore();
+          transaction.mockRestore();
+        }
+        expect(await newEntityManager().query({ from: t, select: t.name })).toEqual(["Committed"]);
+      });
 
-    it("routes execute reads and writes to the active native client and isolates uncommitted state", async () => {
-      // Given a persisted Tag whose committed name is visible to other connections
-      await insertTag({ name: "Original" });
-      const em = newEntityManager();
-      const t = table(Tag);
-      // And a separate EntityManager has neither this transaction nor any cached Tags
-      const observer = newEntityManager();
-      resetQueryCount();
+      it("routes execute reads and writes to the active native client and isolates uncommitted state", async () => {
+        // Given a persisted Tag whose committed name is visible to other connections
+        await insertTag({ name: "Original" });
+        const em = newEntityManager();
+        const t = table(Tag);
+        // And a separate EntityManager has neither this transaction nor any cached Tags
+        const observer = newEntityManager();
+        resetQueryCount();
 
-      // When a transaction updates the Tag and immediately reads its own write
-      const result = await em.transaction(async (txn) => {
-        // And native routing is observed only after the explicit transaction has begun
-        const native = jest.spyOn(txn, "query");
-        const autocommit = jest.spyOn(getPostgresPool(), "query");
-        try {
-          const updated = await em.execute({
-            update: t,
-            set: { name: "Committed" },
-            where: t.id.eq("t:1"),
-            returning: t.name,
-          });
-          // And a metadata-bearing read must use the same uncommitted client
-          const read = await em.execute({ from: t, select: t.name });
+        // When a transaction updates the Tag and immediately reads its own write
+        const result = await em.transaction(async (txn) => {
+          // And native routing is observed only after the explicit transaction has begun
+          const native = jest.spyOn(txn, "query");
+          const autocommit = jest.spyOn(getPostgresPool(), "query");
+          try {
+            const updated = await em.execute({
+              update: t,
+              set: { name: "Committed" },
+              where: t.id.eq("t:1"),
+              returning: t.name,
+            });
+            // And a metadata-bearing read must use the same uncommitted client
+            const read = await em.execute({ from: t, select: t.name });
 
-          // Then both statements use the callback's native client rather than the autocommit pool
-          expect(em.txn).toBe(txn);
-          expect(updated).toEqual({ rowCount: 1, rows: ["Committed"] });
-          expect(read).toEqual({ rowCount: 1, rows: ["Committed"] });
-          expect(autocommit).not.toHaveBeenCalled();
-          expect(native.mock.calls).toMatchInlineSnapshot(`
+            // Then both statements use the callback's native client rather than the autocommit pool
+            expect(em.txn).toBe(txn);
+            expect(updated).toEqual({ rowCount: 1, rows: ["Committed"] });
+            expect(read).toEqual({ rowCount: 1, rows: ["Committed"] });
+            expect(autocommit).not.toHaveBeenCalled();
+            expect(native.mock.calls).toMatchInlineSnapshot(`
             [
               [
                 "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
@@ -347,21 +351,21 @@ describe("em.execute / execution", () => {
               ],
             ]
           `);
-        } finally {
-          native.mockRestore();
-          autocommit.mockRestore();
-        }
+          } finally {
+            native.mockRestore();
+            autocommit.mockRestore();
+          }
 
-        // Then the separate EntityManager still sees the old name until this callback commits
-        expect(observer.txn).toBeUndefined();
-        expect(await observer.query({ from: t, select: t.name })).toEqual(["Original"]);
-        return "callback result";
-      });
+          // Then the separate EntityManager still sees the old name until this callback commits
+          expect(observer.txn).toBeUndefined();
+          expect(await observer.query({ from: t, select: t.name })).toEqual(["Original"]);
+          return "callback result";
+        });
 
-      // Then transaction completion preserves the callback result without adding nested transactions
-      expect(result).toBe("callback result");
-      expect(em.txn).toBeUndefined();
-      expect(queries).toMatchInlineSnapshot(`
+        // Then transaction completion preserves the callback result without adding nested transactions
+        expect(result).toBe("callback result");
+        expect(em.txn).toBeUndefined();
+        expect(queries).toMatchInlineSnapshot(`
         [
           "BEGIN;",
           "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
@@ -370,8 +374,53 @@ describe("em.execute / execution", () => {
           "COMMIT;",
         ]
       `);
-      expect(await observer.query({ from: t, select: t.name })).toEqual(["Committed"]);
-      expect(observer.entities).toEqual([]);
+        expect(await observer.query({ from: t, select: t.name })).toEqual(["Committed"]);
+        expect(observer.entities).toEqual([]);
+      });
+    });
+
+    it("commits an immediate write without starting an EntityManager transaction", async () => {
+      // Given a persisted Tag and an EntityManager without an active transaction
+      await insertTag({ name: "Original" });
+      const em = newEntityManager();
+      const t = table(Tag);
+
+      // When an immediate write executes outside em.transaction
+      await em.execute({ update: t, set: { name: "Committed" }, where: t.id.eq("t:1") });
+
+      // Then the EntityManager still has no active transaction
+      expect(em.txn).toBeUndefined();
+
+      // When a separate EntityManager reads the Tag
+      const names = await newEntityManager().query({ from: t, select: t.name });
+
+      // Then the immediate write is committed
+      expect(names).toEqual(["Committed"]);
+    });
+
+    it("isolates uncommitted immediate writes from another EntityManager", async () => {
+      // Given a persisted Tag and a separate observer with no cached entities
+      await insertTag({ name: "Original" });
+      const em = newEntityManager();
+      const observer = newEntityManager();
+      const t = table(Tag);
+
+      // When a transaction changes the Tag's name
+      await em.transaction(async () => {
+        await em.execute({ update: t, set: { name: "Committed" }, where: t.id.eq("t:1") });
+
+        // Then its own reads see the uncommitted change
+        expect(await em.query({ from: t, select: t.name })).toEqual(["Committed"]);
+
+        // And the observer still sees the committed name
+        expect(await observer.query({ from: t, select: t.name })).toEqual(["Original"]);
+      });
+
+      // When the observer reads after commit
+      const names = await observer.query({ from: t, select: t.name });
+
+      // Then the committed name becomes visible
+      expect(names).toEqual(["Committed"]);
     });
 
     it("rolls back an UPDATE when a real Author RETURNING decoder error leaves the transaction callback", async () => {
@@ -381,9 +430,10 @@ describe("em.execute / execution", () => {
       const a = table(Author);
       // And the native client is observed after BEGIN so rollback is visible even though onQuery does not log it
       let native: jest.SpyInstance | undefined;
-      em.afterBegin((_, txn) => {
-        native = jest.spyOn(txn, "query");
-      });
+      if (!isSqlite)
+        em.afterBegin((_, txn) => {
+          native = jest.spyOn(txn, "query");
+        });
       resetQueryCount();
 
       try {
@@ -401,7 +451,8 @@ describe("em.execute / execution", () => {
         await expect(result).rejects.toThrow(ZodError);
         expect(em.txn).toBeUndefined();
         expect(em.entities).toEqual([]);
-        expect(native!.mock.calls).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(native!.mock.calls).toMatchInlineSnapshot(`
           [
             [
               "UPDATE authors AS a SET first_name = $1 WHERE (a.id = $2) AND (a.deleted_at IS NULL) RETURNING a.business_address AS value",
@@ -415,7 +466,8 @@ describe("em.execute / execution", () => {
             ],
           ]
         `);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
           [
             "BEGIN;",
             "UPDATE authors AS a SET first_name = $1 WHERE (a.id = $2) AND (a.deleted_at IS NULL) RETURNING a.business_address AS value",
@@ -462,7 +514,8 @@ describe("em.execute / execution", () => {
         // Then returning from the callback still flushes pending entities once before COMMIT
         expect(flush).toHaveBeenCalledTimes(1);
         expect(pending.isNewEntity).toBe(false);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
           [
             "BEGIN;",
             "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
@@ -518,7 +571,8 @@ describe("em.execute / execution", () => {
         expect(pending.isNewEntity).toBe(true);
         expect(pending.transientFields.beforeFlushRan).toBe(false);
         expect(pending.transientFields.firstIsNotLastNameRuleInvoked).toBe(0);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
           [
             "UPDATE tags AS t SET name = $1 WHERE (t.id = $2)",
             "SELECT t.name AS value FROM tags AS t",
@@ -559,7 +613,8 @@ describe("em.execute / execution", () => {
       expect(author.books.get).toEqual([book]);
       expect(await em.find(Book, { title: "Original" })).toEqual(cached);
       expect(em.entities).toEqual([author, book]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "UPDATE books AS b SET title = $1 WHERE (b.id = $2) AND (b.deleted_at IS NULL) RETURNING b.id AS id, b.title AS title",
         ]
@@ -586,7 +641,8 @@ describe("em.execute / execution", () => {
       expect(book).toMatchEntity({ title: "Original" });
       expect(book.isDirtyEntity).toBe(false);
       expect(isolated.entities).toEqual([]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "SELECT b.id AS id, b.title AS title FROM books AS b WHERE b.deleted_at IS NULL",
           "SELECT b.id AS id, b.title AS title FROM books AS b WHERE b.deleted_at IS NULL",

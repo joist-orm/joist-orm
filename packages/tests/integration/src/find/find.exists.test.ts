@@ -11,7 +11,7 @@ import {
   insertTag,
   update,
 } from "src/entities/inserts";
-import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 const am = getMetadata(Author);
 
@@ -258,15 +258,16 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { books: { title: "b1" }, comments: { text: "c1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
-          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+            ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("rewrites OR across sibling collection aliases to sibling EXISTS", async () => {
@@ -287,17 +288,18 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE a.age = $1`,
-          ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id IS NOT NULL)`,
-          ` OR EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.id IS NOT NULL)`,
-          `)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE a.age = $1`,
+            ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id IS NOT NULL)`,
+            ` OR EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.id IS NOT NULL)`,
+            `)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("keeps sibling collection OR joins when a collection has filters outside the OR", async () => {
@@ -323,16 +325,17 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "a2" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` LEFT OUTER JOIN comments AS c ON a.id = c.parent_author_id`,
-          ` WHERE b."order" = $1 AND (b.title = $2 OR c.text = $3)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $4`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
+            ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
+            ` LEFT OUTER JOIN comments AS c ON a.id = c.parent_author_id`,
+            ` WHERE b."order" = $1 AND (b.title = $2 OR c.text = $3)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $4`,
+          ].join(""),
+        ]);
     });
 
     it("rewrites single collection queries to EXISTS", async () => {
@@ -343,14 +346,15 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { books: { title: "b1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("keeps collection joins when optimizeJoinsToExists is disabled", async () => {
@@ -361,15 +365,16 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { books: { title: "b1" } }, { ...opts, optimizeJoinsToExists: false });
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` WHERE b.title = $1`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
+            ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
+            ` WHERE b.title = $1`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("rewrites m2m + o2m collections", async () => {
@@ -387,16 +392,17 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { tags: { name: "t1" }, books: { title: "b1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
-          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
-          ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+            ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+            ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("preserves same-row AND semantics within a single collection", async () => {
@@ -414,15 +420,16 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { books: { title: "b1", order: 1 }, comments: { text: "c1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1 AND b."order" = $2)`,
-          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $3)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $4`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1 AND b."order" = $2)`,
+            ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $3)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $4`,
+          ].join(""),
+        ]);
     });
 
     it("avoids cross-product row explosion", async () => {
@@ -442,15 +449,16 @@ describe("em.find / exists", () => {
         opts,
       );
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title LIKE $1)`,
-          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text LIKE $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title LIKE $1)`,
+            ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text LIKE $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("handles nested collections (books -> reviews) with another collection", async () => {
@@ -471,17 +479,18 @@ describe("em.find / exists", () => {
         opts,
       );
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` WHERE a.id = b.author_id`,
-          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1))`,
-          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+            ` WHERE a.id = b.author_id`,
+            ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1))`,
+            ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("handles anti-join with another collection", async () => {
@@ -495,15 +504,16 @@ describe("em.find / exists", () => {
       resetQueryCount();
       const authors = await em.find(Author, { books: { id: null }, comments: { text: "c1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
-          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $1)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+            ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $1)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("splits anti-join ORs with positive nested collection filters into EXISTS", async () => {
@@ -525,17 +535,18 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "no-books" }, { firstName: "high-review" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
-          ` OR EXISTS (SELECT 1 FROM books AS b`,
-          ` WHERE a.id = b.author_id`,
-          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating = $1))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+            ` OR EXISTS (SELECT 1 FROM books AS b`,
+            ` WHERE a.id = b.author_id`,
+            ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating = $1))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("splits collection id IS NULL OR id IN list into NOT EXISTS OR EXISTS", async () => {
@@ -557,17 +568,18 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "no-books" }, { firstName: "book-1" }, { firstName: "book-2" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          // I.e. the null option branch must mean no books at all, not `b.id IS NULL` inside a books EXISTS.
-          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
-          // I.e. non-null option ids remain a positive branch over matching book rows.
-          ` OR EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id = ANY($1))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            // I.e. the null option branch must mean no books at all, not `b.id IS NULL` inside a books EXISTS.
+            ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+            // I.e. non-null option ids remain a positive branch over matching book rows.
+            ` OR EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id = ANY($1))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("splits m2m target id IS NULL OR id IN list into NOT EXISTS OR EXISTS", async () => {
@@ -592,17 +604,18 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "no-tags" }, { firstName: "tag-1" }, { firstName: "tag-2" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          // I.e. m2m target `t.id IS NULL` must become no junction rows, not impossible NULL target ids in EXISTS.
-          ` WHERE NOT EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id)`,
-          ` OR EXISTS (SELECT 1 FROM authors_to_tags AS att`,
-          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.id = ANY($1))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            // I.e. m2m target `t.id IS NULL` must become no junction rows, not impossible NULL target ids in EXISTS.
+            ` WHERE NOT EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id)`,
+            ` OR EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+            ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.id = ANY($1))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("returns empty results when no parent matches all collections", async () => {
@@ -955,14 +968,15 @@ describe("em.find / exists", () => {
         ],
       });
       expect(JSON.stringify(plugin.seen[0]).includes('"kind":"exists"')).toEqual(false);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $2`,
+          ].join(""),
+        ]);
     });
 
     it("rewrites plugin-added mixed-scope OR collection branches to EXISTS", async () => {
@@ -1002,15 +1016,16 @@ describe("em.find / exists", () => {
       const authors = await em.find(Author, { books: b }, opts);
 
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
-          ` OR a.first_name = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+            ` OR a.first_name = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("preserves optional joins under EXISTS for nullable OR branches", async () => {
@@ -1035,20 +1050,21 @@ describe("em.find / exists", () => {
       );
 
       expect(authors).toMatchEntity([{ firstName: "comment-match" }, { firstName: "review-match" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          // I.e. the EXISTS should be a plain `SELECT 1`; DISTINCT is unnecessary for existence checks.
-          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          // I.e. optional descendants under `books` must stay LEFT JOINs so either OR branch can match independently.
-          ` LEFT OUTER JOIN books AS b1 ON b.prequel_id = b1.id`,
-          ` LEFT OUTER JOIN comments AS c ON b.random_comment_id = c.id`,
-          // I.e. both nullable branch predicates must stay grouped under the LEFT JOINs.
-          ` WHERE a.id = b.author_id AND (b1.title = $1 OR c.text = $2))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            // I.e. the EXISTS should be a plain `SELECT 1`; DISTINCT is unnecessary for existence checks.
+            ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+            // I.e. optional descendants under `books` must stay LEFT JOINs so either OR branch can match independently.
+            ` LEFT OUTER JOIN books AS b1 ON b.prequel_id = b1.id`,
+            ` LEFT OUTER JOIN comments AS c ON b.random_comment_id = c.id`,
+            // I.e. both nullable branch predicates must stay grouped under the LEFT JOINs.
+            ` WHERE a.id = b.author_id AND (b1.title = $1 OR c.text = $2))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("optimizes plugin-added alias id IS NULL conditions to NOT EXISTS", async () => {
@@ -1074,14 +1090,15 @@ describe("em.find / exists", () => {
       const authors = await em.find(Author, { books: b }, opts);
 
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $1`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $1`,
+          ].join(""),
+        ]);
     });
 
     it("keeps plugin-added aliases required transitively by a CTE join", async () => {
@@ -1131,17 +1148,18 @@ describe("em.find / exists", () => {
       const authors = await em.find(Author, {}, opts);
 
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `WITH _comment_ids (parent_publisher_id, id) AS (SELECT parent_publisher_id, id FROM comments) `,
-          `SELECT a.* FROM authors AS a`,
-          ` JOIN publishers AS p ON a.publisher_id = p.id`,
-          ` JOIN _comment_ids AS ci ON p.id = ci.parent_publisher_id`,
-          ` WHERE ci.id IS NOT NULL`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $1`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `WITH _comment_ids (parent_publisher_id, id) AS (SELECT parent_publisher_id, id FROM comments) `,
+            `SELECT a.* FROM authors AS a`,
+            ` JOIN publishers AS p ON a.publisher_id = p.id`,
+            ` JOIN _comment_ids AS ci ON p.id = ci.parent_publisher_id`,
+            ` WHERE ci.id IS NOT NULL`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $1`,
+          ].join(""),
+        ]);
     });
   });
 
@@ -1166,71 +1184,92 @@ describe("em.find / exists", () => {
         opts,
       );
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` WHERE a.id = b.author_id`,
-          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
-          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+            ` WHERE a.id = b.author_id`,
+            ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+            ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("generates correct SQL for deep sibling EXISTS", async () => {
+      // Given a1 has a Book with a qualifying review and a pending advance
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 5 });
       await insertPublisher({ name: "p1" });
       await insertBookAdvance({ book_id: 1, publisher_id: 1 });
 
+      // And a2 has a qualifying review but no advance
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertBookReview({ book_id: 2, rating: 5 });
+
       const em = newEntityManager();
       resetQueryCount();
-      await em.find(
+      // When filtering Authors through both sibling Book relationships
+      const authors = await em.find(
         Author,
         { books: { reviews: { rating: { gte: 4 } }, advances: { status: AdvanceStatus.Pending } } },
         opts,
       );
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` WHERE a.id = b.author_id`,
-          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
-          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      // Then only the Author whose Book satisfies both relationships is returned
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+            ` WHERE a.id = b.author_id`,
+            ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+            ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     it("absorbs books into EXISTS when its siblings are at the deeper level", async () => {
+      // Given a1 has a Book with a qualifying review and a pending advance
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 5 });
       await insertPublisher({ name: "p1" });
       await insertBookAdvance({ book_id: 1, publisher_id: 1 });
 
+      // And a2 has a pending advance but no review
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertBookAdvance({ book_id: 2, publisher_id: 1 });
+
       const em = newEntityManager();
       resetQueryCount();
-      await em.find(
+      // When filtering Authors through both sibling Book relationships
+      const authors = await em.find(
         Author,
         { books: { reviews: { rating: { gte: 4 } }, advances: { status: AdvanceStatus.Pending } } },
         opts,
       );
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` WHERE a.id = b.author_id`,
-          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
-          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      // Then the missing review excludes a2 on either backend
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+            ` WHERE a.id = b.author_id`,
+            ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+            ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
   });
 
@@ -1318,15 +1357,16 @@ describe("em.find / exists", () => {
       );
       // a1 matches via b.title, a2 matches via a.firstName
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
-          ` OR a.first_name = $2`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+            ` OR a.first_name = $2`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     // ---- Simple AND: o2m alias + outer alias ----
@@ -1352,15 +1392,16 @@ describe("em.find / exists", () => {
       // Only a1 matches both: firstName="a1" AND has book with title="match"
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
       // The EXISTS stays intact — `b.title` moved inside, `a.firstName` stays outside
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE a.first_name = $1`,
-          ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE a.first_name = $1`,
+            ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     // ---- Nested: cross-scope OR inside an AND ----
@@ -1392,16 +1433,17 @@ describe("em.find / exists", () => {
       // a2: age=30 ✓, book title="match" ✓ (via OR) → matches
       // a3: age=10 ✗ → excluded by AND
       expect(authors).toMatchEntity([{ firstName: "match" }, { firstName: "a2" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE a.age > $1`,
-          ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
-          ` OR a.first_name = $3)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $4`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE a.age > $1`,
+            ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
+            ` OR a.first_name = $3)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $4`,
+          ].join(""),
+        ]);
     });
 
     // ---- AND with m2m alias + outer alias ----
@@ -1426,16 +1468,17 @@ describe("em.find / exists", () => {
       // Only a1 matches both: firstName="a1" AND has tag "match"
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
       // m2m EXISTS stays intact — `t.name` moved inside
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE a.first_name = $1`,
-          ` AND EXISTS (SELECT 1 FROM authors_to_tags AS att`,
-          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $2)`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE a.first_name = $1`,
+            ` AND EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+            ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $2)`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     // ---- OR with m2m alias + outer alias ----
@@ -1458,16 +1501,17 @@ describe("em.find / exists", () => {
       );
       // a1 matches via t.name, a2 matches via a.firstName
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
-          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
-          ` OR a.first_name = $2`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $3`,
-        ].join(""),
-      ]);
+      if (!isSqlite)
+        expect(queries).toEqual([
+          [
+            `SELECT a.* FROM authors AS a`,
+            ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+            ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+            ` OR a.first_name = $2`,
+            ` ORDER BY a.id ASC`,
+            ` LIMIT $3`,
+          ].join(""),
+        ]);
     });
 
     // ---- Verify the parseFindQuery AST is stable before optimization ----

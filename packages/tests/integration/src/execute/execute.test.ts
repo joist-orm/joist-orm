@@ -31,7 +31,7 @@ import {
 } from "src/entities";
 import { insertAuthor, insertBook, insertTag, insertUser, select, update } from "src/entities/inserts";
 import { PasswordValue, PasswordValueSerde } from "src/entities/types";
-import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("em.execute", () => {
@@ -232,7 +232,8 @@ describe("em.execute", () => {
         },
       ]);
       expect(em.entities).toEqual([]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "INSERT INTO books AS b (id, title, notes, author_id) VALUES ($1, $2, $3, $4) RETURNING b.id AS id, b.title AS title, b.author_id AS author, b.\"order\" AS \"order\", b.created_at AS \"createdAt\", b.updated_at AS \"updatedAt\"",
         ]
@@ -269,7 +270,8 @@ describe("em.execute", () => {
           { title: "Default", order: 1, acknowledgements: undefined },
         ],
       });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "INSERT INTO books AS b (title, \"order\", notes, acknowledgements, author_id) VALUES ($1, $2, $3, $4, $5), ($6, DEFAULT, $7, DEFAULT, $8), ($9, DEFAULT, $10, DEFAULT, $11), ($12, DEFAULT, $13, NULL, $14) RETURNING b.title AS title, b.\"order\" AS \"order\", b.acknowledgements AS acknowledgements",
         ]
@@ -380,7 +382,8 @@ describe("em.execute", () => {
       const result = await em.execute({ insert: t, values: [{ name }], returning: t.name });
       // Then the source is evaluated inside PostgreSQL and RETURNING refers to the inserted row
       expect(result).toEqual({ rowCount: 1, rows: ["Source"] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "INSERT INTO tags AS t (name) VALUES (coalesce((SELECT t1.name AS value FROM tags AS t1 WHERE t1.id = $1), $2)) RETURNING t.name AS value",
         ]
@@ -438,7 +441,8 @@ describe("em.execute", () => {
       });
       // Then SET and RETURNING see the target row, and the unused filter and title are pruned
       expect(result).toEqual({ rowCount: 1, rows: [7] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "UPDATE books AS b SET \"order\" = b.\"order\" + $1 WHERE (b.id = $2) AND (b.deleted_at IS NULL) RETURNING b.\"order\" AS value",
         ]
@@ -474,7 +478,8 @@ describe("em.execute", () => {
       });
       // Then physical derived fields are writable without recalculation or identity-map synchronization
       expect(result).toEqual({ rowCount: 1, rows: [{ initials: "BACKFILL", count: 42, publicReviews: 7 }] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "UPDATE authors AS a SET first_name = $1, last_name = $2, initials = $3, number_of_books = $4, \"numberOfPublicReviews2\" = $5 WHERE (a.id = $6) AND (a.deleted_at IS NULL) RETURNING a.initials AS initials, a.number_of_books AS \"count\", a.\"numberOfPublicReviews2\" AS \"publicReviews\"",
         ]
@@ -547,7 +552,8 @@ describe("em.execute", () => {
       const result = await em.execute({ delete: a, allowAll: true, returning: { id: a.id, name: a.firstName } });
       // Then DELETE removes the live row instead of setting its deleted_at
       expect(result).toEqual({ rowCount: 1, rows: [{ id: "a:1", name: "Live" }] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "DELETE FROM authors AS a WHERE (a.deleted_at IS NULL) RETURNING a.id AS id, a.first_name AS name",
         ]
@@ -677,7 +683,8 @@ describe("em.execute", () => {
       const result = await em.execute({ insert: target, from: reusable ? query(read) : read, returning: target.name });
       // Then one source row is inserted with its ordering and bindings intact
       expect(result).toEqual({ rowCount: 1, rows: ["Beta"] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
           [
             "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t1.name AS name FROM tags AS t1 WHERE t1.name != $1 ORDER BY t1.name ASC LIMIT $2 OFFSET $3) AS sq RETURNING t.name AS value",
           ]
@@ -724,7 +731,8 @@ describe("em.execute", () => {
           { title: "Copied", author: "a:1", notes: "notes" },
         ],
       });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "INSERT INTO books AS b (title, notes, author_id) SELECT sq1.title, sq1.notes, sq1."authorId" FROM ((SELECT b1.notes AS notes, b1.author_id AS "authorId", b1.title AS title FROM books AS b1 WHERE b1.id = $1 AND b1.deleted_at IS NULL) UNION ALL (SELECT sq.notes AS notes, sq."authorId" AS "authorId", sq.title AS title FROM (SELECT b2.title AS title, b2.notes AS notes, b2.author_id AS "authorId" FROM books AS b2 WHERE b2.title = $2 AND b2.deleted_at IS NULL) AS sq) ORDER BY title ASC LIMIT $3) AS sq1 RETURNING b.title AS title, b.author_id AS author, b.notes AS notes",
        ]
@@ -767,7 +775,8 @@ describe("em.execute", () => {
         expect(read).not.toHaveBeenCalled();
         expect(decode).not.toHaveBeenCalled();
         expect(encode).not.toHaveBeenCalled();
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "INSERT INTO authors AS a (first_name, number_of_books, business_address) SELECT sq."firstName", sq."numberOfBooks", sq."businessAddress" FROM (SELECT a1.business_address AS "businessAddress", a1.number_of_books AS "numberOfBooks", a1.first_name AS "firstName" FROM authors AS a1 WHERE a1.deleted_at IS NULL) AS sq RETURNING a.id AS value",
          ]
@@ -823,7 +832,8 @@ describe("em.execute", () => {
       });
       // Then PostgreSQL executes one statement and reports zero affected rows
       expect(result).toEqual({ rowCount: 0, rows: [] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "INSERT INTO tags AS t (name) SELECT sq.name FROM (SELECT t1.name AS name FROM tags AS t1) AS sq RETURNING t.id AS value",
         ]
@@ -862,7 +872,8 @@ describe("em.execute", () => {
       });
       // Then only the selected Tag is updated and the compound stays inside SQL
       expect(result).toEqual({ rowCount: 1, rows: ["t:1"] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "UPDATE tags AS t SET name = $1 WHERE (t.id IN (SELECT sq.id AS value FROM ((SELECT t1.id AS id FROM tags AS t1 WHERE t1.name = $2) UNION ALL (SELECT t2.id AS id FROM tags AS t2 WHERE t2.id = $3)) AS sq)) RETURNING t.id AS value",
         ]
@@ -1144,7 +1155,8 @@ describe("em.execute", () => {
       });
       // Then the decoder rejects after PostgreSQL has committed, without a hidden transaction
       await expect(result).rejects.toThrow(ZodError);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "UPDATE authors AS a SET business_address = '{\"street\":123}'::jsonb WHERE (a.id = $1) AND (a.deleted_at IS NULL) RETURNING a.business_address AS value",
         ]
@@ -1207,7 +1219,8 @@ describe("em.execute", () => {
       });
       // Then the command reports the two selected rows instead of the four unpaginated rows
       expect(result).toEqual({ rowCount: 2, rows: [{ name: "Alpha" }, { name: "Beta" }] });
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
         [
           "(SELECT t.name AS name FROM tags AS t) UNION ALL (SELECT t1.name AS name FROM tags AS t1) ORDER BY name ASC LIMIT $1 OFFSET $2",
         ]

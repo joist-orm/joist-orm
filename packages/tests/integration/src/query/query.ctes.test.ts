@@ -2,7 +2,7 @@ import { expectTypeOf } from "expect-type";
 import { type Query, type WithInput, query, recursiveQuery, sql, table, tables } from "joist-orm";
 import { Author, type AuthorId, Book, Publisher } from "src/entities";
 import { insertAuthor, insertBook, insertPublisher, select, update } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query / ctes", () => {
   it("adds a joined query value to a WITH clause", async () => {
@@ -37,7 +37,8 @@ describe("em.query / ctes", () => {
       { name: "a2", count: 1 },
     ]);
     // And the CTE renders once, in a WITH clause the join reads by name
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_stats AS (SELECT b.author_id AS "authorId", count(b.id)::int AS "count" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id) SELECT a.first_name AS name, book_stats."count" AS "count" FROM authors AS a JOIN book_stats ON book_stats."authorId" = a.id WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
      ]
@@ -69,7 +70,8 @@ describe("em.query / ctes", () => {
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And the CTE body renders once, not once per use
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_stats AS (SELECT b.author_id AS "authorId", count(b.id)::int AS "count" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id) SELECT a.first_name AS name FROM authors AS a JOIN book_stats ON book_stats."authorId" = a.id WHERE book_stats."count" >= $1 AND a.deleted_at IS NULL",
      ]
@@ -91,7 +93,8 @@ describe("em.query / ctes", () => {
     // Then only the adult Author is returned
     expect(rows).toEqual([{ id: "a:1", name: "a1" }]);
     // And the CTE is the query's only source
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH adults AS (SELECT a.id AS id, a.first_name AS name FROM authors AS a WHERE a.age >= $1 AND a.deleted_at IS NULL) SELECT adults.id AS id, adults.name AS name FROM adults",
      ]
@@ -130,7 +133,8 @@ describe("em.query / ctes", () => {
     // Then the Author with two Books is returned
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
     // And the second CTE reads the first by name, in declaration order
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_stats AS (SELECT b.author_id AS "authorId", count(b.id)::int AS "count" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id), prolific AS (SELECT book_stats."authorId" AS "authorId" FROM book_stats WHERE book_stats."count" >= $1) SELECT a.first_name AS name, prolific."authorId" AS "authorId" FROM authors AS a JOIN prolific ON prolific."authorId" = a.id WHERE a.deleted_at IS NULL",
      ]
@@ -163,7 +167,8 @@ describe("em.query / ctes", () => {
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
     // And both CTEs survive, because pruning followed the second one's read of the first
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL), distinct_authors AS (SELECT book_authors."authorId" AS "authorId" FROM book_authors GROUP BY book_authors."authorId") SELECT a.first_name AS name, distinct_authors."authorId" AS "authorId" FROM authors AS a JOIN distinct_authors ON distinct_authors."authorId" = a.id WHERE a.deleted_at IS NULL",
      ]
@@ -193,7 +198,8 @@ describe("em.query / ctes", () => {
     // Then the Author is still returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And the join and its now-unread CTE both dropped
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
      ]
@@ -224,7 +230,8 @@ describe("em.query / ctes", () => {
     // Then the kept join filters the bookless Author out
     expect(rows).toEqual([]);
     // And the unread join and its CTE both stay
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_stats AS (SELECT b.author_id AS "authorId", count(b.id)::int AS "count" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id) SELECT a.first_name AS name FROM authors AS a JOIN book_stats ON book_stats."authorId" = a.id WHERE a.deleted_at IS NULL",
      ]
@@ -244,7 +251,8 @@ describe("em.query / ctes", () => {
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And no WITH clause is emitted at all
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL",
      ]
@@ -273,7 +281,8 @@ describe("em.query / ctes", () => {
     // Then the Author matched on the outer binding
     expect(rows).toEqual([{ name: "a1", authorId: "a:1" }]);
     // And the CTE's binding is $1, ahead of the outer query's $2
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH early AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b."order" <= $1 AND b.deleted_at IS NULL) SELECT a.first_name AS name, early."authorId" AS "authorId" FROM authors AS a JOIN early ON early."authorId" = a.id WHERE a.first_name = $2 AND a.deleted_at IS NULL",
      ]
@@ -293,7 +302,8 @@ describe("em.query / ctes", () => {
     // Then the Publisher is returned
     expect(rows).toEqual([{ name: "p1" }]);
     // And deleted_at IS NULL is in the CTE body, where the Publisher table is
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH pub_names AS (SELECT p.id AS id, p.name AS name FROM publishers AS p WHERE p.deleted_at IS NULL) SELECT pub_names.name AS name FROM pub_names",
      ]
@@ -320,7 +330,8 @@ describe("em.query / ctes", () => {
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And the WITH renders inside the subquery that declared it
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.first_name AS name FROM authors AS a WHERE a.id IN (SELECT sq."authorId" AS value FROM (WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) SELECT book_authors."authorId" AS "authorId" FROM book_authors) AS sq) AND a.deleted_at IS NULL",
      ]
@@ -346,7 +357,8 @@ describe("em.query / ctes", () => {
     // Then the Author is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And the subquery reads the CTE by name, without inlining it
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) SELECT a.first_name AS name FROM authors AS a WHERE a.id IN (SELECT book_authors."authorId" AS value FROM book_authors) AND a.deleted_at IS NULL",
      ]
@@ -375,7 +387,8 @@ describe("em.query / ctes", () => {
     // Then both names are returned
     expect(rows).toEqual([{ name: "a1" }, { name: "b1" }]);
     // And the WITH leads the whole compound, not one operand
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH author_names AS (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) (SELECT author_names.name AS name FROM author_names) UNION (SELECT b.title AS name FROM books AS b WHERE b.deleted_at IS NULL) ORDER BY name ASC",
      ]
@@ -395,7 +408,8 @@ describe("em.query / ctes", () => {
     // Then the Author name is returned
     expect(rows).toEqual([{ name: "a1" }]);
     // And Joist generated the name `cte`
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH cte AS (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) SELECT cte.name AS name FROM cte",
      ]
@@ -501,7 +515,8 @@ describe("em.query / ctes", () => {
     // Then the row comes back with the execute result shape
     expect(result).toMatchObject({ rowCount: 1, rows: [{ name: "a1" }] });
     // And the WITH renders the same as it would for em.query
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "WITH names AS (SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) SELECT names.name AS name FROM names",
      ]
@@ -535,7 +550,8 @@ describe("em.query / ctes", () => {
     // And both Books are present
     expect(await select("books")).toMatchObject([{ title: "b1" }, { title: "b1" }]);
     // And the WITH renders inside the INSERT's source, not before the INSERT
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "INSERT INTO books AS b (title, notes, author_id) SELECT sq.title, sq.notes, sq."authorId" FROM (WITH titles AS (SELECT b1.title AS title, b1.author_id AS "authorId", b1.notes AS notes FROM books AS b1 WHERE b1.deleted_at IS NULL) SELECT titles.title AS title, titles."authorId" AS "authorId", titles.notes AS notes FROM titles) AS sq",
        "select * from "books" order by "id" asc",
@@ -565,7 +581,8 @@ describe("em.query / ctes", () => {
       // Then only the Author with a Book is renamed
       expect(await select("authors")).toMatchObject([{ first_name: "writer" }, { first_name: "a2" }]);
       // And the WITH leads the statement, ahead of the UPDATE
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) UPDATE authors AS a SET first_name = $1 WHERE (a.id IN (SELECT book_authors."authorId" AS value FROM book_authors)) AND (a.deleted_at IS NULL)",
          "select * from "authors" order by "id" asc",
@@ -593,7 +610,8 @@ describe("em.query / ctes", () => {
       // Then only the bookless Author is gone
       expect(await select("authors")).toMatchObject([{ first_name: "a1" }]);
       // And the WITH leads the statement, ahead of the DELETE
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL) DELETE FROM authors AS a WHERE (a.id NOT IN (SELECT book_authors."authorId" AS value FROM book_authors)) AND (a.deleted_at IS NULL)",
          "select * from "authors" order by "id" asc",
@@ -624,7 +642,8 @@ describe("em.query / ctes", () => {
       expect(result).toMatchObject({ rowCount: 1 });
       expect(await select("books")).toMatchObject([{ title: "b1" }, { title: "b1" }]);
       // And the WITH is before the INSERT, with the source reading the CTE by name
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH titles AS (SELECT b.title AS title, b.author_id AS "authorId", b.notes AS notes FROM books AS b WHERE b.deleted_at IS NULL) INSERT INTO books AS b1 (title, notes, author_id) SELECT sq.title, sq.notes, sq."authorId" FROM (SELECT titles.title AS title, titles."authorId" AS "authorId", titles.notes AS notes FROM titles) AS sq",
          "select * from "books" order by "id" asc",
@@ -645,7 +664,8 @@ describe("em.query / ctes", () => {
       // Then the row still updates
       expect(await select("authors")).toMatchObject([{ first_name: "x" }]);
       // And no WITH is emitted, the same pruning a read query does
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "UPDATE authors AS a SET first_name = $1 WHERE (a.id = $2) AND (a.deleted_at IS NULL)",
          "select * from "authors" order by "id" asc",
@@ -694,7 +714,8 @@ describe("em.query / ctes", () => {
         { id: "a:4", name: "other" },
       ]);
       // And the step term keeps its join to the CTE, even though its select reads nothing from it
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH RECURSIVE tree AS ((SELECT a.id AS id, a.first_name AS name FROM authors AS a WHERE a.mentor_id IS NULL AND a.deleted_at IS NULL) UNION ALL (SELECT a1.id AS id, a1.first_name AS name FROM authors AS a1 JOIN tree ON a1.mentor_id = tree.id WHERE a1.deleted_at IS NULL)) SELECT tree.id AS id, tree.name AS name FROM tree ORDER BY tree.id ASC",
        ]
@@ -735,7 +756,8 @@ describe("em.query / ctes", () => {
         { id: "a:2", mentorId: "a:1" },
       ]);
       // And the terms are combined with UNION, not UNION ALL
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH RECURSIVE chain AS ((SELECT a.id AS id, a.mentor_id AS "mentorId" FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL) UNION (SELECT a1.id AS id, a1.mentor_id AS "mentorId" FROM authors AS a1 JOIN chain ON chain."mentorId" = a1.id WHERE a1.deleted_at IS NULL)) SELECT chain.id AS id, chain."mentorId" AS "mentorId" FROM chain ORDER BY chain.id ASC",
        ]
@@ -768,7 +790,8 @@ describe("em.query / ctes", () => {
       // Then the root Author comes back
       expect(rows).toEqual([{ id: "a:1", authorId: "a:1" }]);
       // And RECURSIVE is on the clause, not on the one entry that needs it
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH RECURSIVE book_authors AS (SELECT b.author_id AS "authorId" FROM books AS b WHERE b.deleted_at IS NULL), tree AS ((SELECT a.id AS id FROM authors AS a WHERE a.mentor_id IS NULL AND a.deleted_at IS NULL) UNION ALL (SELECT a1.id AS id FROM authors AS a1 JOIN tree ON a1.mentor_id = tree.id WHERE a1.deleted_at IS NULL)) SELECT tree.id AS id, book_authors."authorId" AS "authorId" FROM tree JOIN book_authors ON book_authors."authorId" = tree.id",
        ]

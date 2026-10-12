@@ -12,7 +12,7 @@ import {
   insertTask,
   insertTaskItem,
 } from "src/entities/inserts";
-import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { isSqlite, lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 const { isAllSqlPaths } = testing;
 
@@ -285,9 +285,10 @@ describe("em.lens", () => {
       expect(i1!.fileName).toEqual("i1");
       expect(em.entities.length).toBe(2);
 
-      expect(lastQuery()).toMatchInlineSnapshot(
-        `"SELECT "i".*, "b".id as __source_id FROM images AS i JOIN authors AS a ON a.id = i.author_id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY i.id ASC LIMIT $2"`,
-      );
+      if (!isSqlite)
+        expect(lastQuery()).toMatchInlineSnapshot(
+          `"SELECT "i".*, "b".id as __source_id FROM images AS i JOIN authors AS a ON a.id = i.author_id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY i.id ASC LIMIT $2"`,
+        );
     });
 
     it("loads a subset via m2o that has a o2o as its otherField", async () => {
@@ -304,9 +305,10 @@ describe("em.lens", () => {
       expect(p1!.name).toEqual("p1");
       expect(em.entities.length).toBe(2);
 
-      expect(lastQuery()).toMatchInlineSnapshot(
-        `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE '_' END as __class, "i".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN images AS i ON i.author_id = a.id WHERE a.deleted_at IS NULL AND i.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
-      );
+      if (!isSqlite)
+        expect(lastQuery()).toMatchInlineSnapshot(
+          `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE '_' END as __class, "i".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN images AS i ON i.author_id = a.id WHERE a.deleted_at IS NULL AND i.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
+        );
     });
 
     it("loads a subset via m2o", async () => {
@@ -323,9 +325,10 @@ describe("em.lens", () => {
       expect(p1!.name).toEqual("p1");
       expect(em.entities.length).toBe(2);
 
-      expect(lastQuery()).toMatchInlineSnapshot(
-        `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE '_' END as __class, "b".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
-      );
+      if (!isSqlite)
+        expect(lastQuery()).toMatchInlineSnapshot(
+          `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE '_' END as __class, "b".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
+        );
     });
 
     it("loads a subset via o2m", async () => {
@@ -342,9 +345,10 @@ describe("em.lens", () => {
       expect(books).toMatchEntity([{ title: "b1" }]);
       expect(em.entities.length).toBe(2);
 
-      expect(lastQuery()).toMatchInlineSnapshot(
-        `"SELECT "b".*, "a".publisher_id as __source_id FROM books AS b JOIN authors AS a ON a.id = b.author_id WHERE a.deleted_at IS NULL AND a.publisher_id = ANY($1) ORDER BY b.title ASC, b.id ASC LIMIT $2"`,
-      );
+      if (!isSqlite)
+        expect(lastQuery()).toMatchInlineSnapshot(
+          `"SELECT "b".*, "a".publisher_id as __source_id FROM books AS b JOIN authors AS a ON a.id = b.author_id WHERE a.deleted_at IS NULL AND a.publisher_id = ANY($1) ORDER BY b.title ASC, b.id ASC LIMIT $2"`,
+        );
     });
 
     it("loads a subset via m2m last", async () => {

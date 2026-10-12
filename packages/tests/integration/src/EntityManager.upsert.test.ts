@@ -13,7 +13,7 @@ import {
   select,
   update,
 } from "src/entities/inserts";
-import { newEntityManager } from "src/testEm";
+import { isSqlite, newEntityManager } from "src/testEm";
 
 import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
 import { jan1 } from "./testDates";
@@ -63,13 +63,19 @@ describe("EntityManager.upsert", () => {
   });
 
   it("does not reuse undeleted rows by unique identity", async () => {
+    // Given an undeleted Author already owns a unique SSN
     await insertAuthor({ first_name: "a1", ssn: "123" });
     const em = newEntityManager();
 
+    // When upsert receives that SSN without the existing Author's id
     const a2 = await em.upsert(Author, { ssn: "123", firstName: "a2" });
+
+    // Then it creates a new Author instead of reusing the undeleted row
     expect(a2.isNewEntity).toBe(true);
     expect(a2).toMatchEntity({ firstName: "a2", ssn: "123" });
-    await expect(em.flush()).rejects.toThrow("duplicate key value violates unique constraint");
+    // When the new Author is persisted
+    // Then the database rejects the duplicate unique identity with its native error code
+    await expect(em.flush()).rejects.toMatchObject({ code: isSqlite ? "SQLITE_CONSTRAINT_UNIQUE" : "23505" });
   });
 
   it("does not resurrect soft-deleted rows by id", async () => {

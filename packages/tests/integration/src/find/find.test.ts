@@ -62,7 +62,7 @@ import {
 } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2, jan3 } from "src/testDates";
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, queries, resetQueryCount } from "src/testEm";
 import { twoOf } from "src/utils";
 
 const am = getMetadata(Author);
@@ -1811,16 +1811,19 @@ describe("em.find", () => {
   });
 
   it("can find empty results in a loop", async () => {
+    // Given an Author with no last name
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     resetQueryCount();
+    // When two different last names are looked up concurrently
     await Promise.all(
       ["a", "b"].map(async (lastName) => {
         const authors = await em.find(Author, { lastName });
         expect(authors.length).toEqual(0);
       }),
     );
-    expect(numberOfQueries).toEqual(1);
+    // Then both filters are empty using the backend's query policy
+    expect(numberOfQueries).toEqual(isSqlite ? 2 : 1);
   });
 
   it("can find with GQL filters", async () => {
@@ -2672,20 +2675,23 @@ describe("em.find", () => {
   });
 
   it("can find by unique", async () => {
+    // Given two Authors with different unique SSNs
     await insertAuthor({ first_name: "a1", ssn: "12" });
     await insertAuthor({ first_name: "a2", ssn: "13" });
     const em = newEntityManager();
     resetQueryCount();
+    // When both existing SSNs and a missing SSN are looked up concurrently
     const [a1, a2, a3] = await Promise.all([
       em.findByUnique(Author, { ssn: "12" }),
       em.findByUnique(Author, { ssn: "13" }),
       em.findByUnique(Author, { ssn: "14" }),
     ]);
+    // Then each lookup returns only its matching Author
     expect(a1!.firstName).toEqual("a1");
     expect(a2!.firstName).toEqual("a2");
     expect(a3).toBeUndefined();
-    // Then we only issued a single SQL query
-    expect(numberOfQueries).toEqual(1);
+    // And PostgreSQL batches the lookups while SQLite executes each one separately
+    expect(numberOfQueries).toEqual(isSqlite ? 3 : 1);
     // @ts-expect-error
     const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
     // @ts-expect-error
@@ -2703,7 +2709,8 @@ describe("em.find", () => {
     expect(foundAuthor).toBeUndefined();
   });
 
-  it("fails when findByUnique hits the entityLimit", async () => {
+  it("applies the findByUnique entityLimit per SQL query", async () => {
+    // Given four unique Author SSNs fill one PostgreSQL batched query
     await insertAuthor({ first_name: "a1", ssn: "11" });
     await insertAuthor({ first_name: "a2", ssn: "12" });
     await insertAuthor({ first_name: "a3", ssn: "13" });
@@ -2714,13 +2721,19 @@ describe("em.find", () => {
     // Now lower the limit so the batched SQL query (4 rows matching 4 SSNs) hits the LIMIT,
     // but since all entities are already in the EM, no new entities are created
     em.entityLimit = 4;
+    // When all four SSNs are looked up concurrently
     const result = Promise.all([
       em.findByUnique(Author, { ssn: "11" }),
       em.findByUnique(Author, { ssn: "12" }),
       em.findByUnique(Author, { ssn: "13" }),
       em.findByUnique(Author, { ssn: "14" }),
     ]);
-    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    // Then PostgreSQL hits the combined-query limit, while each SQLite query stays below it
+    if (isSqlite) {
+      expect(await result).toMatchEntity([{ id: "a:1" }, { id: "a:2" }, { id: "a:3" }, { id: "a:4" }]);
+    } else {
+      await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    }
   });
 
   it("can use jsonb path exists", async () => {
@@ -4000,20 +4013,24 @@ describe("em.find", () => {
     });
 
     it("can batch count", async () => {
+      // Given two Authors with different first names
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
       const em = newEntityManager();
       resetQueryCount();
+      // When two matching first names and a missing first name are counted concurrently
       const counts = await Promise.all([
         em.findCount(Author, { firstName: "a1" }, opts),
         em.findCount(Author, { firstName: "a2" }, opts),
         em.findCount(Author, { firstName: "a3" }, opts),
       ]);
+      // Then each count is independent and uses the backend's query policy
       expect(counts).toEqual([1, 1, 0]);
-      expect(numberOfQueries).toBe(1);
+      expect(numberOfQueries).toBe(isSqlite ? 3 : 1);
     });
 
     it("can batch count with m2o joins", async () => {
+      // Given Authors with different last names belong to two Publishers
       await insertPublisher({ name: "p1" });
       await insertPublisher({ id: 2, name: "p2" });
       await insertAuthor({ first_name: "a1", last_name: "smith", publisher_id: 1 });
@@ -4021,6 +4038,7 @@ describe("em.find", () => {
       await insertAuthor({ first_name: "a3", last_name: "doe", publisher_id: 2 });
       const em = newEntityManager();
       resetQueryCount();
+      // When each last-name and Publisher pair is counted concurrently
       const counts = await Promise.all([
         // both a1 and a2
         em.findCount(Author, { lastName: "smith", publisher: "p:1" }, opts),
@@ -4028,16 +4046,19 @@ describe("em.find", () => {
         em.findCount(Author, { lastName: "doe", publisher: "p:2" }, opts),
       ]);
       expect(counts).toEqual([2, 1]);
-      expect(numberOfQueries).toBe(1);
+      // Then each count uses the backend's query policy
+      expect(numberOfQueries).toBe(isSqlite ? 2 : 1);
     });
 
     it("can batch count with o2m joins", async () => {
+      // Given one Author has two Books and another has no Books
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1 });
       const em = newEntityManager();
       resetQueryCount();
+      // When three Author-and-Book predicates are counted concurrently
       const counts = await Promise.all([
         // one book matches
         em.findCount(Author, { firstName: "a1", books: { title: { like: "b1" } } }, opts),
@@ -4047,7 +4068,8 @@ describe("em.find", () => {
         em.findCount(Author, { firstName: "a2", books: { title: { like: "b%" } } }, opts),
       ]);
       expect(counts).toEqual([1, 1, 0]);
-      expect(numberOfQueries).toBe(1);
+      // Then each count uses the backend's query policy
+      expect(numberOfQueries).toBe(isSqlite ? 3 : 1);
     });
   });
 

@@ -29,7 +29,7 @@ import {
 } from "src/entities";
 import { insertAuthor, insertBook, insertComment, insertTask, insertUser } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
-import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
 import { ZodError } from "zod";
 
 describe("em.query / sets", () => {
@@ -70,7 +70,8 @@ describe("em.query / sets", () => {
       });
       // Then PostgreSQL returns one copy in one query
       expect(rows).toEqual([{ name: "Alice" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.deleted_at IS NULL)",
        ]
@@ -171,7 +172,8 @@ describe("em.query / sets", () => {
       });
       // Then both copies are returned by one query
       expect(rows).toEqual([{ name: "Alice" }, { name: "Alice" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION ALL (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.deleted_at IS NULL)",
        ]
@@ -275,7 +277,8 @@ describe("em.query / sets", () => {
       });
       // Then only the shared name survives
       expect(rows).toEqual([{ name: "Bob" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.id != $1 AND a.deleted_at IS NULL) INTERSECT (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.id != $2 AND a1.deleted_at IS NULL)",
        ]
@@ -407,7 +410,8 @@ describe("em.query / sets", () => {
       // Then a1 does not escape through an unparenthesized UNION
       expect(rows).toEqual([{ id: "a:2" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "((SELECT a.id AS id FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL) UNION (SELECT a1.id AS id FROM authors AS a1 WHERE a1.id = $2 AND a1.deleted_at IS NULL)) INTERSECT (SELECT a2.id AS id FROM authors AS a2 WHERE a2.id = $3 AND a2.deleted_at IS NULL)",
        ]
@@ -473,7 +477,8 @@ describe("em.query / sets", () => {
       });
       // Then ALL retains both copies instead of deduplicating them
       expect(rows).toEqual([{ name: "Alice" }, { name: "Alice" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) INTERSECT ALL (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.deleted_at IS NULL)",
        ]
@@ -573,7 +578,8 @@ describe("em.query / sets", () => {
       // Then the minimum count is one, not the first pair's count of two
       expect(rows).toEqual([{ name: "shared" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "((SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) INTERSECT ALL (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.deleted_at IS NULL)) INTERSECT ALL (SELECT a2.first_name AS name FROM authors AS a2 WHERE a2.id = $1 AND a2.deleted_at IS NULL)",
        ]
@@ -601,7 +607,8 @@ describe("em.query / sets", () => {
       });
       // Then EXCEPT removes the name entirely rather than subtracting only one copy
       expect(rows).toEqual([]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) EXCEPT (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.id = $1 AND a1.deleted_at IS NULL)",
        ]
@@ -709,7 +716,8 @@ describe("em.query / sets", () => {
       const rows = await em.query({ except: [one, { except: [one, one] }] });
       // Then the right operand is empty, retaining the Author that flattened subtraction would remove
       expect(rows).toEqual([{ id: "a:1" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.id AS id FROM authors AS a WHERE a.deleted_at IS NULL) EXCEPT ((SELECT a1.id AS id FROM authors AS a1 WHERE a1.deleted_at IS NULL) EXCEPT (SELECT a2.id AS id FROM authors AS a2 WHERE a2.deleted_at IS NULL))",
        ]
@@ -737,7 +745,8 @@ describe("em.query / sets", () => {
       });
       // Then one unmatched copy remains
       expect(rows).toEqual([{ name: "Alice" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) EXCEPT ALL (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.id = $1 AND a1.deleted_at IS NULL)",
        ]
@@ -856,7 +865,8 @@ describe("em.query / sets", () => {
       // Then no copies remain, rather than the two copies from right association
       expect(rows).toEqual([]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "((SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) EXCEPT ALL (SELECT a1.first_name AS name FROM authors AS a1 WHERE a1.id = $1 AND a1.deleted_at IS NULL)) EXCEPT ALL (SELECT a2.first_name AS name FROM authors AS a2 WHERE a2.id = $2 AND a2.deleted_at IS NULL)",
        ]
@@ -897,7 +907,8 @@ describe("em.query / sets", () => {
       });
       // Then the wrapper references outputs and leaves the volatile expression in its original scope
       expect(rows).toEqual([{ count: 1, name: "Alice" }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT count(a.id)::int AS "count", a.first_name AS name FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL GROUP BY a.first_name) UNION (SELECT sq."count" AS "count", sq.name AS name FROM (SELECT DISTINCT a1.first_name AS name, count(random())::int AS "count" FROM authors AS a1 WHERE a1.deleted_at IS NULL GROUP BY a1.first_name ORDER BY "count" DESC LIMIT $2) AS sq)",
        ]
@@ -988,7 +999,8 @@ describe("em.query / sets", () => {
       expect(operands[0]).toBe(author);
       expect(operands[1]).toBe(book);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name, a.last_name AS detail FROM authors AS a WHERE a.deleted_at IS NULL) UNION (SELECT sq.name AS name, sq.detail AS detail FROM (SELECT a1.first_name AS detail, b.title AS name FROM books AS b JOIN authors AS a1 ON b.author_id = a1.id WHERE b.deleted_at IS NULL) AS sq) ORDER BY name ASC",
        ]
@@ -1029,7 +1041,8 @@ describe("em.query / sets", () => {
         { name: "a2", detail: "detail 2" },
       ]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name, a.last_name AS detail FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL) UNION ALL (SELECT sq.name AS name, sq.detail AS detail FROM (SELECT DISTINCT a1.last_name AS detail, a1.first_name AS name FROM authors AS a1 WHERE a1.deleted_at IS NULL ORDER BY name ASC LIMIT $2 OFFSET $3) AS sq) ORDER BY name ASC",
        ]
@@ -1064,7 +1077,8 @@ describe("em.query / sets", () => {
       // Then the inner compound's page remains local and the outer ordering remains independent
       expect(rows).toEqual([{ id: "a:1" }, { id: "a:2" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.id AS id FROM authors AS a WHERE a.id = $1 AND a.deleted_at IS NULL) UNION ALL ((SELECT a1.id AS id FROM authors AS a1 WHERE a1.deleted_at IS NULL) UNION (SELECT a2.id AS id FROM authors AS a2 WHERE a2.deleted_at IS NULL) ORDER BY id DESC LIMIT $2) ORDER BY id ASC",
        ]
@@ -1116,7 +1130,8 @@ describe("em.query / sets", () => {
         // Then branch pages contribute Birch/Cedar and Elm/Dune, and the outer page selects Dune/Cedar
         expect(rows).toEqual([{ name: "Dune" }, { name: "Cedar" }]);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "(SELECT a.first_name AS name FROM authors AS a WHERE a.first_name != $1 AND a.deleted_at IS NULL ORDER BY name ASC LIMIT $2 OFFSET $3) UNION ALL (SELECT b.title AS name FROM books AS b WHERE b.title != $4 AND b.deleted_at IS NULL ORDER BY name DESC LIMIT $5 OFFSET $6) ORDER BY name DESC LIMIT $7 OFFSET $8",
          ]
@@ -1184,7 +1199,8 @@ describe("em.query / sets", () => {
       // Then its union column is a result column, not a fluent method or another root operation
       expect(rows).toEqual([{ union: "a1" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS "union" FROM authors AS a WHERE a.deleted_at IS NULL) UNION (SELECT a1.first_name AS "union" FROM authors AS a1 WHERE a1.deleted_at IS NULL)",
        ]
@@ -1220,7 +1236,8 @@ describe("em.query / sets", () => {
       // Then derived columns retain their values and resolve the quoted source name
       expect(rows).toEqual([{ name: "apple" }, { name: "Zebra" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT "names"" --".name AS name FROM ((SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION (SELECT b.title AS name FROM books AS b WHERE b.deleted_at IS NULL)) AS "names"" --" WHERE "names"" --".name != $1 ORDER BY lower("names"" --".name) ASC",
        ]
@@ -1277,7 +1294,8 @@ describe("em.query / sets", () => {
         // Then comparison encoding strips the tag while result decoding restores it
         expect(rows).toEqual([{ id: "a:2" }]);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT author_ids.id AS id FROM ((SELECT b.author_id AS id FROM books AS b WHERE b.deleted_at IS NULL) UNION (SELECT a.id AS id FROM authors AS a WHERE a.deleted_at IS NULL)) AS author_ids WHERE author_ids.id = $1",
          ]
@@ -1326,7 +1344,8 @@ describe("em.query / sets", () => {
           { name: "a2", id: undefined, fallback: "a:9" },
         ]);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT a.first_name AS name, author_ids.id AS id, coalesce(author_ids.id, $1) AS fallback FROM authors AS a LEFT OUTER JOIN ((SELECT a1.id AS id FROM authors AS a1 WHERE a1.id = $2 AND a1.deleted_at IS NULL) UNION (SELECT b.author_id AS id FROM books AS b WHERE b.deleted_at IS NULL)) AS author_ids ON author_ids.id = a.id WHERE a.deleted_at IS NULL ORDER BY name ASC",
          ]
@@ -1636,7 +1655,8 @@ describe("em.query / sets", () => {
         expect(rows[0].password).toBeInstanceOf(PasswordValue);
         expect(rows[0].password!.matches("secret")).toBe(true);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT passwords.password AS password FROM ((SELECT u.password AS password FROM users AS u) UNION (SELECT u1.password AS password FROM users AS u1)) AS passwords WHERE passwords.password = $1",
          ]
@@ -1762,7 +1782,8 @@ describe("em.query / sets", () => {
         // Then both real and fallback arrays contain tagged Author ids after decoding
         expect(rows).toEqual([{ ids: ["a:1"], fallback: ["a:9"] }]);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT author_ids.ids AS ids, coalesce((SELECT empty_ids.ids AS value FROM ((SELECT array_agg(a1.id) AS ids FROM authors AS a1 WHERE a1.id = $1 AND a1.deleted_at IS NULL) UNION (SELECT array_agg(b1.author_id) AS ids FROM books AS b1 WHERE b1.id = $2 AND b1.deleted_at IS NULL)) AS empty_ids), $3) AS fallback FROM ((SELECT array_agg(a.id) AS ids FROM authors AS a WHERE a.deleted_at IS NULL) UNION (SELECT array_agg(b.author_id) AS ids FROM books AS b WHERE b.deleted_at IS NULL)) AS author_ids",
          ]
@@ -2474,13 +2495,15 @@ describe("em.query / sets", () => {
       expect(rows).toEqual([{ name: "Alice" }]);
       // Each source shape needs its own snapshot site for Jest to record the different SQL statements.
       if (kind === "ordinary") {
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT a.first_name AS name FROM authors AS a WHERE (a.first_name != $1 AND a.id IN (SELECT author_ids.id AS value FROM (SELECT a1.id AS id FROM authors AS a1 WHERE a1.first_name != $2 AND a1.deleted_at IS NULL) AS author_ids)) AND a.deleted_at IS NULL",
          ]
         `);
       } else {
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT a.first_name AS name FROM authors AS a WHERE (a.first_name != $1 AND a.id IN (SELECT author_ids.id AS value FROM ((SELECT a1.id AS id FROM authors AS a1 WHERE a1.first_name != $2 AND a1.deleted_at IS NULL) UNION (SELECT a2.id AS id FROM authors AS a2 WHERE a2.first_name != $3 AND a2.deleted_at IS NULL)) AS author_ids)) AND a.deleted_at IS NULL",
          ]
@@ -2529,7 +2552,8 @@ describe("em.query / sets", () => {
         { id: "a:3", count: 0 },
       ]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT b.author_id AS id, count(b.id)::int AS "count" FROM books AS b WHERE b.deleted_at IS NULL GROUP BY b.author_id HAVING count(b.id)::int > $1) UNION ALL (SELECT a.id AS id, count(b1.id)::int AS "count" FROM authors AS a LEFT OUTER JOIN books AS b1 ON b1.author_id = a.id AND b1.deleted_at IS NULL WHERE a.deleted_at IS NULL GROUP BY a.id HAVING count(b1.id)::int = $2) ORDER BY id ASC",
        ]
@@ -2572,7 +2596,8 @@ describe("em.query / sets", () => {
         { name: "a2", comment: undefined },
       ]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, (SELECT comment_ids.id AS value FROM ((SELECT c.id AS id FROM comments AS c WHERE c.text = $1) UNION (SELECT c1.id AS id FROM comments AS c1 WHERE c1.parent_book_id = b.id)) AS comment_ids) AS comment FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY name ASC",
        ]
@@ -2609,7 +2634,8 @@ describe("em.query / sets", () => {
       // Then the scalar resolves the inner Book and outer Author
       expect(first).toEqual([{ book: "b:1" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (SELECT book_ids.id AS value FROM ((SELECT b.id AS id FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL) UNION (SELECT b1.id AS id FROM books AS b1 WHERE b1.title = $1 AND b1.deleted_at IS NULL)) AS book_ids) AS book FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -2626,7 +2652,8 @@ describe("em.query / sets", () => {
       // Then the reused compound and condition resolve afresh rather than reading the outer Book accidentally
       expect(second).toEqual([{ book: "b:1" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (SELECT book_ids.id AS value FROM ((SELECT b1.id AS id FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL) UNION (SELECT b2.id AS id FROM books AS b2 WHERE b2.title = $1 AND b2.deleted_at IS NULL)) AS book_ids) AS book FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE b.title = $2 AND a.deleted_at IS NULL",
        ]
@@ -2666,7 +2693,8 @@ describe("em.query / sets", () => {
       // Then the retained branch excludes the Book-less Author but includes the deleted Author
       expect(rows).toEqual([{ name: "deleted" }, { name: "no books" }, { name: "with book" }, { name: "with book" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT a.first_name AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION ALL (SELECT a1.first_name AS name FROM authors AS a1 JOIN books AS b1 ON b1.author_id = a1.id) ORDER BY name ASC",
        ]
@@ -2695,7 +2723,8 @@ describe("em.query / sets", () => {
       // Then the default left join still returns its Author row with an undefined title
       expect(rows).toEqual([{ title: "deleted book" }, { title: undefined }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT b.title AS title FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL) UNION (SELECT b1.title AS title FROM authors AS a1 LEFT OUTER JOIN books AS b1 ON b1.author_id = a1.id) ORDER BY title ASC NULLS LAST",
        ]
@@ -2734,7 +2763,8 @@ describe("em.query / sets", () => {
       // Then each Task appears once, not once per branch
       expect(rows).toEqual([{ days: 10 }, { days: 20 }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT t.duration_in_days AS days FROM tasks AS t WHERE t.type_id = $1 AND t.deleted_at IS NULL) UNION ALL (SELECT t1.duration_in_days AS days FROM tasks AS t1 WHERE t1.type_id = $2 AND t1.deleted_at IS NULL) ORDER BY days ASC",
        ]
@@ -2759,7 +2789,8 @@ describe("em.query / sets", () => {
       // Then each Author is one scalar row, with no POJO wrapper or cardinality error
       expect(rows).toEqual(["a:1", "a:2"]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.id AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -2801,7 +2832,8 @@ describe("em.query / sets", () => {
       // Then membership hydrates only the selected Authors in one database query
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
       expect(queries).toHaveLength(1);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.* FROM authors AS a WHERE a.id IN (SELECT author_ids.id AS value FROM ((SELECT a1.id AS id FROM authors AS a1 WHERE a1.id = $1 AND a1.deleted_at IS NULL) UNION (SELECT b.author_id AS id FROM books AS b WHERE b.deleted_at IS NULL)) AS author_ids) AND a.deleted_at IS NULL ORDER BY a.first_name ASC",
        ]
@@ -2858,7 +2890,8 @@ describe("em.query / sets", () => {
         // Then zero scalar rows become SQL NULL, decode as undefined, and leave the fallback as a physical key
         expect(rows).toEqual([{ id: undefined, fallback: "a:9" }]);
         expect(queries).toHaveLength(1);
-        expect(queries).toMatchInlineSnapshot(`
+        if (!isSqlite)
+          expect(queries).toMatchInlineSnapshot(`
          [
            "SELECT (SELECT author_ids.id AS value FROM ((SELECT b.author_id AS id FROM books AS b WHERE b.deleted_at IS NULL) UNION (SELECT b1.author_id AS id FROM books AS b1 WHERE b1.deleted_at IS NULL)) AS author_ids) AS id, coalesce((SELECT author_ids1.id AS value FROM ((SELECT b2.author_id AS id FROM books AS b2 WHERE b2.deleted_at IS NULL) UNION (SELECT b3.author_id AS id FROM books AS b3 WHERE b3.deleted_at IS NULL)) AS author_ids1), $1) AS fallback FROM authors AS a WHERE a.deleted_at IS NULL",
          ]

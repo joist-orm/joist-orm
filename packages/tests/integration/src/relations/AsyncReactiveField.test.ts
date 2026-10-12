@@ -6,18 +6,25 @@ import {
   insertSmallPublisherGroup,
   select,
 } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 import { Book, BookReview, Publisher, SmallPublisherGroup, newBookReview, newLargePublisher } from "../entities";
 
 describe("AsyncReactiveField", () => {
   it("skips UPDATE after INSERT if value hasn't changed", async () => {
+    // Given a Publisher whose derived review count starts at zero
     const em = newEntityManager();
     newLargePublisher(em, { authors: [{}] });
+
+    // When the Publisher and its Author are persisted
     await em.flush();
+
+    // Then recalculation does not issue a redundant Publisher UPDATE on either backend
+    expect(queries.filter((sql) => /\bUPDATE publishers SET\b/.test(sql))).toEqual([]);
     // We don't actually have an `UPDATE` here b/c the default value of 0 from the `INSERT`
     // is the same as the post-INSERT calculated value, so there is no need to `UPDATE`.
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1)",
        "BEGIN;",
@@ -32,17 +39,23 @@ describe("AsyncReactiveField", () => {
   });
 
   it("issues UPDATE after initial INSERT with calculated value", async () => {
+    // Given a Publisher whose review count must be calculated from two new BookReviews
     const em = newEntityManager();
     newLargePublisher(em);
     newBookReview(em);
     newBookReview(em);
+
+    // When the Publisher and reviews are persisted
     await em.flush();
+
+    // Then the stored Publisher count includes both reviews
     expect((await select("publishers"))[0]).toMatchObject({
       id: 1,
       number_of_book_reviews: 2,
     });
     // After the INSERTs, there is a SELECT to calc the data, and then an `UPDATE`
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('books_id_seq') from generate_series(1, 2) UNION ALL select nextval('book_reviews_id_seq') from generate_series(1, 2)",
        "WITH _find (tag, arg0) AS (SELECT unnest($1::int[]), unnest($2::character varying[])) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $3",
@@ -116,7 +129,8 @@ describe("AsyncReactiveField", () => {
       number_of_book_reviews: 1,
     });
     // Isolate the RF's count query, b/c the surrounding populate queries differ by preloading plugin
-    expect(queries.filter((q) => q.startsWith("SELECT count"))).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries.filter((q) => q.startsWith("SELECT count"))).toMatchInlineSnapshot(`
      [
        "SELECT count(distinct br.id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id WHERE a.publisher_id = $1 LIMIT $2",
      ]

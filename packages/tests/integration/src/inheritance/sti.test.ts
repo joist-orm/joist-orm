@@ -12,7 +12,7 @@ import {
   newTaskThird,
 } from "src/entities";
 import { insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("SingleTableInheritance", () => {
   it("can create a TaskOld", async () => {
@@ -92,7 +92,8 @@ describe("SingleTableInheritance", () => {
       specialOldField: 1,
       durationInDays: 0,
     });
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT t.* FROM tasks AS t WHERE t.type_id = $1 AND t.deleted_at IS NULL ORDER BY t.id ASC LIMIT $2",
      ]

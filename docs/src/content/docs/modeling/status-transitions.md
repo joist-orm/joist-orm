@@ -53,9 +53,9 @@ To a certain extent, transitions are just "special rules & reactions", with thes
 
   But for state machines, you often want to validate each specific step of `stateA` -> `stateB` -> `stateC` flow, even if they all happen in a single `em.flush` -- `addTransitionRule` let's you do this, because a) it's invoked earlier in `em.flush`, and b) we record every state transition and make sure it's rules are invoked for each one.
 
-- Normal reactions similarly see "the _latest_ entity change" on each invocation, not "_every_ change" since the reaction was last ran--again usually fine/desirable behavior.
+- Normal reactions are invoked once per group/batch of entity changes, not once per _individual_ change. I.e. if `firstName` changes from Bob to Fred to Jane, a reaction watching `firstName` may be invoked just once after both changes--again this is usually fine/desirable behavior.
 
-  But again state machines usually want to see each individual transition, so similar to `addTransitionRule`, `addTransitionReaction` will be invoked for each discrete transition that Joist observes.
+  But state machines usually want to see each individual transition, so similar to `addTransitionRule`, `addTransitionReaction` is invoked for each discrete transition that Joist observes.
 
 Both `addTransitionRule` and `addTransitionReaction` basically just "do more bookkeeping" that applications could technically do by hand on top of normal validation rules & reactions, but the state/status enum pattern is common enough that its worth implementing as a first-class feature in Joist.
 
@@ -163,7 +163,7 @@ Either can be a single state, or an array of states.
 
 It's common for a new entity to be created with a default state and then immediately be mutated to its correct initial state.
 
-Joist recognizes this pattern and doesn't start recording `from` transitions until the first reaction pass, whether triggered by `em.flush` or `em.recalc`. So in this scenario:
+Joist recognizes this pattern and doesn't start recording state transitions until the first reaction pass, whether triggered by `em.flush` or `em.recalc`. So in this scenario:
 
 ```typescript
 // Create a new advance, initially as Pending
@@ -183,7 +183,7 @@ Joist doesn't order reactions and transitions when invoking them, so if a `statu
 
 The best way to solve these race conditions is **give each step its own state**, and represent the dependency between each state as a first-class notion directly in your domain model.
 
-For example, an `Approval` entity might currently have an initial `Pending` state that needs both:
+For example, an `Approval` entity might have an initial `Pending` state that needs to both:
 
 1. Create its list of `Approver`s, and
 2. Move itself to `Approved` once every `Approver` has approved.

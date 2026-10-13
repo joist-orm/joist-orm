@@ -35,8 +35,8 @@ declare module "bun:test" {
 
 // @ts-ignore
 declare module "vitest" {
-  interface Assertion<T = any> {
-    toMatchEntity(expected: MatchedEntity<T>): void;
+  interface Matchers<R, T = {}> {
+    toMatchEntity(expected: MatchedEntity<T>): R;
   }
   interface AsymmetricMatchersContaining {
     toMatchEntity(expected: MatchedEntity<any>): void;

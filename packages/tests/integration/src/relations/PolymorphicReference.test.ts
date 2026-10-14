@@ -1,4 +1,5 @@
 import { expect } from "@jest/globals";
+import { expectTypeOf } from "expect-type";
 import { NoIdError, getInstanceData, getMetadata, isFieldSet } from "joist-orm";
 import {
   insertAuthor,
@@ -9,19 +10,28 @@ import {
   select,
   update,
 } from "src/entities/inserts";
+import type { CommentScopePoly as GraphQLCommentScopePoly } from "src/generated/graphql-types";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 import {
   Author,
   Book,
   BookReview,
+  type ChildGroup,
   Comment,
+  type CommentScope,
+  type CommentScopePoly,
+  type ParentGroup,
   TaskOld,
+  commentScope,
   isCommentParent,
+  isCommentScopePoly,
   newAdminUser,
   newAuthor,
   newBook,
+  newChildGroup,
   newComment,
+  newParentGroup,
   newSmallPublisher,
   newTaskOld,
 } from "../entities";
@@ -357,5 +367,67 @@ describe("PolymorphicReference", () => {
     expect(() => comment.parent.idIfSet).toThrow(
       new NoIdError("Reference Comment#1.parent is assigned to a new entity"),
     );
+  });
+
+  it.each([newParentGroup, newChildGroup])("persists an optional group scope using %p", async (newGroup) => {
+    // Given a group that can own a Comment's scope
+    const em = newEntityManager();
+    const group: CommentScopePoly = newGroup(em);
+    // And a Comment whose scope is assigned through its generated opts
+    const comment = newComment(em, { scope: group });
+
+    // When the Comment is persisted and reloaded
+    await em.flush();
+    const reloaded = await newEntityManager().load(Comment, comment.id, "scope");
+
+    // Then the scope refers to the same group
+    expectTypeOf<CommentScopePoly>().toEqualTypeOf<ChildGroup | ParentGroup>();
+    expect(reloaded.scope.get?.id).toEqual(group.id);
+  });
+
+  it("can clear an optional group scope through its polymorphic reference", async () => {
+    // Given a Comment without a group scope
+    const em = newEntityManager();
+    const comment = newComment(em);
+    // And a group assigned through its generated reference setter
+    comment.scope.set(newParentGroup(em));
+    await em.flush();
+
+    // When the group scope is cleared and the Comment is reloaded
+    comment.scope.set(undefined);
+    await em.flush();
+    const reloaded = await newEntityManager().load(Comment, comment.id, "scope");
+
+    // Then the scope is absent
+    expect(reloaded.scope.get).toBeUndefined();
+  });
+
+  it("keeps query scopes usable alongside the scope relation", async () => {
+    // Given Comments with different text and an optional group scope
+    const em = newEntityManager();
+    const comment = newComment(em, { text: "scoped", scope: newParentGroup(em) });
+    // And a Comment outside the requested query scope
+    newComment(em, { text: "other" });
+    await em.flush();
+
+    // When selecting Comments through the generated query-scopes API
+    const scope: CommentScope = commentScope({ text: "scoped" });
+    const comments = await scope.find(em);
+
+    // Then only the requested Comment is returned
+    expect(comments).toEqual([comment]);
+  });
+
+  it("narrows a group with the renamed polymorphic type guard", () => {
+    // Given a group that can own a Comment's scope
+    const group: unknown = newChildGroup(newEntityManager());
+
+    // When the generated type guard recognizes the group
+    const owner = isCommentScopePoly(group) ? group : undefined;
+
+    // Then the narrowed value has the polymorphic union type
+    expectTypeOf(owner).toEqualTypeOf<CommentScopePoly | undefined>();
+    expectTypeOf<GraphQLCommentScopePoly>().toEqualTypeOf<CommentScopePoly>();
+    expect(owner).toBe(group);
   });
 });

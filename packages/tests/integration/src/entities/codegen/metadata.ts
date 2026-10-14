@@ -261,6 +261,8 @@ const commentMetaColumns = {
   "parentBookReviewId": new Column("parent_book_review_id", true, false, false, false, false, () => bookReviewMeta, new KeySerde("br", "int")),
   "parentPublisherId": new Column("parent_publisher_id", true, false, false, false, false, () => publisherMeta, new KeySerde("p", "int")),
   "parentTaskId": new Column("parent_task_id", true, false, false, false, false, () => taskMeta, new KeySerde("task", "int")),
+  "scopeChildGroupId": new Column("scope_child_group_id", true, false, false, false, false, () => childGroupMeta, new KeySerde("cg", "int")),
+  "scopeParentGroupId": new Column("scope_parent_group_id", true, false, false, false, false, () => parentGroupMeta, new KeySerde("parentGroup", "int")),
 } satisfies ColumnDescriptors;
 const criticMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => criticMeta, new KeySerde("c", "int")),
@@ -732,6 +734,7 @@ export const childGroupMeta: EntityMetadata<ChildGroup> = {
     "childGroup": { kind: "m2o", fieldName: "childGroup", fieldIdName: "childGroupId", derived: false, required: true, otherMetadata: childGroupMetaColumns["childGroupId"].idMetadata!, otherFieldName: "groups", serde: new SimpleFieldSerde("childGroup", childGroupMetaColumns["childGroupId"]), immutable: false },
     "parentGroup": { kind: "m2o", fieldName: "parentGroup", fieldIdName: "parentGroupId", derived: false, required: true, otherMetadata: childGroupMetaColumns["parentGroupId"].idMetadata!, otherFieldName: "childGroups", serde: new SimpleFieldSerde("parentGroup", childGroupMetaColumns["parentGroupId"]), immutable: false },
     "childItems": { kind: "o2m", fieldName: "childItems", fieldIdName: "childItemIds", required: false, otherMetadata: () => childItemMeta, otherFieldName: "childGroup", otherColumnName: "child_group_id", serde: undefined, immutable: false },
+    "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "scope", otherColumnName: "scope_child_group_id", serde: undefined, immutable: false },
   },
   columns: childGroupMetaColumns,
   allFields: {},
@@ -800,6 +803,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       new PolyComponent(commentMetaColumns["parentPublisherId"], "comments"),
       new PolyComponent(commentMetaColumns["parentTaskId"], "comments", () => taskOldMeta),
     ]),
+    "scope": polymorphicField("scope", false, [new PolyComponent(commentMetaColumns["scopeChildGroupId"], "comments"), new PolyComponent(commentMetaColumns["scopeParentGroupId"], "comments")]),
   },
   columns: commentMetaColumns,
   allFields: {},
@@ -984,6 +988,7 @@ export const parentGroupMeta: EntityMetadata<ParentGroup> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", parentGroupMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", parentGroupMetaColumns["updatedAt"]), immutable: false },
     "childGroups": { kind: "o2m", fieldName: "childGroups", fieldIdName: "childGroupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
+    "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "scope", otherColumnName: "scope_parent_group_id", serde: undefined, immutable: false },
     "parentItems": { kind: "o2m", fieldName: "parentItems", fieldIdName: "parentItemIds", required: false, otherMetadata: () => parentItemMeta, otherFieldName: "parentGroup", otherColumnName: "parent_group_id", serde: undefined, immutable: false },
   },
   columns: parentGroupMetaColumns,

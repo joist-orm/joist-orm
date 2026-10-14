@@ -48,6 +48,8 @@ import {
   type ChildItem,
   type ChildItemId,
   type ChildOrder,
+  type Comment,
+  type CommentId,
   type Entity,
   EntityManager,
   newChildGroup,
@@ -66,6 +68,7 @@ export interface ChildGroupFields {
   childGroup: { kind: "m2o"; type: Child; nullable: never; derived: false };
   parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
   childItems: { kind: "o2m"; type: ChildItem };
+  comments: { kind: "o2m"; type: Comment };
 }
 
 export interface ChildGroupColumns {
@@ -103,12 +106,14 @@ export interface ChildGroupOpts {
   childGroup: Child | ChildId;
   parentGroup: ParentGroup | ParentGroupId;
   childItems?: ChildItem[];
+  comments?: Comment[];
 }
 
 export interface ChildGroupIdsOpts {
   childGroupId?: ChildId | null;
   parentGroupId?: ParentGroupId | null;
   childItemIds?: ChildItemId[] | null;
+  commentIds?: CommentId[] | null;
 }
 
 export interface ChildGroupFilter {
@@ -119,6 +124,7 @@ export interface ChildGroupFilter {
   childGroup?: EntityFilter<Child, ChildId, FilterOf<Child>, never>;
   parentGroup?: EntityFilter<ParentGroup, ParentGroupId, FilterOf<ParentGroup>, never>;
   childItems?: EntityFilter<ChildItem, ChildItemId, FilterOf<ChildItem>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface ChildGroupGraphQLFilter {
@@ -131,6 +137,7 @@ export interface ChildGroupGraphQLFilter {
   parentGroup?: EntityGraphQLFilter<ParentGroup, ParentGroupId, GraphQLFilterOf<ParentGroup>, never>;
   parentGroupId?: ValueGraphQLFilter<ParentGroupId>;
   childItems?: EntityGraphQLFilter<ChildItem, ChildItemId, GraphQLFilterOf<ChildItem>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface ChildGroupOrder {
@@ -185,6 +192,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   declare readonly __type: { 0: "ChildGroup" };
 
   readonly childItems: Collection<ChildGroup, ChildItem> = hasMany();
+  readonly comments: Collection<ChildGroup, Comment> = hasMany();
   readonly childGroup: ManyToOneReference<ChildGroup, Child, never> = hasOne();
   readonly parentGroup: ManyToOneReference<ChildGroup, ParentGroup, never> = hasOne();
 

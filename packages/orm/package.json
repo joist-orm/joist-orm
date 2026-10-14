@@ -232,7 +232,7 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"

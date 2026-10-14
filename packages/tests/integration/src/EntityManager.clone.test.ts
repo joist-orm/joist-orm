@@ -1,10 +1,11 @@
-import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
-import { insertAuthor } from "src/entities/inserts";
+import { type Entity, EntityManager, MaybeAbstractEntityConstructor, Plugin } from "joist-orm";
+import { insertAuthor, insertBook } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 import {
   Author,
   Book,
+  BookReview,
   Comment,
   Image,
   ImageType,
@@ -460,6 +461,76 @@ describe("EntityManager.clone", () => {
     expect(a2.wasEverPopular).toBe(true);
     await em.flush();
   });
+
+  it("does not recalculate the source author's book count when cloning its books", async () => {
+    // Given an author whose book count has already been calculated
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{}] });
+    await em.flush();
+    const calculations = author.transientFields.numberOfBooksCalcInvoked;
+    // When the author and its books are cloned
+    await em.clone(author, { deep: "books" });
+    await em.flush();
+    // Then the source author's unchanged books do not trigger another calculation
+    expect(author.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
+  });
+
+  it("does not recalculate the source author's book count when the source book's author is unloaded", async () => {
+    // Given a persisted author and book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    // And the author's books are loaded without loading the book's author reference
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1", "books");
+    // When the author and its books are cloned
+    await em.clone(author, { deep: "books" });
+    await em.flush();
+    // Then the source author's unchanged books do not trigger a calculation
+    expect(author.transientFields.numberOfBooksCalcInvoked).toBe(0);
+  });
+
+  it("clones grandchildren without attaching new reviews to the source books", async () => {
+    // Given an author whose book has a review and has already run its reviews rule
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
+    const [book] = author.books.get;
+    const [review] = book.reviews.get;
+    await em.flush();
+    const reviewsRuleInvoked = book.transientFields.reviewsRuleInvoked;
+    // When the author, book, and review are cloned together
+    const clone = await em.clone(author, { deep: { books: "reviews" } });
+    await em.flush();
+    // Then the source book's reviews rule does not react to a temporary cloned review
+    expect(book.transientFields.reviewsRuleInvoked).toBe(reviewsRuleInvoked);
+    expect(book.reviews.get).toEqual([review]);
+    expect(clone.books.get).toHaveLength(1);
+    const [clonedBook] = clone.books.get;
+    expect(clonedBook).not.toBe(book);
+    expect(clonedBook.author.get).toBe(clone);
+    expect(clonedBook.reviews.get).toHaveLength(1);
+    const [clonedReview] = clonedBook.reviews.get;
+    expect(clonedReview).not.toBe(review);
+    expect(clonedReview).toMatchEntity({ rating: 5, book: clonedBook });
+  });
+
+  it("only exposes cloned parents to field hooks when cloning children and grandchildren", async () => {
+    // Given a persisted author, book, and review
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
+    await em.flush();
+    // And a plugin observes every book-author and review-book assignment during cloning
+    const plugin = new CloneParentAssignmentsPlugin();
+    em.addPlugin(plugin);
+    // When the author, book, and review are cloned together
+    const clone = await em.clone(author, { deep: { books: "reviews" } });
+    const [clonedBook] = clone.books.get;
+    const [clonedReview] = clonedBook.reviews.get;
+    // Then field hooks see only the cloned parents, with no temporary source parents
+    expect(plugin.assignments).toMatchEntity([
+      { entity: clonedBook, field: "author", value: clone },
+      { entity: clonedReview, field: "book", value: clonedBook },
+    ]);
+  });
 });
 
 async function numberOf(em: EntityManager, ...args: MaybeAbstractEntityConstructor<any>[]): Promise<number[]> {
@@ -469,4 +540,16 @@ async function numberOf(em: EntityManager, ...args: MaybeAbstractEntityConstruct
       return entities.length;
     }),
   );
+}
+
+/** Records parent assignments even when a later reassignment would hide them from the final graph. */
+class CloneParentAssignmentsPlugin extends Plugin {
+  readonly assignments: { entity: Entity; field: string; value: unknown }[] = [];
+
+  /** Observes the owning references for both levels of the cloned author graph. */
+  beforeSetField(entity: Entity, field: string, value: unknown): void {
+    if ((entity instanceof Book && field === "author") || (entity instanceof BookReview && field === "book")) {
+      this.assignments.push({ entity, field, value });
+    }
+  }
 }

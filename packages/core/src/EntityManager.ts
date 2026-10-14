@@ -1236,7 +1236,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                   isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
                 ) as Entity | undefined;
                 // Defer relations within the cloned subgraph because setting a clone field before remapping can update
-                // its other side, and that update is not fixed up later.
+                // its other side, and that update is not fixed up later. Even for o2m collections that are fixed up,
+                // briefly attaching a cloned child to its source parent would queue reactions on the source parent.
                 if (target && todo.has(target)) {
                   deferredRelations.push([entity, f.fieldName, target]);
                   return [f.fieldName, undefined];

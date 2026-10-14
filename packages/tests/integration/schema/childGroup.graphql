@@ -1,3 +1,8 @@
+extend type Query {
+  childGroup(id: ID!): ChildGroup!
+  childGroups(filter: ChildGroupFilter, limit: Int, offset: Int): ChildGroupsPage!
+}
+
 type ChildGroup {
   id: ID!
   name: String
@@ -5,11 +10,7 @@ type ChildGroup {
   updatedAt: DateTime!
   childGroup: ChildGroup
   parentGroup: ParentGroup
-}
-
-extend type Query {
-  childGroup(id: ID!): ChildGroup!
-  childGroups(filter: ChildGroupFilter, limit: Int, offset: Int): ChildGroupsPage!
+  comments: [Comment!]!
 }
 
 type ChildGroupsPage {

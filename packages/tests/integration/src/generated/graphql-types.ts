@@ -140,6 +140,7 @@ export interface Resolvers {
 
 export type UnionResolvers = {
   CommentParent: { __resolveType(o: Author | Book | BookReview | Publisher | TaskOld): string };
+  CommentScopePoly: { __resolveType(o: ChildGroup | ParentGroup): string };
   UserFavoritePublisher: { __resolveType(o: LargePublisher | SmallPublisher): string };
 };
 
@@ -279,6 +280,7 @@ export interface ChildResolvers {
 
 export interface ChildGroupResolvers {
   childGroup: Resolver<ChildGroup, {}, ChildGroup | null | undefined>;
+  comments: Resolver<ChildGroup, {}, readonly Comment[]>;
   createdAt: Resolver<ChildGroup, {}, Date>;
   id: Resolver<ChildGroup, {}, string>;
   name: Resolver<ChildGroup, {}, string | null | undefined>;
@@ -306,6 +308,7 @@ export interface CommentResolvers {
   likedByUsers: Resolver<Comment, {}, readonly User[]>;
   parent: Resolver<Comment, {}, CommentParent | null | undefined>;
   parentTags: Resolver<Comment, {}, string>;
+  scope: Resolver<Comment, {}, CommentScopePoly | null | undefined>;
   text: Resolver<Comment, {}, string | null | undefined>;
   updatedAt: Resolver<Comment, {}, Date>;
   user: Resolver<Comment, {}, User | null | undefined>;
@@ -419,6 +422,7 @@ export interface PageInfoResolvers {
 }
 
 export interface ParentGroupResolvers {
+  comments: Resolver<ParentGroup, {}, readonly Comment[]>;
   createdAt: Resolver<ParentGroup, {}, Date>;
   id: Resolver<ParentGroup, {}, string>;
   name: Resolver<ParentGroup, {}, string | null | undefined>;
@@ -1634,6 +1638,7 @@ export interface CommentFilter {
   parentId?: string[] | null | undefined;
   parentTaggedId?: string[] | null | undefined;
   parentTags?: string[] | null | undefined;
+  scopeId?: string[] | null | undefined;
   text?: string[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
   userId?: string[] | null | undefined;
@@ -1831,6 +1836,7 @@ export interface SaveCommentInput {
   id?: string | null | undefined;
   parentId?: string | null | undefined;
   parentTags?: string | null | undefined;
+  scopeId?: string | null | undefined;
   text?: string | null | undefined;
   userId?: string | null | undefined;
 }
@@ -2148,9 +2154,12 @@ export { TaskType } from "src/entities";
 
 export type CommentParent = Author | Book | BookReview | Publisher | TaskOld;
 
+export type CommentScopePoly = ChildGroup | ParentGroup;
+
 export type UserFavoritePublisher = LargePublisher | SmallPublisher;
 
 export const possibleTypes = {
   CommentParent: ["Author", "Book", "BookReview", "Publisher", "TaskOld"],
+  CommentScopePoly: ["ChildGroup", "ParentGroup"],
   UserFavoritePublisher: ["LargePublisher", "SmallPublisher"],
 };

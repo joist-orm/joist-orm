@@ -44,6 +44,8 @@ import type { Context } from "src/context";
 import {
   type ChildGroup,
   type ChildGroupId,
+  type Comment,
+  type CommentId,
   type Entity,
   EntityManager,
   newParentGroup,
@@ -63,6 +65,7 @@ export interface ParentGroupFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   childGroups: { kind: "o2m"; type: ChildGroup };
+  comments: { kind: "o2m"; type: Comment };
   parentItems: { kind: "o2m"; type: ParentItem };
 }
 
@@ -87,11 +90,13 @@ export interface ParentGroupOpts {
   bulkData?: Object | null;
   requiredData: Object;
   childGroups?: ChildGroup[];
+  comments?: Comment[];
   parentItems?: ParentItem[];
 }
 
 export interface ParentGroupIdsOpts {
   childGroupIds?: ChildGroupId[] | null;
+  commentIds?: CommentId[] | null;
   parentItemIds?: ParentItemId[] | null;
 }
 
@@ -103,6 +108,7 @@ export interface ParentGroupFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
 }
 
@@ -114,6 +120,7 @@ export interface ParentGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
 }
 
@@ -168,6 +175,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   declare readonly __type: { 0: "ParentGroup" };
 
   readonly childGroups: Collection<ParentGroup, ChildGroup> = hasMany();
+  readonly comments: Collection<ParentGroup, Comment> = hasMany();
   readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany();
   readonly bulkData: LazyField<ParentGroup, Object | undefined> = hasLazyField();
   readonly requiredData: LazyField<ParentGroup, Object> = hasLazyField();

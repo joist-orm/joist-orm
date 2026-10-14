@@ -62,7 +62,7 @@
     "ChildItem": { "tag": "ci" },
     "Comment": {
       "fields": { "parentTaggedId": { "derived": "async" }, "parentTags": { "derived": "async" } },
-      "relations": { "parent": { "polymorphic": "notNull" } },
+      "relations": { "parent": { "polymorphic": "notNull" }, "scope": { "polymorphic": true } },
       "tag": "comment"
     },
     "Critic": {

@@ -1131,6 +1131,7 @@ export function canonicalizeOtherEntities(db: DbMetadata): void {
  * `makeEntity` defaults each name to the conventional `${name}<Suffix>`, but if a separate entity or
  * enum is literally named e.g. `AuthorScope` or `AuthorOrder`, our generated type of the same name
  * would collide with it, so we fall back to `Author_Scope` / `Author_Order`.
+ * Polymorphic unions yield to these API names by appending `Poly` until the name is available.
  *
  * Relies on `canonicalizeOtherEntities` having run, so mutating each primary `meta.entity` also updates
  * the `otherEntity` references that point at it (e.g. `Book.author: AuthorId` follows `Author`'s rename).
@@ -1147,6 +1148,30 @@ export function resolveNameConflicts(config: Config, db: DbMetadata): void {
   for (const pgEnum of Object.values(db.pgEnums)) reserved.add(pgEnum.name);
   for (const meta of db.entities) {
     if (hasNameConflict(meta.name, reserved)) applyEntityNames(meta.entity, reserved);
+  }
+
+  // Potentially rename poly types, like a `BookParent = PolyOne | PolyTwo | PolyThree`, if the `BookParent`
+  // name would conflict with existing generated type names. Specifically, our query-scopes feature
+  // creates a `BookScope` type that, if the user also adds a `scope_*` poly, would have the
+  // same name as the poly type.
+  //
+  // Here we detect that, let the scope-feature `BookScope` type win, and rename the poly type to
+  // `BookScopePoly`, appending `Poly` again if that name is also taken.
+  for (const meta of db.entities) {
+    const keys = Object.keys(entitySymbolNames(meta.name)) as (keyof ReturnType<typeof entitySymbolNames>)[];
+    for (const key of keys) reserved.add(meta.entity[key]);
+    reserved.add(`${meta.name}Codegen`).add(`${meta.name}Columns`);
+  }
+  const polymorphics = db.entities.flatMap((meta) => meta.polymorphics);
+  const unionNames = new Set(polymorphics.map((poly) => poly.fieldType));
+  for (const poly of polymorphics) {
+    if (reserved.has(poly.fieldType)) {
+      // I.e. Comment.scope uses CommentScopePoly, leaving CommentScope for query scopes.
+      let name = `${poly.fieldType}Poly`;
+      while (reserved.has(name) || unionNames.has(name)) name += "Poly";
+      poly.fieldType = name;
+    }
+    reserved.add(poly.fieldType);
   }
 }
 

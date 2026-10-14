@@ -1,3 +1,12 @@
+extend type Query {
+  comment(id: ID!): Comment!
+  comments(filter: CommentFilter, limit: Int, offset: Int): CommentsPage!
+}
+
+extend type Mutation {
+  saveComment(input: SaveCommentInput!): SaveCommentResult!
+}
+
 type Comment {
   id: ID!
   text: String
@@ -7,10 +16,7 @@ type Comment {
   user: User
   likedByUsers: [User!]!
   parentTags: String!
-}
-
-extend type Mutation {
-  saveComment(input: SaveCommentInput!): SaveCommentResult!
+  scope: CommentScopePoly
 }
 
 input SaveCommentInput {
@@ -19,6 +25,7 @@ input SaveCommentInput {
   parentId: ID
   userId: ID
   parentTags: String
+  scopeId: ID
 }
 
 type SaveCommentResult {
@@ -26,11 +33,6 @@ type SaveCommentResult {
 }
 
 union CommentParent = Author | Book | BookReview | Publisher | TaskOld
-
-extend type Query {
-  comment(id: ID!): Comment!
-  comments(filter: CommentFilter, limit: Int, offset: Int): CommentsPage!
-}
 
 type CommentsPage {
   entities: [Comment!]!
@@ -46,4 +48,7 @@ input CommentFilter {
   updatedAt: [DateTime!]
   userId: [ID!]
   parentId: [ID!]
+  scopeId: [ID!]
 }
+
+union CommentScopePoly = ChildGroup | ParentGroup

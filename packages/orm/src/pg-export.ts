@@ -13,4 +13,3 @@ export {
 } from "./drivers/binaryParsers.ts";
 export { PostgresDriver, type PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.ts";
 export { seed } from "./seed.ts";
-export { PostgreJsDriver, type PostgreJsDriverOpts } from "./drivers/PostgreJsDriver.ts";

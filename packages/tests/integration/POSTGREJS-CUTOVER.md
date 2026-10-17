@@ -6,8 +6,12 @@ The original measurements are in [POSTGREJS-BENCHMARK.md](POSTGREJS-BENCHMARK.md
 
 ## Implementation
 
+`postgrejs` is an optional peer dependency. Install it when using
+`joist-orm/postgrejs`; importing `joist-orm/pg` does not load it.
+
 ```ts
-import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
+import { PostgresDriver } from "joist-orm/pg";
+import { PostgreJsDriver } from "joist-orm/postgrejs";
 import pg from "pg";
 import { Pool } from "postgrejs";
 

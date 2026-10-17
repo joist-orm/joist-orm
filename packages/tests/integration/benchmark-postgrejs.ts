@@ -6,7 +6,8 @@ import { cpus } from "node:os";
 import { resolve } from "node:path";
 
 import { type Driver, EntityManager, getField, getMetadata, setDefaultEntityLimit } from "joist-orm";
-import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
+import { PostgresDriver } from "joist-orm/pg";
+import { PostgreJsDriver } from "joist-orm/postgrejs";
 import pg from "pg";
 import { Pool } from "postgrejs";
 

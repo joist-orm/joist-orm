@@ -10760,6 +10760,7 @@ __metadata:
     node-pg-migrate: ^9.0.0
     pg: ^8.23.0
     pg-types: ^4.1.0
+    postgrejs: 3.14.0
     postgres-array: ^3.0.4
   peerDependenciesMeta:
     knex:
@@ -10767,6 +10768,8 @@ __metadata:
     node-pg-migrate:
       optional: true
     pg:
+      optional: true
+    postgrejs:
       optional: true
     postgres-array:
       optional: true

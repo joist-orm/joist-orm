@@ -6923,7 +6923,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"change-case@npm:^5.2.0":
+"change-case@npm:^5.2.0, change-case@npm:^5.4.4":
   version: 5.4.4
   resolution: "change-case@npm:5.4.4"
   checksum: 10/446e5573f3c854290a91292afef92b957d2e43a928260c91989b482aa860caaa29711b6725fc40c200af68061cbab357b033446d16a17bc5c553636994074e92
@@ -10665,7 +10665,7 @@ __metadata:
     "@types/jscodeshift": "npm:^17.3.0"
     "@types/node": "npm:^26.2.0"
     "@types/pluralize": "npm:^0.0.33"
-    change-case: "npm:^4.1.2"
+    change-case: "npm:^5.4.4"
     fast-glob: "npm:^3.3.3"
     jest: "npm:30.4.2"
     jscodeshift: "npm:^17.4.0"
@@ -10749,7 +10749,7 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^26.2.0"
-    change-case: "npm:^4.1.2"
+    change-case: "npm:^5.4.4"
     graphql: "npm:^17.0.2"
     jest: "npm:30.4.2"
     pluralize: "npm:^8.0.0"

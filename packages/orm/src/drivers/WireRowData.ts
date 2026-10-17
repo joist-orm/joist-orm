@@ -81,6 +81,15 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  * (benchmark-lazy-parsing.ts), and small finds (n <= 10) are statistically identical.
  */
 export class WireRowData implements RowData {
+  /** PostgreJS omits the int16 field count from the immutable row view it exposes. */
+  constructor(private readonly rowHeaderBytes: 0 | 2 = 2) {}
+
+  /** Installs decoders supplied by a driver with a public raw-row API. */
+  setColumnDecoders(fields: Array<{ name: string; decode: WireColumn["decode"] }>): void {
+    this.#fields = fields.map((field, ordinal) => ({ ...field, ordinal }));
+    this.#columns = new Map(this.#fields.map((field) => [field.name, field]));
+  }
+
   #chunks: Buffer[] = [];
   /** Where each row's bytes live: `(chunk index, start, length)` slices, `ROW_STRIDE` entries per row. */
   #rowSlices: Uint32Array<ArrayBufferLike> = new Uint32Array(16 * ROW_STRIDE);
@@ -127,7 +136,7 @@ export class WireRowData implements RowData {
     const start = slices[base + 1];
     const end = start + slices[base + 2];
     const row: Record<string, any> = {};
-    let pos = start + 2;
+    let pos = start + this.rowHeaderBytes;
     for (const field of this.#fields) {
       const len = this.#cellLength(chunk, pos, end, rowIndex);
       pos += 4;
@@ -192,7 +201,7 @@ export class WireRowData implements RowData {
    * resolves by copying retained rows out when enough of the payload was dropped.
    */
   addRow(bytes: Buffer, offset: number, payloadLength: number): void {
-    if (payloadLength < 2 || offset + payloadLength > bytes.length) {
+    if (payloadLength < this.rowHeaderBytes || offset + payloadLength > bytes.length) {
       throw new Error(`Malformed DataRow payload (length ${payloadLength})`);
     }
     let chunkIndex = this.#chunks.length - 1;
@@ -300,12 +309,12 @@ export class WireRowData implements RowData {
    * resuming to matter, and — being row-relative — stay valid across compaction.
    */
   #readCell(chunk: Buffer, start: number, end: number, column: WireColumn, rowIndex: number): any {
-    const fieldCount = chunk.readInt16BE(start);
+    const fieldCount = this.rowHeaderBytes === 2 ? chunk.readInt16BE(start) : this.#fields.length;
     const { ordinal } = column;
     if (ordinal >= fieldCount) {
       throw new Error(`Row ${rowIndex} has ${fieldCount} cells but column ${column.name} is #${column.ordinal}`);
     }
-    let pos = start + 2;
+    let pos = start + this.rowHeaderBytes;
     let c = 0;
     let scanOrdinal = this.#scanOrdinal;
     if (scanOrdinal === undefined && ordinal >= SCAN_CURSOR_MIN_ORDINAL) {
@@ -313,7 +322,7 @@ export class WireRowData implements RowData {
       this.#scanOffset = new Uint32Array(this.#rowCount);
     }
     if (scanOrdinal !== undefined && rowIndex < scanOrdinal.length) {
-      // 0 = unset: caching cell #0 would be pointless (it is always at offset 2), so any real
+      // 0 = unset: caching cell #0 would be pointless (it is always at rowHeaderBytes), so any real
       // entry is the ordinal, >= 1, whose row-relative offset is in #scanOffset
       const known = scanOrdinal[rowIndex];
       if (known !== 0 && known <= ordinal) {

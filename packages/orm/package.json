@@ -19,6 +19,9 @@
       "pg": [
         "build/pg-export.d.mts"
       ],
+      "postgrejs": [
+        "build/postgrejs-export.d.mts"
+      ],
       "codegen": [
         "build/codegen.d.mts"
       ],
@@ -177,6 +180,25 @@
       },
       "default": "./build/knex-export.js"
     },
+    "./postgrejs": {
+      "bun": {
+        "types": "./build/postgrejs-export.d.mts",
+        "default": "./build/postgrejs-export.js"
+      },
+      "module-sync": {
+        "types": "./build/postgrejs-export.d.mts",
+        "default": "./build/postgrejs-export.js"
+      },
+      "import": {
+        "types": "./build/postgrejs-export.d.mts",
+        "default": "./build/postgrejs-export.js"
+      },
+      "require": {
+        "types": "./build/postgrejs-export.d.cts",
+        "default": "./build/postgrejs-export.cjs"
+      },
+      "default": "./build/postgrejs-export.js"
+    },
     "./pg": {
       "bun": {
         "types": "./build/pg-export.d.mts",
@@ -208,14 +230,14 @@
     "joist-knex": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "joist-utils": "workspace:*",
-    "postgrejs": "3.14.0"
+    "joist-utils": "workspace:*"
   },
   "peerDependencies": {
     "knex": "^3.1.0",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
     "pg-types": "^4.1.0",
+    "postgrejs": "3.14.0",
     "postgres-array": "^3.0.4"
   },
   "peerDependenciesMeta": {
@@ -228,6 +250,9 @@
     "pg": {
       "optional": true
     },
+    "postgrejs": {
+      "optional": true
+    },
     "postgres-array": {
       "optional": true
     }
@@ -235,6 +260,7 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
+    "postgrejs": "3.14.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"
   }

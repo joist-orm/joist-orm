@@ -58,7 +58,7 @@
     "@inquirer/prompts": "^8.7.3",
     "@types/jscodeshift": "^17.3.0",
     "@types/pluralize": "^0.0.33",
-    "change-case": "^4.1.2",
+    "change-case": "^5.4.4",
     "fast-glob": "^3.3.3",
     "jscodeshift": "^17.4.0",
     "jsonc-parser": "^3.3.1",

@@ -1,5 +1,5 @@
 import { EntityManager, newPgConnectionConfig } from "joist-orm";
-import { PostgreJsDriver } from "joist-orm/pg";
+import { PostgreJsDriver } from "joist-orm/postgrejs";
 import { Pool } from "postgrejs";
 import { Author } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";

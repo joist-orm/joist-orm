@@ -1,5 +1,6 @@
 import { Deferred, ReadOnlyError, query, table } from "joist-orm";
-import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
+import { PostgresDriver } from "joist-orm/pg";
+import { PostgreJsDriver } from "joist-orm/postgrejs";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
 import { newEntityManager, pool, queries, recordQuery, resetQueryCount } from "src/testEm";

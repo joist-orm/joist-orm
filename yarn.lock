@@ -3563,6 +3563,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jsopen/objects@npm:^2.3.4":
+  version: 2.3.4
+  resolution: "@jsopen/objects@npm:2.3.4"
+  dependencies:
+    tslib: "npm:^2.8.1"
+  checksum: 10/3f0000b9edadcfcb8dea4c7bf11a4b74a1974d1ca5211a0a523388bd716afd76d99a00ad21a50825e28521d7a64941e77482968636231678f7573362a4fc062e
+  languageName: node
+  linkType: hard
+
 "@mdx-js/mdx@npm:^3.1.1":
   version: 3.1.1
   resolution: "@mdx-js/mdx@npm:3.1.1"
@@ -8074,6 +8083,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"doublylinked@npm:^2.5.6":
+  version: 2.5.6
+  resolution: "doublylinked@npm:2.5.6"
+  checksum: 10/c675118f7ff7654c9c1a7e6f49184222d46e8de3c2b5d1b5fa278413f9a3d7e903837f8eafe3606ff29d0f7a2a5a50177c8188e87295259b9cbae971ba12e156
+  languageName: node
+  linkType: hard
+
 "dprint-node@npm:^1.0.8":
   version: 1.0.8
   resolution: "dprint-node@npm:1.0.8"
@@ -8860,6 +8876,16 @@ __metadata:
   version: 1.1.1
   resolution: "flattie@npm:1.1.1"
   checksum: 10/c5e475c9358ff78ddbf8b211850bfdca041f2e49508ea0419a6cd19e94ffdaf09ee2f6e4379460c91929b203eafc75b3c34ae829809f598a4cc0e58782dc2aaa
+  languageName: node
+  linkType: hard
+
+"flexy-buffer@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "flexy-buffer@npm:1.1.2"
+  dependencies:
+    ts-gems: "npm:^4.0.4"
+    tslib: "npm:^2.8.1"
+  checksum: 10/f3cb8bfb9685f47d8008e29d2bba1a10fa65a50a69986275946a868762e931862bf7d67c20ed486189ac2a5e38c0a5477640f862ebef06bf8f43fa3a5b5db9e1
   languageName: node
   linkType: hard
 
@@ -11221,6 +11247,7 @@ __metadata:
     kelonio: "npm:^0.12.0"
     knex: "npm:3.3.0"
     mitata: "npm:^1.0.34"
+    postgrejs: "npm:3.14.0"
     postgres: "npm:^3.4.9"
     superstruct: "npm:^2.0.2"
     tsconfig-paths: "npm:^4.2.0"
@@ -11798,6 +11825,17 @@ __metadata:
     proc-log: "npm:^6.0.0"
     semver: "npm:^7.3.7"
   checksum: 10/ed1241d0e09a67ff9710096e754d79c047f45ea928f94395e96bbc02fc6a7c62e6e305f90a8db9417379ec031633b385c0c4bd716cd00492f003e6b2357e796d
+  languageName: node
+  linkType: hard
+
+"lightning-pool@npm:^4.14.0":
+  version: 4.14.0
+  resolution: "lightning-pool@npm:4.14.0"
+  dependencies:
+    doublylinked: "npm:^2.5.6"
+    putil-promisify: "npm:^1.10.1"
+    tslib: "npm:^2.8.1"
+  checksum: 10/46c43aa84c9134767ea7afa28328b5e2866f7cdb16654b2311ac886a24cc3e1181a29196419dac35c2addc137e21335a9e32b15bb812b566f7255aa172b512c7
   languageName: node
   linkType: hard
 
@@ -13539,6 +13577,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-events-async@npm:^1.5.2":
+  version: 1.5.2
+  resolution: "node-events-async@npm:1.5.2"
+  dependencies:
+    putil-promisify: "npm:^1.10.1"
+    tslib: "npm:^2.8.1"
+  checksum: 10/b05d6ef5e52783072df708f5df1acd300a6cd2e8e1b9f298812bd68b133715c3fbffea5b773c94e88eaffcc0d8db63abe293b32c98a0a2368089423765f70b41
+  languageName: node
+  linkType: hard
+
 "node-fetch-native@npm:^1.6.7":
   version: 1.6.7
   resolution: "node-fetch-native@npm:1.6.7"
@@ -14889,6 +14937,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"postgrejs@npm:3.14.0":
+  version: 3.14.0
+  resolution: "postgrejs@npm:3.14.0"
+  dependencies:
+    "@jsopen/objects": "npm:^2.3.4"
+    doublylinked: "npm:^2.5.6"
+    flexy-buffer: "npm:^1.1.2"
+    lightning-pool: "npm:^4.14.0"
+    power-tasks: "npm:^1.14.2"
+    putil-promisify: "npm:^1.10.1"
+    putil-varhelpers: "npm:^1.7.0"
+    tslib: "npm:^2.8.1"
+  checksum: 10/fd689e2daa005508af43d50b5680be48e8886d62f3b1970843ebc62e8f71190eeba618d111998d863cc6354f907b60b07a933c77dbe19c3fa9f9ccdf7abdc079
+  languageName: node
+  linkType: hard
+
 "postgres-array@npm:~2.0.0":
   version: 2.0.0
   resolution: "postgres-array@npm:2.0.0"
@@ -14923,6 +14987,17 @@ __metadata:
   version: 3.4.9
   resolution: "postgres@npm:3.4.9"
   checksum: 10/c6c7e85f5cfb00d455bcfee98e7af2abded43323552295044f00a602431465c9296ef6152d45d4a53bf3a72323ca00e03585b7ba6f8713367e42d1ef34d1fa5d
+  languageName: node
+  linkType: hard
+
+"power-tasks@npm:^1.14.2":
+  version: 1.14.2
+  resolution: "power-tasks@npm:1.14.2"
+  dependencies:
+    doublylinked: "npm:^2.5.6"
+    node-events-async: "npm:^1.5.2"
+    tslib: "npm:^2.8.1"
+  checksum: 10/15de0caeb87843c3538f6b5d15f079b773a2377cfdec2432befaa152e366420131e5e986358b3d7cb15b24621a6f682175dd1030e7d527dccb34577e93457114
   languageName: node
   linkType: hard
 
@@ -15056,6 +15131,20 @@ __metadata:
   version: 7.0.1
   resolution: "pure-rand@npm:7.0.1"
   checksum: 10/c61a576fda5032ec9763ecb000da4a8f19263b9e2f9ae9aa2759c8fbd9dc6b192b2ce78391ebd41abb394a5fedb7bcc4b03c9e6141ac8ab20882dd5717698b80
+  languageName: node
+  linkType: hard
+
+"putil-promisify@npm:^1.10.1":
+  version: 1.10.1
+  resolution: "putil-promisify@npm:1.10.1"
+  checksum: 10/bad9c3080b90eed16d084ec1e4b49c37b88e7d2efe808f47745f4c943109b9b0ff8da25d83e931de0c3799bfd9fcadc6ca51d47d4fc7bfa3d73c54c7636f601a
+  languageName: node
+  linkType: hard
+
+"putil-varhelpers@npm:^1.7.0":
+  version: 1.7.0
+  resolution: "putil-varhelpers@npm:1.7.0"
+  checksum: 10/b06adda94248595d27ca277c072245a0e3a0f7d60e26e988cf31ae1264aa4309703579bb7fc5be41c3d530e2c49de96bcff144c90b281219ff3b2c251ad6de05
   languageName: node
   linkType: hard
 
@@ -17244,6 +17333,13 @@ __metadata:
   version: 2.1.0
   resolution: "trough@npm:2.1.0"
   checksum: 10/6ca8a545d0080ce40c3d0e1e44cf9aa0484a272a91f3a5a02ac433bf1e3ed16983d39da0a77a96467237f7f983cfbf19abc5ab1994c27cde9417e21a2aec76cc
+  languageName: node
+  linkType: hard
+
+"ts-gems@npm:^4.0.4":
+  version: 4.0.4
+  resolution: "ts-gems@npm:4.0.4"
+  checksum: 10/8bda642b394814aa415ca978f73822bd1c83342caeab85222f7d979c032ecda80fa0749a2fdc21d98ff74fcd07bb4261acbd175ac6778231f0b78bb810dc1e4d
   languageName: node
   linkType: hard
 

@@ -6,7 +6,7 @@ import { cpus } from "node:os";
 import { resolve } from "node:path";
 
 import { type Driver, EntityManager, getField, getMetadata, setDefaultEntityLimit } from "joist-orm";
-import { PostgresDriver } from "joist-orm/pg";
+import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
 import pg from "pg";
 import { Pool } from "postgrejs";
 
@@ -16,8 +16,16 @@ import { Author, type AuthorId } from "./src/entities";
 const url = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist_stock";
 const sizes = (process.env.BENCH_SIZES ?? "1,100,10000,50000").split(",").map(Number);
 const iterations = Number(process.env.BENCH_ITERATIONS ?? 7);
-const modes = ["pg-stock", "pg-wire", "postgrejs-eager", "postgrejs-lazy"] as const;
-type Mode = (typeof modes)[number];
+const allModes = [
+  "pg-stock",
+  "pg-wire",
+  "postgrejs-eager",
+  "postgrejs-lazy",
+  "postgrejs-full-eager",
+  "postgrejs-full-lazy",
+] as const;
+type Mode = (typeof allModes)[number];
+const modes = process.env.BENCH_MODES ? (process.env.BENCH_MODES.split(",") as Mode[]) : allModes;
 type Scenario = "hydrate" | "sparse" | "selective" | "full" | "reverse" | "identity";
 type Measurement = {
   mode: Mode;
@@ -108,6 +116,7 @@ async function main(): Promise<void> {
  */
 async function child(mode: Mode, schema: string, output: string): Promise<void> {
   const pgPool = new pg.Pool({ connectionString: url, max: 1, options: `-c search_path=${schema},public` });
+  const fullPool = createPostgreJsPool({ connectionString: url, max: 1, options: `-c search_path=${schema},public` });
   const parsed = new URL(url);
   const jsPool = new Pool({
     host: parsed.hostname,
@@ -123,7 +132,9 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   });
   const driver: Driver = mode.startsWith("pg-")
     ? new PostgresDriver(pgPool, { lazyRows: mode === "pg-wire" })
-    : new PostgreJsPrototype(jsPool, mode === "postgrejs-lazy");
+    : mode.startsWith("postgrejs-full-")
+      ? new PostgresDriver(fullPool, { lazyRows: mode === "postgrejs-full-lazy" })
+      : new PostgreJsPrototype(jsPool, mode === "postgrejs-lazy");
   try {
     await verifyRetainedEntities(driver);
     if (mode === "postgrejs-lazy") await verifyDecoder(jsPool);
@@ -159,6 +170,7 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   } finally {
     await pgPool.end();
     await jsPool.close();
+    await fullPool.end();
   }
 }
 

@@ -88,7 +88,7 @@ export function buildQuery<T extends Entity>(
  */
 export function createKnex(poolOrClient: pg.Pool | pg.PoolClient): Knex {
   const knex = baseCreateKnex({ client: "pg", connection: {}, pool: { max: 0 } });
-  if (poolOrClient instanceof pg.Pool) {
+  if (poolOrClient instanceof pg.Pool || ("connect" in poolOrClient && !("release" in poolOrClient))) {
     knex.client.acquireConnection = () => poolOrClient.connect();
     knex.client.releaseConnection = (conn: pg.PoolClient) => conn.release();
   } else {

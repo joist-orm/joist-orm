@@ -1,7 +1,6 @@
 import { EntityManager, newPgConnectionConfig } from "joist-core";
-import type pg from "pg";
+import pg from "pg";
 
-import { createPostgreJsPool } from "./drivers/PostgreJsPool.ts";
 import { PostgresDriver } from "./drivers/PostgresDriver.ts";
 
 /**
@@ -28,7 +27,7 @@ export function seed<E extends EntityManager = EntityManager>(fn: (em: E) => Pro
     throw new Error("seed will only run with NODE_ENV=local or NODE_ENV=test because it resets the database");
   }
 
-  const pool = createPostgreJsPool(newPgConnectionConfig());
+  const pool = new pg.Pool(newPgConnectionConfig());
 
   run<E>(pool, fn)
     .then(async () => {

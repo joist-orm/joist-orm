@@ -8,6 +8,7 @@ import { newEntityManager } from "src/testEm";
 // These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
 // into the build directly
 import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol.cjs";
+import { RawRowData } from "../../../orm/build/drivers/RawRowData.cjs";
 import { WireRowData, executeRowDataQuery } from "../../../orm/build/drivers/WireRowData.cjs";
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist";
@@ -427,6 +428,7 @@ describe("WireRowData", () => {
     const itLazy = process.env.JOIST_ROW_DATA === "1" ? it : it.skip;
 
     itLazy("compacts unretained duplicate rows after em.find", async () => {
+      // Given twenty authors, with half already loaded into the identity map
       for (let i = 1; i <= 20; i++) await insertAuthor({ first_name: `a${i}` });
       const em = newEntityManager();
       // Pre-load half the authors, so the later find sees their rows as already-loaded duplicates
@@ -434,13 +436,15 @@ describe("WireRowData", () => {
         Author,
         Array.from({ length: 10 }, (_, i) => `a:${i + 1}`),
       );
-      expect(getInstanceData(preloaded[0]).rowData).toBeInstanceOf(WireRowData);
+      expect(getInstanceData(preloaded[0]).rowData).toBeInstanceOf(RawRowData);
+      // When a find encounters those same authors alongside fresh entities
       const authors = await em.find(Author, {});
+      // Then both lazy transports retain only the rows needed by the fresh entities
       expect(authors).toHaveLength(20);
       // The 10 fresh entities share the find's result; the pre-loaded 10 keep their em.load result
       const fresh = authors.filter((a) => Number(a.id.split(":")[1]) > 10);
-      const wire = getInstanceData(fresh[0]).rowData as WireRowData;
-      expect(wire).toBeInstanceOf(WireRowData);
+      const wire = getInstanceData(fresh[0]).rowData as RawRowData;
+      expect(wire).toBeInstanceOf(RawRowData);
       expect(wire).not.toBe(getInstanceData(preloaded[0]).rowData);
       expect(wire.rowCount).toBe(20);
       // With 10 of 20 rows unretained (>20% of payload bytes), finalize compacted the duplicates

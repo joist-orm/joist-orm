@@ -36,6 +36,7 @@ import array from "postgres-array";
 
 import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers.ts";
 import { ensureLazyDataRows } from "./patchPgProtocol.ts";
+import { PostgreJsClient, isPostgreJsPool } from "./PostgreJsPool.ts";
 import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData.ts";
 
 export interface PostgresDriverOpts {
@@ -47,6 +48,8 @@ export interface PostgresDriverOpts {
   /**
    * Experimental: keeps entity find results as raw wire bytes and decodes each row/column cell
    * lazily on field access, instead of eagerly materializing POJO rows.
+   * `createPostgreJsPool` uses PostgreJS's public RowDecoder hook; node-pg uses the
+   * protocol patch and parser registry described below.
    *
    * Applies to unpaginated `em.find`, `em.load`, and o2m/o2o/recursive relation loads against
    * the pure-JS pg client. Other loaders deliberately stay classic: paginated finds (small
@@ -115,9 +118,9 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       });
     this.#preloadPlugin = opts?.preloadPlugin;
     this.#onQuery = opts?.onQuery;
-    // Lazy rows require pg-protocol to emit lazy DataRows, which we patch in at runtime; if the
-    // patch cannot be applied/verified (i.e. future pg-protocol internals changed), stay classic
-    this.lazyRows = (opts?.lazyRows ?? false) && ensureLazyDataRows();
+    // PostgreJS exposes immutable rows directly. Legacy pg needs a verified protocol patch;
+    // if that patch cannot be applied, keep that pool on classic rows.
+    this.lazyRows = (opts?.lazyRows ?? false) && (isPostgreJsPool(pool) || ensureLazyDataRows());
     if (opts?.lazyRows && !this.lazyRows) {
       console.warn("joist-orm: lazyRows was requested, but patching pg-protocol failed; using classic rows.");
     }
@@ -143,10 +146,11 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   ): Promise<RowData> {
     // Auto-register binary parsers for the db's dynamic-oid text-likes (native enums, citext)
     // once, before our first lazy query; on failure, reset so the next query retries
-    await (this.#databaseBinaryParsers ??= registerDatabaseBinaryParsers(this.pool).catch((err) => {
-      this.#databaseBinaryParsers = undefined;
-      throw err;
-    }));
+    if (!isPostgreJsPool(this.pool))
+      await (this.#databaseBinaryParsers ??= registerDatabaseBinaryParsers(this.pool).catch((err) => {
+        this.#databaseBinaryParsers = undefined;
+        throw err;
+      }));
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
     const pgSql = toPgParams(sql);
     this.#onQuery?.(pgSql);
@@ -156,13 +160,14 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     const txnClient = em.txn as pg.PoolClient | undefined;
     const client = txnClient ?? (await this.pool.connect());
     try {
+      if (client instanceof PostgreJsClient) return await client.queryRowData(pgSql, bindings);
       if (!isRowDataCapableClient(client)) {
         warnUnsupportedClientOnce();
         return new PojoRowData((await (client as pg.PoolClient).query(pgSql, bindings as any[])).rows);
       }
       return await executeRowDataQuery(client, pgSql, bindings);
     } finally {
-      if (!txnClient) client.release();
+      if (!txnClient) await client.release();
     }
   }
 
@@ -200,7 +205,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       }
       await driverAfterCommit(em, client);
     } finally {
-      client.release();
+      await client.release();
     }
     return result;
   }

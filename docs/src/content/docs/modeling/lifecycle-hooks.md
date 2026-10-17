@@ -88,6 +88,27 @@ The `beforeCommit` hook runs after entities have been `INSERT`d or `UPDATE`d, an
 
 These background jobs create "intentions of work to be done", and since the job is atomically saved to the database in the same transaction as your business logic writes (for example inserting a `sendOnboardingEmail` job into the `jobs` table and `INSERT`ing a new `authors` row), they are both guaranteed to complete or not-complete. And then the background job runner can separately invoke (and retry if necessary) the intended action of calling/syncing with the 3rd party system.
 
+#### EntityManager Transaction Hooks
+
+`em.beforeBegin`, `em.afterBegin`, `em.beforeCommit`, and `em.afterCommit` all accept an optional `{ forceTransaction: true }` option.
+
+Use `em.beforeCommit(callback, { forceTransaction: true })` to enqueue work even when `em.flush()` has no entity changes:
+
+```typescript
+em.beforeCommit(async (em, txn) => {
+  await enqueueJobs(txn, pendingJobs);
+}, { forceTransaction: true });
+await em.flush();
+```
+
+`forceTransaction` defaults to `false`: registering ordinary transaction hooks does not make a write-less flush open a transaction or run transaction hooks.
+
+With `forceTransaction: true` on any transaction hook, a write-less flush runs the normal transaction lifecycle, including all registered transaction hooks, not just the forced hook. The transaction opens only after the normal pre-transaction reactivity and validation work; an existing transaction is reused.
+
+Use `afterBegin` or `beforeCommit` and the hook's transaction for SQL writes so they commit atomically with entity changes. If either hook throws, its SQL writes roll back and the error propagates. `beforeBegin` runs before `BEGIN`, and `afterCommit` runs after `COMMIT`; an `afterCommit` error propagates but cannot roll back the committed transaction.
+
+Registrations persist across flushes, and cloning an EntityManager with `{ em }` or `em.fork()` preserves both the hooks and their `forceTransaction` behavior. A forced registration therefore requires a transaction on each flush, not just the next one. This option applies to EntityManager hooks, not entity-level `config.beforeCommit` hooks.
+
 ### Hooks vs. Validation Rules
 
 Hooks run before validation rules, and are allowed to mutate entities that may currently be invalid.

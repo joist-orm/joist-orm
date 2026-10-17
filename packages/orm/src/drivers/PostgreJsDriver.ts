@@ -1,7 +1,16 @@
-import { EventEmitter } from "node:events";
-
-import { type Temporal, getRuntimeConfig } from "joist-core";
-import type pg from "pg";
+import {
+  type DriverQueryResult,
+  type EntityManager,
+  type ParsedFindQuery,
+  type RowData,
+  type Temporal,
+  buildRawQuery,
+  driverAfterBegin,
+  driverAfterCommit,
+  driverBeforeBegin,
+  driverBeforeCommit,
+  getRuntimeConfig,
+} from "joist-core";
 import * as native from "postgrejs";
 import type {
   AnyParseFunction,
@@ -13,93 +22,37 @@ import type {
   QueryResult,
 } from "postgrejs";
 
-import { WireRowData } from "./WireRowData.ts";
+import { AbstractPostgresDriver, type PostgresDriverOpts, toPgParams } from "./AbstractPostgresDriver.ts";
+import { RawRowData } from "./RawRowData.ts";
 
-/** Identifies the public RowDecoder path without probing node-pg protocol internals. */
-export function isPostgreJsPool(pool: unknown): pool is pg.Pool & { postgrejs: Pool } {
-  return pool instanceof PostgreJsPool;
-}
+export type PostgreJsDriverOpts = PostgresDriverOpts;
 
-/**
- * Creates a PostgreJS-backed pool with the pg query/connect surface used by Joist and Knex.
- *
- * This prototype keeps application setup stable while changing every database request's
- * transport. The cast is deliberately confined here: native pg Submittables, COPY streams,
- * cancellation, and pg-specific connection internals are not part of this compatibility surface.
- */
-export function createPostgreJsPool(config: pg.PoolConfig = {}): pg.Pool {
-  return new PostgreJsPool(config) as unknown as pg.Pool;
-}
-
-type Query = string | (pg.QueryConfig & { rowMode?: "array" });
-type Callback = (error: Error | null, result?: pg.QueryResult) => void;
-
-/** Owns PostgreJS connections while exposing the pool lifecycle Joist already uses. */
-class PostgreJsPool extends EventEmitter {
-  readonly postgrejs: Pool;
-  readonly options: pg.PoolConfig;
-
-  constructor(config: pg.PoolConfig) {
-    super();
-    this.options = config;
-    const url = config.connectionString ? new URL(config.connectionString) : undefined;
-    const timezone = config.options?.match(/(?:TimeZone|timezone)=([^ ]+)/)?.[1];
-    this.postgrejs = new native.Pool({
-      host: config.host ?? url?.hostname,
-      port: config.port ?? (url?.port ? Number(url.port) : undefined),
-      user: config.user ?? (url ? decodeURIComponent(url.username) : undefined),
-      password: config.password ?? (url ? decodeURIComponent(url.password) : undefined),
-      database: config.database ?? url?.pathname.slice(1),
-      max: config.max ?? 10,
-      timezone: timezone ?? "UTC",
-      schema: config.options?.match(/search_path=([^ ,]+)/)?.[1],
-      ssl: config.ssl === true ? {} : config.ssl || undefined,
-      requireSSL: !!config.ssl,
-      connectTimeoutMs: config.connectionTimeoutMillis,
-      pipeline: config.pipeline ?? true,
-      rollbackOnError: false,
-      asyncErrorHandling: false,
-      unknownTypesAsString: true,
-      typeMap: createTypeMap(),
-    });
+/** PostgreSQL over native PostgreJS pools and transaction connections. */
+export class PostgreJsDriver extends AbstractPostgresDriver<Connection> {
+  constructor(
+    readonly pool: Pool,
+    opts?: PostgreJsDriverOpts,
+  ) {
+    super((sql, bindings) => executeNativeQuery(pool, sql, bindings), opts?.lazyRows ?? true, opts);
   }
 
-  /** Acquires a dedicated connection for transactions or Knex. */
-  async connect(): Promise<PostgreJsClient> {
-    return new PostgreJsClient(await this.postgrejs.acquire());
+  /** Executes through the native pool or the transaction's native connection. */
+  protected query(txn: Connection | undefined, sql: string, bindings: readonly unknown[]): Promise<DriverQueryResult> {
+    return executeNativeQuery(txn ?? this.pool, sql, bindings);
   }
 
-  /** Executes an ordinary query without reserving a transaction connection. */
-  query(query: Query, values?: unknown[] | Callback, callback?: Callback): Promise<pg.QueryResult> {
-    return queryWithCallback(this.postgrejs, query, values, callback);
-  }
-
-  /** Closes native sockets and waits for all checked-out connections. */
-  async end(): Promise<void> {
-    await this.postgrejs.close();
-  }
-}
-
-/** A checked-out native connection; all ORM transaction SQL stays on this socket. */
-export class PostgreJsClient extends EventEmitter {
-  constructor(readonly connection: Connection) {
-    super();
-  }
-
-  /** Matches the promise and callback forms used by PostgresDriver and Knex. */
-  query(query: Query, values?: unknown[] | Callback, callback?: Callback): Promise<pg.QueryResult> {
-    return queryWithCallback(this.connection, query, values, callback);
-  }
-
-  /** Returns the dedicated connection to its native pool. */
-  async release(): Promise<void> {
-    await this.connection.close();
-  }
-
-  /** Supplies Joist's existing RowData lifecycle using only the public driver hook. */
-  async queryRowData(sql: string, bindings: readonly unknown[]): Promise<WireRowData> {
+  /** Supplies Joist's RowData lifecycle using only PostgreJS's public decoder hook. */
+  protected async findRowData(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<RowData> {
+    const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
+    const pgSql = toPgParams(sql);
+    this.onQuery?.(pgSql);
     const decoder = new PostgreJsRowDecoder();
-    await this.connection.query(sql, {
+    const client = (em.txn as Connection | undefined) ?? this.pool;
+    await client.query(pgSql, {
       ...mappingOptions(true),
       pipeline: false,
       params: bindings.map(prepareValue),
@@ -107,11 +60,44 @@ export class PostgreJsClient extends EventEmitter {
     });
     return decoder.rows;
   }
+
+  /**
+   * Preserves transaction hooks and rollback on a dedicated native connection.
+   *
+   * The callback and all ORM queries share this Connection; close returns it to its pool.
+   */
+  async transaction<T>(em: EntityManager, fn: (txn: Connection) => Promise<T>): Promise<T> {
+    if (em.txn) return fn(em.txn as Connection);
+    const client = await this.pool.acquire();
+    let result: T;
+    try {
+      await driverBeforeBegin(em, client);
+      this.onQuery?.("BEGIN;");
+      await executeNativeQuery(client, "BEGIN", []);
+      em.txn = client;
+      try {
+        await driverAfterBegin(em, client);
+        result = await fn(client);
+        await driverBeforeCommit(em, client);
+        this.onQuery?.("COMMIT;");
+        await executeNativeQuery(client, "COMMIT", []);
+      } catch (error) {
+        await executeNativeQuery(client, "ROLLBACK", []);
+        throw error;
+      } finally {
+        em.txn = undefined;
+      }
+      await driverAfterCommit(em, client);
+    } finally {
+      await client.close();
+    }
+    return result;
+  }
 }
 
 /** Records immutable raw rows, leaving all value construction to field access. */
 export class PostgreJsRowDecoder extends native.RowDecoder {
-  readonly rows = new WireRowData(0);
+  readonly rows = new RawRowData(0);
   #chunk: Buffer | undefined;
 
   /** Supports the view-based fallback of PostgreJS's public decoder contract. */
@@ -153,52 +139,42 @@ function mappingOptions(lazy = false): QueryOptions {
     rowDecoder: "object",
     fetchCount: 0,
     rollbackOnError: false,
+    typeMap: joistTypeMap,
+    unknownTypesAsString: true,
     temporalTypes: temporal && lazy ? [1082, 1083, 1114, 1184] : false,
-    // Knex/raw-query callers still expect pg's strings, while lazy hydration can use
+    // Joist raw-query callers still expect pg-compatible strings, while lazy hydration can use
     // native Temporal objects. Both retain microseconds and preserve array nulls.
     fetchAsString: temporal && !lazy ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
   };
 }
 
-/** Normalizes the pg calling convention at the transport boundary. */
-function queryWithCallback(
+/** Executes with Joist's value representations without changing the caller's pool configuration. */
+async function executeNativeQuery(
   client: Pool | Connection,
-  query: Query,
-  values?: unknown[] | Callback,
-  callback?: Callback,
-): Promise<pg.QueryResult> {
-  const sql = typeof query === "string" ? query : query.text;
-  const params = typeof query === "string" ? (Array.isArray(values) ? values : []) : (query.values ?? []);
-  const cb = typeof values === "function" ? values : callback;
+  sql: string,
+  params: readonly unknown[],
+): Promise<DriverQueryResult> {
   // A cached statement must not overtake an earlier query still being prepared.
   // Flush can issue several updates to one row, whose oplocks require submission order.
-  const promise = client
+  return client
     .query(sql, {
       ...mappingOptions(),
       pipeline: client instanceof native.Connection ? false : undefined,
       params: params.map(prepareValue),
-      rowDecoder: typeof query !== "string" && query.rowMode === "array" ? "array" : "object",
     })
-    .then(toPgResult);
-  if (cb)
-    void promise.then(
-      (result) => cb(null, result),
-      (error) => cb(error),
-    );
-  return promise;
+    .then(toDriverResult);
 }
 
 /** Uses native mutation counts; an unlimited SELECT's complete rows supply its returned-row count. */
-function toPgResult(result: QueryResult): pg.QueryResult {
+function toDriverResult(result: QueryResult): DriverQueryResult {
   const rows = result.rows ?? [];
   return {
-    command: result.command ?? "",
     rowCount: result.rowsAffected ?? (result.command === "SELECT" ? rows.length : null),
     rows,
-    oid: 0,
-    fields: [],
   };
 }
+
+const joistTypeMap = createTypeMap();
 
 /** Preserves pg's exact scalar numerics and int8 strings without forcing text-format results. */
 function createTypeMap(): native.DataTypeMap {

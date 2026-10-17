@@ -6,7 +6,7 @@ import { cpus } from "node:os";
 import { resolve } from "node:path";
 
 import { type Driver, EntityManager, getField, getMetadata, setDefaultEntityLimit } from "joist-orm";
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
 import pg from "pg";
 import { Pool } from "postgrejs";
 
@@ -116,8 +116,18 @@ async function main(): Promise<void> {
  */
 async function child(mode: Mode, schema: string, output: string): Promise<void> {
   const pgPool = new pg.Pool({ connectionString: url, max: 1, options: `-c search_path=${schema},public` });
-  const fullPool = createPostgreJsPool({ connectionString: url, max: 1, options: `-c search_path=${schema},public` });
   const parsed = new URL(url);
+  const fullPool = new Pool({
+    host: parsed.hostname,
+    port: Number(parsed.port),
+    user: parsed.username,
+    password: parsed.password,
+    database: parsed.pathname.slice(1),
+    schema,
+    max: 1,
+    timezone: "UTC",
+    asyncErrorHandling: false,
+  });
   const jsPool = new Pool({
     host: parsed.hostname,
     port: Number(parsed.port),
@@ -133,7 +143,7 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   const driver: Driver = mode.startsWith("pg-")
     ? new PostgresDriver(pgPool, { lazyRows: mode === "pg-wire" })
     : mode.startsWith("postgrejs-full-")
-      ? new PostgresDriver(fullPool, { lazyRows: mode === "postgrejs-full-lazy" })
+      ? new PostgreJsDriver(fullPool, { lazyRows: mode === "postgrejs-full-lazy" })
       : new PostgreJsPrototype(jsPool, mode === "postgrejs-lazy");
   try {
     await verifyRetainedEntities(driver);
@@ -170,7 +180,7 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   } finally {
     await pgPool.end();
     await jsPool.close();
-    await fullPool.end();
+    await fullPool.close();
   }
 }
 

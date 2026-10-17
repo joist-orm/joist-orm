@@ -4,8 +4,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { type Driver, EntityManager } from "joist-orm";
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
 import pg from "pg";
+import { Pool } from "postgrejs";
 
 import { Author, type AuthorId } from "./src/entities";
 
@@ -67,8 +68,11 @@ async function main(): Promise<void> {
 /** Measures warmed requests with fresh identity maps and checks persisted effects outside the timer. */
 async function child(mode: Mode, url: string, output: string): Promise<void> {
   const config = { connectionString: url, max: 4 };
-  const pool = mode.startsWith("pg-") ? new pg.Pool(config) : createPostgreJsPool(config);
-  const driver = new PostgresDriver(pool, { lazyRows: mode === "pg-wire" || mode === "postgrejs-full-lazy" });
+  const pool = new pg.Pool(config);
+  const native = new Pool(url);
+  const driver = mode.startsWith("pg-")
+    ? new PostgresDriver(pool, { lazyRows: mode === "pg-wire" })
+    : new PostgreJsDriver(native, { lazyRows: mode === "postgrejs-full-lazy" });
   const samples = [];
   try {
     await pool.query("select flush_database()");
@@ -110,6 +114,7 @@ async function child(mode: Mode, url: string, output: string): Promise<void> {
     writeFileSync(output, JSON.stringify({ mode, samples }, null, 2));
   } finally {
     await pool.end();
+    await native.close();
   }
 }
 

@@ -1,32 +1,65 @@
-# PostgreJS full ORM cutover experiment
+# PostgreJS native driver experiment
 
-This is the second commit, following the read-only prototype in
+This follows the read-only prototype and full ORM compatibility experiment in
 [PR #2119](https://github.com/joist-orm/joist-orm/pull/2119).
 The original measurements are in [POSTGREJS-BENCHMARK.md](POSTGREJS-BENCHMARK.md).
 
 ## Implementation
 
 ```ts
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
+import pg from "pg";
+import { Pool } from "postgrejs";
 
-const pool = createPostgreJsPool({ connectionString: process.env.DATABASE_URL });
-const driver = new PostgresDriver(pool, { lazyRows: true });
-// Pass driver to EntityManager as usual; await pool.end() on shutdown.
+const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const nativePool = new Pool(process.env.DATABASE_URL);
+
+// Choose one driver at application setup; entity code is identical.
+const stock = new PostgresDriver(pgPool);
+const patched = new PostgresDriver(pgPool, { lazyRows: true });
+const native = new PostgreJsDriver(nativePool); // lazyRows defaults to true
+const nativeEager = new PostgreJsDriver(nativePool, { lazyRows: false });
+
+// On shutdown: await pgPool.end(); await nativePool.close();
 ```
 
-`PostgreJsPool.ts` implements the query/connect/release/end surface used by the
-existing PostgresDriver and Knex adapter. Actual connections and wire traffic
-use PostgreJS. This lets the experiment reuse Joist's SQL generation, ID
-assignment, bulk flushes, m2m writes, optimistic locks and transaction hooks.
-Both ordinary queries and lazy hydration participate in the same checked-out
-transaction connection. Lazy reads use the public `decodeAt` hook and the
-existing WireRowData retention/compaction lifecycle, without patching PostgreJS.
+`PostgreJsDriver` implements Joist's driver boundary directly, using native
+`Pool.acquire`, `Connection.query` and `Connection.close`. The earlier
+`createPostgreJsPool` compatibility facade has been removed. No pg.Pool cast or
+PostgreJS-specific branch remains in `PostgresDriver`.
 
-All application test setups now use this pool, including the Knex queries in
-their contexts. The default seeding helper also uses it. The legacy node-pg
-transport remains available for the benchmark controls and explicit node-pg
-protocol tests. Codegen/introspection and migration tooling still depend on
-node-pg; this experiment changes the ORM's runtime transport, not those tools.
+`AbstractPostgresDriver` shares PostgreSQL SQL generation, sequence ID assignment,
+flushes, m2m writes and optimistic locks. Each concrete driver owns its transport,
+transaction lifecycle and decoding. `RawRowData` shares retention, compaction and
+lazy cell access without importing pg. `WireRowData` adds node-pg's protocol and
+parser integration; PostgreJS uses its public `decodeAt` hook directly.
+
+EntityManager, entities, relations and ORM flush planning are unchanged. Native
+transaction callbacks receive a PostgreJS Connection, not a disguised pg client.
+Applications using connection-specific APIs must use that driver's native API.
+Knex remains a separate pg-backed integration; it is not part of PostgreJsDriver.
+The existing seed helper and secondary test workspaces retain PostgresDriver.
+Codegen and migrations also retain their existing pg setup.
+
+## Integration test matrix
+
+`yarn workspace joist-tests-integration test` runs four isolated processes and
+databases, with no driver × preloading cross-product:
+
+| Script | Driver | Lazy rows | Preloading | Database |
+| --- | --- | --- | --- | --- |
+| `test-stock` | PostgresDriver | No | No | joist_stock |
+| `test-lazy` | PostgresDriver | Yes | No | joist_lazy |
+| `test-postgrejs` | PostgreJsDriver | Yes | No | joist_postgrejs |
+| `test-lazy-preloading` | PostgresDriver | Yes | Yes | joist_lazy_preloading |
+
+`scripts/clone-integration-dbs.sh` prepares these databases from the migrated
+integration fixture. `JOIST_DRIVER` selects the ORM transport. Knex fixture
+helpers and explicit node-pg protocol tests retain a separate pg pool. They do
+not route ORM entity operations through pg in the PostgreJS pass.
+
+Focused real-database tests in `PostgreJsDriver.test.ts` cover eager/lazy value
+parity and the native transaction boundary without adding another full pass.
 
 ### Compatibility fixes found by the suite
 
@@ -46,29 +79,48 @@ node-pg; this experiment changes the ORM's runtime transport, not those tools.
   prepared. Joist sometimes updates the same row twice in one flush; reordering
   breaks optimistic locks and immediate-FK fixup updates. Pool queries can still
   run concurrently; transactions retain submission order.
-- Distinguish pools from already-connected clients in createKnex, and await
-  native asynchronous connection release.
+- Await native asynchronous connection release. The earlier facade's createKnex
+  detection change is no longer needed and has been removed.
 - Transform PostgreJS's ESM dependencies in the CommonJS Jest fixtures.
 
 ### Prototype boundary
 
-This is not a complete implementation of node-pg's public API. The factory's
-pg.Pool type cast is confined to the compatibility boundary. COPY/Submittables,
-cancellation, arbitrary pg connection internals, custom pg type overrides, and
-every possible connection-string option are not implemented. The adapter maps
-common connection settings, TimeZone and the first search_path schema; it does
-not claim general startup-option parity. Raw result field metadata is currently
-empty. SELECT counts come from the complete unlimited result; mutation counts
-come from PostgreJS's native rowsAffected, and DDL counts remain null.
+Pool configuration is native PostgreJS configuration. Joist supplies query-level
+value mapping and parameter normalization for its ORM operations. Custom pg type
+overrides are not PostgreJS overrides. Native queries issued directly by callers
+use the caller's native options rather than Joist's query defaults. SELECT counts
+come from the complete unlimited result; mutation counts come from PostgreJS's
+native rowsAffected, and DDL counts remain null.
 
 The experiment establishes feasibility for Joist's tested runtime behavior,
-not production readiness or removal of the node-pg dependency. A production
-driver should expose native pool/configuration types instead of the facade.
+not production readiness or removal of the repository's node-pg dependency.
 PostgreJS requires Node 20 or newer; this run used Node 26.3.1, including its
 require(ESM) support for the CommonJS build. Older-runtime compatibility is not
 established by this experiment.
 
 ## Validation
+
+### Native-driver refactor validation (2026-10-17)
+
+- Root `yarn test`: passed, including all four integration passes:
+  - Stock pg: **2,763** passed.
+  - Lazy pg: **2,764** passed.
+  - Lazy PostgreJS: **2,764** passed.
+  - Lazy pg + preloading: **2,764** passed.
+- Root `yarn build`: passed, including package/consumer typechecks and module-sync checks.
+- Benchmark TypeScript project, changed-file lint and formatting checks: passed.
+- Read benchmark smoke check: all four runtime modes, 100 entities, matching checksums.
+- Write benchmark smoke check: all four runtime modes, 10 Authors, persisted-effect checks.
+
+Existing skips remain. Native transaction routing, rollback and compaction tests
+use the selected driver. Tests that inject malformed node-pg responses or exercise
+pg-protocol explicitly remain node-pg-specific. No new timing claims are made
+from the smoke checks.
+
+### Earlier adapter run
+
+The following counts and performance tables are the recorded pre-refactor run;
+they are not fresh performance claims for the native-driver refactor.
 
 - Root `yarn test`: **passed**, including:
   - Integration eager: **2,760** tests.
@@ -120,9 +172,11 @@ checked outside the timer, and cleanup occurs outside it too.
 - **Transaction cycle:** insert, rename/update, and delete 100 Authors in three
   flushes within one explicit transaction, then commit.
 
-Unlike the initial read-only experiment, the full adapter uses PostgreJS's
+Unlike the initial read-only experiment, the full driver uses PostgreJS's
 default prepared-statement cache and the compatibility settings described above.
-These measurements compare the working configurations, not just wire decoding.
+The benchmark scripts now instantiate PostgreJsDriver directly; the tables below
+preserve the earlier adapter measurements. These measurements compare the working
+configurations, not just wire decoding.
 Results are local serial timings, not production throughput or concurrency tests.
 
 ## Write results

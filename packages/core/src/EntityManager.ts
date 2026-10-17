@@ -219,6 +219,17 @@ export function isId(value: any): value is IdOf<unknown> {
 
 export type EntityManagerHook = "beforeBegin" | "afterBegin" | "beforeCommit" | "afterCommit";
 
+/** Options for EntityManager transaction hooks. */
+export interface EntityManagerHookOptions {
+  /**
+   * Runs the transaction lifecycle even on write-less flushes. Defaults to false.
+   *
+   * The transaction still starts after pre-transaction reactivity and validation, or reuses an
+   * existing transaction. Like the hooks, this option persists across flushes and forks.
+   */
+  forceTransaction?: boolean;
+}
+
 type HookFn<TX> = (em: EntityManager, txn: TX) => MaybePromise<any>;
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
@@ -332,6 +343,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     beforeCommit: [],
     afterCommit: [],
   };
+  // Hooks persist across flushes, so a forced hook keeps requiring a transaction on each flush.
+  #forceTransaction = false;
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger = noopFieldLogger;
   #isLoadedCache = new IsLoadedCache();
@@ -361,6 +374,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
+      this.#forceTransaction = opts.em.#forceTransaction;
       opts.em.__api.pluginManager.cloneTo(pluginManager);
     }
 
@@ -2109,7 +2123,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (
         Object.keys(entityTodos).length > 0 ||
         Object.keys(joinRowTodos).length > 0 ||
-        this.#rm.hasPendingCommitTransitions()
+        this.#rm.hasPendingCommitTransitions() ||
+        this.#forceTransaction
       ) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
@@ -2586,20 +2601,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.#rm.recalcPendingReactables("reactables");
   }
 
-  public beforeBegin(fn: HookFn<TX>) {
+  /** Registers a hook to run before the transaction begins. */
+  public beforeBegin(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.beforeBegin.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public afterBegin(fn: HookFn<TX>) {
+  /** Registers a hook to run after the transaction begins. */
+  public afterBegin(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.afterBegin.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public beforeCommit(fn: HookFn<TX>) {
+  /** Registers a hook to run before the transaction commits. */
+  public beforeCommit(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.beforeCommit.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public afterCommit(fn: HookFn<TX>) {
+  /** Registers a hook to run after the transaction commits. */
+  public afterCommit(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.afterCommit.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
   /**
    * Returns an EntityManager-scoped (i.e. request scoped) data loader.

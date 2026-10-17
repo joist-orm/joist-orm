@@ -1,5 +1,11 @@
 # PostgreJS read-path prototype
 
+The follow-up [full ORM cutover experiment](POSTGREJS-CUTOVER.md) covers writes,
+transactions and the complete test suite. The results below preserve the initial
+read-only experiment. The benchmark now also supports `postgrejs-full-eager` and
+`postgrejs-full-lazy`; use `BENCH_MODES` to select a comma-separated subset, or
+omit it to run all six modes.
+
 ## Results (2026-10-16)
 
 Node 26.3.1, PostgreSQL 16.0, Intel i9-12900K, localhost; pg 8.23.0 and

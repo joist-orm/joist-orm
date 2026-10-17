@@ -10752,6 +10752,7 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-test-utils: "workspace:*"
     joist-utils: "workspace:*"
+    postgrejs: "npm:3.14.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
   peerDependencies:

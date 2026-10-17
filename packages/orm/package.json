@@ -208,7 +208,8 @@
     "joist-knex": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "joist-utils": "workspace:*"
+    "joist-utils": "workspace:*",
+    "postgrejs": "3.14.0"
   },
   "peerDependencies": {
     "knex": "^3.1.0",

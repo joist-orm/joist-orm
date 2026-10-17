@@ -3,5 +3,5 @@
   "compilerOptions": {
     "composite": false
   },
-  "include": ["benchmark-postgrejs.ts", "postgrejs-prototype.ts"]
+  "include": ["benchmark-postgrejs.ts", "benchmark-postgrejs-writes.ts", "postgrejs-prototype.ts"]
 }

@@ -1,9 +1,9 @@
 import { createKnex } from "joist-orm/knex";
-import { PostgresDriver, type PostgresDriverOpts } from "joist-orm/pg";
+import { PostgresDriver, type PostgresDriverOpts, createPostgreJsPool } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { type Knex } from "knex";
-import pg from "pg";
+import type pg from "pg";
 import { type Context } from "src/context";
 import { EntityManager } from "src/entities";
 
@@ -20,7 +20,7 @@ export function newEntityManager(opts?: PostgresDriverOpts): EntityManager {
 expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
-  pool = new pg.Pool(newPgConnectionConfig());
+  pool = createPostgreJsPool(newPgConnectionConfig());
   knex = createKnex(pool);
 });
 

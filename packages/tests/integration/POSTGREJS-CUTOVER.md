@@ -30,9 +30,12 @@ PostgreJS-specific branch remains in `PostgresDriver`.
 
 `AbstractPostgresDriver` shares PostgreSQL SQL generation, sequence ID assignment,
 flushes, m2m writes and optimistic locks. Each concrete driver owns its transport,
-transaction lifecycle and decoding. `RawRowData` shares retention, compaction and
-lazy cell access without importing pg. `WireRowData` adds node-pg's protocol and
-parser integration; PostgreJS uses its public `decodeAt` hook directly.
+transaction lifecycle and decoding. Both use one `WireRowData` for retention,
+compaction and lazy cell access. Its only layout setting is `rowHeaderBytes`:
+2 for pg's field-count prefix, 0 for PostgreJS's headerless rows. PostgreJS supplies
+its native decoders via `setColumnDecoders`; pg uses `setRowDescription`. The module
+also contains pg's query integration, but PostgreJS does not use it or activate
+the pg-protocol patch. No separate RawRowData base class is needed.
 
 EntityManager, entities, relations and ORM flush planning are unchanged. Native
 transaction callbacks receive a PostgreJS Connection, not a disguised pg client.
@@ -111,6 +114,8 @@ established by this experiment.
 - Benchmark TypeScript project, changed-file lint and formatting checks: passed.
 - Read benchmark smoke check: all four runtime modes, 100 entities, matching checksums.
 - Write benchmark smoke check: all four runtime modes, 10 Authors, persisted-effect checks.
+- After consolidating storage back into WireRowData: build/typechecks, lint and
+  the WireRowData/PostgreJsDriver integration tests passed in all four modes.
 
 Existing skips remain. Native transaction routing, rollback and compaction tests
 use the selected driver. Tests that inject malformed node-pg responses or exercise

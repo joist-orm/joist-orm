@@ -23,7 +23,7 @@ import type {
 } from "postgrejs";
 
 import { AbstractPostgresDriver, type PostgresDriverOpts, toPgParams } from "./AbstractPostgresDriver.ts";
-import { RawRowData } from "./RawRowData.ts";
+import { WireRowData } from "./WireRowData.ts";
 
 export type PostgreJsDriverOpts = PostgresDriverOpts;
 
@@ -97,7 +97,7 @@ export class PostgreJsDriver extends AbstractPostgresDriver<Connection> {
 
 /** Records immutable raw rows, leaving all value construction to field access. */
 export class PostgreJsRowDecoder extends native.RowDecoder {
-  readonly rows = new RawRowData(0);
+  readonly rows = new WireRowData(0);
   #chunk: Buffer | undefined;
 
   /** Supports the view-based fallback of PostgreJS's public decoder contract. */

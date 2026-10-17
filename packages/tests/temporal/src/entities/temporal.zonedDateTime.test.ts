@@ -1,7 +1,8 @@
 import { PrimitiveField, Temporal, alias, getMetadata } from "joist-orm";
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgresDriver, registerDatabaseBinaryParsers } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
-import { knex, newEntityManager } from "src/setupDbTests";
+import pg from "pg";
+import { knex, newEntityManager, pool } from "src/setupDbTests";
 import { jan1DateTime, jan1at10am, jan2DateTime, jan3DateTime } from "src/utils";
 
 import { Author, Book, BookFilter, EntityManager, newBook } from "./entities";
@@ -57,7 +58,7 @@ describe("zonedDateTime", () => {
     await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
     await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
     // And a session whose TimeZone is not UTC
-    const nyPool = createPostgreJsPool({ ...newPgConnectionConfig(), options: "-c TimeZone=America/New_York" });
+    const nyPool = new pg.Pool({ ...newPgConnectionConfig(), options: "-c TimeZone=America/New_York" });
     try {
       // When the same book is loaded through eager and lazy decoding
       const classicEm = new EntityManager({} as any, new PostgresDriver(nyPool, { lazyRows: false }));
@@ -71,6 +72,8 @@ describe("zonedDateTime", () => {
       expect(lazyBook.publishedAt).toEqual(classicBook.publishedAt);
       expect(lazyBook.publishedAt.toString()).toBe(classicBook.publishedAt.toString());
     } finally {
+      // Restore the shared UTC session zone captured by the lazy driver's auto-registration.
+      await registerDatabaseBinaryParsers(pool);
       await nyPool.end();
     }
   });

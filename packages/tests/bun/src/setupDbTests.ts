@@ -2,14 +2,15 @@ import { afterAll, beforeEach, expect } from "bun:test";
 
 import { newPgConnectionConfig } from "joist-orm";
 import { createKnex } from "joist-orm/knex";
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgresDriver } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
+import pg from "pg";
 import { EntityManager } from "src/entities";
 
 expect.extend({ toMatchEntity });
 
-const pool = createPostgreJsPool(newPgConnectionConfig());
+const pool = new pg.Pool(newPgConnectionConfig());
 export let knex: Knex = createKnex(pool);
 
 export function newEntityManager(): EntityManager {

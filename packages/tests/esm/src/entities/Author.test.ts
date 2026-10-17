@@ -1,11 +1,12 @@
 import { afterAll, describe, it } from "@jest/globals";
 import { type EntityManagerOpts } from "joist-orm";
-import { PostgresDriver, createPostgreJsPool } from "joist-orm/pg";
+import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
+import pg from "pg";
 
 import { EntityManager, newAuthor } from "./entities.js";
 
-const pool = createPostgreJsPool(newPgConnectionConfig());
+const pool = new pg.Pool(newPgConnectionConfig());
 
 describe("Author", () => {
   it("works", async () => {

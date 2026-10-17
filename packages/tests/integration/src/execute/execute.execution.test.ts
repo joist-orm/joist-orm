@@ -1,5 +1,5 @@
 import { Deferred, ReadOnlyError, query, table } from "joist-orm";
-import { PostgresDriver } from "joist-orm/pg";
+import { PostgreJsDriver, PostgresDriver } from "joist-orm/pg";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
 import { insertAuthor, insertBook, insertTag, select } from "src/entities/inserts";
 import { newEntityManager, pool, queries, recordQuery, resetQueryCount } from "src/testEm";
@@ -173,10 +173,9 @@ describe("em.execute / execution", () => {
     it("keeps query rows-only while the driver returns native command metadata", async () => {
       // Given a persisted Tag
       await insertTag({ name: "Readable" });
-      // And a separate driver records this EntityManager's result envelopes
+      // And the selected driver's result envelopes are observed
       const em = newEntityManager();
       const t = table(Tag);
-      em.driver = new PostgresDriver(pool, { onQuery: recordQuery });
       const execute = jest.spyOn(em.driver, "executeQuery");
       resetQueryCount();
 
@@ -220,12 +219,13 @@ describe("em.execute / execution", () => {
     });
 
     it.each([null, undefined, "1", -1, 1.5, NaN, Infinity, -Infinity])(
-      "rejects an invalid native command count of %s even when RETURNING has a row",
+      "rejects an invalid node-pg command count of %s even when RETURNING has a row",
       async (rowCount) => {
         // Given a native PostgreSQL response whose count is invalid despite returning one Tag name
         const em = newEntityManager();
         const t = table(Tag);
-        // And only the native response is replaced, leaving the real EM and PostgresDriver checks in place
+        // And this node-pg boundary test injects only its native response, retaining real EM validation
+        em.driver = new PostgresDriver(pool, { onQuery: recordQuery });
         const native = jest.spyOn(pool, "query").mockImplementationOnce(async () => ({
           command: "UPDATE",
           rowCount,
@@ -263,7 +263,8 @@ describe("em.execute / execution", () => {
       const em = newEntityManager();
       const t = table(Tag);
       // And the native pool and transaction entry point are observed without replacing their behavior
-      const native = jest.spyOn(pool, "query");
+      const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : pool;
+      const native = jest.spyOn(nativePool, "query");
       const transaction = jest.spyOn(em.driver, "transaction");
       resetQueryCount();
 
@@ -280,7 +281,7 @@ describe("em.execute / execution", () => {
         expect(result).toEqual({ rowCount: 1, rows: ["Committed"] });
         expect(transaction).not.toHaveBeenCalled();
         expect(em.txn).toBeUndefined();
-        expect(native.mock.calls).toMatchInlineSnapshot(`
+        expect(nativeQueryCalls(native)).toMatchInlineSnapshot(`
           [
             [
               "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
@@ -316,7 +317,8 @@ describe("em.execute / execution", () => {
       const result = await em.transaction(async (txn) => {
         // And native routing is observed only after the explicit transaction has begun
         const native = jest.spyOn(txn, "query");
-        const autocommit = jest.spyOn(pool, "query");
+        const nativePool = em.driver instanceof PostgreJsDriver ? em.driver.pool : pool;
+        const autocommit = jest.spyOn(nativePool, "query");
         try {
           const updated = await em.execute({
             update: t,
@@ -332,7 +334,7 @@ describe("em.execute / execution", () => {
           expect(updated).toEqual({ rowCount: 1, rows: ["Committed"] });
           expect(read).toEqual({ rowCount: 1, rows: ["Committed"] });
           expect(autocommit).not.toHaveBeenCalled();
-          expect(native.mock.calls).toMatchInlineSnapshot(`
+          expect(nativeQueryCalls(native)).toMatchInlineSnapshot(`
             [
               [
                 "UPDATE tags AS t SET name = $1 WHERE (t.id = $2) RETURNING t.name AS value",
@@ -401,7 +403,7 @@ describe("em.execute / execution", () => {
         await expect(result).rejects.toThrow(ZodError);
         expect(em.txn).toBeUndefined();
         expect(em.entities).toEqual([]);
-        expect(native!.mock.calls).toMatchInlineSnapshot(`
+        expect(nativeQueryCalls(native!)).toMatchInlineSnapshot(`
           [
             [
               "UPDATE authors AS a SET first_name = $1 WHERE (a.id = $2) AND (a.deleted_at IS NULL) RETURNING a.business_address AS value",
@@ -412,6 +414,7 @@ describe("em.execute / execution", () => {
             ],
             [
               "ROLLBACK",
+              [],
             ],
           ]
         `);
@@ -596,3 +599,8 @@ describe("em.execute / execution", () => {
     });
   });
 });
+
+/** Compares SQL and bindings across pg's positional arguments and PostgreJS's native options. */
+function nativeQueryCalls(spy: jest.SpyInstance): unknown[][] {
+  return spy.mock.calls.map((call) => [call[0], Array.isArray(call[1]) ? call[1] : (call[1]?.params ?? [])]);
+}

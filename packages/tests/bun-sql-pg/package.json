@@ -20,7 +20,7 @@
     "node-pg-migrate": "^9.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.5",
     "jest": "30.4.2",
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",

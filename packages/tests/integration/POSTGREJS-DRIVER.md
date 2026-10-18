@@ -1,4 +1,8 @@
-# PostgreJS native driver experiment
+# PostgreJS driver support
+
+Joist intends to support node-pg and PostgreJS indefinitely as alternative drivers.
+Stock node-pg, node-pg with lazy rows, and PostgreJS are choices applications can
+make at setup; adding PostgreJS does not replace or deprecate node-pg.
 
 This follows the read-only prototype and full ORM compatibility experiment in
 [PR #2119](https://github.com/joist-orm/joist-orm/pull/2119).
@@ -32,9 +36,10 @@ const nativeEager = new PostgreJsDriver(nativePool, { lazyRows: false });
 `createPostgreJsPool` compatibility facade has been removed. No pg.Pool cast or
 PostgreJS-specific branch remains in `PostgresDriver`.
 
-`AbstractPostgresDriver` shares PostgreSQL SQL generation, sequence ID assignment,
-flushes, m2m writes and optimistic locks. Each concrete driver owns its transport,
-transaction lifecycle and decoding. Both use one `WireRowData` for retention,
+Both drivers implement `Driver` directly. `postgresSql.ts` shares bulk SQL,
+m2m writes and optimistic locks through a query-execution callback. Each driver
+owns its options, ID assignment, transport, transaction lifecycle, query observation
+and lazy-read capability. Both use one `WireRowData` for retention,
 compaction and lazy cell access. Its only layout setting is `rowHeaderBytes`:
 2 for pg's field-count prefix, 0 for PostgreJS's headerless rows. PostgreJS supplies
 its native decoders via `setColumnDecoders`; pg uses `setRowDescription`. The module
@@ -120,6 +125,9 @@ established by this experiment.
 - Write benchmark smoke check: all four runtime modes, 10 Authors, persisted-effect checks.
 - After consolidating storage back into WireRowData: build/typechecks, lint and
   the WireRowData/PostgreJsDriver integration tests passed in all four modes.
+- After replacing the abstract driver with standalone drivers and shared SQL helpers
+  (2026-10-18): root tests passed, including all 11,055 integration test executions;
+  build/typechecks, benchmark typecheck, lint and formatting passed as well.
 
 Existing skips remain. Native transaction routing, rollback and compaction tests
 use the selected driver. Tests that inject malformed node-pg responses or exercise

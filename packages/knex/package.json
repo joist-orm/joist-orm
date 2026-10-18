@@ -41,7 +41,7 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.13",
+    "@swc/core": "1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",

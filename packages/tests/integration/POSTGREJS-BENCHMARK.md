@@ -1,6 +1,6 @@
 # PostgreJS read-path prototype
 
-The follow-up [full ORM cutover experiment](POSTGREJS-CUTOVER.md) covers writes,
+The follow-up [PostgreJS driver support](POSTGREJS-DRIVER.md) covers writes,
 transactions and the complete test suite. The results below preserve the initial
 read-only experiment. The benchmark now also supports `postgrejs-full-eager` and
 `postgrejs-full-lazy`; use `BENCH_MODES` to select a comma-separated subset, or

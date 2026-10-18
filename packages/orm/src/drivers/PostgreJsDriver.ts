@@ -1,14 +1,21 @@
 import {
+  type Driver,
   type DriverQueryResult,
   type EntityManager,
+  type IdAssigner,
+  type JoinRowTodo,
   type ParsedFindQuery,
+  type PreloadPlugin,
   type RowData,
+  SequenceIdAssigner,
   type Temporal,
+  type Todo,
   buildRawQuery,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
   driverBeforeCommit,
+  fail,
   getRuntimeConfig,
 } from "joist-core";
 import * as native from "postgrejs";
@@ -22,27 +29,93 @@ import type {
   QueryResult,
 } from "postgrejs";
 
-import { AbstractPostgresDriver, type PostgresDriverOpts, toPgParams } from "./AbstractPostgresDriver.ts";
+import { flushPostgres, toPgParams } from "./postgresSql.ts";
 import { WireRowData } from "./WireRowData.ts";
 
-export type PostgreJsDriverOpts = PostgresDriverOpts;
+export interface PostgreJsDriverOpts {
+  idAssigner?: IdAssigner;
+  /** Sets a default `PreloadPlugin` for any `EntityManager` that uses this driver. */
+  preloadPlugin?: PreloadPlugin;
+  /** Observes SQL before submission to PostgreJS. */
+  onQuery?: (sql: string) => void;
+  /**
+   * Uses PostgreJS's public decoder hook for lazy entity hydration. Defaults to true.
+   *
+   * Applies to unpaginated entity finds/loads and o2m/o2o/recursive loads. Paginated finds,
+   * m2m join-table rows, lazy columns and id/count queries still use eager results.
+   * Set false to eagerly decode all results. Deferred parser errors surface on field access.
+   */
+  lazyRows?: boolean;
+}
 
 /** PostgreSQL over native PostgreJS pools and transaction connections. */
-export class PostgreJsDriver extends AbstractPostgresDriver<Connection> {
+export class PostgreJsDriver implements Driver<Connection> {
+  readonly #idAssigner: IdAssigner;
+  readonly #preloadPlugin: PreloadPlugin | undefined;
+  private readonly onQuery: PostgreJsDriverOpts["onQuery"];
+  readonly lazyRows: boolean;
+  /** Its presence is the lazy-read capability signal checked by EntityManager. */
+  readonly executeFindRowData: Driver["executeFindRowData"];
+
   constructor(
     readonly pool: Pool,
     opts?: PostgreJsDriverOpts,
   ) {
-    super((sql, bindings) => executeNativeQuery(pool, sql, bindings), opts?.lazyRows ?? true, opts);
+    this.onQuery = opts?.onQuery;
+    this.#preloadPlugin = opts?.preloadPlugin;
+
+    this.#idAssigner =
+      opts?.idAssigner ?? new SequenceIdAssigner(async (sql) => (await this.query(undefined, sql, [])).rows);
+
+    this.lazyRows = opts?.lazyRows ?? true;
+    this.executeFindRowData = this.lazyRows
+      ? (em, parsed, settings) => this.findRowData(em, parsed, settings)
+      : undefined;
   }
 
   /** Executes through the native pool or the transaction's native connection. */
-  protected query(txn: Connection | undefined, sql: string, bindings: readonly unknown[]): Promise<DriverQueryResult> {
+  private query(txn: Connection | undefined, sql: string, bindings: readonly unknown[]): Promise<DriverQueryResult> {
+    this.onQuery?.(sql);
     return executeNativeQuery(txn ?? this.pool, sql, bindings);
   }
 
+  /** Executes an entity find with the EntityManager's default limit. */
+  async executeFind(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<any[]> {
+    const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
+    return (await this.executeQuery(em, sql, bindings)).rows;
+  }
+
+  /** Returns PostgreJS command counts and rows through Joist's query boundary. */
+  executeQuery(em: EntityManager, sql: string, bindings: readonly unknown[]): Promise<DriverQueryResult> {
+    return this.query(em.txn as Connection | undefined, toPgParams(sql), bindings);
+  }
+
+  /** Assigns identifiers with the configured strategy before dependent writes. */
+  async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
+    await this.#idAssigner.assignNewIds(todos);
+  }
+
+  /** Flushes PostgreSQL operations on the active native PostgreJS transaction. */
+  async flush(
+    em: EntityManager,
+    entityTodos: Record<string, Todo>,
+    joinRows: Record<string, JoinRowTodo>,
+  ): Promise<void> {
+    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Connection;
+    await this.#idAssigner.assignNewIds(entityTodos);
+    await flushPostgres((sql, bindings) => this.query(txn, sql, bindings), entityTodos, joinRows);
+  }
+
+  get defaultPlugins() {
+    return { preloadPlugin: this.#preloadPlugin };
+  }
+
   /** Supplies Joist's RowData lifecycle using only PostgreJS's public decoder hook. */
-  protected async findRowData(
+  private async findRowData(
     em: EntityManager,
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },

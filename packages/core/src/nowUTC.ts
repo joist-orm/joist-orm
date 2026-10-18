@@ -11,10 +11,7 @@ export function nowUTC(
   const now = new Date();
   if (type === undefined) return now;
 
-  // Date's native conversion can return another realm's Temporal objects in a VM such as Jest.
-  const zonedDateTime = requireTemporal()
-    .Temporal.Instant.fromEpochMilliseconds(now.getTime())
-    .toZonedDateTimeISO("UTC");
+  const zonedDateTime = requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO("UTC");
   if (type === "plainDate") return zonedDateTime.toPlainDate();
   if (type === "plainDateTime") return zonedDateTime.toPlainDateTime();
   return zonedDateTime;

@@ -69,14 +69,14 @@ describe("FieldLogging", () => {
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults:<line>",
-       "a#1.nickNames = a1 at defaults:<line>",
+       "a#1.isFunny = false at defaults.ts:55",
+       "a#1.nickNames = a1 at defaults.ts:203",
        "b#1 created at newBook.ts:10",
        "b#1.title = title at newBook.ts:10",
        "b#1.order = 1 at newBook.ts:10",
        "b#1.author = Author#1 at newBook.ts:10",
-       "b#1.notes = Notes for title at defaults:<line>",
-       "b#1.authorsNickNames = a1 at defaults:<line>",
+       "b#1.notes = Notes for title at defaults.ts:55",
+       "b#1.authorsNickNames = a1 at defaults.ts:203",
      ]
     `);
   });
@@ -100,8 +100,8 @@ describe("FieldLogging", () => {
        "a#1 created at newAuthor.ts:14",
        "a#1.firstName = a1 at newAuthor.ts:14",
        "a#1.age = 40 at newAuthor.ts:14",
-       "a#1.isFunny = false at defaults:<line>",
-       "a#1.nickNames = a1 at defaults:<line>",
+       "a#1.isFunny = false at defaults.ts:55",
+       "a#1.nickNames = a1 at defaults.ts:203",
      ]
     `);
   });
@@ -141,10 +141,10 @@ describe("FieldLogging", () => {
        "p#1 created at newLargePublisher.ts:6",
        "p#1.rating = 0 at newLargePublisher.ts:6",
        "p#1.name = lp1 at newLargePublisher.ts:6",
-       "p#1.numberOfBookReviews = 0 at defaults:<line>",
-       "p#1.type = BIG at defaults:<line>",
-       "p#1.baseSyncDefault = LPSyncDefault at defaults:<line>",
-       "p#1.baseAsyncDefault = LPAsyncDefault at defaults:<line>",
+       "p#1.numberOfBookReviews = 0 at defaults.ts:46",
+       "p#1.type = BIG at defaults.ts:55",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:55",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:203",
      ]
     `);
   });
@@ -207,8 +207,7 @@ class StubFieldLogger extends FieldLogger {
     // uncomment to see colorized output
     // super();
     super(watching, (line: string) => {
-      // Defaults may be source-mapped TypeScript or compiled JavaScript, depending on the driver.
-      fieldOutput.push(stripAnsi(line).replace(/defaults\.(?:ts|js|cjs):\d+/g, "defaults:<line>"));
+      fieldOutput.push(stripAnsi(line));
     });
   }
 }

@@ -22,7 +22,7 @@
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
-    "jest": "30.5.2",
+    "jest": "30.4.2",
     "jest-junit": "^17.0.0",
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",

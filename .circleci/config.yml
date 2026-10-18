@@ -28,6 +28,13 @@ jobs:
     steps:
       - checkout
 
+      # SWC validates cache ancestors; CircleCI's home-directory permissions fail that check.
+      - run:
+          name: Configure SWC native cache
+          command: |
+            SWC_NATIVE_BINDING_CACHE="$(mktemp -d /tmp/joist-swc-native.XXXXXX)"
+            echo "export SWC_NATIVE_BINDING_CACHE='$SWC_NATIVE_BINDING_CACHE'" >> "$BASH_ENV"
+
       - when:
           condition:
             not:

@@ -217,7 +217,7 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     // Given two authors (to turn off the obvious default)
     const [, a2] = [newAuthor(em), newAuthor(em)];
-    // Given we want to make a Book
+    // When a Book is created with an existing Author nested in its options
     const b = newTestInstance(
       em,
       Book,
@@ -230,7 +230,7 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1561↩",
+       "Creating new Book at jestAdapterInit.js:<line>↩",
        "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
        "  reviewer = Author#2 from scope↩",
@@ -246,7 +246,7 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     // Given two comments (to turn off the obvious default)
     const [, c2] = [newComment(em), newComment(em)];
-    // Given we want to make a Book
+    // When a Book is created with an existing Comment in its options
     const b = newTestInstance(
       em,
       Book,
@@ -254,11 +254,11 @@ describe("EntityManager.factories", () => {
       { comments: [c2], useLogging: true },
       {},
     );
-    // Then the book used that author
+    // Then the book reuses that Comment
     expect(b.randomComment.get).toMatchEntity(c2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1561↩",
+       "Creating new Book at jestAdapterInit.js:<line>↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
@@ -688,18 +688,21 @@ describe("EntityManager.factories", () => {
 
   describe("maybeNewPoly", () => {
     it("should use the Author from an existing Book for the Comment.parent", async () => {
+      // Given a Book with an existing Author
       const em = newEntityManager();
       const b1 = newBook(em);
+      // When a Comment prefers an existing Author as its parent
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent, Author>(Author, {
           existingSearchOrder: [Author, Book, Publisher],
         }),
         useLogging: true,
       });
+      // Then the Comment reuses the Book's Author
       expect(ft1.parent.get).toEqual(b1.author.get);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at jestAdapterInit.js:<line>↩",
          "  parent = Author#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -707,16 +710,19 @@ describe("EntityManager.factories", () => {
     });
 
     it("should use an existing Publisher for the Comment.parent when no Book or Author exist", async () => {
+      // Given a Publisher without any Books or Authors
       const em = newEntityManager();
       const p1 = newPublisher(em);
+      // When a Comment searches Authors, Books, and then Publishers for its parent
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, Publisher] }),
         useLogging: true,
       });
+      // Then the Comment reuses the existing Publisher
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at jestAdapterInit.js:<line>↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -724,17 +730,21 @@ describe("EntityManager.factories", () => {
     });
 
     it("should use an existing Publisher for the Comment.parent even though there is a book/author", async () => {
+      // Given an existing LargePublisher
       const em = newEntityManager();
       const p1 = newLargePublisher(em);
+      // And an existing Book and Author
       newBook(em);
+      // When a Comment prefers an existing Publisher over Authors and Books
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [Publisher, Author, Book] }),
         useLogging: true,
       });
+      // Then the Comment reuses the existing LargePublisher
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at jestAdapterInit.js:<line>↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -953,7 +963,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:944↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:954↩",
          "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",
@@ -1114,7 +1124,12 @@ describe("EntityManager.factories", () => {
 
 beforeEach(() => {
   setFactoryWriter((line: string) => {
-    factoryOutput.push(stripAnsi(line).replace("\n", "↩"));
+    // Jest's internal line numbers change between releases and are not factory behavior.
+    factoryOutput.push(
+      stripAnsi(line)
+        .replace(/jestAdapterInit\.js:\d+/g, "jestAdapterInit.js:<line>")
+        .replace("\n", "↩"),
+    );
   });
 });
 

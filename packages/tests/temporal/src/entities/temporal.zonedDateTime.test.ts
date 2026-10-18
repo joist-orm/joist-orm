@@ -185,6 +185,18 @@ describe("zonedDateTime", () => {
     expect(result).toMatchEntity(b2);
     expect(where.publishedAt.between[0]).toEqual(jan2DateTime);
   });
+
+  it("creates timestamps with the configured Temporal constructors", async () => {
+    // Given a new Book with an automatically assigned creation timestamp
+    const em = newEntityManager();
+    const book = newBook(em);
+
+    // When the Book is persisted
+    await em.flush();
+
+    // Then its timestamp uses the same Temporal constructor as its field metadata
+    expect(book.createdAt).toBeInstanceOf(Temporal.ZonedDateTime);
+  });
 });
 
 function toTimestampTzString(zonedDateTime: Temporal.ZonedDateTime) {

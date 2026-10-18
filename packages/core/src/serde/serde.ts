@@ -242,7 +242,11 @@ export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampC
 
   mapFromNow(now: Date): Temporal.PlainDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
-    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();
+    // Date's native conversion can return another realm's Temporal objects in a VM such as Jest.
+    return requireTemporal()
+      .Temporal.Instant.fromEpochMilliseconds(now.getTime())
+      .toZonedDateTimeISO(timeZone)
+      .toPlainDateTime();
   }
 }
 
@@ -254,7 +258,8 @@ export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampC
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
-    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
+    // Use the same Temporal constructors as field parsing, including inside a VM such as Jest.
+    return requireTemporal().Temporal.Instant.fromEpochMilliseconds(now.getTime()).toZonedDateTimeISO(timeZone);
   }
 }
 

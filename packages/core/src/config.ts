@@ -734,7 +734,8 @@ export function findUserCodeLine(lines: string[]): string {
       const nodeInternals = line.includes("node:internal/") || line.includes("Promise.all");
       const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
       // const isRecalc = line.includes(".recalcPending");
-      const isDefault = line.includes("/defaults.ts");
+      // Source maps are not always active, so recognize defaults in compiled packages too.
+      const isDefault = /\/defaults\.(?:ts|js|cjs):/.test(line);
       // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
       const isDataloader = line.includes("/dataloaders/");
       // If this is the `newTestInstance` call

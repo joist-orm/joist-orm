@@ -13,7 +13,7 @@ For example, to clone an `Author` plus all of their `Book`s and all of the `Book
 
 ```typescript
 const a1 = await em.load(Author, "a:1");
-const a2 = await em.clone(a1, { books: "reviews" })
+const a2 = await em.clone(a1, { deep: { books: "reviews" } });
 ```
 
 After the `em.clone` is finished:
@@ -28,7 +28,7 @@ Basically Joist will keep the subgraph of cloned entities intact.
 
 ### Advanced Features
 
-When calling `em.clone`, you can provide three config options to customize the behavior:
+When calling `em.clone`, you can provide these config options to customize the behavior:
 
 * `opts.deep` is the load hint from above, i.e. `{ books: "reviews" }`, that specifies the subgraph to clone.
 
@@ -42,12 +42,37 @@ When calling `em.clone`, you can provide three config options to customize the b
    );
    ```
   
-* `opts.postClone` is a function that accepts both the original entity and its new clone, to allow customizing to the clone:
+* `opts.skip` skips copying the specified fields, i.e. `{ skip: ["notes", "reviewer"] }`.
+
+* `opts.overrides` returns creation options for each original entity. These replace copied values before setters and synchronous defaults run:
 
    ```ts
    // This will duplicate the author's books, and assign them to a different author
    const duplicatedBooks = await em.clone(
      author.books.get,
-     { postClone: (_original, clone) => clone.author.set(author2) }
+     { overrides: () => ({ author: author2 }) }
    );
+   ```
+
+   Unlike reparenting in `postClone`, this never temporarily attaches the copied books to the source author, so its hooks and reactions are not triggered by that assignment. An explicit `undefined` clears a copied value and prevents its default from running.
+
+   The callback runs for every entity in a deep clone, not just the roots. Use `instanceof` to return options for the appropriate type, and return `{}` for types that need no overrides:
+
+   ```ts
+   const duplicatedAuthor = await em.clone(author, {
+     deep: "books",
+     overrides: (original) => original instanceof Book ? { reviewer: undefined } : {},
+   });
+   ```
+
+* `opts.postClone` accepts both the original entity and its new clone after references have been remapped. Use it for bookkeeping or assignments that need the clone itself:
+
+   ```ts
+   const originalToClone = new Map();
+   const duplicatedBooks = await em.clone(author.books.get, {
+     overrides: () => ({ author: author2 }),
+     postClone: (original, clone) => {
+       originalToClone.set(original, clone);
+     },
+   });
    ```

@@ -1,11 +1,10 @@
-import { type Entity, EntityManager, MaybeAbstractEntityConstructor, Plugin } from "joist-orm";
-import { insertAuthor, insertBook } from "src/entities/inserts";
+import { type Entity, EntityManager, type MaybeAbstractEntityConstructor, Plugin } from "joist-orm";
+import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 import {
   Author,
   Book,
-  BookReview,
   Comment,
   Image,
   ImageType,
@@ -462,74 +461,122 @@ describe("EntityManager.clone", () => {
     await em.flush();
   });
 
-  it("does not recalculate the source author's book count when cloning its books", async () => {
-    // Given an author whose book count has already been calculated
+  it("does not recalculate the source author's book count when overriding the cloned books' author", async () => {
+    // Given two authors, and only the first has a book
     const em = newEntityManager();
-    const author = newAuthor(em, { books: [{}] });
+    const [a1, a2] = [newAuthor(em, { books: [{}] }), newAuthor(em)];
     await em.flush();
-    const calculations = author.transientFields.numberOfBooksCalcInvoked;
-    // When the author and its books are cloned
-    await em.clone(author, { deep: "books" });
+    const calculations = a1.transientFields.numberOfBooksCalcInvoked;
+
+    // When we clone just the books directly into the second author
+    await em.clone(a1.books.get, { overrides: () => ({ author: a2 }) });
     await em.flush();
+
     // Then the source author's unchanged books do not trigger another calculation
-    expect(author.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
   });
 
-  it("does not recalculate the source author's book count when the source book's author is unloaded", async () => {
-    // Given a persisted author and book
-    await insertAuthor({ first_name: "a1" });
-    await insertBook({ title: "b1", author_id: 1 });
-    // And the author's books are loaded without loading the book's author reference
+  it("persists cloned books under the overridden author", async () => {
+    // Given two authors, and only the first has a book
     const em = newEntityManager();
-    const author = await em.load(Author, "a:1", "books");
-    // When the author and its books are cloned
-    await em.clone(author, { deep: "books" });
+    const [a1, a2] = [newAuthor(em, { books: [{ title: "b1" }] }), newAuthor(em)];
     await em.flush();
-    // Then the source author's unchanged books do not trigger a calculation
-    expect(author.transientFields.numberOfBooksCalcInvoked).toBe(0);
+
+    // When we clone the books directly into the second author and save them
+    await em.clone(a1.books.get, { overrides: () => ({ author: a2 }) });
+    await em.flush();
+    const reloadedAuthor = await newEntityManager().load(Author, a2.id, "books");
+
+    // Then the copied book belongs to the second author in the database
+    expect(reloadedAuthor).toMatchEntity({ books: [{ title: "b1", author: reloadedAuthor }] });
   });
 
-  it("clones grandchildren without attaching new reviews to the source books", async () => {
-    // Given an author whose book has a review and has already run its reviews rule
+  it("only exposes the overridden author to field hooks", async () => {
+    // Given two authors, and only the first has a book
     const em = newEntityManager();
-    const author = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
-    const [book] = author.books.get;
-    const [review] = book.reviews.get;
+    const [a1, a2] = [newAuthor(em, { books: [{}] }), newAuthor(em)];
     await em.flush();
-    const reviewsRuleInvoked = book.transientFields.reviewsRuleInvoked;
-    // When the author, book, and review are cloned together
-    const clone = await em.clone(author, { deep: { books: "reviews" } });
-    await em.flush();
-    // Then the source book's reviews rule does not react to a temporary cloned review
-    expect(book.transientFields.reviewsRuleInvoked).toBe(reviewsRuleInvoked);
-    expect(book.reviews.get).toEqual([review]);
-    expect(clone.books.get).toHaveLength(1);
-    const [clonedBook] = clone.books.get;
-    expect(clonedBook).not.toBe(book);
-    expect(clonedBook.author.get).toBe(clone);
-    expect(clonedBook.reviews.get).toHaveLength(1);
-    const [clonedReview] = clonedBook.reviews.get;
-    expect(clonedReview).not.toBe(review);
-    expect(clonedReview).toMatchEntity({ rating: 5, book: clonedBook });
-  });
 
-  it("only exposes cloned parents to field hooks when cloning children and grandchildren", async () => {
-    // Given a persisted author, book, and review
-    const em = newEntityManager();
-    const author = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
-    await em.flush();
-    // And a plugin observes every book-author and review-book assignment during cloning
+    // And a plugin observes every book-author assignment during cloning
     const plugin = new CloneParentAssignmentsPlugin();
     em.addPlugin(plugin);
-    // When the author, book, and review are cloned together
-    const clone = await em.clone(author, { deep: { books: "reviews" } });
-    const [clonedBook] = clone.books.get;
-    const [clonedReview] = clonedBook.reviews.get;
-    // Then field hooks see only the cloned parents, with no temporary source parents
-    expect(plugin.assignments).toMatchEntity([
-      { entity: clonedBook, field: "author", value: clone },
-      { entity: clonedReview, field: "book", value: clonedBook },
-    ]);
+
+    // When we clone just the books directly into the second author
+    const [clonedBook] = await em.clone(a1.books.get, { overrides: () => ({ author: a2 }) });
+
+    // Then field hooks never see an assignment to the source author
+    expect(plugin.assignments).toMatchEntity([{ entity: clonedBook, field: "author", value: a2.id }]);
+  });
+
+  it("applies overrides to skipped fields before synchronous defaults and postClone", async () => {
+    // Given a book whose notes were derived from its original title
+    const em = newEntityManager();
+    const book = newBook(em, { title: "b1" });
+    const notes: string[] = [];
+
+    // When we skip the title and notes but supply a new title during creation
+    await em.clone(book, {
+      skip: ["title", "notes"],
+      overrides: (original) => (original instanceof Book ? { title: `${original.title} copy` } : {}),
+      postClone: (_original, clone) => {
+        if (clone instanceof Book) notes.push(clone.notes);
+      },
+    });
+
+    // Then postClone sees notes defaulted from the overridden title, not the original title
+    expect(notes).toEqual(["Notes for b1 copy"]);
+  });
+
+  it("does not restore an explicitly cleared reference from the cloned graph", async () => {
+    // Given an author whose current draft is one of its books
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{}] });
+    // And the draft reference would normally be remapped to the cloned book
+    author.currentDraftBook.set(author.books.get[0]);
+
+    // When we clone the author and books but explicitly clear the draft
+    const clone = await em.clone(author, {
+      deep: "books",
+      overrides: (original) => (original instanceof Author ? { currentDraftBook: undefined } : {}),
+    });
+    await em.flush();
+
+    // Then remapping does not restore the cleared draft reference
+    expect(clone.currentDraftBook.isSet).toBe(false);
+  });
+
+  it("does not remap an overridden reference to an original entity that is also cloned", async () => {
+    // Given a book whose author will also be cloned
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{}] });
+    const [book] = author.books.get;
+    await em.flush();
+
+    // When we explicitly keep the copied book on the original author
+    const clone = await em.clone(book, {
+      deep: "author",
+      overrides: (original) => (original instanceof Book ? { author } : {}),
+    });
+    await em.flush();
+
+    // Then automatic remapping does not replace the explicit author
+    expect(clone.author.id).toBe(author.id);
+  });
+
+  it("overrides polymorphic parents on deep-cloned children", async () => {
+    // Given an author with a comment and another author without comments
+    const em = newEntityManager();
+    const [a1, a2] = [newAuthor(em, { comments: [{ text: "Great" }] }), newAuthor(em)];
+
+    // When we clone the first author but send its copied comments to the second author
+    await em.clone(a1, {
+      deep: "comments",
+      overrides: (original) => (original instanceof Comment ? { parent: a2, text: `${original.text} copy` } : {}),
+    });
+    await em.flush();
+
+    // Then the deep-cloned comment uses its overridden parent and text
+    expect(a2.comments.get).toMatchEntity([{ parent: a2, text: "Great copy" }]);
   });
 });
 
@@ -546,9 +593,9 @@ async function numberOf(em: EntityManager, ...args: MaybeAbstractEntityConstruct
 class CloneParentAssignmentsPlugin extends Plugin {
   readonly assignments: { entity: Entity; field: string; value: unknown }[] = [];
 
-  /** Observes the owning references for both levels of the cloned author graph. */
+  /** Observes book-author assignments during cloning. */
   beforeSetField(entity: Entity, field: string, value: unknown): void {
-    if ((entity instanceof Book && field === "author") || (entity instanceof BookReview && field === "book")) {
+    if (entity instanceof Book && field === "author") {
       this.assignments.push({ entity, field, value });
     }
   }

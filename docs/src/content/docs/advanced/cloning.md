@@ -32,19 +32,19 @@ When calling `em.clone`, you can provide these config options to customize the b
 
 * `opts.deep` is the load hint from above, i.e. `{ books: "reviews" }`, that specifies the subgraph to clone.
 
-* `opts.skipIf` is a function that accepts an entity and returns `true` if that entity should be skipped/not cloned:
+* `opts.skipIf` returns `true` if an entity and its children should be skipped. It accepts either a shared function or a map of per-type predicates:
 
    ```ts
    // This will duplicate the author's books, but skip any book where the title includes `sea`
    const duplicatedBooks = await em.clone(
      author.books.get,
-     { skipIf: (original) => original.title.includes("sea") }
+     { skipIf: { Book: (original) => original.title.includes("sea") } }
    );
    ```
   
 * `opts.skip` skips copying the specified fields, i.e. `{ skip: ["notes", "reviewer"] }`.
 
-* `opts.overrides` returns creation options for each original entity. These replace copied values before setters and synchronous defaults run:
+* `opts.overrides` returns creation options for each original entity. It accepts either a shared function or a map of per-type callbacks. These options replace copied values before setters and synchronous defaults run:
 
    ```ts
    // This will duplicate the author's books, and assign them to a different author
@@ -56,16 +56,16 @@ When calling `em.clone`, you can provide these config options to customize the b
 
    Unlike reparenting in `postClone`, this never temporarily attaches the copied books to the source author, so its hooks and reactions are not triggered by that assignment. An explicit `undefined` clears a copied value and prevents its default from running.
 
-   The callback runs for every entity in a deep clone, not just the roots. Use `instanceof` to return options for the appropriate type, and return `{}` for types that need no overrides:
+   A shared callback runs for every entity in a deep clone, not just the roots. A per-type map applies options only to the matching entity types:
 
    ```ts
    const duplicatedAuthor = await em.clone(author, {
      deep: "books",
-     overrides: (original) => original instanceof Book ? { reviewer: undefined } : {},
+     overrides: { Book: () => ({ reviewer: undefined }) },
    });
    ```
 
-* `opts.postClone` accepts both the original entity and its new clone after references have been remapped. Use it for bookkeeping or assignments that need the clone itself:
+* `opts.postClone` accepts both the original entity and its new clone after references have been remapped. It accepts either a shared function or a map of per-type callbacks. Use it for bookkeeping or assignments that need the clone itself:
 
    ```ts
    const originalToClone = new Map();
@@ -76,3 +76,32 @@ When calling `em.clone`, you can provide these config options to customize the b
      },
    });
    ```
+
+### Type-safe callbacks
+
+Because `em.clone` is often used to clone a tree/subgraph of data, there are likely multiple entity types involved in a given clone, i.e. a single clone might create new `Book`s and new `Author`s.
+
+This means the `em.clone` options like `skipIf`, `overrides`, and `postClone` will likely want to have per-type behavior, which Joist supports by passing maps/records of "entity name => lambda" for each one:
+
+```ts
+const copiedBooks = new Map<Book, Book>();
+const copy = await em.clone(author, {
+  deep: { books: "reviews" },
+  skipIf: {
+    Book: (original) => original.title === "Excluded",
+  },
+  overrides: {
+    Book: (original) => ({ title: `${original.title} COPY` }),
+  },
+  postClone: {
+    Book: (original, clone) => {
+      copiedBooks.set(original, clone);
+    },
+    BookReview: (original, clone) => {
+      clone.rating = original.rating + 1;
+    },
+  },
+});
+```
+
+This allows each lambda to be strongly typed, i.e. the `Book` `skipIf` handler's `original` is already typed as `Book`, not a generic `Entity`. Override handlers return the matching entity's creation options, such as `Partial<BookOpts>`.

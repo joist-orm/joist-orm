@@ -216,6 +216,21 @@ export type TaggedId = string;
 /** Creation options for any registered entity type, since deep clones can include more than the root type. */
 export type CloneOverrides = Partial<TypeMap[keyof TypeMap]["optsType"]>;
 
+/** Skips entities using either a shared predicate or predicates for specific entity types. */
+export type CloneSkipIf<E extends EntityW = EntityW> =
+  | ((original: E) => boolean)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"]) => boolean };
+
+/** Supplies creation options using either a shared callback or callbacks with type-specific options. */
+export type CloneOverridesCallback<E extends EntityW = EntityW> =
+  | ((original: E) => CloneOverrides)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"]) => Partial<TypeMap[K]["optsType"]> };
+
+/** Customizes clones using either a shared callback or callbacks for specific entity types. */
+export type ClonePostClone<E extends EntityW = EntityW> =
+  | ((original: E, clone: E) => void)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"], clone: TypeMap[K]["entityType"]) => void };
+
 export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
@@ -1129,9 +1144,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
-   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
-   *   @param overrides - Creation options for each entity, applied before defaults and instead of copied values
-   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   *   @param skipIf - Shared or per-type predicates that skip entities and their children
+   *   @param overrides - Shared or per-type callbacks that supply creation options before defaults run
+   *   @param postClone - Shared or per-type callbacks for any original/clone post-processing needed
    * @returns The `Loaded` cloned entity or fails if the clone could not be made
    *
    * @example
@@ -1159,9 +1174,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: K;
-      skipIf?: (entity: Entity) => boolean;
-      overrides?: (original: Entity) => CloneOverrides;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H>>;
 
@@ -1172,9 +1187,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
-   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
-   *   @param overrides - Creation options for each entity, applied before defaults and instead of copied values
-   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   *   @param skipIf - Shared or per-type predicates that skip entities and their children
+   *   @param overrides - Shared or per-type callbacks that supply creation options before defaults run
+   *   @param postClone - Shared or per-type callbacks for any original/clone post-processing needed
    * @returns Array of `Loaded` cloned entities from the provided list or empty array if all are skipped
    *
    * @example
@@ -1198,9 +1213,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: K;
-      skipIf?: (entity: Entity) => boolean;
-      overrides?: (original: Entity) => CloneOverrides;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H>[]>;
 
@@ -1209,9 +1224,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: object;
-      skipIf?: (entity: Entity) => boolean;
-      overrides?: (original: Entity) => CloneOverrides;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
     const { deep = {}, skipIf, skip = {}, overrides, postClone } = opts ?? {};
@@ -1221,7 +1236,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // 1. Find all entities w/o mutating them yet
     await crawl(todo, skipMap, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
-      skipIf: skipIf as any,
+      skipIf: (entity) => invokeCloneCallback(skipIf, entity as Entity) ?? false,
       skip,
     });
 
@@ -1230,7 +1245,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const overrideMap = new WeakMap<Entity, object>();
     const clones = [...todo].map((entity) => {
       const skip = skipMap.get(entity) ?? [];
-      const override: Record<string, unknown> = overrides?.(entity) ?? {};
+      const override: Record<string, unknown> = invokeCloneCallback(overrides, entity) ?? {};
       overrideMap.set(entity, override);
 
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
@@ -1327,7 +1342,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
 
     if (postClone) {
-      await Promise.all(clones.map(([original, clone]) => postClone(original, clone)));
+      await Promise.all(clones.map((pair) => invokeCloneCallback(postClone, ...pair)));
     }
 
     return Array.isArray(entityOrArray)
@@ -3502,6 +3517,25 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
       }
     }
   }
+}
+
+/** Invokes only the most specific handler, falling back to a base type when no concrete-type handler exists. */
+function invokeCloneCallback<A extends [EntityW, ...EntityW[]], R>(
+  callback: ((...args: A) => R) | object | undefined,
+  ...args: A
+): R | undefined {
+  if (typeof callback === "function") return callback(...args);
+  if (!callback) return undefined;
+
+  // The public maps correlate each handler's parameters with its metadata type; dispatch restores that pairing.
+  const handlers = callback as Record<string, ((...args: A) => R) | undefined>;
+  let meta: EntityMetadata | undefined = getMetadata(args[0]);
+  while (meta) {
+    const handler = Object.hasOwn(handlers, meta.type) ? handlers[meta.type] : undefined;
+    if (handler) return handler(...args);
+    meta = meta.baseType ? getMetadataForType(meta.baseType) : undefined;
+  }
+  return undefined;
 }
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */

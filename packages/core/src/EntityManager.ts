@@ -140,7 +140,7 @@ import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyF
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
 import { runInTrustedContext } from "src/trusted.ts";
-import { type OptsOf, type OrderOf } from "src/typeMap.ts";
+import { type OptsOf, type OrderOf, type TypeMap } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
 import {
   type MaybePromise,
@@ -212,6 +212,9 @@ export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<
 export type IdOf<T> = T extends { id: infer I } ? I : never;
 
 export type TaggedId = string;
+
+/** Creation options for any registered entity type, since deep clones can include more than the root type. */
+export type CloneOverrides = Partial<TypeMap[keyof TypeMap]["optsType"]>;
 
 export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
@@ -1127,6 +1130,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
    *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
+   *   @param overrides - Creation options for each entity, applied before defaults and instead of copied values
    *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
    * @returns The `Loaded` cloned entity or fails if the clone could not be made
    *
@@ -1156,6 +1160,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       deep?: H;
       skip?: K;
       skipIf?: (entity: Entity) => boolean;
+      overrides?: (original: Entity) => CloneOverrides;
       postClone?: (original: Entity, clone: Entity) => void;
     },
   ): Promise<Loaded<T, H>>;
@@ -1168,6 +1173,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
    *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
+   *   @param overrides - Creation options for each entity, applied before defaults and instead of copied values
    *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
    * @returns Array of `Loaded` cloned entities from the provided list or empty array if all are skipped
    *
@@ -1181,7 +1187,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * @example
    * // This will duplicate the author's books, and assign them to a different author
-   * const duplicatedBooks = await em.clone(author.books.get, { postClone: (_original, clone) => clone.author.set(author2) })
+   * const duplicatedBooks = await em.clone(author.books.get, { overrides: () => ({ author: author2 }) })
    *
    * @example
    * // This will duplicate the author's books, but skip any book where the title includes `sea`
@@ -1193,6 +1199,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       deep?: H;
       skip?: K;
       skipIf?: (entity: Entity) => boolean;
+      overrides?: (original: Entity) => CloneOverrides;
       postClone?: (original: Entity, clone: Entity) => void;
     },
   ): Promise<Loaded<T, H>[]>;
@@ -1203,10 +1210,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       deep?: H;
       skip?: object;
       skipIf?: (entity: Entity) => boolean;
+      overrides?: (original: Entity) => CloneOverrides;
       postClone?: (original: Entity, clone: Entity) => void;
     },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
-    const { deep = {}, skipIf, skip = {}, postClone } = opts ?? {};
+    const { deep = {}, skipIf, skip = {}, overrides, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
     const todo = new Set<Entity>();
     const skipMap = new WeakMap<Entity, string[]>();
@@ -1219,8 +1227,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // 2. Clone each found entity
     const deferredRelations: [Entity, string, Entity][] = [];
+    const overrideMap = new WeakMap<Entity, object>();
     const clones = [...todo].map((entity) => {
       const skip = skipMap.get(entity) ?? [];
+      const override: Record<string, unknown> = overrides?.(entity) ?? {};
+      overrideMap.set(entity, override);
+
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
       // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
       // by `em.register`).
@@ -1228,6 +1240,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const copy = Object.fromEntries(
         Object.values(meta.allFields)
           .map((f) => {
+            // Overrides are passed to create below instead of copying the source value.
+            // I.e. { currentDraftBook: undefined } must not add the original draft to deferredRelations,
+            // which would later replace undefined with the cloned draft.
+            if (Object.hasOwn(override, f.fieldName)) return [f.fieldName, override[f.fieldName]];
             if (skip.includes(f.fieldName)) return undefined;
             switch (f.kind) {
               case "primitive":
@@ -1250,7 +1266,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                   isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
                 ) as Entity | undefined;
                 // Defer relations within the cloned subgraph because setting a clone field before remapping can update
-                // its other side, and that update is not fixed up later.
+                // its other side, and that update is not fixed up later. Even for o2m collections that are fixed up,
+                // briefly attaching a cloned child to its source parent would queue reactions on the source parent.
                 if (target && todo.has(target)) {
                   deferredRelations.push([entity, f.fieldName, target]);
                   return [f.fieldName, undefined];
@@ -1274,7 +1291,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       // Call `new` just like the user would do
       // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
-      const clone = this.create(asConcreteCstr(meta.cstr), copy);
+      const clone = this.create(asConcreteCstr(meta.cstr), { ...copy, ...override });
 
       return [entity, clone] as const;
     });
@@ -1282,8 +1299,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // 3. Now mutate the m2o relations. We focus on only m2o's because they "own" the field/column,
     // and will drive percolation to keep the other-side o2m & o2o updated.
-    clones.forEach(([, clone]) => {
+    clones.forEach(([original, clone]) => {
       getRelationEntries(clone).forEach(([fieldName, value]) => {
+        // Overridden references already have their final values and do not need fixup.
+        if (Object.hasOwn(overrideMap.get(original)!, fieldName)) return;
         if (
           value instanceof ManyToOneReferenceImpl ||
           value instanceof PolymorphicReferenceImpl ||

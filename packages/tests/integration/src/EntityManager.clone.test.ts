@@ -1,3 +1,4 @@
+import { expectTypeOf } from "expect-type";
 import { type Entity, EntityManager, type MaybeAbstractEntityConstructor, Plugin } from "joist-orm";
 import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -5,6 +6,7 @@ import { newEntityManager } from "src/testEm";
 import {
   Author,
   Book,
+  BookReview,
   Comment,
   Image,
   ImageType,
@@ -578,6 +580,155 @@ describe("EntityManager.clone", () => {
     // Then the deep-cloned comment uses its overridden parent and text
     expect(a2.comments.get).toMatchEntity([{ parent: a2, text: "Great copy" }]);
   });
+
+  it("dispatches postClone handlers to each entity type in a deep clone", async () => {
+    // Given an author with a reviewed book
+    const em = newEntityManager();
+    const author = newAuthor(em, { firstName: "a1", books: [{ title: "b1", reviews: [{ rating: 3 }] }] });
+
+    // When each entity type customizes its own copy
+    const clone = await em.clone(author, {
+      deep: { books: "reviews" },
+      postClone: {
+        Author: (original, copy) => {
+          copy.firstName = `${original.firstName} copy`;
+        },
+        Book: (original, copy) => {
+          copy.title = `${original.title} copy`;
+        },
+        BookReview: (original, copy) => {
+          copy.rating = original.rating + 1;
+        },
+      },
+    });
+    await em.flush();
+
+    // Then the author, book, and review each use the matching handler
+    expect(clone).toMatchEntity({ firstName: "a1 copy", books: [{ title: "b1 copy", reviews: [{ rating: 4 }] }] });
+  });
+
+  it("uses per-type overrides without changing the source parent's books", async () => {
+    // Given an author with a book and another author without books
+    const em = newEntityManager();
+    const [a1, a2] = [newAuthor(em, { books: [{ title: "b1" }] }), newAuthor(em)];
+    await em.flush();
+    const calculations = a1.transientFields.numberOfBooksCalcInvoked;
+
+    // When only copied books are given a new author and title
+    await em.clone(a1, {
+      deep: "books",
+      overrides: { Book: (original) => ({ author: a2, title: `${original.title} copy` }) },
+    });
+    await em.flush();
+
+    // Then the source author does not react to a temporary copied book
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
+  });
+
+  it("skips only matching entity types and their children", async () => {
+    // Given an author with two reviewed books
+    const em = newEntityManager();
+    const author = newAuthor(em, {
+      books: [
+        { title: "b1", reviews: [{ rating: 3 }] },
+        { title: "b2", reviews: [{ rating: 5 }] },
+      ],
+    });
+
+    // When the book predicate excludes the second book
+    const clone = await em.clone(author, {
+      deep: { books: "reviews" },
+      skipIf: { Book: (original) => original.title === "b2" },
+    });
+    await em.flush();
+
+    // Then types without a predicate are copied along with the first book
+    expect(clone).toMatchEntity({ books: [{ title: "b1", reviews: [{ rating: 3 }] }] });
+  });
+
+  it("waits for asynchronous per-type postClone handlers", async () => {
+    // Given a book whose copied title is set asynchronously
+    const em = newEntityManager();
+    const book = newBook(em, { title: "b1" });
+
+    // When the matching handler yields before setting the title
+    const clone = await em.clone(book, {
+      postClone: {
+        Book: async (original, copy) => {
+          await Promise.resolve();
+          copy.title = `${original.title} copy`;
+        },
+      },
+    });
+
+    // Then cloning returns only after the copied title is set
+    expect(clone.title).toBe("b1 copy");
+  });
+
+  it("prefers a concrete-type handler without also invoking the base-type handler", async () => {
+    // Given a small publisher with handlers for both its concrete and base types
+    const em = newEntityManager();
+    const publisher = newSmallPublisher(em, { name: "p1" });
+
+    // When both handlers would append a different suffix
+    const clone = await em.clone(publisher, {
+      postClone: {
+        Publisher: (_original, copy) => {
+          copy.name += " base";
+        },
+        SmallPublisher: (_original, copy) => {
+          copy.name += " small";
+        },
+      },
+    });
+    await em.flush();
+
+    // Then only the concrete-type suffix is applied
+    expect(clone.name).toBe("p1 small");
+  });
+
+  it("falls back to base-type handlers for all clone callbacks", async () => {
+    // Given two small publishers and handlers declared only for their Publisher base type
+    const em = newEntityManager();
+    const publishers = [newSmallPublisher(em, { name: "p1" }), newSmallPublisher(em, { name: "excluded" })];
+
+    // When the base handlers select and customize the copies
+    const clones = await em.clone(publishers, {
+      skipIf: { Publisher: (original) => original.name === "excluded" },
+      overrides: { Publisher: (original) => ({ name: `${original.name} copy` }) },
+      postClone: {
+        Publisher: (_original, copy) => {
+          copy.name += " draft";
+        },
+      },
+    });
+    await em.flush();
+
+    // Then the unexcluded subtype uses its base-type creation options and post-processing
+    expect(clones).toMatchEntity([{ name: "p1 copy draft" }]);
+  });
+
+  it("does not fall back to a base predicate when the concrete predicate returns false", async () => {
+    // Given a small publisher whose base predicate would exclude it
+    const em = newEntityManager();
+    const publisher = newSmallPublisher(em, { name: "p1" });
+
+    // When its concrete predicate keeps it
+    const clones = await em.clone([publisher], {
+      skipIf: { Publisher: () => true, SmallPublisher: () => false },
+    });
+    await em.flush();
+
+    // Then the concrete predicate determines whether it is copied
+    expect(clones).toMatchEntity([{ name: "p1" }]);
+  });
+
+  it("type-checks per-type callback parameters and creation options", () => {
+    // Given callback assertions against generated Author, Book, and BookReview types
+    // When TypeScript checks valid and invalid callback maps
+    // Then the assertions are checked without executing invalid calls
+    expect(typeof cloneCallbackTypeAssertions).toBe("function");
+  });
 });
 
 async function numberOf(em: EntityManager, ...args: MaybeAbstractEntityConstructor<any>[]): Promise<number[]> {
@@ -599,4 +750,56 @@ class CloneParentAssignmentsPlugin extends Plugin {
       this.assignments.push({ entity, field, value });
     }
   }
+}
+
+/**
+ * Checks callback inference and rejected maps against generated entity types.
+ *
+ * Invalid calls are checked by TypeScript but never executed.
+ */
+function cloneCallbackTypeAssertions() {
+  const em = newEntityManager();
+  const author = newAuthor(em);
+
+  void em.clone(author, {
+    deep: { books: "reviews" },
+    skipIf: {
+      Book: (original) => {
+        expectTypeOf(original).toEqualTypeOf<Book>();
+        return original.title === "excluded";
+      },
+    },
+    overrides: {
+      BookReview: (original) => {
+        expectTypeOf(original).toEqualTypeOf<BookReview>();
+        return { rating: original.rating + 1 };
+      },
+    },
+    postClone: {
+      Author: (original, clone) => {
+        expectTypeOf(original).toEqualTypeOf<Author>();
+        expectTypeOf(clone).toEqualTypeOf<Author>();
+      },
+      Book: (_original, clone) => {
+        expectTypeOf(clone).toEqualTypeOf<Book>();
+        // @ts-expect-error Concrete entity typing does not promise loaded references.
+        void clone.author.get;
+      },
+    },
+  });
+
+  // @ts-expect-error Book creation options do not accept a numeric title.
+  void em.clone(author, {
+    overrides: { Book: () => ({ title: 123 }) },
+  });
+
+  // @ts-expect-error Book predicates must return booleans.
+  void em.clone(author, {
+    skipIf: { Book: () => "yes" },
+  });
+
+  // @ts-expect-error Handler keys must name registered entity types.
+  void em.clone(author, {
+    postClone: { Bok: () => {} },
+  });
 }

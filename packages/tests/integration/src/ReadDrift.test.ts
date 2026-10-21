@@ -67,7 +67,7 @@ describe("ReadDrift", () => {
     );
   });
 
-  it("leaves asserted writes to oplocks", async () => {
+  it("does not read lock entities being written", async () => {
     // Given a loaded author
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -81,7 +81,7 @@ describe("ReadDrift", () => {
     expect(shareQueries()).toEqual([]);
   });
 
-  it("still rejects oplock collisions on asserted writes", async () => {
+  it("still rejects oplock collisions on entities marked for read locking", async () => {
     // Given an asserted author with a pending edit
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -96,7 +96,7 @@ describe("ReadDrift", () => {
     await expect(flushed).rejects.toThrow("Oplock failure for authors rows");
   });
 
-  it("protects dependencies when an opted-in rule runs", async () => {
+  it("read locks entities of triggered rules", async () => {
     // Given a book whose rule reads its author
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book
@@ -147,7 +147,7 @@ describe("ReadDrift", () => {
     expect(shareQueries()).toEqual([]);
   });
 
-  it("protects opted-in reaction dependencies", async () => {
+  it("read locks entities of triggered reactions", async () => {
     // Given a reaction on book notes that also reads its author
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book
@@ -163,7 +163,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("clears the read set after a successful flush", async () => {
+  it("does not repeat read locks without another request", async () => {
     // Given an asserted author whose first flush succeeds
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -179,7 +179,7 @@ describe("ReadDrift", () => {
     expect(queries).toEqual([]);
   });
 
-  it("ignores unsaved entities", async () => {
+  it("does not read lock unsaved entities", async () => {
     // Given a new author
     const em = newEntityManager();
     const author = newAuthor(em);
@@ -213,7 +213,7 @@ describe("ReadDrift", () => {
     }
   });
 
-  it("protects sibling rows reached through a reactive property's collection hint", async () => {
+  it("read locks sibling entities reached through a reactive property's collection hint", async () => {
     // Given two books by the same author
     await insertAuthor({ first_name: "a1" });
     // And the author has two persisted books
@@ -248,7 +248,7 @@ describe("ReadDrift", () => {
     ]);
   });
 
-  it("reports both loaded and current versions for an updated dependency", async () => {
+  it("reports expected and actual versions on read drift", async () => {
     // Given a loaded author version
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -263,7 +263,7 @@ describe("ReadDrift", () => {
     );
   });
 
-  it("uses the persisted version after this EM has already written the entity", async () => {
+  it("uses the last saved version when read locking an entity", async () => {
     // Given an existing author loaded into this EM
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -310,7 +310,7 @@ describe("ReadDrift", () => {
     }
   });
 
-  it("batches repeated reads of a configured scalar getter", async () => {
+  it("read locks an entity once for repeated field reads", async () => {
     // Given a persisted schedule whose overview has field-level protection
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -391,7 +391,7 @@ describe("ReadDrift", () => {
     expect(queries).toEqual([]);
   });
 
-  it("protects a parent's inherited status read when deciding to edit a book", async () => {
+  it("read locks a parent when its inherited status is read", async () => {
     // Given a book whose publisher status is draft
     await insertSmallPublisher({ name: "p1", status_id: 1 });
     // And the publisher has an author with a persisted book
@@ -408,7 +408,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects enum boolean convenience getters", async () => {
+  it("read locks entities accessed through enum boolean getters", async () => {
     // Given a loaded draft publisher
     await insertSmallPublisher({ name: "p1", status_id: 1 });
     const em = newEntityManager();
@@ -421,7 +421,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects enum detail getters", async () => {
+  it("read locks entities accessed through enum detail getters", async () => {
     // Given a loaded draft publisher
     await insertSmallPublisher({ name: "p1", status_id: 1 });
     const em = newEntityManager();
@@ -434,7 +434,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects configured native enum reads", async () => {
+  it("read locks entities accessed through native enum getters", async () => {
     // Given an author's configured native enum field
     await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
     const em = newEntityManager();
@@ -447,7 +447,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects configured enum array reads", async () => {
+  it("read locks entities accessed through enum array getters", async () => {
     // Given an author's configured enum array field
     await insertAuthor({ first_name: "a1", favorite_colors: [1] });
     const em = newEntityManager();
@@ -477,7 +477,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects direct application calls to getField", async () => {
+  it("read locks entities accessed through getField", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -539,7 +539,7 @@ describe("ReadDrift", () => {
     expect(queries).toEqual([]);
   });
 
-  it("protects reads in auth-trusted contexts", async () => {
+  it("read locks entities read by trusted business logic", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -554,7 +554,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects configured source values copied during cloning", async () => {
+  it("read locks source entities when cloning", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -569,7 +569,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("protects configured values read through changes.originalValue", async () => {
+  it("read locks entities accessed through changes.originalValue", async () => {
     // Given a configured field on an unchanged loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule

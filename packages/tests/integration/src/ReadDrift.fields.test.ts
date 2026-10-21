@@ -1,27 +1,16 @@
 import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
-import {
-  Author,
-  AuthorSchedule,
-  Book,
-  Color,
-  FavoriteShape,
-  PublisherStatus,
-  SmallPublisher,
-  newAuthor,
-  newAuthorSchedule,
-  newBook,
-  newSmallPublisher,
-} from "src/entities";
+import { Author, AuthorSchedule, Book, PublisherStatus, SmallPublisher, newAuthorSchedule } from "src/entities";
+import { insertAuthor, insertAuthorSchedule, insertBook, insertSmallPublisher } from "src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("ReadDrift.fields", () => {
   it("batches repeated reads of a configured scalar getter", async () => {
     // Given a persisted schedule whose overview has field-level protection
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When application logic reads its overview repeatedly
     void parent.overview;
     void parent.overview;
@@ -37,11 +26,11 @@ describe("ReadDrift.fields", () => {
 
   it("compares against the loaded version rather than the getter-read version", async () => {
     // Given a schedule loaded before a concurrent update
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // And another connection publishes it before application logic reads the cached value
     await knex("author_schedules")
       .where("id", parent.idUntagged)
@@ -54,12 +43,12 @@ describe("ReadDrift.fields", () => {
 
   it("does not enroll a configured field during hydration", async () => {
     // Given a persisted schedule with a configured overview
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
     // When it is loaded but its getter is never read
-    await em.load(AuthorSchedule, schedule.id);
+    await em.load(AuthorSchedule, "authorSchedule:1");
     resetQueryCount();
     await em.flush();
     // Then hydration alone adds no assertion or transaction
@@ -68,11 +57,11 @@ describe("ReadDrift.fields", () => {
 
   it("does not enroll a configured field when its setter internally reads the current value", async () => {
     // Given a loaded schedule with a configured overview
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When a setter compares an unchanged value through internal getField
     parent.overview = "draft";
     resetQueryCount();
@@ -83,11 +72,11 @@ describe("ReadDrift.fields", () => {
 
   it("does not enroll unconfigured getters", async () => {
     // Given a loaded schedule with only overview configured
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When application logic only reads createdAt
     void parent.createdAt;
     resetQueryCount();
@@ -98,12 +87,12 @@ describe("ReadDrift.fields", () => {
 
   it("protects a parent's inherited status read when deciding to edit a book", async () => {
     // Given a book whose publisher status is draft
-    const seed = newEntityManager();
-    const publisher = newSmallPublisher(seed, { status: PublisherStatus.Draft });
-    const b = newBook(seed, { author: { publisher } });
-    await seed.flush();
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
+    // And the publisher has an author with a persisted book
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, { author: "publisher" });
+    const book = await em.load(Book, "b:1", { author: "publisher" });
     const parent = book.author.get.publisher.get!;
     // When application logic uses the inherited status getter without an explicit assertion
     if (parent.status === PublisherStatus.Draft) book.notes = "allowed while draft";
@@ -115,11 +104,9 @@ describe("ReadDrift.fields", () => {
 
   it("protects enum boolean convenience getters", async () => {
     // Given a loaded draft publisher
-    const seed = newEntityManager();
-    const p = newSmallPublisher(seed, { status: PublisherStatus.Draft });
-    await seed.flush();
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
     const em = newEntityManager();
-    const publisher = await em.load(SmallPublisher, p.id);
+    const publisher = await em.load(SmallPublisher, "p:1");
     // When application logic uses isDraft instead of the status getter
     void publisher.isDraft;
     // And another connection changes the row version
@@ -130,11 +117,9 @@ describe("ReadDrift.fields", () => {
 
   it("protects enum detail getters", async () => {
     // Given a loaded draft publisher
-    const seed = newEntityManager();
-    const p = newSmallPublisher(seed, { status: PublisherStatus.Draft });
-    await seed.flush();
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
     const em = newEntityManager();
-    const publisher = await em.load(SmallPublisher, p.id);
+    const publisher = await em.load(SmallPublisher, "p:1");
     // When application logic accesses the enum details
     void publisher.statusDetails;
     // And another connection changes the row version
@@ -145,11 +130,9 @@ describe("ReadDrift.fields", () => {
 
   it("protects configured native enum reads", async () => {
     // Given an author's configured native enum field
-    const seed = newEntityManager();
-    const a = newAuthor(seed, { favoriteShape: FavoriteShape.Circle });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // When application logic uses a native enum convenience getter
     void author.isCircle;
     // And another connection changes the row version
@@ -160,11 +143,9 @@ describe("ReadDrift.fields", () => {
 
   it("protects configured enum array reads", async () => {
     // Given an author's configured enum array field
-    const seed = newEntityManager();
-    const a = newAuthor(seed, { favoriteColors: [Color.Red] });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1", favorite_colors: [1] });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // When application logic reads the enum array
     void author.favoriteColors;
     // And another connection changes an unrelated field on the same row
@@ -175,11 +156,11 @@ describe("ReadDrift.fields", () => {
 
   it("clears implicit assertions after a successful flush", async () => {
     // Given an overview read whose implicit assertion has already succeeded
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     void parent.overview;
     await em.flush();
     // And another connection changes the version after that flush
@@ -193,11 +174,11 @@ describe("ReadDrift.fields", () => {
 
   it("enrolls another assertion when the cached getter is read after a successful flush", async () => {
     // Given a protected getter read and a successful flush
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     void parent.overview;
     await em.flush();
     // And another connection invalidates the still-cached entity
@@ -210,11 +191,11 @@ describe("ReadDrift.fields", () => {
 
   it("leaves configured getter reads on dirty entities to oplocks", async () => {
     // Given an existing schedule read through its protected getter
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     void parent.overview;
     // When the same row is also updated
     parent.overview = "published";
@@ -237,11 +218,11 @@ describe("ReadDrift.fields", () => {
 
   it("protects direct application calls to getField", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When application code reads the field without using its generated getter
     getField(parent, "overview");
     // And another connection invalidates that read
@@ -252,11 +233,11 @@ describe("ReadDrift.fields", () => {
 
   it("allows housekeeping to read getField without enrolling an assertion", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // And another connection changes its version
     await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
     // When housekeeping explicitly marks its read internal
@@ -269,11 +250,11 @@ describe("ReadDrift.fields", () => {
 
   it("does not enroll assertions when checking whether a field is set", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When housekeeping checks presence without reading a domain value
     isFieldSet(parent, "overview");
     resetQueryCount();
@@ -284,11 +265,11 @@ describe("ReadDrift.fields", () => {
 
   it("does not enroll assertions when applying unchanged opts", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When opts application inspects the current value without changing it
     parent.set({ overview: "draft" });
     resetQueryCount();
@@ -299,11 +280,11 @@ describe("ReadDrift.fields", () => {
 
   it("protects reads in auth-trusted contexts", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When trusted domain logic reads the field, as hooks and rules do
     runInTrustedContext(() => getField(parent, "overview"));
     // And another connection invalidates the read
@@ -314,11 +295,11 @@ describe("ReadDrift.fields", () => {
 
   it("protects configured source values copied during cloning", async () => {
     // Given a configured field on a loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When application logic copies the configured field into a new entity
     await em.clone(parent);
     // And another connection changes the source row
@@ -329,11 +310,11 @@ describe("ReadDrift.fields", () => {
 
   it("protects configured values read through changes.originalValue", async () => {
     // Given a configured field on an unchanged loaded schedule
-    const seed = newEntityManager();
-    const schedule = newAuthorSchedule(seed, { overview: "draft" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
     const em = newEntityManager();
-    const parent = await em.load(AuthorSchedule, schedule.id);
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
     // When application logic reads the loaded value through the changes API
     void parent.changes.overview.originalValue;
     // And another connection changes the source row

@@ -1,5 +1,6 @@
 import { ReadDriftError } from "joist-orm";
-import { Author, Book, newAuthor, newBook } from "src/entities";
+import { Author, Book, newAuthor } from "src/entities";
+import { insertAuthor, insertBook } from "src/entities/inserts";
 import {
   readDriftCollectionOptions,
   readDriftReactionOptions,
@@ -16,13 +17,13 @@ describe("ReadDrift", () => {
 
   it("batches unchanged dependencies once per table", async () => {
     // Given two persisted authors and a book
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    const a2 = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And a second author and a book belong to the read set
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const authors = await em.loadAll(Author, [b.author.id, a2.id]);
-    const book = await em.load(Book, b.id);
+    const authors = await em.loadAll(Author, ["a:1", "a:2"]);
+    const book = await em.load(Book, "b:1");
     // When the read set contains duplicates across two tables
     em.assertUnchanged([...authors, book, authors[0]]);
     resetQueryCount();
@@ -36,11 +37,11 @@ describe("ReadDrift", () => {
 
   it("detects changes made before the assertion was registered", async () => {
     // Given a loaded author and a pending book edit
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     book.notes = "decision based on the author";
     // And another connection changes the author after it was loaded
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
@@ -52,11 +53,11 @@ describe("ReadDrift", () => {
 
   it("does not persist book edits when an asserted author drifts", async () => {
     // Given a persisted book and a loaded author
-    const seed = newEntityManager();
-    const b = newBook(seed, { notes: "original" });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a book with its original notes
+    await insertBook({ title: "b1", author_id: 1, notes: "original" });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     // And another connection invalidates the author version
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When a stale decision tries to change the book
@@ -64,16 +65,14 @@ describe("ReadDrift", () => {
     em.assertUnchanged(book.author.get);
     await em.flush().catch(() => {});
     // Then the database retains the original book
-    expect((await newEntityManager().load(Book, b.id)).notes).toEqual("original");
+    expect((await newEntityManager().load(Book, "b:1")).notes).toEqual("original");
   });
 
   it("reports deleted rows with tagged ids and expected versions", async () => {
     // Given a loaded author
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // And another connection deletes the author
     await knex("authors").where("id", author.idUntagged).delete();
     // When we flush its assertion
@@ -86,11 +85,9 @@ describe("ReadDrift", () => {
 
   it("leaves asserted writes to oplocks", async () => {
     // Given a loaded author
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // When the asserted author is also changed
     em.assertUnchanged(author);
     author.firstName = "changed";
@@ -102,11 +99,9 @@ describe("ReadDrift", () => {
 
   it("still rejects oplock collisions on asserted writes", async () => {
     // Given an asserted author with a pending edit
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     em.assertUnchanged(author);
     author.firstName = "changed";
     // And another writer invalidates its version
@@ -119,11 +114,11 @@ describe("ReadDrift", () => {
 
   it("protects dependencies when an opted-in rule runs", async () => {
     // Given a book whose rule reads its author
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     readDriftRuleOptions.assertUnchanged = true;
     // And its loaded author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
@@ -135,11 +130,11 @@ describe("ReadDrift", () => {
 
   it("does not protect dependencies without the opt-in", async () => {
     // Given a book with an ordinary rule reading its author
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     // And the author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When the unprotected rule runs
@@ -152,11 +147,11 @@ describe("ReadDrift", () => {
 
   it("does not assert dependencies of rules that do not run", async () => {
     // Given an opted-in rule on book notes and author firstName
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     readDriftRuleOptions.assertUnchanged = true;
     // And its author changes outside this EM
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
@@ -170,11 +165,11 @@ describe("ReadDrift", () => {
 
   it("protects opted-in reaction dependencies", async () => {
     // Given a reaction on book notes that also reads its author
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     readDriftReactionOptions.assertUnchanged = true;
     // And its author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
@@ -186,11 +181,9 @@ describe("ReadDrift", () => {
 
   it("clears the read set after a successful flush", async () => {
     // Given an asserted author whose first flush succeeds
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     em.assertUnchanged(author);
     await em.flush();
     // And the author subsequently changes
@@ -215,11 +208,9 @@ describe("ReadDrift", () => {
 
   it("holds the share lock until the surrounding transaction commits", async () => {
     // Given a persisted author and an independent writer
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     const writer = await pool.connect();
     try {
       // When the read assertion is flushed inside a still-open transaction
@@ -240,15 +231,15 @@ describe("ReadDrift", () => {
 
   it("protects sibling rows reached through a reactive property's collection hint", async () => {
     // Given two books by the same author
-    const seed = newEntityManager();
-    const first = newBook(seed);
-    const sibling = newBook(seed, { author: first.author.get });
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has two persisted books
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, first.id, { author: "books" });
+    const book = await em.load(Book, "b:1", { author: "books" });
     readDriftCollectionOptions.assertUnchanged = true;
     // And a loaded sibling changes outside the EM
-    await knex("books").where("id", sibling.idUntagged).update({ updated_at: "2050-01-01" });
+    await knex("books").where("id", 2).update({ updated_at: "2050-01-01" });
     // When title triggers the numberOfBooks2 rule through author.books
     book.title = "changed title";
     // Then the sibling's stale row version is rejected
@@ -257,11 +248,11 @@ describe("ReadDrift", () => {
 
   it("locks an unchanged author once while successfully writing its book", async () => {
     // Given a persisted book and author
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     // When a decision based on the unchanged author edits the book
     em.assertUnchanged(book.author.get);
     book.notes = "valid decision";
@@ -275,11 +266,9 @@ describe("ReadDrift", () => {
 
   it("reports both loaded and current versions for an updated dependency", async () => {
     // Given a loaded author version
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // And another connection changes the persisted version
     await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01" });
     // When the loaded author is asserted
@@ -292,11 +281,9 @@ describe("ReadDrift", () => {
 
   it("uses the persisted version after this EM has already written the entity", async () => {
     // Given an existing author loaded into this EM
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // And this EM successfully updates the author
     author.firstName = "new name";
     await em.flush();
@@ -308,11 +295,11 @@ describe("ReadDrift", () => {
 
   it("queues later table checks without waiting for an earlier row lock", async () => {
     // Given an asserted book and author, registered in reverse table order
-    const seed = newEntityManager();
-    const b = newBook(seed);
-    await seed.flush();
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted book
+    await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const book = await em.load(Book, b.id, "author");
+    const book = await em.load(Book, "b:1", "author");
     const author = book.author.get;
     em.assertUnchanged([book, author]);
     // And another transaction holds a conflicting lock on the author

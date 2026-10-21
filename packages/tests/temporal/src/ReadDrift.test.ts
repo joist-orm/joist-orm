@@ -1,16 +1,15 @@
 import { ReadDriftError } from "joist-orm";
-import { Author, newAuthor } from "src/entities";
+import { Author } from "src/entities";
 import { knex, newEntityManager } from "src/setupDbTests";
 
 describe("ReadDrift", () => {
   it("accepts an unchanged microsecond-precision version", async () => {
     // Given an author whose version has database microsecond precision
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
-    await knex("authors").where("id", a.idUntagged).update({ updated_at: "2050-01-01T00:00:00.123456Z" });
+    await knex
+      .insert({ firstName: "a1", birthday: "2000-01-01", updated_at: "2050-01-01T00:00:00.123456Z" })
+      .into("authors");
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // When its loaded version is asserted
     em.assertUnchanged(author);
     // Then the unchanged version succeeds
@@ -19,14 +18,13 @@ describe("ReadDrift", () => {
 
   it("detects drift smaller than a millisecond", async () => {
     // Given a loaded microsecond-precision author version
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
-    await knex("authors").where("id", a.idUntagged).update({ updated_at: "2050-01-01T00:00:00.123456Z" });
+    await knex
+      .insert({ firstName: "a1", birthday: "2000-01-01", updated_at: "2050-01-01T00:00:00.123456Z" })
+      .into("authors");
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // And another connection advances the version by one microsecond
-    await knex("authors").where("id", a.idUntagged).update({ updated_at: "2050-01-01T00:00:00.123457Z" });
+    await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01T00:00:00.123457Z" });
     // When its loaded version is asserted
     em.assertUnchanged(author);
     // Then the microsecond drift is rejected
@@ -35,11 +33,9 @@ describe("ReadDrift", () => {
 
   it("compares instants across session timezones", async () => {
     // Given an author loaded from a UTC session
-    const seed = newEntityManager();
-    const a = newAuthor(seed);
-    await seed.flush();
+    await knex.insert({ firstName: "a1", birthday: "2000-01-01" }).into("authors");
     const em = newEntityManager();
-    const author = await em.load(Author, a.id);
+    const author = await em.load(Author, "a:1");
     // When the assertion is checked in a transaction using a different timezone
     em.assertUnchanged(author);
     await em.transaction(async () => {

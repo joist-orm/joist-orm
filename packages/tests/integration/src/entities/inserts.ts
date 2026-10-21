@@ -84,8 +84,14 @@ export function insertBook(row: {
   random_comment_id?: number | null;
   deleted_at?: Date;
   order?: number;
+  notes?: string;
 }) {
   return testDriver.insert("books", { notes: "notes", ...row });
+}
+
+/** Inserts a persisted schedule without running entity hooks or commit rules during setup. */
+export function insertAuthorSchedule(row: { id?: number; author_id: number; overview?: string }) {
+  return testDriver.insert("author_schedules", row);
 }
 
 export function insertBookAdvance(row: { id?: number; book_id: number; publisher_id: number; status_id?: number }) {
@@ -218,6 +224,7 @@ export async function insertSmallPublisher(row: {
   latitude?: string | number;
   huge_number?: string | number;
   size_id?: number;
+  status_id?: number;
   group_id?: number;
   shared_column?: string;
   updated_at?: Date;

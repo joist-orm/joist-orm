@@ -112,7 +112,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("does not protect dependencies without the opt-in", async () => {
+  it("does not read lock regular fields without an opt-in", async () => {
     // Given a book with an ordinary rule reading its author
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book
@@ -121,7 +121,7 @@ describe("ReadDrift", () => {
     const book = await em.load(Book, "b:1", "author");
     // And the author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
-    // When the unprotected rule runs
+    // When an unprotected field is changed
     book.notes = "ordinary rule";
     resetQueryCount();
     await em.flush();
@@ -129,7 +129,7 @@ describe("ReadDrift", () => {
     expect(shareQueries()).toEqual([]);
   });
 
-  it("does not assert dependencies of rules that do not run", async () => {
+  it("does not read lock entities of rules that are not triggered", async () => {
     // Given an opted-in rule on book notes and author firstName
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book

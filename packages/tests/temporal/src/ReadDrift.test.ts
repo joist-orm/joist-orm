@@ -1,8 +1,8 @@
-import { ReadSetDriftError } from "joist-orm";
+import { ReadDriftError } from "joist-orm";
 import { Author, newAuthor } from "src/entities";
 import { knex, newEntityManager } from "src/setupDbTests";
 
-describe("ReadSet", () => {
+describe("ReadDrift", () => {
   it("accepts an unchanged microsecond-precision version", async () => {
     // Given an author whose version has database microsecond precision
     const seed = newEntityManager();
@@ -30,7 +30,7 @@ describe("ReadSet", () => {
     // When its loaded version is asserted
     em.assertUnchanged(author);
     // Then the microsecond drift is rejected
-    await expect(em.flush()).rejects.toThrow(ReadSetDriftError);
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("compares instants across session timezones", async () => {

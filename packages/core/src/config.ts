@@ -1,7 +1,7 @@
 import { resetConstructorMap } from "src/configure.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
-import { assertHintUnchanged } from "src/flush/ReadSet.ts";
+import { assertHintUnchanged } from "src/flush/ReadDrift.ts";
 import {
   type EntityConstructor,
   type EntityField,
@@ -39,11 +39,11 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
-type ReadSetOpts = {
+type AssertUnchangedOpts = {
   /** Protect reached rows at flush; does not protect collection membership or predicates. */
   assertUnchanged?: boolean;
 };
-type AddReactionOpts = ReadSetOpts & { runOnce?: boolean; name?: string };
+type AddReactionOpts = AssertUnchangedOpts & { runOnce?: boolean; name?: string };
 
 /** An `addTransitionRule` rule, which also gets the transition it is checking, since the entity may have moved on. */
 export type TransitionGuardFn<T extends Entity, V> = (
@@ -145,7 +145,7 @@ export class ConfigApi<T extends Entity, C> {
    * access the `reacted.entity` property to get a full view of the entity's fields and methods.
    */
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
-  addRule<H extends ReactiveHint<T>>(opts: ReadSetOpts, hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addRule<H extends ReactiveHint<T>>(opts: AssertUnchangedOpts, hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(
     ruleOrHint: ValidationRule<T> | any,
@@ -179,7 +179,11 @@ export class ConfigApi<T extends Entity, C> {
    * hint changes (walking back to the owning entity), and the lambda gets a `Reacted` view.
    */
   addCommitRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
-  addCommitRule<H extends ReactiveHint<T>>(opts: ReadSetOpts, hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addCommitRule<H extends ReactiveHint<T>>(
+    opts: AssertUnchangedOpts,
+    hint: H,
+    rule: ValidationRule<Reacted<T, H>>,
+  ): void;
   addCommitRule(rule: ValidationRule<T>): void;
   addCommitRule(
     ruleOrHint: ValidationRule<T> | any,
@@ -804,7 +808,7 @@ function pushValidationRule<T extends Entity>(
   name: string,
   ruleOrHint: ValidationRule<T> | any,
   maybeRule: ValidationRule<any> | undefined,
-  opts: ReadSetOpts = {},
+  opts: AssertUnchangedOpts = {},
 ): void {
   if (typeof ruleOrHint === "function") {
     rules.push({ name, fn: ruleOrHint, hint: undefined });

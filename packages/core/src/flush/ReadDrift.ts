@@ -11,16 +11,16 @@ import { getRelationFromMaybePolyKey } from "src/reactivity/reactiveHints.ts";
 import { getRuntimeConfig } from "src/runtimeConfig.ts";
 
 /** A read-only dependency changed after it was loaded; retry the unit of work in a fresh EM. */
-export class ReadSetDriftError extends Error {
-  constructor(readonly drifts: readonly ReadSetDrift[]) {
+export class ReadDriftError extends Error {
+  constructor(readonly drifts: readonly ReadDrift[]) {
     super(
-      `Read set drift: ${drifts.map((d) => `${d.id} expected ${d.expected}, actual ${d.actual ?? "missing"}`).join("; ")}`,
+      `Read drift: ${drifts.map((d) => `${d.id} expected ${d.expected}, actual ${d.actual ?? "missing"}`).join("; ")}`,
     );
-    this.name = "ReadSetDriftError";
+    this.name = "ReadDriftError";
   }
 }
 
-export type ReadSetDrift = { id: string; expected: string; actual: string | undefined };
+export type ReadDrift = { id: string; expected: string; actual: string | undefined };
 
 /**
  * Locks read-only dependencies in table/id order and checks the same version used by oplocks.
@@ -28,7 +28,7 @@ export type ReadSetDrift = { id: string; expected: string; actual: string | unde
  * Untouched versions are still the loaded field value; originalData retains that value if a
  * hook has changed the timestamp. Written entities are excluded before reading their bumped version.
  */
-export async function checkReadSet(
+export async function checkReadDrift(
   em: EntityManager,
   readSet: Set<Entity>,
   written: Set<Entity>,
@@ -43,7 +43,7 @@ export async function checkReadSet(
     tables.set(meta.tableName, group);
   }
 
-  const drifts: ReadSetDrift[] = [];
+  const drifts: ReadDrift[] = [];
   // Serial table acquisition also keeps multi-table assertions in a consistent lock order.
   for (const table of [...tables.keys()].sort()) {
     const entities = tables.get(table)!;
@@ -73,7 +73,7 @@ export async function checkReadSet(
       checked.add(entity);
     }
   }
-  if (drifts.length > 0) throw new ReadSetDriftError(drifts);
+  if (drifts.length > 0) throw new ReadDriftError(drifts);
 }
 
 /** Asserts each row reached by an already-populated hint, not collection membership or predicates. */

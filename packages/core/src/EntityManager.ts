@@ -33,7 +33,7 @@ import { getField, setField } from "src/fields.ts";
 import { FlushLock } from "src/flush/FlushLock.ts";
 import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
 import type { PendingChange } from "src/flush/PendingChanges.ts";
-import { checkReadSet } from "src/flush/ReadSet.ts";
+import { checkReadDrift } from "src/flush/ReadDrift.ts";
 import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "src/flush/Todo.ts";
 import {
   CustomCollection,
@@ -2167,7 +2167,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (this.#readSet.size > 0) await checkReadSet(this, this.#readSet, allFlushedEntities, checkedReads);
+            if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
               // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
@@ -2219,7 +2219,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           await beforeCommit(this.ctx, allFlushedEntities);
           await this.#rm.runCommitTransitions();
           // Commit rules and callbacks can assert dependencies after the last write loop.
-          if (this.#readSet.size > 0) await checkReadSet(this, this.#readSet, allFlushedEntities, checkedReads);
+          if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }

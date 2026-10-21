@@ -1,13 +1,17 @@
-import { ReadSetDriftError } from "joist-orm";
+import { ReadDriftError } from "joist-orm";
 import { Author, Book, newAuthor, newBook } from "src/entities";
-import { readSetCollectionOptions, readSetReactionOptions, readSetRuleOptions } from "src/entities/readSetOptions";
+import {
+  readDriftCollectionOptions,
+  readDriftReactionOptions,
+  readDriftRuleOptions,
+} from "src/entities/readDriftOptions";
 import { knex, newEntityManager, pool, queries, resetQueryCount } from "src/testEm";
 
-describe("ReadSet", () => {
+describe("ReadDrift", () => {
   afterEach(() => {
-    readSetRuleOptions.assertUnchanged = false;
-    readSetReactionOptions.assertUnchanged = false;
-    readSetCollectionOptions.assertUnchanged = false;
+    readDriftRuleOptions.assertUnchanged = false;
+    readDriftReactionOptions.assertUnchanged = false;
+    readDriftCollectionOptions.assertUnchanged = false;
   });
 
   it("batches unchanged dependencies once per table", async () => {
@@ -43,7 +47,7 @@ describe("ReadSet", () => {
     // When we assert that the loaded version still holds
     em.assertUnchanged(book.author.get);
     // Then flush rejects the stale decision
-    await expect(em.flush()).rejects.toThrow(ReadSetDriftError);
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("does not persist book edits when an asserted author drifts", async () => {
@@ -76,7 +80,7 @@ describe("ReadSet", () => {
     em.assertUnchanged(author);
     // Then the missing row is reported with the original timestamp
     await expect(em.flush()).rejects.toThrow(
-      `Read set drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual missing`,
+      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual missing`,
     );
   });
 
@@ -120,13 +124,13 @@ describe("ReadSet", () => {
     await seed.flush();
     const em = newEntityManager();
     const book = await em.load(Book, b.id, "author");
-    readSetRuleOptions.assertUnchanged = true;
+    readDriftRuleOptions.assertUnchanged = true;
     // And its loaded author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When notes trigger the rule
     book.notes = "trigger rule";
     // Then its stale author dependency is rejected
-    await expect(em.flush()).rejects.toThrow(ReadSetDriftError);
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("does not protect dependencies without the opt-in", async () => {
@@ -153,7 +157,7 @@ describe("ReadSet", () => {
     await seed.flush();
     const em = newEntityManager();
     const book = await em.load(Book, b.id, "author");
-    readSetRuleOptions.assertUnchanged = true;
+    readDriftRuleOptions.assertUnchanged = true;
     // And its author changes outside this EM
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When only the unrelated book order changes
@@ -171,13 +175,13 @@ describe("ReadSet", () => {
     await seed.flush();
     const em = newEntityManager();
     const book = await em.load(Book, b.id, "author");
-    readSetReactionOptions.assertUnchanged = true;
+    readDriftReactionOptions.assertUnchanged = true;
     // And its author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When notes trigger the reaction
     book.notes = "trigger reaction";
     // Then its stale author dependency is rejected
-    await expect(em.flush()).rejects.toThrow(ReadSetDriftError);
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("clears the read set after a successful flush", async () => {
@@ -242,13 +246,13 @@ describe("ReadSet", () => {
     await seed.flush();
     const em = newEntityManager();
     const book = await em.load(Book, first.id, { author: "books" });
-    readSetCollectionOptions.assertUnchanged = true;
+    readDriftCollectionOptions.assertUnchanged = true;
     // And a loaded sibling changes outside the EM
     await knex("books").where("id", sibling.idUntagged).update({ updated_at: "2050-01-01" });
     // When title triggers the numberOfBooks2 rule through author.books
     book.title = "changed title";
     // Then the sibling's stale row version is rejected
-    await expect(em.flush()).rejects.toThrow(ReadSetDriftError);
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("locks an unchanged author once while successfully writing its book", async () => {
@@ -282,7 +286,7 @@ describe("ReadSet", () => {
     em.assertUnchanged(author);
     // Then the diagnostic identifies the entity and both versions
     await expect(em.flush()).rejects.toThrow(
-      `Read set drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual 2050-01-01T00:00:00.000Z`,
+      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual 2050-01-01T00:00:00.000Z`,
     );
   });
 
@@ -303,7 +307,7 @@ describe("ReadSet", () => {
   });
 });
 
-/** Returns only the read-set locking queries. */
+/** Returns only the read drift locking queries. */
 function shareQueries(): string[] {
   return queries.filter((q) => q.endsWith("FOR SHARE"));
 }

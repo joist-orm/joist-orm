@@ -8,6 +8,7 @@ import type { LoadHint } from "src/loading/loadHints.ts";
 import { normalizeHint } from "src/normalizeHints.ts";
 import { kq } from "src/queries/sql/keywords.ts";
 import { getRelationFromMaybePolyKey } from "src/reactivity/reactiveHints.ts";
+import { failIfAnyRejected } from "src/utils.ts";
 
 /** A read-only entity changed after it was loaded; retry the unit of work in a fresh EM. */
 export class ReadDriftError extends Error {
@@ -42,35 +43,10 @@ export async function checkReadDrift(
     tables.set(meta.tableName, group);
   }
 
-  const drifts: ReadDrift[] = [];
-  // Serial table acquisition also keeps multi-table assertions in a consistent lock order.
-  for (const table of [...tables.keys()].sort()) {
-    const entities = tables.get(table)!;
-    const meta = getBaseMeta(getMetadata(entities[0]));
-    const fieldName = meta.timestampFields!.updatedAt!;
-    const versionColumn = meta.allFields[fieldName].serde!.columns[0];
-    const idColumn = meta.allFields.id.serde!.columns[0];
-    const ids = entities.map((e) => keyToNumber(meta, e.idTagged));
-    const { rows } = await em.driver.executeQuery(
-      em,
-      `SELECT ${kq(idColumn.columnName)} AS id, ${kq(versionColumn.columnName)} AS version FROM ${kq(table)} WHERE ${kq(idColumn.columnName)} = ANY(?) ORDER BY ${kq(idColumn.columnName)} FOR SHARE`,
-      [ids],
-    );
-    const versions = new Map<string, unknown>(rows.map((row) => [String(row.id), row.version]));
-    for (const entity of entities) {
-      const data = getInstanceData(entity);
-      const original =
-        fieldName in data.originalData ? data.originalData[fieldName] : getField(entity, fieldName, true);
-      const expected = String(versionColumn.mapToDbValue(original));
-      const raw = versions.get(String(keyToNumber(meta, entity.idTagged)));
-      const actualValue = raw === undefined ? undefined : versionColumn.mapFromDb(raw);
-      const actual = actualValue === undefined ? undefined : String(versionColumn.mapToDbValue(actualValue));
-      if (actualValue === undefined || versionKey(original) !== versionKey(actualValue)) {
-        drifts.push({ id: entity.idTagged, expected, actual });
-      }
-      checked.add(entity);
-    }
-  }
+  // Submit in table order on the same transaction connection so pipelining preserves lock order.
+  const checks = [...tables.keys()].sort().map((table) => checkTableReadDrift(em, tables.get(table)!, checked));
+  // Drain every queued query before an error can start transaction rollback.
+  const drifts = failIfAnyRejected(await Promise.allSettled(checks)).flat();
   if (drifts.length > 0) throw new ReadDriftError(drifts);
 }
 
@@ -86,6 +62,40 @@ export function assertHintUnchanged<T extends Entity>(entity: T, hint: LoadHint<
       if (isEntity(reached)) assertHintUnchanged(reached, subHint);
     }
   }
+}
+
+/**
+ * Locks one table's asserted rows and compares their versions using the existing timestamp serde.
+ *
+ * Decode returned versions without hydrating entities, so the EM retains the loaded data used by domain logic.
+ */
+async function checkTableReadDrift(em: EntityManager, entities: Entity[], checked: Set<Entity>): Promise<ReadDrift[]> {
+  const meta = getBaseMeta(getMetadata(entities[0]));
+  const fieldName = meta.timestampFields!.updatedAt!;
+  const versionColumn = meta.allFields[fieldName].serde!.columns[0];
+  const idColumn = meta.allFields.id.serde!.columns[0];
+  const ids = entities.map((e) => keyToNumber(meta, e.idTagged));
+  const { rows } = await em.driver.executeQuery(
+    em,
+    `SELECT ${kq(idColumn.columnName)} AS id, ${kq(versionColumn.columnName)} AS version FROM ${kq(meta.tableName)} WHERE ${kq(idColumn.columnName)} = ANY(?) ORDER BY ${kq(idColumn.columnName)} FOR SHARE`,
+    [ids],
+  );
+
+  const drifts: ReadDrift[] = [];
+  const versions = new Map<string, unknown>(rows.map((row) => [String(row.id), row.version]));
+  for (const entity of entities) {
+    const data = getInstanceData(entity);
+    const original = fieldName in data.originalData ? data.originalData[fieldName] : getField(entity, fieldName, true);
+    const expected = String(versionColumn.mapToDbValue(original));
+    const raw = versions.get(String(keyToNumber(meta, entity.idTagged)));
+    const actualValue = raw === undefined ? undefined : versionColumn.mapFromDb(raw);
+    const actual = actualValue === undefined ? undefined : String(versionColumn.mapToDbValue(actualValue));
+    if (actualValue === undefined || versionKey(original) !== versionKey(actualValue)) {
+      drifts.push({ id: entity.idTagged, expected, actual });
+    }
+    checked.add(entity);
+  }
+  return drifts;
 }
 
 /** Compare instants independently of the timezone used to hydrate a Temporal.ZonedDateTime. */

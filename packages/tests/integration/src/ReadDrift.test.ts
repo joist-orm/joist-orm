@@ -305,6 +305,39 @@ describe("ReadDrift", () => {
     // Then its last persisted version is accepted instead of the old hydration row
     await expect(em.flush()).resolves.toEqual([]);
   });
+
+  it("queues later table checks without waiting for an earlier row lock", async () => {
+    // Given an asserted book and author, registered in reverse table order
+    const seed = newEntityManager();
+    const b = newBook(seed);
+    await seed.flush();
+    const em = newEntityManager();
+    const book = await em.load(Book, b.id, "author");
+    const author = book.author.get;
+    em.assertUnchanged([book, author]);
+    // And another transaction holds a conflicting lock on the author
+    const writer = await pool.connect();
+    try {
+      await writer.query("BEGIN");
+      await writer.query("SELECT id FROM authors WHERE id = $1 FOR UPDATE", [author.idUntagged]);
+      // When the author's read lock times out during flush
+      await em
+        .transaction(async () => {
+          await em.driver.executeQuery(em, "SET LOCAL lock_timeout = '100ms'", []);
+          resetQueryCount();
+          await em.flush();
+        })
+        .catch(() => {});
+      // Then both checks were submitted in table order without waiting for the author query to finish
+      expect(shareQueries()).toEqual([
+        "SELECT id AS id, updated_at AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
+        "SELECT id AS id, updated_at AS version FROM books WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      ]);
+    } finally {
+      await writer.query("ROLLBACK");
+      writer.release();
+    }
+  });
 });
 
 /** Returns only the read drift locking queries. */

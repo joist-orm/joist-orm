@@ -30,7 +30,7 @@ describe("ReadDrift.fields", () => {
     // Then the unchanged row is checked once inside the flush transaction
     expect(queries).toEqual([
       "BEGIN;",
-      "SELECT id AS id, updated_at::text AS version FROM author_schedules WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      "SELECT id AS id, updated_at AS version FROM author_schedules WHERE id = ANY($1) ORDER BY id FOR SHARE",
       "COMMIT;",
     ]);
   });

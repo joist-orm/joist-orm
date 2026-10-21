@@ -29,8 +29,8 @@ describe("ReadDrift", () => {
     await em.flush();
     // Then each table is locked exactly once, in id order
     expect(shareQueries()).toEqual([
-      "SELECT id AS id, updated_at::text AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
-      "SELECT id AS id, updated_at::text AS version FROM books WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      "SELECT id AS id, updated_at AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      "SELECT id AS id, updated_at AS version FROM books WHERE id = ANY($1) ORDER BY id FOR SHARE",
     ]);
   });
 
@@ -269,7 +269,7 @@ describe("ReadDrift", () => {
     await em.flush();
     // Then there is exactly one read-dependency locking query
     expect(shareQueries()).toEqual([
-      "SELECT id AS id, updated_at::text AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      "SELECT id AS id, updated_at AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
     ]);
   });
 

@@ -81,11 +81,11 @@ async function checkTableReadDrift(em: EntityManager, entities: Entity[], checke
   );
 
   const drifts: ReadDrift[] = [];
-  const versions = new Map<string, unknown>(rows.map((row) => [String(row.id), row.version]));
+  const versions = new Map<string | number, unknown>(rows.map((row) => [row.id, row.version]));
   for (const entity of entities) {
     const expectedVersion = getField(entity, fieldName, true);
     const expected = String(versionColumn.mapToDbValue(expectedVersion));
-    const raw = versions.get(String(keyToNumber(meta, entity.idTagged)));
+    const raw = versions.get(keyToNumber(meta, entity.idTagged));
     const actualValue = raw === undefined ? undefined : versionColumn.mapFromDb(raw);
     const actual = actualValue === undefined ? undefined : String(versionColumn.mapToDbValue(actualValue));
     if (actualValue === undefined || versionKey(expectedVersion) !== versionKey(actualValue)) {

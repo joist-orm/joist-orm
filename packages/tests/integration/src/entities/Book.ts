@@ -8,7 +8,7 @@ import {
   bookConfig as config,
   bookScope as scope,
 } from "./entities";
-import { readDriftRuleOptions, readDriftReactionOptions, readDriftCollectionOptions } from "./readDriftOptions";
+import { readDriftCollectionOptions, readDriftReactionOptions, readDriftRuleOptions } from "./readDriftOptions";
 
 export class Book extends BookCodegen {
   static fromLargePubs = scope({ author: { publisher: { type: PublisherType.Big } } });

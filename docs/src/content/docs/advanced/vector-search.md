@@ -42,7 +42,7 @@ Embeddings are large and rarely needed when loading an entity, so it's best to m
 The field is a plain `number[]`, so reads and writes are the same as any other field (or lazy field):
 
 ```ts
-const book = em.create(Book, { title: "t1", embedding: await embed("t1") });
+const book = em.create(Book, { title: "t1", embedding: await embeddingService.analyze("t1") });
 await em.flush();
 
 // Later, in another em
@@ -56,7 +56,7 @@ Vector columns have a `cosineDistance` method (pgvector's `<=>` operator) that r
 
 ```ts
 const b = table(Book);
-const distance = b.embedding.cosineDistance(await embed("space opera"));
+const distance = b.embedding.cosineDistance(await embeddingService.analyze("space opera"));
 const rows = await em.query({
   from: b,
   select: { id: b.id, distance },
@@ -67,13 +67,13 @@ const rows = await em.query({
 // rows is { id: BookId; distance: number | undefined }[]
 ```
 
-The query embedding is bound as a parameter, so the generated SQL is:
+The query embedding is bound as a parameter (Postgres infers its type from the `<=>` operator), so the generated SQL is:
 
 ```sql
-SELECT b.id, (b.embedding <=> $1::vector) AS distance
+SELECT b.id, (b.embedding <=> $1) AS distance
 FROM books AS b
-WHERE (b.embedding <=> $2::vector) <= $3
-ORDER BY (b.embedding <=> $4::vector) ASC
+WHERE (b.embedding <=> $2) <= $3
+ORDER BY (b.embedding <=> $4) ASC
 LIMIT $5
 ```
 

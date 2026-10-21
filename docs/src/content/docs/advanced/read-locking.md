@@ -45,7 +45,7 @@ config.addReaction({ assertUnchanged: true }, { notes: {}, author: "status:ro" }
 });
 ```
 
-This can overuse `FOR SHARE` locks: a broad reactive hint may lock many entities even if only a few reads are invariant-critical. Use explicit assertions or field-level configuration for narrower protection.
+Note, be aware that this approach can overuse `FOR SHARE` locks: a broad reactive hint may lock many entities even if only a few reads are invariant-critical. Use explicit assertions or field-level configuration for narrower protection.
 
 The options-first form matches reaction options such as `runOnce`. Reactive `addCommitRule` also supports this option.
 
@@ -64,10 +64,12 @@ For fields that are always invariant-critical, like status fields, we can config
 }
 ```
 
-Now any clients that read `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` automatically call `em.assertUnchanged(publisher)`. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in.
+Now any business logic that reads `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` automatically calls `em.assertUnchanged(publisher)`. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in.
 
 ## Scope and Limitations
 
-This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`. For example, if we read `publisher.status` as `draft` and another transaction changes only `publisher.name`, our flush still fails because the publisher's row version changed—even though its status is still `draft`.
+This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`.
+
+For example, if we read `publisher.status` as `draft` and another transaction changes only `publisher.name`, our flush still fails because the publisher's row version changed—even though its status is still `draft`.
 
 This protects **row drift**, not predicates or collection membership. For `{ author: "books" }`, the reached author and book rows are protected, but a newly inserted book is not detected. Membership invariants require a parent-row locking protocol followed by all writers, or a database constraint. Writes that bypass version bumps are not detected.

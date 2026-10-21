@@ -24,7 +24,7 @@ describe("ReadDrift.fields", () => {
     ]);
   });
 
-  it("detects changes made after loading but before reading the field", async () => {
+  it("detects changes to a loaded entity", async () => {
     // Given a schedule loaded before a concurrent update
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule

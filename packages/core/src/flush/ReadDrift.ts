@@ -1,4 +1,3 @@
-import { getInstanceData } from "src/BaseEntity.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import type { EntityManager } from "src/EntityManager.ts";
 import { getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
@@ -25,8 +24,8 @@ export type ReadDrift = { id: string; expected: string; actual: string | undefin
 /**
  * Locks read-only dependencies in table/id order and checks the same version used by oplocks.
  *
- * The expected version is the updatedAt loaded with the entity, not the time a rule ran.
- * If code has changed updatedAt in memory, use the saved original value instead.
+ * Written entities are excluded. For the remaining entities, updatedAt is the value
+ * loaded from the database or saved by an earlier successful flush.
  */
 export async function checkReadDrift(
   em: EntityManager,
@@ -84,13 +83,12 @@ async function checkTableReadDrift(em: EntityManager, entities: Entity[], checke
   const drifts: ReadDrift[] = [];
   const versions = new Map<string, unknown>(rows.map((row) => [String(row.id), row.version]));
   for (const entity of entities) {
-    const data = getInstanceData(entity);
-    const original = fieldName in data.originalData ? data.originalData[fieldName] : getField(entity, fieldName, true);
-    const expected = String(versionColumn.mapToDbValue(original));
+    const expectedVersion = getField(entity, fieldName, true);
+    const expected = String(versionColumn.mapToDbValue(expectedVersion));
     const raw = versions.get(String(keyToNumber(meta, entity.idTagged)));
     const actualValue = raw === undefined ? undefined : versionColumn.mapFromDb(raw);
     const actual = actualValue === undefined ? undefined : String(versionColumn.mapToDbValue(actualValue));
-    if (actualValue === undefined || versionKey(original) !== versionKey(actualValue)) {
+    if (actualValue === undefined || versionKey(expectedVersion) !== versionKey(actualValue)) {
       drifts.push({ id: entity.idTagged, expected, actual });
     }
     checked.add(entity);

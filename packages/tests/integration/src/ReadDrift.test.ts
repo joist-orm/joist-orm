@@ -80,7 +80,7 @@ describe("ReadDrift", () => {
     em.assertUnchanged(author);
     // Then the missing row is reported with the original timestamp
     await expect(em.flush()).rejects.toThrow(
-      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual missing`,
+      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual deleted`,
     );
   });
 

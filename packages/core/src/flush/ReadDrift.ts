@@ -13,7 +13,7 @@ import { failIfAnyRejected } from "src/utils.ts";
 export class ReadDriftError extends Error {
   constructor(readonly drifts: readonly ReadDrift[]) {
     super(
-      `Read drift: ${drifts.map((d) => `${d.id} expected ${d.expected}, actual ${d.actual ?? "missing"}`).join("; ")}`,
+      `Read drift: ${drifts.map((d) => `${d.id} expected ${d.expected}, actual ${d.actual ?? "deleted"}`).join("; ")}`,
     );
     this.name = "ReadDriftError";
   }
@@ -86,6 +86,7 @@ async function checkTableReadDrift(em: EntityManager, entities: Entity[], checke
     const expectedVersion = getField(entity, fieldName, true);
     const expected = String(versionColumn.mapToDbValue(expectedVersion));
     const raw = versions.get(keyToNumber(meta, entity.idTagged));
+    // A concurrent delete leaves no row in the locking query's results, so there is no version to decode.
     const actualValue = raw === undefined ? undefined : versionColumn.mapFromDb(raw);
     const actual = actualValue === undefined ? undefined : String(versionColumn.mapToDbValue(actualValue));
     if (actualValue === undefined || versionKey(expectedVersion) !== versionKey(actualValue)) {

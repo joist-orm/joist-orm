@@ -17,6 +17,12 @@ Joist can help prevent these race conditions by opting into PostgreSQL's `FOR SH
 
 If the version has changed, Joist fails the transaction. Otherwise, `FOR SHARE` holds a read lock on the row, preventing other transactions from updating or deleting it until our transaction commits. This closes the gap between checking the version and committing our decision.
 
+There are three ways to opt into `FOR SHARE` locks:
+
+1. Call `em.assertUnchanged(entity)` explicitly.
+2. Add `{ assertUnchanged: true }` to a reactive rule or reaction.
+3. Configure `{ assertUnchanged: true }` on a field in `joist-config.json`.
+
 ## Explicit Assertions
 
 ```typescript
@@ -26,15 +32,9 @@ book.notes = "Decision based on the author's current state";
 await em.flush();
 ```
 
-There are three ways to opt into `FOR SHARE` locks:
-
-1. Call `em.assertUnchanged(entity)` explicitly, as above.
-2. Add `{ assertUnchanged: true }` to a reactive rule or reaction.
-3. Configure `{ assertUnchanged: true }` on a field in `joist-config.json`.
-
 ## Reactive Rules and Reactions
 
-Reactive rules and reactions assert all rows reached through their hints, but only when they actually run:
+Reactive rules and reactions can request `FOR SHARE` read locks for all entities in their reactive hints by using the `assertUnchanged` option, but only when they actually run:
 
 ```typescript
 config.addRule({ assertUnchanged: true }, { notes: {}, author: ["status", "maxBooks"] }, (book) => {
@@ -45,11 +45,13 @@ config.addReaction({ assertUnchanged: true }, { notes: {}, author: "status:ro" }
 });
 ```
 
+This can overuse `FOR SHARE` locks: a broad reactive hint may lock many entities even if only a few reads are invariant-critical. Use explicit assertions or field-level configuration for narrower protection.
+
 The options-first form matches reaction options such as `runOnce`. Reactive `addCommitRule` also supports this option.
 
 ## Field-Level Configuration
 
-For fields that are always invariant-critical, configure protection once in `joist-config.json` and regenerate:
+For fields that are always invariant-critical, like status fields, we can configure read-lock protection for the field just once in `joist-config.json`:
 
 ```json
 {
@@ -62,7 +64,7 @@ For fields that are always invariant-critical, configure protection once in `joi
 }
 ```
 
-Now reading `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` calls `em.assertUnchanged(publisher)` automatically. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in.
+Now any clients that read `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` automatically call `em.assertUnchanged(publisher)`. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in.
 
 ## Scope and Limitations
 

@@ -3665,7 +3665,7 @@ function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, n
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
         const orm = getInstanceData(e);
-        orm.markFieldDirty(updatedAt, getField(e, updatedAt));
+        orm.markFieldDirty(updatedAt, getField(e, updatedAt, true));
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
         rm.queueDownstreamReactables(e, updatedAt);

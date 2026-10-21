@@ -116,7 +116,7 @@ export interface EntityMetadata<T extends Entity = any> {
   nonDeferredFkOrder?: number;
 }
 
-export type Field =
+export type Field = (
   | PrimaryKeyField
   | PrimitiveField
   | EnumField
@@ -126,7 +126,11 @@ export type Field =
   | ManyToManyField
   | ManyToManyEnumField
   | OneToOneField
-  | PolymorphicField;
+  | PolymorphicField
+) & {
+  /** When true, application reads enroll this entity for read drift protection at flush. */
+  assertUnchanged?: boolean;
+};
 
 // Only the fields that have defined `serde` keys; should be a mapped type of Field
 export type SerdeField = PrimaryKeyField | PrimitiveField | EnumField | ManyToOneField | PolymorphicField;

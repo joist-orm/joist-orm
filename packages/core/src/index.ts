@@ -379,8 +379,9 @@ export function setOpt<T extends Entity>(
   const value = _value === null ? undefined : _value;
 
   // Use `getField` to side-step `id` blowing up on new entities that are setting an
-  // explicit id; otherwise use `entity[key]` to get back the relation.
-  const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+  // explicit id. Also bypass configured getters so applying opts does not assert a read dependency;
+  // otherwise use `entity[key]` to get back the relation.
+  const current = key === "id" || field?.assertUnchanged ? getField(entity, key, true) : (entity as any)[key];
 
   if (current instanceof AbstractRelationImpl) {
     if (calledFromConstructor) {

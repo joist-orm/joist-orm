@@ -33,7 +33,7 @@ const fieldConfig = z
     hasDefault: z.optional(z.boolean()),
     // Exclude a (large jsonb/text) column from the default SELECT and expose it as a lazy-loaded LazyField
     lazy: z.optional(z.boolean()),
-    /** Enroll the entity for read drift protection whenever its generated getter is read. */
+    /** Enroll the entity for read drift protection whenever the field's value is read. */
     assertUnchanged: z.optional(z.boolean()),
   })
   .strict()

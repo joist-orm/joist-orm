@@ -1,4 +1,4 @@
-import { ReadDriftError } from "joist-orm";
+import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
 import {
   Author,
   AuthorSchedule,
@@ -233,5 +233,112 @@ describe("ReadDrift.fields", () => {
     await em.flush();
     // Then no persisted version is checked for the new entity
     expect(queries.filter((q) => q.endsWith("FOR SHARE"))).toEqual([]);
+  });
+
+  it("protects direct application calls to getField", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When application code reads the field without using its generated getter
+    getField(parent, "overview");
+    // And another connection invalidates that read
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then the direct read has the same protection as a getter read
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("allows housekeeping to read getField without enrolling an assertion", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // And another connection changes its version
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // When housekeeping explicitly marks its read internal
+    getField(parent, "overview", true);
+    resetQueryCount();
+    await em.flush();
+    // Then it creates neither a read assertion nor a transaction
+    expect(queries).toEqual([]);
+  });
+
+  it("does not enroll assertions when checking whether a field is set", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When housekeeping checks presence without reading a domain value
+    isFieldSet(parent, "overview");
+    resetQueryCount();
+    await em.flush();
+    // Then the presence check creates no assertion
+    expect(queries).toEqual([]);
+  });
+
+  it("does not enroll assertions when applying unchanged opts", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When opts application inspects the current value without changing it
+    parent.set({ overview: "draft" });
+    resetQueryCount();
+    await em.flush();
+    // Then the internal inspection does not become a protected application read
+    expect(queries).toEqual([]);
+  });
+
+  it("protects reads in auth-trusted contexts", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When trusted domain logic reads the field, as hooks and rules do
+    runInTrustedContext(() => getField(parent, "overview"));
+    // And another connection invalidates the read
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then auth trust has not disabled read drift protection
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured source values copied during cloning", async () => {
+    // Given a configured field on a loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When application logic copies the configured field into a new entity
+    await em.clone(parent);
+    // And another connection changes the source row
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then cloning cannot commit a protected value copied from a stale source
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured values read through changes.originalValue", async () => {
+    // Given a configured field on an unchanged loaded schedule
+    const seed = newEntityManager();
+    const schedule = newAuthorSchedule(seed, { overview: "draft" });
+    await seed.flush();
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, schedule.id);
+    // When application logic reads the loaded value through the changes API
+    void parent.changes.overview.originalValue;
+    // And another connection changes the source row
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then that domain read has not been treated as housekeeping
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 });

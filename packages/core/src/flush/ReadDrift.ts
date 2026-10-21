@@ -61,7 +61,8 @@ export async function checkReadDrift(
     const versions = new Map(rows.map((row) => [String(row.id), row.version as string]));
     for (const entity of entities) {
       const data = getInstanceData(entity);
-      const original = fieldName in data.originalData ? data.originalData[fieldName] : getField(entity, fieldName);
+      const original =
+        fieldName in data.originalData ? data.originalData[fieldName] : getField(entity, fieldName, true);
       const expected = String(column.mapToDbValue(original));
       const raw = versions.get(String(keyToNumber(meta, entity.idTagged)));
       const actualValue =

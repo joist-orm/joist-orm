@@ -175,7 +175,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get overview(): string | undefined {
-    this.em.assertUnchanged(this);
     return getField(this, "overview");
   }
 

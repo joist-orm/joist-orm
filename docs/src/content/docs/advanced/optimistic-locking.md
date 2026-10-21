@@ -89,11 +89,19 @@ In theory, you should rarely see `Oplock failure` errors, and when you do it sho
 
 ### Protecting Read-Only Dependencies
 
-Oplocks protect rows being updated, not rows your business logic only reads. Opt into read-set drift detection for invariant-critical dependencies:
+Oplocks protect rows being updated, not rows your business logic only reads.
+
+For example, a business invariant might allow editing a child only while its parent's `status` is `draft`. After we read `status=draft`, another transaction could change it to `status=published`. Our decision to allow the edit is now based on stale data, even though we never write the parent ourselves.
+
+Because Joist normally reads entities outside the flush transaction, a stricter (and more expensive) SQL isolation level on that transaction does not protect those earlier reads.
+
+Joist can help prevent these race conditions by opting into PostgreSQL's `FOR SHARE` row locks with `assertUnchanged`. We still read the parent's `status=draft` outside the transaction as usual. During flush, **inside the transaction that commits our writes**, Joist reads the parent's version again to check whether anyone has changed or version-bumped the row since we loaded it.
+
+If the version has changed, Joist fails the transaction. Otherwise, `FOR SHARE` holds a read lock on the row, preventing other transactions from updating or deleting it until our transaction commits. This closes the gap between checking the version and committing our decision:
 
 ```typescript
 const book = await em.load(Book, bookId, "author");
-em.assertUnchanged(book.author.get); // Also accepts multiple entities and arrays
+em.assertUnchanged(book.author.get); // Also accepts an array of entities
 book.notes = "Decision based on the author's current state";
 await em.flush();
 ```
@@ -144,4 +152,3 @@ On step 4, the `saveAuthor` request could specify "the user is saving `a:1`, but
 This approach would catch that User A is potentially writing over User B's changes, i.e. and fail User A's update with an `Oplock failure`.
 
 That said, this example is theoretical at this point, because Joist does not currently have a way to load an entity but then say you want the `updated_at` to be the prior/incoming `updated_at` / "as of" value. See [#204](https://github.com/joist-orm/joist-orm/issues/204) for tracking that feature.
-

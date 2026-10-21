@@ -2549,8 +2549,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * New entities are ignored. Written entities use oplocks instead. Types without updatedAt
    * cannot be protected. A drift requires retrying the whole unit of work in a fresh EM.
    */
-  assertUnchanged(...entities: (EntityW | readonly EntityW[])[]): void {
-    for (const entity of entities.flat()) {
+  assertUnchanged(entity: EntityW): void;
+  assertUnchanged(entities: readonly EntityW[]): void;
+  assertUnchanged(entityOrEntities: EntityW | readonly EntityW[]): void {
+    const entities = isEntity(entityOrEntities) ? [entityOrEntities] : entityOrEntities;
+    for (const entity of entities) {
       if (entity.em !== this) throw new Error("assertUnchanged requires entities from this EntityManager");
       if (entity.isNewEntity) continue;
       if (!getBaseMeta(getMetadata(entity)).timestampFields?.updatedAt) {

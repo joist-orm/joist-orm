@@ -20,7 +20,7 @@ describe("ReadSet", () => {
     const authors = await em.loadAll(Author, [b.author.id, a2.id]);
     const book = await em.load(Book, b.id);
     // When the read set contains duplicates across two tables
-    em.assertUnchanged(authors, book, authors[0]);
+    em.assertUnchanged([...authors, book, authors[0]]);
     resetQueryCount();
     await em.flush();
     // Then each table is locked exactly once, in id order

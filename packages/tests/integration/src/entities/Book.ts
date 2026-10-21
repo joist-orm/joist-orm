@@ -8,6 +8,7 @@ import {
   bookConfig as config,
   bookScope as scope,
 } from "./entities";
+import { readSetRuleOptions, readSetReactionOptions, readSetCollectionOptions } from "./readSetOptions";
 
 export class Book extends BookCodegen {
   static fromLargePubs = scope({ author: { publisher: { type: PublisherType.Big } } });
@@ -58,8 +59,8 @@ config.addRule((book) => {
   book.transientFields.rulesInvoked++;
 });
 
-// A noop rule to make Book reactive on author.firstName
-config.addRule({ author: "firstName" }, (b) => {
+// A noop rule on author.firstName and notes, with optional read-set protection for integration tests
+config.addRule(readSetRuleOptions, { author: "firstName", notes: {} }, (b) => {
   // Assert that this compiles
   noop(b.author.get.changes.firstName.hasChanged);
   // Assert this does not
@@ -83,7 +84,7 @@ config.addRule("reviews", (b) => {
 });
 
 // Another noop rule to make Book reactive on author.numberOfBooks2, an async property
-config.addRule({ author: "numberOfBooks2" }, (b) => {
+config.addRule(readSetCollectionOptions, { author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.transientFields.numberOfBooks2RuleInvoked++;
 });
 
@@ -136,7 +137,7 @@ config.addRule(["title", "tags:ro"], (b) => {
 });
 
 // For testing reactions observing fields set by defaults
-config.addReaction("notes", (b) => {
+config.addReaction(readSetReactionOptions, { notes: {}, author: "firstName:ro" }, (b) => {
   b.transientFields.reactions.observedNotes.push(b.notes);
 });
 

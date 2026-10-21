@@ -94,6 +94,7 @@ export type * from "src/EntityFields.ts";
 export * from "src/queries/find/EntityFilter.ts";
 export * from "src/queries/find/EntityGraphQLFilter.ts";
 export * from "src/EntityManager.ts";
+export { ReadSetDriftError, type ReadSetDrift } from "src/flush/ReadSet.ts";
 export * from "src/EntityMetadata.ts";
 export type {
   DeleteStatement,

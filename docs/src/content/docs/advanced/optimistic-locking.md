@@ -87,6 +87,38 @@ In theory, you should rarely see `Oplock failure` errors, and when you do it sho
 
 2. Two incoming requests happened simultaneously, and it's possible a client is "double tapping" saves, i.e. issuing two requests when it should only be issuing one.
 
+### Protecting Read-Only Dependencies
+
+Oplocks protect rows being updated, not rows your business logic only reads. Opt into read-set drift detection for invariant-critical dependencies:
+
+```typescript
+const book = await em.load(Book, bookId, "author");
+em.assertUnchanged(book.author.get); // Also accepts multiple entities and arrays
+book.notes = "Decision based on the author's current state";
+await em.flush();
+```
+
+Reactive rules and reactions can assert all rows reached through their hints, but only when they actually run:
+
+```typescript
+config.addRule({ assertUnchanged: true }, { notes: {}, author: ["status", "maxBooks"] }, (book) => {
+  // Validate using book.author.get.status and book.author.get.maxBooks
+});
+config.addReaction({ assertUnchanged: true }, { notes: {}, author: "status:ro" }, (book) => {
+  // React using the author's current status
+});
+```
+
+The options-first form matches reaction options such as `runOnce`. Reactive `addCommitRule` also supports this option.
+
+Inside the flush transaction, Joist batches assertions by table and locks rows in id order with `SELECT ... FOR SHARE` before writing. It compares `updatedAt` against the original loaded value, **not** the value when the rule ran. Under READ COMMITTED, the query waits for in-flight writers and checks their committed version. The locks block non-key updates and deletes until the transaction commits. Missing or changed rows throw `ReadSetDriftError`, including tagged ids and expected/actual versions. Like an oplock failure, retry the **whole unit of work with a fresh EntityManager**, reloading data and rerunning business logic; do not retry flush on the failed EM.
+
+Assertions clear after a successful flush, including read-set-only flushes. Assert again for a later flush if needed; this does not refresh the entity's loaded version. Unsaved entities are ignored, and entities written in the flush use the existing write path instead of an extra read lock. Assertions require an `updatedAt` version field. Joist's existing deletes do not perform version checks.
+
+This protects **row drift**, not predicates or collection membership. For `{ author: "books" }`, the reached author and book rows are protected, but a newly inserted book is not detected. Membership invariants require a parent-row locking protocol followed by all writers, or a database constraint. Writes that bypass version bumps are not detected. Date-based versions use the same millisecond precision as oplocks; Temporal preserves database precision.
+
+Row locks write to tuple headers and generate WAL, and can cause lock waits or deadlocks. There is one extra locking query per table in each flush phase that registers dependencies. Use this for invariant-critical reads, not every loaded entity. There are no extra queries without assertions.
+
 ### Integrating Locks with the Client
 
 By default/currently, Joist's op locks are only "held" between the read & write of a single `EntityManager`, i.e.:
@@ -112,5 +144,4 @@ On step 4, the `saveAuthor` request could specify "the user is saving `a:1`, but
 This approach would catch that User A is potentially writing over User B's changes, i.e. and fail User A's update with an `Oplock failure`.
 
 That said, this example is theoretical at this point, because Joist does not currently have a way to load an entity but then say you want the `updated_at` to be the prior/incoming `updated_at` / "as of" value. See [#204](https://github.com/joist-orm/joist-orm/issues/204) for tracking that feature.
-
 

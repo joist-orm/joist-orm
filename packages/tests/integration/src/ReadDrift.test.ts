@@ -1,6 +1,6 @@
-import { ReadDriftError } from "joist-orm";
-import { Author, Book, newAuthor } from "src/entities";
-import { insertAuthor, insertBook } from "src/entities/inserts";
+import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
+import { Author, AuthorSchedule, Book, PublisherStatus, SmallPublisher, newAuthor } from "src/entities";
+import { insertAuthor, insertAuthorSchedule, insertBook, insertSmallPublisher } from "src/entities/inserts";
 import {
   readDriftCollectionOptions,
   readDriftReactionOptions,
@@ -15,7 +15,7 @@ describe("ReadDrift", () => {
     readDriftCollectionOptions.assertUnchanged = false;
   });
 
-  it("batches unchanged dependencies once per table", async () => {
+  it("batches read locks per table", async () => {
     // Given two persisted authors and a book
     await insertAuthor({ first_name: "a1" });
     // And a second author and a book belong to the read set
@@ -33,22 +33,6 @@ describe("ReadDrift", () => {
       "SELECT id AS id, updated_at AS version FROM authors WHERE id = ANY($1) ORDER BY id FOR SHARE",
       "SELECT id AS id, updated_at AS version FROM books WHERE id = ANY($1) ORDER BY id FOR SHARE",
     ]);
-  });
-
-  it("detects changes made before the assertion was registered", async () => {
-    // Given a loaded author and a pending book edit
-    await insertAuthor({ first_name: "a1" });
-    // And the author has a persisted book
-    await insertBook({ title: "b1", author_id: 1 });
-    const em = newEntityManager();
-    const book = await em.load(Book, "b:1", "author");
-    book.notes = "decision based on the author";
-    // And another connection changes the author after it was loaded
-    await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
-    // When we assert that the loaded version still holds
-    em.assertUnchanged(book.author.get);
-    // Then flush rejects the stale decision
-    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("does not persist book edits when an asserted author drifts", async () => {
@@ -79,7 +63,7 @@ describe("ReadDrift", () => {
     em.assertUnchanged(author);
     // Then the missing row is reported with the original timestamp
     await expect(em.flush()).rejects.toThrow(
-      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual deleted`,
+      `Read drift: a:1 expected ${author.updatedAt.toISOString()}, actual deleted`,
     );
   });
 
@@ -275,7 +259,7 @@ describe("ReadDrift", () => {
     em.assertUnchanged(author);
     // Then the diagnostic identifies the entity and both versions
     await expect(em.flush()).rejects.toThrow(
-      `Read drift: ${author.idTagged} expected ${author.updatedAt.toISOString()}, actual 2050-01-01T00:00:00.000Z`,
+      `Read drift: a:1 expected ${author.updatedAt.toISOString()}, actual 2050-01-01T00:00:00.000Z`,
     );
   });
 
@@ -324,6 +308,280 @@ describe("ReadDrift", () => {
       await writer.query("ROLLBACK");
       writer.release();
     }
+  });
+
+  it("batches repeated reads of a configured scalar getter", async () => {
+    // Given a persisted schedule whose overview has field-level protection
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When application logic reads its overview repeatedly
+    void parent.overview;
+    void parent.overview;
+    resetQueryCount();
+    await em.flush();
+    // Then the unchanged row is checked once inside the flush transaction
+    expect(queries).toEqual([
+      "BEGIN;",
+      "SELECT id AS id, updated_at AS version FROM author_schedules WHERE id = ANY($1) ORDER BY id FOR SHARE",
+      "COMMIT;",
+    ]);
+  });
+
+  it("detects changes to a loaded entity", async () => {
+    // Given a schedule loaded before a concurrent update
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // And another connection publishes it before application logic reads the cached value
+    await knex("author_schedules")
+      .where("id", parent.idUntagged)
+      .update({ overview: "published", updated_at: "2050-01-01" });
+    // When application logic reads the original overview
+    void parent.overview;
+    // Then its implicit assertion rejects the stale row
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("merely hydrating a field does not mark it as read locked", async () => {
+    // Given a persisted schedule with a configured overview
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    // When it is loaded but its getter is never read
+    await em.load(AuthorSchedule, "authorSchedule:1");
+    resetQueryCount();
+    await em.flush();
+    // Then hydration alone adds no assertion or transaction
+    expect(queries).toEqual([]);
+  });
+
+  it("setting an unchanged field does not mark it as read locked", async () => {
+    // Given a loaded schedule with a configured overview
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When a setter compares an unchanged value through internal getField
+    parent.overview = "draft";
+    resetQueryCount();
+    await em.flush();
+    // Then internal field access does not acquire a read lock
+    expect(queries).toEqual([]);
+  });
+
+  it("reading an unconfigured field does not mark it as read locked", async () => {
+    // Given a loaded schedule with only overview configured
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When application logic only reads createdAt
+    void parent.createdAt;
+    resetQueryCount();
+    await em.flush();
+    // Then no locking query is added
+    expect(queries).toEqual([]);
+  });
+
+  it("protects a parent's inherited status read when deciding to edit a book", async () => {
+    // Given a book whose publisher status is draft
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
+    // And the publisher has an author with a persisted book
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1", { author: "publisher" });
+    const parent = book.author.get.publisher.get!;
+    // When application logic uses the inherited status getter without an explicit assertion
+    if (parent.status === PublisherStatus.Draft) book.notes = "allowed while draft";
+    // And a concurrent transaction changes the publisher
+    await knex("publishers").where("id", parent.idUntagged).update({ status_id: 2, updated_at: "2050-01-01" });
+    // Then the stale decision fails instead of committing the book edit
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects enum boolean convenience getters", async () => {
+    // Given a loaded draft publisher
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
+    const em = newEntityManager();
+    const publisher = await em.load(SmallPublisher, "p:1");
+    // When application logic uses isDraft instead of the status getter
+    void publisher.isDraft;
+    // And another connection changes the row version
+    await knex("publishers").where("id", publisher.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then the convenience getter has marked the publisher for read locking
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects enum detail getters", async () => {
+    // Given a loaded draft publisher
+    await insertSmallPublisher({ name: "p1", status_id: 1 });
+    const em = newEntityManager();
+    const publisher = await em.load(SmallPublisher, "p:1");
+    // When application logic accesses the enum details
+    void publisher.statusDetails;
+    // And another connection changes the row version
+    await knex("publishers").where("id", publisher.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then the detail getter has marked the publisher for read locking
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured native enum reads", async () => {
+    // Given an author's configured native enum field
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    // When application logic uses a native enum convenience getter
+    void author.isCircle;
+    // And another connection changes the row version
+    await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then the native enum read detects drift
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured enum array reads", async () => {
+    // Given an author's configured enum array field
+    await insertAuthor({ first_name: "a1", favorite_colors: [1] });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    // When application logic reads the enum array
+    void author.favoriteColors;
+    // And another connection changes an unrelated field on the same row
+    await knex("authors").where("id", author.idUntagged).update({ last_name: "changed", updated_at: "2050-01-01" });
+    // Then the protection detects row-level drift, not just changes to the configured field
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("reading a cached field after flushing marks it as read locked again", async () => {
+    // Given a protected getter read and a successful flush
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    void parent.overview;
+    await em.flush();
+    // And another connection invalidates the still-cached entity
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // When application logic reads the cached getter again
+    void parent.overview;
+    // Then the new assertion detects drift from the unchanged loaded version
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects direct application calls to getField", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When application code reads the field without using its generated getter
+    getField(parent, "overview");
+    // And another connection invalidates that read
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then the direct read has the same protection as a getter read
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("internal getField reads do not mark the entity as read locked", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // And another connection changes its version
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // When housekeeping explicitly marks its read internal
+    getField(parent, "overview", true);
+    resetQueryCount();
+    await em.flush();
+    // Then it creates neither a read assertion nor a transaction
+    expect(queries).toEqual([]);
+  });
+
+  it("checking whether a field is set does not mark it as read locked", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When housekeeping checks presence without reading a domain value
+    isFieldSet(parent, "overview");
+    resetQueryCount();
+    await em.flush();
+    // Then the presence check creates no assertion
+    expect(queries).toEqual([]);
+  });
+
+  it("applying unchanged opts does not mark the entity as read locked", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When opts application inspects the current value without changing it
+    parent.set({ overview: "draft" });
+    resetQueryCount();
+    await em.flush();
+    // Then the internal inspection does not become a protected application read
+    expect(queries).toEqual([]);
+  });
+
+  it("protects reads in auth-trusted contexts", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When trusted domain logic reads the field, as hooks and rules do
+    runInTrustedContext(() => getField(parent, "overview"));
+    // And another connection invalidates the read
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then auth trust has not disabled read drift protection
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured source values copied during cloning", async () => {
+    // Given a configured field on a loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When application logic copies the configured field into a new entity
+    await em.clone(parent);
+    // And another connection changes the source row
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then cloning cannot commit a protected value copied from a stale source
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects configured values read through changes.originalValue", async () => {
+    // Given a configured field on an unchanged loaded schedule
+    await insertAuthor({ first_name: "a1" });
+    // And the author has a persisted draft schedule
+    await insertAuthorSchedule({ author_id: 1, overview: "draft" });
+    const em = newEntityManager();
+    const parent = await em.load(AuthorSchedule, "authorSchedule:1");
+    // When application logic reads the loaded value through the changes API
+    void parent.changes.overview.originalValue;
+    // And another connection changes the source row
+    await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
+    // Then that domain read has not been treated as housekeeping
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 });
 

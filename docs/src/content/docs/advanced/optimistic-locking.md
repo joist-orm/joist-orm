@@ -89,60 +89,7 @@ In theory, you should rarely see `Oplock failure` errors, and when you do it sho
 
 ### Protecting Read-Only Dependencies
 
-Oplocks protect rows being updated, not rows your business logic only reads.
-
-For example, a business invariant might allow editing a child only while its parent's `status` is `draft`. After we read `status=draft`, another transaction could change it to `status=published`. Our decision to allow the edit is now based on stale data, even though we never write the parent ourselves.
-
-Because Joist normally reads entities outside the flush transaction, a stricter (and more expensive) SQL isolation level on that transaction does not protect those earlier reads.
-
-Joist can help prevent these race conditions by opting into PostgreSQL's `FOR SHARE` row locks with `assertUnchanged`. We still read the parent's `status=draft` outside the transaction as usual. During flush, **inside the transaction that commits our writes**, Joist reads the parent's version again to check whether anyone has changed or version-bumped the row since we loaded it.
-
-If the version has changed, Joist fails the transaction. Otherwise, `FOR SHARE` holds a read lock on the row, preventing other transactions from updating or deleting it until our transaction commits. This closes the gap between checking the version and committing our decision:
-
-```typescript
-const book = await em.load(Book, bookId, "author");
-em.assertUnchanged(book.author.get);
-book.notes = "Decision based on the author's current state";
-await em.flush();
-```
-
-There are three ways to opt into `FOR SHARE` locks:
-
-1. Call `em.assertUnchanged(entity)` explicitly, as above.
-2. Add `{ assertUnchanged: true }` to a reactive rule or reaction.
-3. Configure `{ assertUnchanged: true }` on a field in `joist-config.json`.
-
-Reactive rules and reactions assert all rows reached through their hints, but only when they actually run:
-
-```typescript
-config.addRule({ assertUnchanged: true }, { notes: {}, author: ["status", "maxBooks"] }, (book) => {
-  // Validate using book.author.get.status and book.author.get.maxBooks
-});
-config.addReaction({ assertUnchanged: true }, { notes: {}, author: "status:ro" }, (book) => {
-  // React using the author's current status
-});
-```
-
-The options-first form matches reaction options such as `runOnce`. Reactive `addCommitRule` also supports this option.
-
-For fields that are always invariant-critical, configure protection once in `joist-config.json` and regenerate:
-
-```json
-{
-  "entities": {
-    "Publisher": {
-      "tag": "p",
-      "fields": { "status": { "assertUnchanged": true } }
-    }
-  }
-}
-```
-
-Now reading `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` calls `em.assertUnchanged(publisher)` automatically. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in.
-
-This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`. For example, if we read `publisher.status` as `draft` and another transaction changes only `publisher.name`, our flush still fails because the publisher's row version changed—even though its status is still `draft`.
-
-This protects **row drift**, not predicates or collection membership. For `{ author: "books" }`, the reached author and book rows are protected, but a newly inserted book is not detected. Membership invariants require a parent-row locking protocol followed by all writers, or a database constraint. Writes that bypass version bumps are not detected.
+Oplocks protect rows being updated, not rows your business logic only reads. See [Read Locking](./read-locking.md) for protecting read-only dependencies with `FOR SHARE` locks.
 
 ### Integrating Locks with the Client
 

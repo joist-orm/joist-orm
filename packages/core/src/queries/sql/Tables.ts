@@ -39,13 +39,13 @@ import {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
+  OperatorExpr,
   RefExpr,
   type SqlFragment,
   asNode,
   deferredCondition,
   isExpr,
   selectKeyBrand,
-  joinFragments,
 } from "src/queries/sql/Expr.ts";
 import { kq, kqDot, safeKq } from "src/queries/sql/keywords.ts";
 import type { QueryArg, QueryJoinInput, QuerySource } from "src/queries/sql/query.ts";
@@ -172,7 +172,13 @@ type LocalFieldNames<T> = ColumnsOf<T>[keyof ColumnsOf<T>] extends { fieldName: 
 
 /** The owning-reference subset of find filters that only compares a foreign key. */
 type TableReferenceFilter<T extends Entity, N> =
-  T | IdOf<T> | readonly (T | IdOf<T>)[] | boolean | N | undefined | { ne: T | IdOf<T> | N | undefined };
+  | T
+  | IdOf<T>
+  | readonly (T | IdOf<T>)[]
+  | boolean
+  | N
+  | undefined
+  | { ne: T | IdOf<T> | N | undefined };
 
 /** Maps an entity's columns and relationships to expressions and joins for one typed table handle. */
 type TableShape<T extends Entity, Name extends string> = {
@@ -645,7 +651,9 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn impleme
   }
 
   cosineDistance(vector: number[] | ExprLike<number[] | N>): Expr<number | N, string> {
-    return new VectorDistanceExpr(this, "<=>", vector) as unknown as Expr<number | N, string>;
+    if (this.column.dbType !== "vector") fail(`${this.column.columnName} is not a vector column`);
+    const outputType: TypeInfo = { dbType: "float8", domain: Number, arrayElementSafe: true };
+    return new OperatorExpr(this, "<=>", vector, { outputType }) as unknown as Expr<number | N, string>;
   }
 
   like(value: V | undefined): SqlCondition {
@@ -846,44 +854,6 @@ class TaggedIdExpr extends BaseExpr {
 
   get outputType(): TypeInfo {
     return { dbType: "text", domain: String, arrayElementSafe: true };
-  }
-
-  get sqlNullable(): boolean | undefined {
-    return this.column.sqlNullable;
-  }
-
-  get sqlSource(): object {
-    return this.column.sqlSource;
-  }
-}
-
-/** A pgvector distance between a `vector` column and a bound vector or another expression, i.e. `pg.embedding <=> ?::vector`. */
-class VectorDistanceExpr extends BaseExpr {
-  constructor(
-    private column: TableColumn,
-    private op: string,
-    private vector: unknown,
-  ) {
-    super();
-    if (column.column.dbType !== "vector") fail(`${column.column.columnName} is not a vector column`);
-  }
-
-  toSql(ctx: ExprContext): SqlFragment {
-    const left = this.column.toSql(ctx);
-    if (isExpr(this.vector)) {
-      const joined = joinFragments([left, asNode(this.vector).toSql(ctx)], ` ${this.op} `);
-      return { ...joined, sql: `(${joined.sql})` };
-    }
-    // The column's own codec renders the vector as pgvector's literal, not a pg array
-    return {
-      sql: `(${left.sql} ${this.op} ?::vector)`,
-      bindings: [...left.bindings, this.column.encode(this.vector)],
-      refs: left.refs,
-    };
-  }
-
-  get outputType(): TypeInfo {
-    return { dbType: "float8", domain: Number, arrayElementSafe: true };
   }
 
   get sqlNullable(): boolean | undefined {

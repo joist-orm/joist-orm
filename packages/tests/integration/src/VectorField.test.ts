@@ -118,10 +118,10 @@ describe("VectorField", () => {
       { name: "orthogonal", distance: 1 },
     ]);
     expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined; distance: number | undefined }[]>();
-    // And the vector was bound as pgvector's literal
+    // And the vector was bound as pgvector's literal, which Postgres types from the operator
     expect(queries).toMatchInlineSnapshot(`
      [
-       "SELECT pg.name AS name, (pg.lazy_embedding <=> $1::vector) AS distance FROM parent_groups AS pg WHERE (pg.lazy_embedding <=> $2::vector) <= $3 ORDER BY (pg.lazy_embedding <=> $4::vector) ASC",
+       "SELECT pg.name AS name, (pg.lazy_embedding <=> $1) AS distance FROM parent_groups AS pg WHERE (pg.lazy_embedding <=> $2) <= $3 ORDER BY (pg.lazy_embedding <=> $4) ASC",
      ]
     `);
   });

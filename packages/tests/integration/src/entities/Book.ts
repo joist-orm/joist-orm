@@ -8,7 +8,6 @@ import {
   bookConfig as config,
   bookScope as scope,
 } from "./entities";
-import { readDriftCollectionOptions, readDriftReactionOptions, readDriftRuleOptions } from "./readDriftOptions";
 
 export class Book extends BookCodegen {
   static fromLargePubs = scope({ author: { publisher: { type: PublisherType.Big } } });
@@ -59,8 +58,8 @@ config.addRule((book) => {
   book.transientFields.rulesInvoked++;
 });
 
-// A noop rule on author.firstName and notes, with optional read drift protection for integration tests
-config.addRule(readDriftRuleOptions, { author: "firstName", notes: {} }, (b) => {
+// For testing read locks requested by reactive rules
+config.addRule({ assertUnchanged: true }, { author: "firstName", acknowledgements: {} }, (b) => {
   // Assert that this compiles
   noop(b.author.get.changes.firstName.hasChanged);
   // Assert this does not
@@ -83,8 +82,8 @@ config.addRule("reviews", (b) => {
   b.fullNonReactiveAccess.transientFields.reviewsRuleInvoked++;
 });
 
-// Another noop rule to make Book reactive on author.numberOfBooks2, an async property
-config.addRule(readDriftCollectionOptions, { author: "numberOfBooks2" }, (b) => {
+// For testing read locks through author.numberOfBooks2, an async property backed by author.books
+config.addRule({ assertUnchanged: true }, { author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.transientFields.numberOfBooks2RuleInvoked++;
 });
 
@@ -136,8 +135,8 @@ config.addRule(["title", "tags:ro"], (b) => {
   b.transientFields.readOnlyTagsRuleInvoked++;
 });
 
-// For testing reactions observing fields set by defaults
-config.addReaction(readDriftReactionOptions, { notes: {}, author: "firstName:ro" }, (b) => {
+// For testing read locks in reactions and observing notes set by defaults
+config.addReaction({ assertUnchanged: true }, { notes: {}, author: "firstName:ro" }, (b) => {
   b.transientFields.reactions.observedNotes.push(b.notes);
 });
 

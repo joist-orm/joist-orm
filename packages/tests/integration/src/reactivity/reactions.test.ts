@@ -307,7 +307,7 @@ describe("reactions", () => {
         path: ["books"],
         source: Author,
         isReadOnly: true,
-        name: "Book.ts:140",
+        name: "Book.ts:139",
         fn,
         runOnce: false,
       },

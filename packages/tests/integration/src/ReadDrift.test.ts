@@ -1,20 +1,9 @@
 import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
 import { Author, AuthorSchedule, Book, PublisherStatus, SmallPublisher, newAuthor } from "src/entities";
 import { insertAuthor, insertAuthorSchedule, insertBook, insertSmallPublisher } from "src/entities/inserts";
-import {
-  readDriftCollectionOptions,
-  readDriftReactionOptions,
-  readDriftRuleOptions,
-} from "src/entities/readDriftOptions";
 import { knex, newEntityManager, pool, queries, resetQueryCount } from "src/testEm";
 
 describe("ReadDrift", () => {
-  afterEach(() => {
-    readDriftRuleOptions.assertUnchanged = false;
-    readDriftReactionOptions.assertUnchanged = false;
-    readDriftCollectionOptions.assertUnchanged = false;
-  });
-
   it("batches read locks per table", async () => {
     // Given two persisted authors and a book
     await insertAuthor({ first_name: "a1" });
@@ -103,17 +92,16 @@ describe("ReadDrift", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1", "author");
-    readDriftRuleOptions.assertUnchanged = true;
     // And its loaded author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
-    // When notes trigger the rule
-    book.notes = "trigger rule";
+    // When acknowledgements trigger the rule
+    book.acknowledgements = "trigger rule";
     // Then its stale author dependency is rejected
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
   it("does not read lock regular fields without an opt-in", async () => {
-    // Given a book with an ordinary rule reading its author
+    // Given a book without read locking on authorsNickNames
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book
     await insertBook({ title: "b1", author_id: 1 });
@@ -122,7 +110,7 @@ describe("ReadDrift", () => {
     // And the author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When an unprotected field is changed
-    book.notes = "ordinary rule";
+    book.authorsNickNames = "regular field";
     resetQueryCount();
     await em.flush();
     // Then no row locks were requested
@@ -130,13 +118,12 @@ describe("ReadDrift", () => {
   });
 
   it("does not read lock entities of rules that are not triggered", async () => {
-    // Given an opted-in rule on book notes and author firstName
+    // Given an opted-in rule on book acknowledgements and author firstName
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted book
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1", "author");
-    readDriftRuleOptions.assertUnchanged = true;
     // And its author changes outside this EM
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When only the unrelated book order changes
@@ -154,7 +141,6 @@ describe("ReadDrift", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1", "author");
-    readDriftReactionOptions.assertUnchanged = true;
     // And its author changes in another connection
     await knex("authors").where("id", book.author.get.idUntagged).update({ updated_at: "2050-01-01" });
     // When notes trigger the reaction
@@ -221,7 +207,6 @@ describe("ReadDrift", () => {
     await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1", { author: "books" });
-    readDriftCollectionOptions.assertUnchanged = true;
     // And a loaded sibling changes outside the EM
     await knex("books").where("id", 2).update({ updated_at: "2050-01-01" });
     // When title triggers the numberOfBooks2 rule through author.books

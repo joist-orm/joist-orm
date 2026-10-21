@@ -536,6 +536,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get status(): PublisherStatus | undefined {
+    this.em.assertUnchanged(this);
     return getField(this, "status");
   }
 
@@ -548,10 +549,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isDraft(): boolean {
+    this.em.assertUnchanged(this);
     return getField(this, "status") === PublisherStatus.Draft;
   }
 
   get isActive(): boolean {
+    this.em.assertUnchanged(this);
     return getField(this, "status") === PublisherStatus.Active;
   }
 

@@ -75,7 +75,8 @@
                 "stiType": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
                 "notNull": { "type": "boolean" },
                 "hasDefault": { "type": "boolean" },
-                "lazy": { "type": "boolean" }
+                "lazy": { "type": "boolean" },
+                "assertUnchanged": { "type": "boolean" }
               },
               "additionalProperties": false
             }

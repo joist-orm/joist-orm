@@ -124,16 +124,18 @@ export function generateEntityCodegenFile(
   const { entity, tagName } = meta;
   const entityName = entity.name;
 
+  validateAssertUnchangedFields(config, meta);
+
   // Per-field `.md` docs to inject as JSDocs on the codegen'd getters/relations (empty if docs are off)
   const fieldDocs = docs?.fields ?? {};
 
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
 
-  const primitives = createPrimitives(meta, entity, fieldDocs); // Add the primitives
-  primitives.push(...createRegularEnums(meta, entity, fieldDocs)); // Add ManyToOne enums
-  primitives.push(...createArrayEnums(meta, fieldDocs)); // Add integer[] enums
-  primitives.push(...createPgEnums(meta, fieldDocs)); // Add native enums
+  const primitives = createPrimitives(config, meta, entity, fieldDocs); // Add the primitives
+  primitives.push(...createRegularEnums(config, meta, entity, fieldDocs)); // Add ManyToOne enums
+  primitives.push(...createArrayEnums(config, meta, fieldDocs)); // Add integer[] enums
+  primitives.push(...createPgEnums(config, meta, fieldDocs)); // Add native enums
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
@@ -868,7 +870,7 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums];
 }
 
-function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
+function createPrimitives(config: Config, meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -888,12 +890,14 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Rec
     } else if (p.zodSchema) {
       getter = code`
         get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
+          ${assertUnchangedOnRead(config, meta, fieldName)}
           return ${getField}(this, "${fieldName}");
         }
      `;
     } else {
       getter = code`
         get ${fieldName}(): ${fieldType}${maybeOptional} {
+          ${assertUnchangedOnRead(config, meta, fieldName)}
           return ${getField}(this, "${fieldName}");
         }
      `;
@@ -951,7 +955,7 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Rec
   return primitives;
 }
 
-function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
+function createRegularEnums(config: Config, meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => !e.isArray)
     .flatMap((e) => {
@@ -971,6 +975,7 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
       } else {
         getter = code`
           get ${fieldName}(): ${enumType}${maybeOptional} {
+            ${assertUnchangedOnRead(config, meta, fieldName)}
             return ${getField}(this, "${fieldName}");
           }
 
@@ -999,6 +1004,7 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
       const accessors = enumRows.map(
         (row) => code`
           get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+            ${assertUnchangedOnRead(config, meta, fieldName)}
             return ${getField}(this, "${fieldName}") === ${enumType}.${pascalCase(row.code)};
           }
         `,
@@ -1007,13 +1013,14 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
     });
 }
 
-function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
+function createArrayEnums(config: Config, meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.enums
     .filter((e) => e.isArray)
     .flatMap((e) => {
       const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
       const getter = code`
         get ${fieldName}(): ${enumType}[] {
+          ${assertUnchangedOnRead(config, meta, fieldName)}
           return ${getField}(this, "${fieldName}") || [];
         }
 
@@ -1043,13 +1050,14 @@ function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, stri
     });
 }
 
-function createPgEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
+function createPgEnums(config: Config, meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
   return meta.pgEnums.flatMap((e) => {
     const { fieldName, enumType, enumValues, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
 
     const getter = code`
         get ${fieldName}(): ${enumType}${maybeOptional} {
+          ${assertUnchangedOnRead(config, meta, fieldName)}
           return ${getField}(this, "${fieldName}");
         }
      `;
@@ -1376,5 +1384,40 @@ export function getIdType(config: Config) {
       return "number";
     default:
       return assertNever(config.idType);
+  }
+}
+
+/** Enroll only generated getter reads; internal getField calls must not acquire read assertions. */
+function assertUnchangedOnRead(config: Config, meta: EntityDbMetadata, fieldName: string): Code {
+  return config.entities[meta.name]?.fields?.[fieldName]?.assertUnchanged
+    ? code`this.em.assertUnchanged(this);`
+    : code``;
+}
+
+/**
+ * Reject configurations whose generated getters cannot provide the promised protection.
+ *
+ * A misspelled or inherited field must not silently disable an invariant's read drift check.
+ */
+function validateAssertUnchangedFields(config: Config, meta: EntityDbMetadata): void {
+  for (const [fieldName, field] of Object.entries(config.entities[meta.name]?.fields ?? {})) {
+    if (!field.assertUnchanged) continue;
+
+    const scalar = [...meta.primitives, ...meta.enums, ...meta.pgEnums].find((f) => f.fieldName === fieldName);
+    if (
+      !scalar ||
+      ("derived" in scalar && (scalar.derived === "sync" || scalar.derived === "async")) ||
+      ("lazy" in scalar && scalar.lazy)
+    ) {
+      throw new Error(
+        `assertUnchanged on ${meta.name}.${fieldName} requires a stored scalar getter declared on this entity`,
+      );
+    }
+
+    let base = meta;
+    while (base.baseType) base = base.baseType;
+    if (!base.updatedAt) {
+      throw new Error(`assertUnchanged on ${meta.name}.${fieldName} requires an updatedAt version field`);
+    }
   }
 }

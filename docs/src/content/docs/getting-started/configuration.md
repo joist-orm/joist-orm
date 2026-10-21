@@ -324,6 +324,7 @@ export interface FieldConfig {
   superstruct?: string;
   zodSchema?: string;
   type?: string;
+  assertUnchanged?: boolean;
 }
 ```
 
@@ -334,6 +335,7 @@ Where:
 - `ignore` controls whether to ignore the field
 - `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
 - `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas`
+- `assertUnchanged` automatically protects reads of this field against [read drift](../advanced/optimistic-locking.md#protecting-read-only-dependencies). Reading its generated getter enrolls the entity for a version check and `FOR SHARE` lock at the next flush. This also applies to enum detail and boolean convenience getters. It supports stored scalar fields, including lookup enums, enum arrays, and native enums; lazy, derived, ignored, and relationship fields are not supported. Configure inherited fields on the entity that declares the getter. The entity must have an `updatedAt` version field.
 - `type` links to an TypeScript type to use instead of the schema derived one
 
   Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.

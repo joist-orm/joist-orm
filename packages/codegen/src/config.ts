@@ -33,8 +33,14 @@ const fieldConfig = z
     hasDefault: z.optional(z.boolean()),
     // Exclude a (large jsonb/text) column from the default SELECT and expose it as a lazy-loaded LazyField
     lazy: z.optional(z.boolean()),
+    /** Enroll the entity for read drift protection whenever its generated getter is read. */
+    assertUnchanged: z.optional(z.boolean()),
   })
-  .strict();
+  .strict()
+  .refine((field) => !field.assertUnchanged || (!field.derived && !field.lazy && !field.ignore), {
+    message: "assertUnchanged requires a non-derived, non-lazy, non-ignored field",
+    path: ["assertUnchanged"],
+  });
 
 export type FieldConfig = z.infer<typeof fieldConfig>;
 

@@ -10,6 +10,8 @@
         "address": { "superstruct": "address@src/entities/types" },
         "bookComments": { "derived": "async" },
         "businessAddress": { "zodSchema": "AddressSchema@src/entities/types" },
+        "favoriteColors": { "assertUnchanged": true },
+        "favoriteShape": { "assertUnchanged": true },
         "ignoreEnumFk": { "ignore": true },
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
@@ -39,7 +41,7 @@
       "tag": "a",
       "uniqueBy": [["ssn"]]
     },
-    "AuthorSchedule": { "tag": "authorSchedule" },
+    "AuthorSchedule": { "fields": { "overview": { "assertUnchanged": true } }, "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
     "Book": {
       "fields": { "search": { "derived": "async" } },
@@ -93,6 +95,7 @@
         "favoriteAuthorName": { "derived": "async" },
         "numberOfBookAdvancesSnapshot": { "derived": "async" },
         "numberOfBookReviews": { "derived": "async" },
+        "status": { "assertUnchanged": true },
         "titlesOfFavoriteBooks": { "derived": "async" }
       },
       "relations": {

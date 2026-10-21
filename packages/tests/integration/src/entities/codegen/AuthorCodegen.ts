@@ -822,6 +822,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteColors(): Color[] {
+    this.em.assertUnchanged(this);
     return getField(this, "favoriteColors") || [];
   }
 
@@ -846,6 +847,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteShape(): FavoriteShape | undefined {
+    this.em.assertUnchanged(this);
     return getField(this, "favoriteShape");
   }
 

@@ -119,6 +119,25 @@ config.addReaction({ assertUnchanged: true }, { notes: {}, author: "status:ro" }
 
 The options-first form matches reaction options such as `runOnce`. Reactive `addCommitRule` also supports this option.
 
+For fields that are always invariant-critical, configure protection once in `joist-config.json` and regenerate:
+
+```json
+{
+  "entities": {
+    "Publisher": {
+      "tag": "p",
+      "fields": { "status": { "assertUnchanged": true } }
+    }
+  }
+}
+```
+
+Now reading `publisher.status`, `publisher.statusDetails`, or `publisher.isDraft` calls `em.assertUnchanged(publisher)` automatically. This works in ordinary business logic, rules, reactions, and hooks without rule-level opt-in. Reading does not issue SQL or acquire a lock immediately; the version check and lock happen at flush using the same mechanism as explicit assertions.
+
+Only reads through generated application getters enroll assertions. Internal hydration, setter comparisons, and write bindings do not. Any application code that invokes a configured getter, including logging or serialization, also enrolls the row. Reading an unconfigured getter does not. Cached reads still enroll assertions: after a successful flush clears the assertions, reading the getter again asserts the original loaded version again, without refreshing the entity.
+
+The flag supports stored scalar fields, lookup enums, enum arrays, and native enums. Configure inherited fields on the entity that declares the getter; the protection then applies to its subtypes. Codegen rejects flags on lazy, derived, ignored, or relationship fields, and entities without an `updatedAt` version field. Use explicit assertions or rule-level opt-in for those other read dependencies. This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`.
+
 Inside the flush transaction, Joist batches assertions by table and locks rows in id order with `SELECT ... FOR SHARE` before writing. It compares `updatedAt` against the original loaded value, **not** the value when the rule ran. Under READ COMMITTED, the query waits for in-flight writers and checks their committed version. The locks block non-key updates and deletes until the transaction commits. Missing or changed rows throw `ReadDriftError`, including tagged ids and expected/actual versions. Like an oplock failure, retry the **whole unit of work with a fresh EntityManager**, reloading data and rerunning business logic; do not retry flush on the failed EM.
 
 Assertions clear after a successful flush, including flushes that only check for read drift without writing any entities. Assert again for a later flush if needed; this does not refresh the entity's loaded version. Unsaved entities are ignored, and entities written in the flush use the existing write path instead of an extra read lock. Assertions require an `updatedAt` version field. Joist's existing deletes do not perform version checks.

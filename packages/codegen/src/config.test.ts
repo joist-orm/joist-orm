@@ -131,6 +131,41 @@ describe("config", () => {
       );
     });
   });
+
+  it("rejects read drift protection on derived getters", () => {
+    // Given a derived getter without an ordinary generated field getter
+    const input = {
+      entities: { Author: { tag: "a", fields: { initials: { derived: "sync", assertUnchanged: true } } } },
+    };
+    // When validating the config
+    function validate() {
+      return config.parse(input);
+    }
+    // Then codegen rejects the unsupported protection instead of silently ignoring it
+    expect(validate).toThrow("assertUnchanged requires a non-derived, non-lazy, non-ignored field");
+  });
+
+  it("rejects read drift protection on lazy fields", () => {
+    // Given a lazy field accessed through a property rather than a generated scalar getter
+    const input = { entities: { Author: { tag: "a", fields: { notes: { lazy: true, assertUnchanged: true } } } } };
+    // When validating the config
+    function validate() {
+      return config.parse(input);
+    }
+    // Then codegen rejects the unsupported protection
+    expect(validate).toThrow("assertUnchanged requires a non-derived, non-lazy, non-ignored field");
+  });
+
+  it("rejects read drift protection on ignored fields", () => {
+    // Given an ignored column with no generated getter
+    const input = { entities: { Author: { tag: "a", fields: { notes: { ignore: true, assertUnchanged: true } } } } };
+    // When validating the config
+    function validate() {
+      return config.parse(input);
+    }
+    // Then codegen rejects the unsupported protection
+    expect(validate).toThrow("assertUnchanged requires a non-derived, non-lazy, non-ignored field");
+  });
 });
 
 function newAuthorConfig(fields?: Record<string, FieldConfig>): Config {

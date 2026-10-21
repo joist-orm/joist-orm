@@ -128,7 +128,7 @@ export type Field = (
   | OneToOneField
   | PolymorphicField
 ) & {
-  /** When true, application reads enroll this entity for read drift protection at flush. */
+  /** When true, application reads mark this entity for read locking at flush. */
   assertUnchanged?: boolean;
 };
 

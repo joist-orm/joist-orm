@@ -379,7 +379,7 @@ export function setOpt<T extends Entity>(
   const value = _value === null ? undefined : _value;
 
   // Use `getField` to side-step `id` blowing up on new entities that are setting an
-  // explicit id. Read configured fields as internal so applying opts does not enroll a read dependency.
+  // explicit id. Read configured fields as internal so applying opts does not mark the entity for read locking.
   // Otherwise use `entity[key]` to get back the relation.
   const current = key === "id" || field?.assertUnchanged ? getField(entity, key, true) : (entity as any)[key];
 

@@ -24,7 +24,7 @@ describe("ReadDrift.fields", () => {
     ]);
   });
 
-  it("compares against the loaded version rather than the getter-read version", async () => {
+  it("detects changes made after loading but before reading the field", async () => {
     // Given a schedule loaded before a concurrent update
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -41,7 +41,7 @@ describe("ReadDrift.fields", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("does not enroll a configured field during hydration", async () => {
+  it("merely hydrating a field does not mark it as read locked", async () => {
     // Given a persisted schedule with a configured overview
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -55,7 +55,7 @@ describe("ReadDrift.fields", () => {
     expect(queries).toEqual([]);
   });
 
-  it("does not enroll a configured field when its setter internally reads the current value", async () => {
+  it("setting an unchanged field does not mark it as read locked", async () => {
     // Given a loaded schedule with a configured overview
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -70,7 +70,7 @@ describe("ReadDrift.fields", () => {
     expect(queries).toEqual([]);
   });
 
-  it("does not enroll unconfigured getters", async () => {
+  it("reading an unconfigured field does not mark it as read locked", async () => {
     // Given a loaded schedule with only overview configured
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -111,7 +111,7 @@ describe("ReadDrift.fields", () => {
     void publisher.isDraft;
     // And another connection changes the row version
     await knex("publishers").where("id", publisher.idUntagged).update({ updated_at: "2050-01-01" });
-    // Then the convenience getter has enrolled the same row assertion
+    // Then the convenience getter has marked the publisher for read locking
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
@@ -124,7 +124,7 @@ describe("ReadDrift.fields", () => {
     void publisher.statusDetails;
     // And another connection changes the row version
     await knex("publishers").where("id", publisher.idUntagged).update({ updated_at: "2050-01-01" });
-    // Then the detail getter has enrolled the same row assertion
+    // Then the detail getter has marked the publisher for read locking
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
@@ -172,7 +172,7 @@ describe("ReadDrift.fields", () => {
     expect(queries).toEqual([]);
   });
 
-  it("enrolls another assertion when the cached getter is read after a successful flush", async () => {
+  it("reading a cached field after flushing marks it as read locked again", async () => {
     // Given a protected getter read and a successful flush
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -231,7 +231,7 @@ describe("ReadDrift.fields", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("allows housekeeping to read getField without enrolling an assertion", async () => {
+  it("internal getField reads do not mark the entity as read locked", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -248,7 +248,7 @@ describe("ReadDrift.fields", () => {
     expect(queries).toEqual([]);
   });
 
-  it("does not enroll assertions when checking whether a field is set", async () => {
+  it("checking whether a field is set does not mark it as read locked", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -263,7 +263,7 @@ describe("ReadDrift.fields", () => {
     expect(queries).toEqual([]);
   });
 
-  it("does not enroll assertions when applying unchanged opts", async () => {
+  it("applying unchanged opts does not mark the entity as read locked", async () => {
     // Given a configured field on a loaded schedule
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule

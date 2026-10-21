@@ -7,7 +7,7 @@ import { maybeRequireTemporal } from "src/serde/temporal.ts";
 import { fail } from "src/utils.ts";
 
 /**
- * Returns the current value of `fieldName` and enrolls configured read drift assertions.
+ * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
  * Generated getters and direct application calls are protected by default. Only ORM
  * housekeeping should pass `isInternal`, not domain logic in hooks, rules, or reactions.

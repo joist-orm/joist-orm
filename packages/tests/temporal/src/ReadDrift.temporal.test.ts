@@ -2,7 +2,7 @@ import { ReadDriftError } from "joist-orm";
 import { Author } from "src/entities";
 import { knex, newEntityManager } from "src/setupDbTests";
 
-describe("ReadDrift", () => {
+describe("ReadDrift.temporal", () => {
   it("accepts an unchanged microsecond-precision version", async () => {
     // Given an author whose version has database microsecond precision
     await knex

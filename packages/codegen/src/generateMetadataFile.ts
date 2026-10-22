@@ -28,6 +28,7 @@ import {
   PrimitiveSerde,
   SimpleFieldSerde,
   SuperstructSerde,
+  VectorSerde,
   ZodSerde,
   ZonedDateTimeSerde,
   polymorphicField,
@@ -401,6 +402,7 @@ function primitiveColumnCodec(config: Config, column: PrimitiveField): Code {
     return isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
   }
   if (columnType === "jsonb") return code`new ${JsonSerde}()`;
+  if (columnType === "vector") return code`new ${VectorSerde}()`;
   if (column.rawFieldType === "bigint") {
     return isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
   }

@@ -39,6 +39,7 @@ import {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
+  OperatorExpr,
   RefExpr,
   type SqlFragment,
   asNode,
@@ -315,6 +316,16 @@ export interface PrimitiveColumn<
   ilike(value: V | undefined): SqlCondition;
   search(value: V | undefined): SqlCondition;
   between(v1: V | undefined, v2: V | undefined): SqlCondition;
+  /**
+   * The cosine distance (pgvector's `<=>`) between this `vector` column and `vector`, from 0 for the same direction
+   * to 2 for opposite directions; NULL when the column is NULL.
+   *
+   * Only `vector` columns support it, so other `number[]` (i.e. pg array) columns fail when the query is built.
+   */
+  cosineDistance(
+    this: PrimitiveColumn<number[], N, Src, Key>,
+    vector: number[] | ExprLike<number[] | N>,
+  ): Expr<number | N, Src>;
   // need to move to ArrayColumn
   // ...added the `string` to support jsonb contains like `WHERE profile @> '{"age": 25}'`
   // Ideally this would go in a JsonbColumn
@@ -637,6 +648,12 @@ class PrimitiveColumnImpl<V, N extends null | never> extends TableColumn impleme
   between(v1: V | undefined, v2: V | undefined): SqlCondition {
     if (v1 === undefined || v2 === undefined) return skipCondition;
     return this.addCondition({ kind: "between", value: [v1, v2] });
+  }
+
+  cosineDistance(vector: number[] | ExprLike<number[] | N>): Expr<number | N, string> {
+    if (this.column.dbType !== "vector") fail(`${this.column.columnName} is not a vector column`);
+    const outputType: TypeInfo = { dbType: "float8", domain: Number, arrayElementSafe: true };
+    return new OperatorExpr(this, "<=>", vector, { outputType }) as unknown as Expr<number | N, string>;
   }
 
   like(value: V | undefined): SqlCondition {

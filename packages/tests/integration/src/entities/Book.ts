@@ -58,7 +58,7 @@ config.addRule((book) => {
   book.transientFields.rulesInvoked++;
 });
 
-// For testing read locks requested by reactive rules
+// For testing a) Book reacting to author.firstName and b) read locks requested by reactive rules.
 config.addRule({ assertUnchanged: true }, { author: "firstName", acknowledgements: {} }, (b) => {
   // Assert that this compiles
   noop(b.author.get.changes.firstName.hasChanged);
@@ -82,7 +82,7 @@ config.addRule("reviews", (b) => {
   b.fullNonReactiveAccess.transientFields.reviewsRuleInvoked++;
 });
 
-// For testing read locks through author.numberOfBooks2, an async property backed by author.books
+// For testing a) Book reacting to author.numberOfBooks2, an async property, and b) read locks through author.books.
 config.addRule({ assertUnchanged: true }, { author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.transientFields.numberOfBooks2RuleInvoked++;
 });
@@ -135,7 +135,7 @@ config.addRule(["title", "tags:ro"], (b) => {
   b.transientFields.readOnlyTagsRuleInvoked++;
 });
 
-// For testing read locks in reactions and observing notes set by defaults
+// For testing a) reactions observing fields set by defaults and b) read locks requested by reactions.
 config.addReaction({ assertUnchanged: true }, { notes: {}, author: "firstName:ro" }, (b) => {
   b.transientFields.reactions.observedNotes.push(b.notes);
 });

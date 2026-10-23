@@ -303,8 +303,8 @@ describe("reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt", "title"], path: ["author"], fn },
       // Author's "cannot have 13 books" rule
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt"], path: ["author"], fn },
-      // Book's noop rule on author.firstName, if author changes
-      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
+      // Book's noop rule on author.firstName and acknowledgements
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author", "acknowledgements"], path: [], fn },
       // Book's "too many colors" rule, if author changes
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
@@ -482,7 +482,7 @@ describe("reactiveRules", () => {
       kind: "reaction",
       cstr: "Book",
       name: "Book.ts:139",
-      fields: ["notes"],
+      fields: ["notes", "author"],
       path: [],
       runOnce: false,
       fn: expect.any(Function),

@@ -195,7 +195,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
       // Check isChangeableField because we might be updating the base `publishers` table
       // and `originalData` might have fields from a subclass `large_publishers` table.
       if (!(key in data) && isChangeableField(entity, key) && !lazyFieldNames.has(key)) {
-        getField(entity, key);
+        getField(entity, key, true);
       }
     }
   }

@@ -33,6 +33,7 @@ import { getField, setField } from "src/fields.ts";
 import { FlushLock } from "src/flush/FlushLock.ts";
 import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
 import type { PendingChange } from "src/flush/PendingChanges.ts";
+import { checkReadDrift } from "src/flush/ReadDrift.ts";
 import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "src/flush/Todo.ts";
 import {
   CustomCollection,
@@ -363,6 +364,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   };
   // Hooks persist across flushes, so a forced hook keeps requiring a transaction on each flush.
   #forceTransaction = false;
+  #readSet = new Set<EntityW>();
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger = noopFieldLogger;
   #isLoadedCache = new IsLoadedCache();
@@ -2158,11 +2160,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         Object.keys(entityTodos).length > 0 ||
         Object.keys(joinRowTodos).length > 0 ||
         this.#rm.hasPendingCommitTransitions() ||
+        this.#readSet.size > 0 ||
         this.#forceTransaction
       ) {
+        const checkedReads = new Set<EntityW>();
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
+            if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
               // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
@@ -2213,6 +2218,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
           await this.#rm.runCommitTransitions();
+          // Commit rules and callbacks can assert dependencies after the last write loop.
+          if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }
@@ -2256,6 +2263,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#merging?.clear();
 
       this.#rm.clear();
+      this.#readSet.clear();
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       // A failed flush may have already run reactions, hooks, or SQL, so we don't try to resume from it
@@ -2533,6 +2541,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
 
     return entities;
+  }
+
+  /**
+   * Protects loaded read dependencies at the next flush, then clears them on success.
+   *
+   * New entities are ignored. Written entities use oplocks instead. Types without updatedAt
+   * cannot be protected. A drift requires retrying the whole unit of work in a fresh EM.
+   */
+  assertUnchanged(entity: EntityW): void;
+  assertUnchanged(entities: readonly EntityW[]): void;
+  assertUnchanged(entityOrEntities: EntityW | readonly EntityW[]): void {
+    const entities = isEntity(entityOrEntities) ? [entityOrEntities] : entityOrEntities;
+    for (const entity of entities) {
+      if (entity.em !== this) throw new Error("assertUnchanged requires entities from this EntityManager");
+      if (entity.isNewEntity) continue;
+      if (!getBaseMeta(getMetadata(entity)).timestampFields?.updatedAt) {
+        throw new Error(`assertUnchanged requires updatedAt on ${entity}`);
+      }
+      this.#readSet.add(entity);
+    }
   }
 
   /**
@@ -3637,7 +3665,7 @@ function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, n
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
         const orm = getInstanceData(e);
-        orm.markFieldDirty(updatedAt, getField(e, updatedAt));
+        orm.markFieldDirty(updatedAt, getField(e, updatedAt, true));
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
         rm.queueDownstreamReactables(e, updatedAt);

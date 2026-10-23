@@ -324,6 +324,7 @@ export interface FieldConfig {
   superstruct?: string;
   zodSchema?: string;
   type?: string;
+  assertUnchanged?: boolean;
 }
 ```
 
@@ -334,6 +335,7 @@ Where:
 - `ignore` controls whether to ignore the field
 - `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
 - `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas`
+- `assertUnchanged` automatically protects reads of this field against [read drift](../advanced/read-locking.md#field-level-configuration).
 - `type` links to an TypeScript type to use instead of the schema derived one
 
   Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.

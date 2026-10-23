@@ -300,6 +300,17 @@ describe("reactions", () => {
         fn,
         runOnce: false,
       },
+      {
+        kind: "reaction",
+        cstr: Book,
+        fields: ["firstName"],
+        path: ["books"],
+        source: Author,
+        isReadOnly: true,
+        name: "Book.ts:139",
+        fn,
+        runOnce: false,
+      },
     ]);
   });
 

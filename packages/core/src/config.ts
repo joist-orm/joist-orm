@@ -1,6 +1,7 @@
 import { resetConstructorMap } from "src/configure.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
+import { assertHintUnchanged } from "src/flush/ReadDrift.ts";
 import {
   type EntityConstructor,
   type EntityField,
@@ -38,7 +39,11 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
-type AddReactionOpts = { runOnce?: boolean; name?: string };
+type AssertUnchangedOpts = {
+  /** Protect reached rows at flush; does not protect collection membership or predicates. */
+  assertUnchanged?: boolean;
+};
+type AddReactionOpts = AssertUnchangedOpts & { runOnce?: boolean; name?: string };
 
 /** An `addTransitionRule` rule, which also gets the transition it is checking, since the entity may have moved on. */
 export type TransitionGuardFn<T extends Entity, V> = (
@@ -140,12 +145,23 @@ export class ConfigApi<T extends Entity, C> {
    * access the `reacted.entity` property to get a full view of the entity's fields and methods.
    */
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addRule<H extends ReactiveHint<T>>(opts: AssertUnchangedOpts, hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
-  addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+  addRule(
+    ruleOrHint: ValidationRule<T> | any,
+    hintOrRule?: ReactiveHint<T> | ValidationRule<any>,
+    maybeRule?: ValidationRule<any>,
+  ): void {
     // Keep the name for easy debugging/tracing later
     const name = `addRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addRule");
-    pushValidationRule(this.__data.rules, name, ruleOrHint, maybeRule);
+    pushValidationRule(
+      this.__data.rules,
+      name,
+      maybeRule ? hintOrRule : ruleOrHint,
+      maybeRule ?? (hintOrRule as ValidationRule<any> | undefined),
+      maybeRule ? ruleOrHint : {},
+    );
   }
 
   /**
@@ -163,12 +179,27 @@ export class ConfigApi<T extends Entity, C> {
    * hint changes (walking back to the owning entity), and the lambda gets a `Reacted` view.
    */
   addCommitRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addCommitRule<H extends ReactiveHint<T>>(
+    opts: AssertUnchangedOpts,
+    hint: H,
+    rule: ValidationRule<Reacted<T, H>>,
+  ): void;
   addCommitRule(rule: ValidationRule<T>): void;
-  addCommitRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+  addCommitRule(
+    ruleOrHint: ValidationRule<T> | any,
+    hintOrRule?: ReactiveHint<T> | ValidationRule<any>,
+    maybeRule?: ValidationRule<any>,
+  ): void {
     // Keep the name for easy debugging/tracing later
     const name = `addCommitRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addCommitRule");
-    pushValidationRule(this.__data.commitRules, name, ruleOrHint, maybeRule);
+    pushValidationRule(
+      this.__data.commitRules,
+      name,
+      maybeRule ? hintOrRule : ruleOrHint,
+      maybeRule ?? (hintOrRule as ValidationRule<any> | undefined),
+      maybeRule ? ruleOrHint : {},
+    );
   }
 
   /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
@@ -321,7 +352,7 @@ export class ConfigApi<T extends Entity, C> {
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
     const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-    const wrappedFn = (entity: T, ctx: C) => {
+    async function wrappedFn(entity: T, ctx: C) {
       const meta = getMetadata(entity);
       let loadHint = loadHints.get(meta);
       if (loadHint === undefined) {
@@ -329,10 +360,11 @@ export class ConfigApi<T extends Entity, C> {
         loadHints.set(meta, loadHint);
       }
       if (Object.keys(loadHint).length > 0) {
-        return entity.em.populate(entity, loadHint).then((loaded) => fn(loaded as Loaded<T, H>, ctx));
+        await entity.em.populate(entity, loadHint);
       }
+      if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
       return fn(entity as Loaded<T, H>, ctx);
-    };
+    }
     this.__data.reactions.push({ name, fn: wrappedFn, hint, runOnce });
   }
 
@@ -776,6 +808,7 @@ function pushValidationRule<T extends Entity>(
   name: string,
   ruleOrHint: ValidationRule<T> | any,
   maybeRule: ValidationRule<any> | undefined,
+  opts: AssertUnchangedOpts = {},
 ): void {
   if (typeof ruleOrHint === "function") {
     rules.push({ name, fn: ruleOrHint, hint: undefined });
@@ -784,7 +817,7 @@ function pushValidationRule<T extends Entity>(
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
     const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-    const fn = (entity: T) => {
+    async function fn(entity: T) {
       const meta = getMetadata(entity);
       let loadHint = loadHints.get(meta);
       if (loadHint === undefined) {
@@ -792,10 +825,11 @@ function pushValidationRule<T extends Entity>(
         loadHints.set(meta, loadHint);
       }
       if (Object.keys(loadHint).length > 0) {
-        return entity.em.populate(entity, loadHint).then(maybeRule!);
+        await entity.em.populate(entity, loadHint);
       }
+      if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
       return maybeRule!(entity);
-    };
+    }
     rules.push({ name, fn, hint });
   }
 }

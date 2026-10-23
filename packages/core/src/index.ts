@@ -94,6 +94,7 @@ export type * from "src/EntityFields.ts";
 export * from "src/queries/find/EntityFilter.ts";
 export * from "src/queries/find/EntityGraphQLFilter.ts";
 export * from "src/EntityManager.ts";
+export { ReadDriftError, type ReadDrift } from "src/flush/ReadDrift.ts";
 export * from "src/EntityMetadata.ts";
 export type {
   DeleteStatement,
@@ -378,8 +379,9 @@ export function setOpt<T extends Entity>(
   const value = _value === null ? undefined : _value;
 
   // Use `getField` to side-step `id` blowing up on new entities that are setting an
-  // explicit id; otherwise use `entity[key]` to get back the relation.
-  const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+  // explicit id. Read configured fields as internal so applying opts does not mark the entity for read locking.
+  // Otherwise use `entity[key]` to get back the relation.
+  const current = key === "id" || field?.assertUnchanged ? getField(entity, key, true) : (entity as any)[key];
 
   if (current instanceof AbstractRelationImpl) {
     if (calledFromConstructor) {

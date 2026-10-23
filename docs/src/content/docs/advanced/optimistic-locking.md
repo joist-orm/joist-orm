@@ -87,6 +87,10 @@ In theory, you should rarely see `Oplock failure` errors, and when you do it sho
 
 2. Two incoming requests happened simultaneously, and it's possible a client is "double tapping" saves, i.e. issuing two requests when it should only be issuing one.
 
+### Protecting Read-Only Dependencies
+
+Oplocks protect rows being updated, not rows your business logic only reads. See [Read Locking](./read-locking.md) for protecting read-only dependencies with `FOR SHARE` locks.
+
 ### Integrating Locks with the Client
 
 By default/currently, Joist's op locks are only "held" between the read & write of a single `EntityManager`, i.e.:
@@ -112,5 +116,3 @@ On step 4, the `saveAuthor` request could specify "the user is saving `a:1`, but
 This approach would catch that User A is potentially writing over User B's changes, i.e. and fail User A's update with an `Oplock failure`.
 
 That said, this example is theoretical at this point, because Joist does not currently have a way to load an entity but then say you want the `updated_at` to be the prior/incoming `updated_at` / "as of" value. See [#204](https://github.com/joist-orm/joist-orm/issues/204) for tracking that feature.
-
-

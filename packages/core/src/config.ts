@@ -733,7 +733,15 @@ export function getCallerName(extraFrames: number = 0): string {
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
-export function getFuzzyCallerName(ignoreFactoryFrames = false): string {
+export function getFuzzyCallerName(
+  // FactoryLogger wants the test line that called into the factories, i.e. newAuthor(em) at
+  // SomeTest.test.ts:42, so passes true to skip the application's misc /factories/ internals
+  // and find the first "actually a test" line.
+  //
+  // But otherwise other loggers like FieldLogger do want to see "what exact line, even if it's
+  // in a factory, is calling field.set".
+  ignoreFactoryFrames = false,
+): string {
   const err = getStack();
   const lines = err
     .stack!.split("\n")

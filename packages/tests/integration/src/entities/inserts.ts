@@ -122,6 +122,7 @@ export function insertUser(row: {
   name: string;
   email?: string;
   password?: string;
+  password_history?: string[] | null;
   author_id?: number;
   favorite_publisher_small_id?: number;
   favorite_publisher_large_id?: number;

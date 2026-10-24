@@ -18,6 +18,7 @@ export const plainDateMapper: CustomSerde<Temporal.PlainDate, string> = t
   ? {
       fromDb: (value: string | Temporal.PlainDate) => (value instanceof t.PlainDate ? value : t.PlainDate.from(value)),
       toDb: (p) => p.toString(),
+      getUnnestMarker: () => t.PlainDate.from("2000-01-01"),
     }
   : temporalNotAvailable;
 
@@ -26,6 +27,7 @@ export const plainTimeMapper: CustomSerde<Temporal.PlainTime, string> = t
   ? {
       fromDb: (value: string | Temporal.PlainTime) => (value instanceof t.PlainTime ? value : t.PlainTime.from(value)),
       toDb: (pt) => pt.toString(),
+      getUnnestMarker: () => t.PlainTime.from("00:00:00"),
     }
   : temporalNotAvailable;
 
@@ -39,6 +41,7 @@ export const plainDateTimeMapper: CustomSerde<Temporal.PlainDateTime, string> = 
       fromDb: (value: string | Temporal.PlainDateTime) =>
         value instanceof t.PlainDateTime ? value : t.PlainDateTime.from(value),
       toDb: (p) => p.toString(),
+      getUnnestMarker: () => t.PlainDateTime.from("2000-01-01T00:00:00"),
     }
   : temporalNotAvailable;
 
@@ -68,5 +71,6 @@ export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = 
       },
       // Match a PG `TIMESTAMPTZ` input format, i.e. "2021-01-01T12:00:00-05:00"
       toDb: (zdt) => zdt.toString({ timeZoneName: "never" }),
+      getUnnestMarker: () => t.ZonedDateTime.from("2000-01-01T00:00:00+00:00[UTC]"),
     }
   : temporalNotAvailable;

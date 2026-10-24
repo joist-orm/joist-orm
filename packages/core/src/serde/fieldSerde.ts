@@ -68,6 +68,9 @@ export class FieldColumn {
   get isNullableArray(): boolean {
     return this.column.isNullableArray;
   }
+  get notNullMarker(): unknown {
+    return this.column.notNullMarker;
+  }
   get sqlNullable(): boolean {
     return this.column.sqlNullable;
   }

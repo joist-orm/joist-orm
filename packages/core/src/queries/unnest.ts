@@ -57,22 +57,16 @@ function fillArrayWithNulls(c: OpColumn, array: any[] | null, maxSize: number): 
   const result = array ? [...array] : [];
   const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
   for (let i = 0; i < nullsToAdd; i++) result.push(null);
-  // Add our unset marker
+  // Add our unset marker for unnest
   if (c.isNullableArray) result.unshift(wasNull ? null : notNullMarker(c));
   return result;
 }
 
-function notNullMarker(c: OpColumn): any {
-  // Should probably push this into an OpColumn.notNullMarker value
-  if (c.dbType.startsWith("varchar") || c.dbType.startsWith("character") || c.dbType.startsWith("text")) {
-    return "";
-  } else if (c.dbType.startsWith("int")) {
-    return 1;
-  } else if (c.dbType.startsWith("date")) {
-    return new Date(); // maybe something temporal?
-  } else if (c.dbType.startsWith("timestamp")) {
-    return new Date(); // maybe something temporal?
-  } else {
-    throw new Error("Unhandled nullable array column type " + c.dbType);
+/** Return the unnest null/set marker as the physical db type, rejecting null or undefined. */
+function notNullMarker(c: OpColumn): unknown {
+  const marker = c.notNullMarker;
+  if (marker === null || marker === undefined) {
+    throw new Error("Missing non-null array marker for column " + c.columnName);
   }
+  return marker;
 }

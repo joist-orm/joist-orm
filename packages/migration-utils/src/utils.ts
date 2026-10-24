@@ -149,7 +149,8 @@ export function createUpdatedAtFunction(b: MigrationBuilder): void {
  * That said, we do need to support nullable array columns, i.e. `nick_names=NULL`, which we
  * detect by prefixing an additional marker element to each sub-array that indicates whether the
  * array column is null or not, and then conditionally enabling this with the `nullable=true`
- * param to `unnest_arrays`.
+ * param to `unnest_arrays`. The null/set marker uses the column codec's physical db type
+ * (i.e. a string for Temporal dates), and is always removed before storage.
  */
 export const unnest_arrays = `
 CREATE OR REPLACE FUNCTION unnest_arrays(arr ANYARRAY, nullable BOOLEAN = false, OUT a ANYARRAY)

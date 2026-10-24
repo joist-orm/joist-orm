@@ -55,7 +55,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
     "jest": "30.4.2",
-    "temporal-polyfill": "^1.0.5",
+    "temporal-polyfill": "^1.0.6",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"
   }

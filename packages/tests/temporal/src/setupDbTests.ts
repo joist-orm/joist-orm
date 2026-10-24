@@ -1,7 +1,7 @@
 import { expect } from "@jest/globals";
 import { Temporal } from "joist-orm";
 import { createKnex } from "joist-orm/knex";
-import { PostgresDriver, PostgresDriverOpts } from "joist-orm/pg";
+import { PostgresDriver, type PostgresDriverOpts } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex } from "knex";

@@ -3,7 +3,7 @@ import { PostgresDriver } from "joist-orm/pg";
 import pg from "pg";
 import { Author, Book, Tag, newBook, newTag } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
-import { newEntityManager, testDriver } from "src/testEm";
+import { newEntityManager } from "src/testEm";
 
 // This will test whatever driver the test suite is currently being run against
 describe("Driver", () => {
@@ -27,16 +27,15 @@ describe("Driver", () => {
 
   describe("flush", () => {
     it("can insert", async () => {
+      // Given an author with the derived fields normally prepared by EntityManager.flush
       const em = newEntityManager();
       const author = em.create(Author, { firstName: "a1" });
       // Pretend EntityManager.flush ran
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      const client = await testDriver.pool.connect();
-      try {
-        await client.query("BEGIN");
-        em.txn = client;
+      // When the selected driver inserts it within its own native transaction
+      await em.driver.transaction(em, async () => {
         await em.driver.flush(
           em,
           {
@@ -49,14 +48,8 @@ describe("Driver", () => {
           },
           {},
         );
-        await client.query("COMMIT");
-      } catch (e) {
-        await client.query("ROLLBACK");
-        throw e;
-      } finally {
-        em.txn = undefined;
-        client.release();
-      }
+      });
+      // Then the author is committed with its generated identifier and database defaults
       const authors = await select("authors");
       expect(authors.length).toEqual(1);
       expect(authors[0].id).toEqual(1);

@@ -54,12 +54,13 @@ describe("zonedDateTime", () => {
   });
 
   it("zones loads by the session TimeZone identically in classic and lazy modes", async () => {
+    // Given a book stored at a known instant
     await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
     await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
-    // A session whose TimeZone is not UTC renders timestamptz with local offsets, which classic
-    // parsing preserves as the ZonedDateTime's zone — binary decoding must match it exactly
+    // And a session whose TimeZone is not UTC
     const nyPool = new pg.Pool({ ...newPgConnectionConfig(), options: "-c TimeZone=America/New_York" });
     try {
+      // When the same book is loaded through eager and lazy decoding
       const classicEm = new EntityManager({} as any, new PostgresDriver(nyPool, { lazyRows: false }));
       const classicBook = await classicEm.load(Book, "b:1");
       const lazyEm = new EntityManager(
@@ -67,11 +68,11 @@ describe("zonedDateTime", () => {
         new PostgresDriver(nyPool, { lazyRows: process.env.JOIST_ROW_DATA === "1" }),
       );
       const lazyBook = await lazyEm.load(Book, "b:1");
+      // Then the instant and its local wall-clock offset agree
       expect(lazyBook.publishedAt).toEqual(classicBook.publishedAt);
-      // i.e. jan1 UTC renders as Dec 31 in EST, zoned by the rendered offset
       expect(lazyBook.publishedAt.toString()).toBe(classicBook.publishedAt.toString());
     } finally {
-      // Restore the shared UTC session zone captured by the lazy driver's auto-registration
+      // Restore the shared UTC session zone captured by the lazy driver's auto-registration.
       await registerDatabaseBinaryParsers(pool);
       await nyPool.end();
     }

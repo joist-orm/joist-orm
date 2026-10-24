@@ -1,22 +1,10 @@
-import { createRequire } from "node:module";
-
-import { type RowData } from "joist-core";
-import pg from "pg";
-
-import { getBinaryTypeParser } from "./binaryParsers.ts";
-
-const runtimeRequire = createRequire(import.meta.url);
-
-// pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
-// submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PgQuery: any = runtimeRequire("pg/lib/query");
+import type { RowData } from "joist-core";
 
 /** One column's RowDescription-derived metadata, resolved once per query. */
 type WireColumn = {
   name: string;
   ordinal: number;
-  /** Decodes this column's cell bytes to its value; see `setRowDescription`. */
+  /** Decodes this column's cell bytes to its value; supplied by the selected driver. */
   decode: (chunk: Buffer, start: number, length: number) => any;
 };
 
@@ -43,11 +31,11 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  * or appended across queries, and the payload is read-only after the query completes (entity
  * mutations go into `InstanceData.data`, never back into the row bytes).
  *
- * Rows are kept in their row-major wire format (`int16 fieldCount` + length-prefixed cells) as
+ * Rows are kept in their row-major wire format (optional `int16 fieldCount` + length-prefixed cells) as
  * zero-copy views over the parser's own immutable buffers: `addRow` records each DataRow's
  * `(bytes, offset, length)` by reference, deduping the socket chunk that consecutive rows
- * share. (Our pg-protocol patch guarantees message bytes are never rewritten — chunks parse in
- * place and straddling messages get a buffer of their own; see `patchPgProtocol.ts`.) A
+ * share. The selected driver guarantees immutable bytes: node-pg through `patchPgProtocol.ts`,
+ * PostgreJS through its public RowDecoder contract. A
  * `row × column` cell is decoded on first field access by scanning the row's length-prefixed
  * cells to the column's ordinal ("row-lazy" decode, see JS-ROW-STORE-DESIGN.md §3/C2). This is
  * deferred decoding of row-major data, not a columnar layout.
@@ -56,12 +44,11 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  * protocol frames share it); `finalize`'s compaction copies retained rows out into an
  * exact-size owned buffer when enough of the payload was dropped.
  *
- * Text-format cells go through the same active text parsers node-postgres would resolve for
- * the query (i.e. honoring pool/client `TypeOverrides`), so they parse identically to classic
- * rows. Binary-format cells decode via `wireBinaryParser`: wire bytes -> value directly for
- * default-parsed scalar types (no intermediate string), else rendered to pg's canonical text
- * and fed through the active text parser for parity. (Classic node-postgres cannot do binary
- * at all — it round-trips cells through a UTF-8 string, corrupting bytes >= 0x80.)
+ * Column decoders come from the selected driver through `setColumnDecoders`. RowDataQuery
+ * resolves node-pg text fields through TypeOverrides and binary fields through Joist's binary
+ * registry. PostgreJsDriver supplies its native parsers, bypassing pg's parser resolution.
+ * (Classic node-postgres cannot safely decode binary cells: it round-trips
+ * them through a UTF-8 string, corrupting bytes >= 0x80.)
  *
  * Because decoding is deferred, a custom parser that throws will do so on first field access
  * (or `toRow`/`toRows`), not while awaiting the query; `id` and inheritance-discriminator cells
@@ -81,6 +68,15 @@ const SCAN_CURSOR_MIN_ORDINAL = 8;
  * (benchmark-lazy-parsing.ts), and small finds (n <= 10) are statistically identical.
  */
 export class WireRowData implements RowData {
+  /** PostgreJS omits the int16 field count from the immutable row view it exposes. */
+  constructor(private readonly rowHeaderBytes: 0 | 2 = 2) {}
+
+  /** Installs decoders supplied by a driver with a public raw-row API. */
+  setColumnDecoders(fields: Array<{ name: string; decode: WireColumn["decode"] }>): void {
+    this.#fields = fields.map((field, ordinal) => ({ ...field, ordinal }));
+    this.#columns = new Map(this.#fields.map((field) => [field.name, field]));
+  }
+
   #chunks: Buffer[] = [];
   /** Where each row's bytes live: `(chunk index, start, length)` slices, `ROW_STRIDE` entries per row. */
   #rowSlices: Uint32Array<ArrayBufferLike> = new Uint32Array(16 * ROW_STRIDE);
@@ -127,7 +123,7 @@ export class WireRowData implements RowData {
     const start = slices[base + 1];
     const end = start + slices[base + 2];
     const row: Record<string, any> = {};
-    let pos = start + 2;
+    let pos = start + this.rowHeaderBytes;
     for (const field of this.#fields) {
       const len = this.#cellLength(chunk, pos, end, rowIndex);
       pos += 4;
@@ -149,50 +145,15 @@ export class WireRowData implements RowData {
   }
 
   /**
-   * Resolves each column's decoder from the query's RowDescription.
-   *
-   * Binary-format fields decode through Joist's own binary registry only (see
-   * `setBinaryTypeParser`) — `pg.types`/`TypeOverrides` are never consulted, and a column whose
-   * oid has no registered binary parser fails the query here, before any rows arrive, rather
-   * than guessing at a lossy decoding. Text-format fields (the `binary: false` escape hatch)
-   * decode by utf8-slicing the cell into the active text parser, resolved via `getTypeParser`
-   * (i.e. the pool/client `TypeOverrides` chain) or the global registry.
-   */
-  setRowDescription(
-    fields: Array<{ name: string; dataTypeID: number; format?: string }>,
-    getTypeParser?: (dataTypeID: number) => (value: any) => any,
-  ): void {
-    for (let i = 0; i < fields.length; i++) {
-      const { name, dataTypeID, format } = fields[i];
-      let decode;
-      if (format === "binary") {
-        decode = getBinaryTypeParser(dataTypeID);
-        if (decode === undefined) {
-          throw new Error(
-            `joist-orm: no binary type parser registered for oid ${dataTypeID} (column "${name}");` +
-              ` register one with setBinaryTypeParser (i.e. binaryTextParser for text-like types)`,
-          );
-        }
-      } else {
-        const parse = getTypeParser?.(dataTypeID) ?? pg.types.getTypeParser(dataTypeID, "text");
-        decode = textCellDecoder(parse);
-      }
-      const column = { name, ordinal: i, decode };
-      this.#columns.set(name, column);
-      this.#fields.push(column);
-    }
-  }
-
-  /**
    * Records one DataRow payload *by reference* (zero-copy); called synchronously from the wire
-   * parser, whose patched buffer management guarantees the bytes are never rewritten.
+   * parser, whose buffer ownership contract guarantees the bytes are never rewritten.
    *
    * Consecutive rows usually share one socket chunk, so `bytes` is deduped against the last
    * chunk ref; retaining any row of a chunk pins the whole chunk, which `finalize`'s compaction
    * resolves by copying retained rows out when enough of the payload was dropped.
    */
   addRow(bytes: Buffer, offset: number, payloadLength: number): void {
-    if (payloadLength < 2 || offset + payloadLength > bytes.length) {
+    if (payloadLength < this.rowHeaderBytes || offset + payloadLength > bytes.length) {
       throw new Error(`Malformed DataRow payload (length ${payloadLength})`);
     }
     let chunkIndex = this.#chunks.length - 1;
@@ -300,12 +261,12 @@ export class WireRowData implements RowData {
    * resuming to matter, and — being row-relative — stay valid across compaction.
    */
   #readCell(chunk: Buffer, start: number, end: number, column: WireColumn, rowIndex: number): any {
-    const fieldCount = chunk.readInt16BE(start);
+    const fieldCount = this.rowHeaderBytes === 2 ? chunk.readInt16BE(start) : this.#fields.length;
     const { ordinal } = column;
     if (ordinal >= fieldCount) {
       throw new Error(`Row ${rowIndex} has ${fieldCount} cells but column ${column.name} is #${column.ordinal}`);
     }
-    let pos = start + 2;
+    let pos = start + this.rowHeaderBytes;
     let c = 0;
     let scanOrdinal = this.#scanOrdinal;
     if (scanOrdinal === undefined && ordinal >= SCAN_CURSOR_MIN_ORDINAL) {
@@ -313,7 +274,7 @@ export class WireRowData implements RowData {
       this.#scanOffset = new Uint32Array(this.#rowCount);
     }
     if (scanOrdinal !== undefined && rowIndex < scanOrdinal.length) {
-      // 0 = unset: caching cell #0 would be pointless (it is always at offset 2), so any real
+      // 0 = unset: caching cell #0 would be pointless (it is always at rowHeaderBytes), so any real
       // entry is the ordinal, >= 1, whose row-relative offset is in #scanOffset
       const known = scanOrdinal[rowIndex];
       if (known !== 0 && known <= ordinal) {
@@ -344,124 +305,4 @@ export class WireRowData implements RowData {
     }
     return len;
   }
-}
-
-/**
- * Executes `sql` on an already-checked-out client, returning a {@link RowData} instead of
- * materialized POJO rows.
- *
- * Uses a `pg` Query subclass that records each DataRow's raw payload bytes into the result
- * (via the lazy DataRow message from `patchPgProtocol`) and never materializes per-cell
- * strings or per-row objects. If the client's connection turns out to use an unpatched
- * pg-protocol copy (i.e. the app's pool was built from a different `pg` install than the one
- * joist-orm patched), the query fails with a descriptive error — a misconfiguration any CI
- * build/smoketest will surface immediately, so we fail loudly rather than silently degrade.
- * The rows already streamed are discarded; the connection itself stays usable.
- *
- * By default the query requests *binary* result format (via the extended protocol), so scalar
- * cells decode wire-bytes -> value with no intermediate strings; see `wireBinaryParser` for the
- * parity strategy. Pass `binary: false` for classic text-format results, or set
- * `JOIST_LAZY_BINARY=0` to flip the default while the binary path is a prototype (i.e. for
- * A/B benchmarking or as an escape hatch).
- */
-// The prototype escape hatch for binary results, i.e. for A/B benchmarking; read once at load
-const BINARY_BY_DEFAULT = process.env.JOIST_LAZY_BINARY !== "0";
-
-export function executeRowDataQuery(
-  client: pg.PoolClient,
-  sql: string,
-  bindings: readonly any[],
-  opts?: { binary?: boolean },
-): Promise<RowData> {
-  const binary = opts?.binary ?? BINARY_BY_DEFAULT;
-  return new Promise((resolve, reject) => {
-    const query = new RowDataQuery(
-      // Binary results require the extended protocol; `queryMode` forces it for bindings-less queries
-      binary
-        ? { text: sql, values: bindings as any[], binary: true, queryMode: "extended" }
-        : { text: sql, values: bindings as any[] },
-      (err: unknown) => {
-        if (err) reject(err);
-        else resolve(query.rowData);
-      },
-    );
-    client.query(query as any);
-  });
-}
-
-/** Returns whether `client` supports the lazy row-data query path, before submitting anything. */
-export function isRowDataCapableClient(client: unknown): client is pg.PoolClient {
-  // Require the pure-JS pg client (pg-native has no `connection` and different query internals)
-  return (
-    typeof client === "object" &&
-    client !== null &&
-    typeof (client as any).query === "function" &&
-    (client as any).connection !== undefined &&
-    (client as any).native === undefined
-  );
-}
-
-/** A pg Query that diverts DataRows into a {@link WireRowData} instead of a `Result`. */
-class RowDataQuery extends PgQuery {
-  #wire = new WireRowData();
-
-  constructor(
-    config: { text: string; values: any[]; binary?: boolean; queryMode?: string },
-    callback: (err: unknown) => void,
-  ) {
-    super(config, undefined, callback);
-  }
-
-  /**
-   * The query's result rows, i.e. once our callback has fired.
-   *
-   * If a small-result materialization threshold ever seems attractive, this is where it would
-   * go — but see the "Small results deliberately stay lazy" note on {@link WireRowData}: lazy
-   * won the measured comparison at every row count for sparse access, so no threshold exists.
-   */
-  get rowData(): RowData {
-    return this.#wire;
-  }
-
-  handleRowDescription(msg: any): void {
-    if (this._canceledDueToError) return;
-    try {
-      super.handleRowDescription(msg);
-      // Resolve active *text* parsers through the client's TypeOverrides chain (client.js
-      // injects `_types` at submit time); we can't reuse `Result._parsers` because in binary
-      // mode those resolve to pg's (broken) binary registry, while our binary decode path is
-      // built on text-parser parity — see `wireBinaryParser`
-      const types = this._result?._types;
-      this.#wire.setRowDescription(msg.fields, types && ((oid: number) => types.getTypeParser(oid, "text")));
-    } catch (err) {
-      // Mirror pg's Query error containment: record + reject at ReadyForQuery, keeping the
-      // connection's protocol state intact
-      this._canceledDueToError = err;
-    }
-  }
-
-  handleDataRow(msg: any): void {
-    if (this._canceledDueToError) return;
-    try {
-      if (msg.bytes === undefined) {
-        // This connection's pg-protocol copy is unpatched (i.e. the pool came from a different
-        // `pg` install than the one joist-orm patched), so lazyRows cannot work — fail loudly
-        // rather than silently degrade; any CI build/smoketest will surface this immediately
-        throw new Error(
-          "joist-orm: lazyRows is enabled, but this connection's pg-protocol emits classic" +
-            " DataRows (likely a duplicate pg install); fix the install or disable lazyRows.",
-        );
-      }
-      // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
-      // our patched message carries the real length from `handlePacket`'s argument
-      this.#wire.addRow(msg.bytes, msg.offset, msg.length - 4);
-    } catch (err) {
-      this._canceledDueToError = err;
-    }
-  }
-}
-
-/** Builds a text-format cell decoder: utf8-slice the cell bytes into the active text parser. */
-function textCellDecoder(parse: (value: any) => any): (chunk: Buffer, start: number, length: number) => any {
-  return (chunk, start, length) => parse(chunk.toString("utf8", start, start + length));
 }

@@ -9,12 +9,14 @@
     "directory": "packages/tests/integration"
   },
   "scripts": {
+    "benchmark:postgrejs": "node --expose-gc --import tsx benchmark-postgrejs.ts",
+    "benchmark:postgrejs-writes": "node --expose-gc --import tsx benchmark-postgrejs-writes.ts",
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
-    "test": "concurrently --kill-others-on-fail --names stock,preloading,lazy,lazy-preloading \"yarn test-stock\" \"yarn test-preloading\" \"yarn test-lazy\" \"yarn test-lazy-preloading\"",
-    "test-stock": "TEST_VARIANT=stock DATABASE_URL=postgres://joist:local@localhost:5435/joist_stock JOIST_ROW_DATA=0 PLUGINS= jest --runInBand --logHeapUsage",
-    "test-preloading": "TEST_VARIANT=preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_preloading JOIST_ROW_DATA=0 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
-    "test-lazy": "TEST_VARIANT=lazy DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
-    "test-lazy-preloading": "TEST_VARIANT=lazy-preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy_preloading JOIST_ROW_DATA=1 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
+    "test": "concurrently --kill-others-on-fail --names stock,lazy,postgrejs,lazy-preloading \"yarn test-stock\" \"yarn test-lazy\" \"yarn test-postgrejs\" \"yarn test-lazy-preloading\"",
+    "test-stock": "TEST_VARIANT=stock DATABASE_URL=postgres://joist:local@localhost:5435/joist_stock JOIST_DRIVER=pg JOIST_ROW_DATA=0 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-postgrejs": "TEST_VARIANT=postgrejs DATABASE_URL=postgres://joist:local@localhost:5435/joist_postgrejs JOIST_DRIVER=postgrejs JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-lazy": "TEST_VARIANT=lazy DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-lazy-preloading": "TEST_VARIANT=lazy-preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy_preloading JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
     "codegen": "env-cmd tsx ../../codegen && graphql-codegen --config graphql-codegen.mjs",
     "docker:up": "docker compose up -d db",
     "docker:reset": "docker compose exec db ./reset.sh"
@@ -50,6 +52,7 @@
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
     "kelonio": "^0.12.0",
+    "postgrejs": "3.14.0",
     "postgres": "^3.4.9",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",

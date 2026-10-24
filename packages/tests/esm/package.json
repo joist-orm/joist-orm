@@ -18,7 +18,7 @@
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^9.0.0",
-    "temporal-polyfill": "^1.0.5"
+    "temporal-polyfill": "^1.0.6"
   },
   "devDependencies": {
     "@graphql-codegen/add": "^7.1.1",

@@ -15,7 +15,23 @@ import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/field
 import { groupBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
-export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };
+export type OpColumn = {
+  columnName: string;
+  dbType: string;
+  isNullableArray?: boolean;
+  /**
+   * The unnest null/set marker as the physical db type, removed before storage.
+   *
+   * I.e. strings use "", integers use 1, and Temporal dates use "2000-01-01".
+   * The marker must have the same physical db type as real array elements, even for empty arrays.
+   *
+   * Nullable arrays prepend null for SQL NULL or this marker for a present array, then pad shorter
+   * arrays with nulls to make the batch rectangular. With nullable=true, unnest_arrays checks the
+   * first element: null means SQL NULL; otherwise it discards that marker and removes null padding.
+   * All remaining non-null elements are real values, so null elements within stored arrays are not supported.
+   */
+  readonly notNullMarker?: unknown;
+};
 export type InsertOp = { tableName: string; columns: OpColumn[]; columnValues: any[][] };
 /**
  * A logical `update` operation.

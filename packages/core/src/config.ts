@@ -733,13 +733,21 @@ export function getCallerName(extraFrames: number = 0): string {
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
-export function getFuzzyCallerName(): string {
+export function getFuzzyCallerName(
+  // FactoryLogger wants the test line that called into the factories, i.e. newAuthor(em) at
+  // SomeTest.test.ts:42, so passes true to skip the application's misc /factories/ internals
+  // and find the first "actually a test" line.
+  //
+  // But otherwise other loggers like FieldLogger do want to see "what exact line, even if it's
+  // in a factory, is calling field.set".
+  ignoreFactoryFrames = false,
+): string {
   const err = getStack();
   const lines = err
     .stack!.split("\n")
     // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
     .filter((line) => line.includes(" at "));
-  const line = findUserCodeLine(lines);
+  const line = findUserCodeLine(lines, ignoreFactoryFrames);
   return getFilePath(line);
 }
 
@@ -754,7 +762,7 @@ export function getFilePath(line: string): string {
 }
 
 /** Given a callstack, uses heuristics to find the first line that looks like user code. */
-export function findUserCodeLine(lines: string[]): string {
+export function findUserCodeLine(lines: string[], ignoreFactoryFrames = false): string {
   return (
     lines.find((line) => {
       // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
@@ -772,9 +780,14 @@ export function findUserCodeLine(lines: string[]): string {
       // If this is the `newTestInstance` call
       // What about:
       // recalcSynchronousDerivedFields
+      // Jest's adapter is an implementation detail, not a meaningful source location.
+      const isJestInternal = line.includes("jestAdapterInit.js");
+      const isFactoryHelper = line.includes("/factories/");
       return (
         (isDefault || isDataloader || isUserCode) &&
         !line.includes("Codegen.ts") &&
+        !isJestInternal &&
+        !(ignoreFactoryFrames && isFactoryHelper) &&
         // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
         // !line.includes("entities.ts") &&
         // Ignore loops in joist code like setOpts

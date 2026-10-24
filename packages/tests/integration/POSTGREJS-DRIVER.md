@@ -96,6 +96,32 @@ parity and the native transaction boundary without adding another full pass.
   detection change is no longer needed and has been removed.
 - Transform PostgreJS's ESM dependencies in the CommonJS Jest fixtures.
 
+### Native-driver issue reproductions
+
+The PR review follow-up reproduced these behaviors directly against installed
+PostgreJS 3.14.0, without Joist:
+
+- [Pipelined query ordering](POSTGREJS_BUG_PIPELINE_QUERY_ORDER.md): concurrent
+  `query()` calls can execute out of submission order on one connection, both
+  inside and outside transactions. The explicit `connection.pipeline([...])`
+  API preserved order in the tested cases.
+- [Mixed Date/string arrays](POSTGREJS_BUG_MIXED_DATE_ARRAYS.md): choosing one
+  formatter for an entire array shifts date strings, truncates timestamp
+  microseconds, or fails when the element order is reversed. This is a confirmed
+  encoding bug behind `prepareValue`'s recursive Date normalization.
+- [Typed byte arrays](POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md): Uint8Array parameters
+  are inferred as JSON, and explicit bytea encoding expects Buffer methods.
+  This is a compatibility gap: the native bytea type currently specifies Buffer
+  inputs, which work. Joist converts views to Buffers over the same byte range.
+
+Temporal normalization is not a separately confirmed upstream bug. Native
+PlainDate, PlainDateTime, PlainTime, ZonedDateTime and Instant inputs succeeded
+with `temporalTypes: true` and failed JSON-to-date/time casts with it disabled.
+Joist intentionally keeps this option disabled for eager/raw results; converting
+Temporal parameters to PostgreSQL strings lets writes work without changing
+those result representations. ZonedDateTime strings omit the bracketed time-zone
+annotation because PostgreSQL accepts the offset but not that annotation.
+
 ### Prototype boundary
 
 Pool configuration is native PostgreJS configuration. Joist supplies query-level

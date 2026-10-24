@@ -190,6 +190,8 @@ export class PostgreJsRowDecoder extends native.RowDecoder {
     fields: FieldInfo[],
   ) {
     if (this.rows.rowCount === 0) {
+      // Use separate function scopes and copy only decoding options so the stored closures cannot
+      // capture decodeAt's socket buffer or the original query options, which also hold params.
       this.rows.setColumnDecoders(columnDecoders(parsers, fields, decodingOptions(options)));
     }
     this.rows.addRow(buffer, offset, length);
@@ -197,7 +199,7 @@ export class PostgreJsRowDecoder extends native.RowDecoder {
   }
 }
 
-/** Captures only value mapping: native query options also contain potentially large parameters. */
+/** Selects the options used to decode field values. */
 function decodingOptions(options: DataMappingOptions): DataMappingOptions {
   return {
     decimalAsString: options.decimalAsString,
@@ -211,7 +213,7 @@ function decodingOptions(options: DataMappingOptions): DataMappingOptions {
   };
 }
 
-/** Keeps decoder closures in a scope that never holds the original query options or parameters. */
+/** Adapts native parsers to Joist's column decoders and Temporal time-zone representation. */
 function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], options: DataMappingOptions) {
   return fields.map((field, index) => ({
     name: field.fieldName,
@@ -295,12 +297,20 @@ function createTypeMap(): native.DataTypeMap {
 /**
  * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
  *
- * Keep array elements consistent: Date sentinels, Temporal objects and typed byte
- * arrays must not cause the driver to choose the wrong encoder for the whole array.
+ * Joist's bulk array writes can mix Date sentinels with date/timestamp strings. PostgreJS
+ * chooses one formatter from the first array element, which can shift date strings or
+ * truncate their microseconds. Converting Dates to offset-bearing strings avoids that
+ * coercion while preserving pg's local wall-clock convention.
+ *
+ * Binary views need Buffer normalization because PostgreJS otherwise infers JSON; even
+ * an explicit bytea BindParam expects Buffer methods. Temporal normalization is different:
+ * native inputs work with temporalTypes enabled, but eager/raw results deliberately keep
+ * pg-compatible representations. Strings preserve write precision without enabling it.
+ * See POSTGREJS_BUG_MIXED_DATE_ARRAYS.md and POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md in
+ * packages/tests/integration for native reproductions and the supported-input distinction.
  */
 function prepareValue(value: unknown): unknown {
-  // Nullable array writes mix a Date sentinel with date strings. PostgreJS otherwise
-  // chooses one date formatter for the entire array and shifts the strings' calendar day.
+  // Normalize each element before PostgreJS chooses an encoder for the whole bulk array.
   if (value instanceof Date) return formatDateParameter(value);
   if (ArrayBuffer.isView(value) && !Buffer.isBuffer(value)) {
     return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
@@ -309,6 +319,7 @@ function prepareValue(value: unknown): unknown {
   if (value !== null && typeof value === "object") {
     const tag = Object.prototype.toString.call(value);
     if (tag === "[object Temporal.ZonedDateTime]") {
+      // PostgreSQL accepts the UTC offset, but not Temporal's bracketed zone annotation.
       return (value as Temporal.ZonedDateTime).toString({ timeZoneName: "never" });
     }
     if (tag.startsWith("[object Temporal.")) return String(value);

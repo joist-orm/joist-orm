@@ -16,6 +16,7 @@ updates:
     schedule:
       interval: weekly
     ignore:
+      # Keep Jest pinned to 30.4.2 due to the regression discussed in https://github.com/jestjs/jest/pull/16504.
       - dependency-name: "jest"
     cooldown:
       default-days: 7

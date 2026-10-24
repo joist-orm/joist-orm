@@ -108,6 +108,25 @@ empty array from a null array. Actual field values can be date/timestamp strings
 so this is a real mixed-array input rather than a hypothetical application value.
 Bulk writes can also create nested arrays.
 
+The sentinel is a temporary transport marker, not a date stored in the user's
+column. `fillArrayWithNulls` pads the sub-arrays to equal lengths, then prepends
+`null` for a null array and a type-compatible non-null value for a present array.
+For example, with one padding slot and `M` denoting a non-null marker:
+
+```text
+NULL           -> [null, null]         -> NULL
+[]             -> [M, null]            -> []
+["2024-01-02"] -> [M, "2024-01-02"]   -> ["2024-01-02"]
+```
+
+The last step is `unnest_arrays(..., true)`: it checks the marker, removes it,
+and removes padding. This protocol intentionally preserves NULL versus empty
+arrays; it is not itself a Joist bug. `notNullMarker` currently chooses
+`new Date()` for date/timestamp columns, but the exact value and use of a Date
+object are incidental. A fixed, valid date string could simplify Joist's marker
+implementation and avoid this particular mixed input. That would not fix the
+native driver's general mixed-array behavior reproduced above.
+
 `prepareValue` recursively converts each Date into a string containing its local
 wall clock and explicit UTC offset. Existing strings are left untouched. This
 prevents a Date formatter from coercing unrelated elements and preserves

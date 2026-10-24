@@ -313,8 +313,14 @@ function createTypeMap(): native.DataTypeMap {
 /**
  * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
  *
- * Joist's bulk array writes can mix Date sentinels with date/timestamp strings. PostgreJS
- * chooses one formatter from the first array element, which can shift date strings or
+ * Joist's bulk array writes can mix Date markers with date/timestamp strings. Nullable
+ * arrays are padded and prefixed by fillArrayWithNulls: null means the array was NULL,
+ * while a non-null value means it was present (possibly empty). unnest_arrays(..., true)
+ * removes this marker before storage. For date/timestamp columns, notNullMarker currently
+ * uses new Date(); its value is irrelevant, and a fixed valid date string could also work.
+ * The marker protocol is intentional; requiring a JS Date for the marker is not.
+ *
+ * PostgreJS chooses one formatter from the first array element, which can shift date strings or
  * truncate their microseconds. Converting Dates to offset-bearing strings avoids that
  * coercion while preserving pg's local wall-clock convention.
  *

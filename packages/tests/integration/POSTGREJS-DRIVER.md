@@ -80,10 +80,10 @@ parity and the native transaction boundary without adding another full pass.
   per-pool native type map. Numeric arrays retain their existing numeric values.
 - Normalize Uint8Array parameters to Buffer, including nested arrays, so native
   inference sends bytea rather than JSON.
-- Normalize Temporal inputs to PostgreSQL-compatible strings. Normalize Date
-  inputs before native array inference: Joist's nullable-array sentinel can mix
-  a Date with date strings, which otherwise shifts a plain date by one day in a
-  non-UTC process timezone.
+- Normalize Temporal inputs to PostgreSQL-compatible strings. Nullable-array
+  markers now use the column codec's serialized representation (#2132), so they
+  no longer mix Date markers with Temporal strings. The former Date-to-string
+  parameter workaround has been removed; native Date inputs pass through.
 - Preserve raw/Knex Temporal strings and microseconds; lazy hydration can use
   native Temporal objects. Normalize lazy ZonedDateTime zones to the same
   server-rendered offset used by Joist's text serde.
@@ -108,7 +108,9 @@ PostgreJS 3.14.0, without Joist:
 - [Mixed Date/string arrays](POSTGREJS_BUG_MIXED_DATE_ARRAYS.md): choosing one
   formatter for an entire array shifts date strings, truncates timestamp
   microseconds, or fails when the element order is reversed. This is a confirmed
-  encoding bug behind `prepareValue`'s recursive Date normalization.
+  native encoding bug that Joist previously triggered with mixed marker/value
+  types. #2132 fixed Joist's marker serialization, and the driver workaround has
+  been removed. The report remains a standalone native reproduction.
 - [Typed byte arrays](POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md): Uint8Array parameters
   are inferred as JSON, and explicit bytea encoding expects Buffer methods.
   This is a compatibility gap: the native bytea type currently specifies Buffer

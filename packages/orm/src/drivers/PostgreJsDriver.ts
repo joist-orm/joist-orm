@@ -268,9 +268,18 @@ function toDriverResult(result: QueryResult): DriverQueryResult {
 
 const joistTypeMap = createTypeMap();
 
-/** Preserves pg's exact scalar numerics and int8 strings without forcing text-format results. */
+/**
+ * Preserves pg's exact scalar numerics and int8 strings without forcing text-format results.
+ *
+ * PostgreJS intentionally returns number/bigint for int8 and number/Numeric for numeric,
+ * depending on the value. Those defaults preserve precision but differ from pg's strings.
+ * These overrides preserve Joist's existing result representations, not fix upstream bugs;
+ * PostgreJS does not need to change its defaults to match pg.
+ */
 function createTypeMap(): native.DataTypeMap {
   const types = new native.DataTypeMap(native.GlobalTypeMap);
+
+  // pg returns every int8 as a string, even when the value would fit in a JS number.
   const int8 = types.get(20);
   types.register({
     ...int8,
@@ -278,11 +287,18 @@ function createTypeMap(): native.DataTypeMap {
     decodeText: (text) => text,
     decodeTextBuffer: (buffer, offset, length) => buffer.toString("utf8", offset, offset + length),
   });
+
+  // int8[] (OID 1016) stores its own element decoders; overriding int8 does not update them.
+  // Reuse the string decoders so array elements keep the same representation as pg's int8[].
   types.register({
     ...types.get(1016),
     decodeBinary: types.get(20).decodeBinary,
     decodeText: types.get(20).decodeText,
   });
+
+  // Scalar numeric (OID 1700) must stay an exact string, including scale (i.e. "12.340").
+  // Use native decimalAsString for binary cells and pass text through without parsing it.
+  // Keep this scalar-only: pg returns numbers for numeric[] rather than scalar-style strings.
   const numeric = types.get(1700);
   types.register({
     ...numeric,

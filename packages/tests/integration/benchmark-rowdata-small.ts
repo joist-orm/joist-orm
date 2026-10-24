@@ -1,6 +1,7 @@
 import { PojoRowData, setDefaultEntityLimit } from "joist-orm";
 // WireRowData is deliberately not public API; this benchmark reaches into the build directly
 import { WireRowData } from "../../orm/build/drivers/WireRowData";
+import { pgColumnDecoders } from "../../orm/build/drivers/RowDataQuery";
 import { performance } from "node:perf_hooks";
 import { Author } from "./src/entities";
 import { newEntityManager, pool, testDriver } from "./src/testEm";
@@ -129,7 +130,7 @@ function buildWire(
   n: number,
 ): WireRowData {
   const wire = new WireRowData();
-  wire.setRowDescription(fields);
+  wire.setColumnDecoders(pgColumnDecoders(fields));
   for (let i = 0; i < n; i++) wire.addRow(payload, 0, payload.length);
   return wire;
 }

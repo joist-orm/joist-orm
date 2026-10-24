@@ -313,12 +313,25 @@ function createTypeMap(): native.DataTypeMap {
 /**
  * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
  *
- * Joist's bulk array writes can mix Date markers with date/timestamp strings. Nullable
- * arrays are padded and prefixed by fillArrayWithNulls: null means the array was NULL,
- * while a non-null value means it was present (possibly empty). unnest_arrays(..., true)
- * removes this marker before storage. For date/timestamp columns, notNullMarker currently
- * uses new Date(); its value is irrelevant, and a fixed valid date string could also work.
- * The marker protocol is intentional; requiring a JS Date for the marker is not.
+ * Joist sends several entities' array fields as one PostgreSQL multidimensional array for
+ * bulk writes. PostgreSQL requires equal-length subarrays, so fillArrayWithNulls pads them
+ * with nulls. Padding alone makes a NULL field indistinguishable from an empty array.
+ * Joist therefore prepends a null/non-null flag, using the column's element type because
+ * PostgreSQL does not allow a separate boolean type inside a date[] parameter.
+ *
+ * I.e. three entities have date[] values NULL, [], and [Temporal.PlainDate.from("2024-01-02")].
+ * The Temporal serde serializes the real date to "2024-01-02". Joist then sends:
+ *   NULL             -> [null, null]
+ *   []               -> [D, null]
+ *   ["2024-01-02"]   -> [D, "2024-01-02"]
+ * Here D is an arbitrary new Date() invented by notNullMarker, NOT a field value.
+ * unnest_arrays(..., true) checks and removes that first element and removes padding,
+ * restoring NULL, [], and ["2024-01-02"] before storage. Timestamp serdes likewise emit
+ * real strings, i.e. "2024-01-02T03:04:05.123456", to preserve microseconds.
+ *
+ * The null flag is needed by this encoding, but choosing a current-time JS Date for it
+ * is an unnecessary Joist implementation choice: a fixed valid date string would work.
+ * That choice introduces mixed Date/string inputs even when every real value is a string.
  *
  * PostgreJS chooses one formatter from the first array element, which can shift date strings or
  * truncate their microseconds. Converting Dates to offset-bearing strings avoids that

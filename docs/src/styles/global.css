@@ -99,6 +99,7 @@
 
   [data-has-hero] .hero {
     background: radial-gradient(ellipse at 75% 35%, var(--sl-color-bg-nav), transparent 65%);
+    padding-block: 1.5rem 0.5rem;
   }
 
   [data-has-hero] .hero h1 {
@@ -119,7 +120,7 @@
   @media (min-width: 50rem) {
     [data-has-hero] .hero {
       grid-template-columns: 1fr;
-      padding-bottom: 1rem;
+      padding-block: 2rem 0.5rem;
     }
 
     [data-has-hero] .hero .stack,
@@ -165,6 +166,44 @@
 
 .sl-blog-posts .sl-blog-preview .sl-blog-metadata {
   color: var(--sl-color-gray-3);
+}
+
+.why-joist {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4rem) 0 clamp(3rem, 6vw, 5rem);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.why-joist__lead {
+  margin: 0;
+  color: var(--sl-color-white);
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.why-joist__description {
+  max-width: 44rem;
+  margin: 1.5rem auto 0;
+  color: var(--sl-color-gray-2);
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  line-height: 1.65;
+}
+
+.why-joist__description strong {
+  color: var(--sl-color-text-accent);
+  font-weight: 600;
+}
+
+.why-joist__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
 }
 
 /* Keep the carousel's split-card look, but let every homepage feature stay visible. */

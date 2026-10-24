@@ -313,40 +313,14 @@ function createTypeMap(): native.DataTypeMap {
 /**
  * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
  *
- * Joist sends several entities' array fields as one PostgreSQL multidimensional array for
- * bulk writes. PostgreSQL requires equal-length subarrays, so fillArrayWithNulls pads them
- * with nulls. Padding alone makes a NULL field indistinguishable from an empty array.
- * Joist therefore prepends a null/non-null flag, using the column's element type because
- * PostgreSQL does not allow a separate boolean type inside a date[] parameter.
- *
- * I.e. three entities have date[] values NULL, [], and [Temporal.PlainDate.from("2024-01-02")].
- * The Temporal serde serializes the real date to "2024-01-02". Joist then sends:
- *   NULL             -> [null, null]
- *   []               -> [D, null]
- *   ["2024-01-02"]   -> [D, "2024-01-02"]
- * Here D is an arbitrary new Date() invented by notNullMarker, NOT a field value.
- * unnest_arrays(..., true) checks and removes that first element and removes padding,
- * restoring NULL, [], and ["2024-01-02"] before storage. Timestamp serdes likewise emit
- * real strings, i.e. "2024-01-02T03:04:05.123456", to preserve microseconds.
- *
- * The null flag is needed by this encoding, but choosing a current-time JS Date for it
- * is an unnecessary Joist implementation choice: a fixed valid date string would work.
- * That choice introduces mixed Date/string inputs even when every real value is a string.
- *
- * PostgreJS chooses one formatter from the first array element, which can shift date strings or
- * truncate their microseconds. Converting Dates to offset-bearing strings avoids that
- * coercion while preserving pg's local wall-clock convention.
- *
  * Binary views need Buffer normalization because PostgreJS otherwise infers JSON; even
  * an explicit bytea BindParam expects Buffer methods. Temporal normalization is different:
  * native inputs work with temporalTypes enabled, but eager/raw results deliberately keep
  * pg-compatible representations. Strings preserve write precision without enabling it.
- * See POSTGREJS_BUG_MIXED_DATE_ARRAYS.md and POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md in
- * packages/tests/integration for native reproductions and the supported-input distinction.
+ * See packages/tests/integration/POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md for the native
+ * reproduction and the supported-input distinction.
  */
 function prepareValue(value: unknown): unknown {
-  // Normalize each element before PostgreJS chooses an encoder for the whole bulk array.
-  if (value instanceof Date) return formatDateParameter(value);
   if (ArrayBuffer.isView(value) && !Buffer.isBuffer(value)) {
     return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
   }
@@ -360,15 +334,6 @@ function prepareValue(value: unknown): unknown {
     if (tag.startsWith("[object Temporal.")) return String(value);
   }
   return value;
-}
-
-/** Preserves pg's local wall-clock representation and its explicit UTC offset. */
-function formatDateParameter(value: Date): string {
-  const offset = -value.getTimezoneOffset();
-  const local = new Date(value.getTime() + offset * 60_000).toISOString().slice(0, -1);
-  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
-  const minutes = String(Math.abs(offset) % 60).padStart(2, "0");
-  return `${local}${offset >= 0 ? "+" : "-"}${hours}:${minutes}`;
 }
 
 /** Joist's text serde uses the server-rendered offset, not a named zone with future DST rules. */

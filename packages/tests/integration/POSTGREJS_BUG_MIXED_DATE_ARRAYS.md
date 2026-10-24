@@ -101,12 +101,22 @@ microseconds. Conversely, selecting the ordinary string formatter from the
 first element leaves later Date values with a JavaScript date string PostgreSQL
 does not accept.
 
-## Joist impact and workaround
+## Joist status after #2132
 
-Joist's nullable-array bulk writes prepend a Date sentinel to distinguish an
-empty array from a null array. Actual field values can be date/timestamp strings,
-so this is a real mixed-array input rather than a hypothetical application value.
-Bulk writes can also create nested arrays.
+Joist fixed its marker serialization in #2132 (main commit `7b854dde`). Markers
+now come from column codecs and have the same serialized representation as real
+elements. Temporal arrays use deterministic strings, i.e. "2000-01-01", rather
+than an invented Date object. The PostgreJS driver no longer converts Date
+parameters to strings to compensate for this mismatch.
+
+The native mixed-array behavior documented above is independent of that Joist
+fix; the reproduction deliberately supplies mixed values directly to PostgreJS.
+
+### Historical trigger and workaround
+
+Joist's nullable-array bulk writes previously prepended a Date sentinel to
+distinguish an empty array from a null array. Actual field values could be
+date/timestamp strings, producing mixed arrays, including nested bulk arrays.
 
 The sentinel is a temporary transport marker, not a date stored in the user's
 column. `fillArrayWithNulls` pads the sub-arrays to equal lengths, then prepends
@@ -121,16 +131,16 @@ NULL           -> [null, null]         -> NULL
 
 The last step is `unnest_arrays(..., true)`: it checks the marker, removes it,
 and removes padding. This protocol intentionally preserves NULL versus empty
-arrays; it is not itself a Joist bug. `notNullMarker` currently chooses
-`new Date()` for date/timestamp columns, but the exact value and use of a Date
-object are incidental. A fixed, valid date string could simplify Joist's marker
-implementation and avoid this particular mixed input. That would not fix the
-native driver's general mixed-array behavior reproduced above.
+arrays; it is not itself a Joist bug. The old `notNullMarker` chose `new Date()`
+for date/timestamp columns without consulting their codecs. #2132 corrected that
+representation mismatch at its source rather than changing the marker protocol.
 
-`prepareValue` recursively converts each Date into a string containing its local
-wall clock and explicit UTC offset. Existing strings are left untouched. This
-prevents a Date formatter from coercing unrelated elements and preserves
-microseconds. The last two reproduction cases demonstrate the workaround.
+Before #2132, `prepareValue` recursively converted each Date into a string
+containing its local wall clock and explicit UTC offset, leaving existing strings
+untouched. This prevented a Date formatter from coercing unrelated elements and
+preserved microseconds. That workaround has been removed from Joist. The last two
+reproduction cases still demonstrate string normalization for native callers
+that intentionally supply mixed values.
 
 ## Requested upstream fix
 

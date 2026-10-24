@@ -30,6 +30,7 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
+    "postgrejs": "3.14.0",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"

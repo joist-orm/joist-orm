@@ -26,7 +26,7 @@ import array from "postgres-array";
 import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers.ts";
 import { ensureLazyDataRows } from "./patchPgProtocol.ts";
 import { flushPostgres, toPgParams } from "./postgresSql.ts";
-import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData.ts";
+import { executeRowDataQuery, isRowDataCapableClient } from "./RowDataQuery.ts";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;

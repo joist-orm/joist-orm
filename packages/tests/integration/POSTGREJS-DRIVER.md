@@ -42,9 +42,10 @@ owns its options, ID assignment, transport, transaction lifecycle, query observa
 and lazy-read capability. Both use one `WireRowData` for retention,
 compaction and lazy cell access. Its only layout setting is `rowHeaderBytes`:
 2 for pg's field-count prefix, 0 for PostgreJS's headerless rows. PostgreJS supplies
-its native decoders via `setColumnDecoders`; pg uses `setRowDescription`. The module
-also contains pg's query integration, but PostgreJS does not use it or activate
-the pg-protocol patch. No separate RawRowData base class is needed.
+its native decoders via `setColumnDecoders`; pg resolves its decoders in
+`RowDataQuery.ts`, alongside its query integration. `WireRowData` imports neither
+transport, so PostgreJS does not load pg or activate the pg-protocol patch.
+No separate RawRowData base class is needed.
 
 EntityManager, entities, relations and ORM flush planning are unchanged. Native
 transaction callbacks receive a PostgreJS Connection, not a disguised pg client.

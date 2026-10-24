@@ -1,5 +1,5 @@
 import ansis from "ansis";
-import { getCallerName } from "src/config.ts";
+import { getFuzzyCallerName } from "src/config.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityMetadata } from "src/EntityMetadata.ts";
 import { type UseMapSource } from "src/newTestInstance.ts";
@@ -25,7 +25,7 @@ export class FactoryLogger {
     if (this.skipNextLogCreating) {
       this.skipNextLogCreating = false;
     } else {
-      this.write("Creating", green.bold(`new ${cstr.name}`), gray(`at ${getCallerName(2)}`));
+      this.write("Creating", green.bold(`new ${cstr.name}`), gray(`at ${getFuzzyCallerName(true)}`));
     }
   }
 

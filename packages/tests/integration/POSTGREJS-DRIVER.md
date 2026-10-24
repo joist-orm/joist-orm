@@ -105,12 +105,6 @@ PostgreJS 3.14.0, without Joist:
   `query()` calls can execute out of submission order on one connection, both
   inside and outside transactions. The explicit `connection.pipeline([...])`
   API preserved order in the tested cases.
-- [Mixed Date/string arrays](POSTGREJS_BUG_MIXED_DATE_ARRAYS.md): choosing one
-  formatter for an entire array shifts date strings, truncates timestamp
-  microseconds, or fails when the element order is reversed. This is a confirmed
-  native encoding bug that Joist previously triggered with mixed marker/value
-  types. #2132 fixed Joist's marker serialization, and the driver workaround has
-  been removed. The report remains a standalone native reproduction.
 - [Typed byte arrays](POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md): Uint8Array parameters
   are inferred as JSON, and explicit bytea encoding expects Buffer methods.
   This is a compatibility gap: the native bytea type currently specifies Buffer

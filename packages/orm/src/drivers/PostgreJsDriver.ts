@@ -190,19 +190,36 @@ export class PostgreJsRowDecoder extends native.RowDecoder {
     fields: FieldInfo[],
   ) {
     if (this.rows.rowCount === 0) {
-      this.rows.setColumnDecoders(
-        fields.map((field, index) => ({
-          name: field.fieldName,
-          decode:
-            options.temporalTypes && (field.dataTypeId === 1184 || field.dataTypeId === 1185)
-              ? (chunk, start, len) => normalizeTimeZone(parsers[index](chunk, start, len, options))
-              : (chunk, start, len) => parsers[index](chunk, start, len, options),
-        })),
-      );
+      this.rows.setColumnDecoders(columnDecoders(parsers, fields, decodingOptions(options)));
     }
     this.rows.addRow(buffer, offset, length);
     return undefined;
   }
+}
+
+/** Captures only value mapping: native query options also contain potentially large parameters. */
+function decodingOptions(options: DataMappingOptions): DataMappingOptions {
+  return {
+    decimalAsString: options.decimalAsString,
+    temporalTypes: options.temporalTypes,
+    timeZone: options.timeZone,
+    dateStyle: options.dateStyle,
+    moneyFormat: options.moneyFormat,
+    utcDates: options.utcDates,
+    fetchAsString: options.fetchAsString,
+    unknownTypesAsString: options.unknownTypesAsString,
+  };
+}
+
+/** Keeps decoder closures in a scope that never holds the original query options or parameters. */
+function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], options: DataMappingOptions) {
+  return fields.map((field, index) => ({
+    name: field.fieldName,
+    decode:
+      options.temporalTypes && (field.dataTypeId === 1184 || field.dataTypeId === 1185)
+        ? (chunk: Buffer, start: number, len: number) => normalizeTimeZone(parsers[index](chunk, start, len, options))
+        : (chunk: Buffer, start: number, len: number) => parsers[index](chunk, start, len, options),
+  }));
 }
 
 /** Keeps Temporal's microseconds through decoding instead of rounding through Date. */

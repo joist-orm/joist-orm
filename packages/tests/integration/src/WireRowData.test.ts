@@ -462,6 +462,41 @@ describe("WireRowData", () => {
         Array.from({ length: 10 }, (_, i) => `a${i + 1}`).sort(),
       );
     });
+
+    itLazy("keeps paginated find results lazy", async () => {
+      // Given three authors ordered by name
+      for (const name of ["a1", "a2", "a3"]) await insertAuthor({ first_name: name });
+      const em = newEntityManager();
+      // When finding the second author
+      const authors = await em.find(Author, {}, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } });
+      // Then the page retains wire rows and can lazily read the selected author
+      expect(getInstanceData(authors[0]).rowData).toBeInstanceOf(WireRowData);
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    itLazy("returns shared authors in both pages and compacts duplicate rows", async () => {
+      // Given three authors with overlapping age filters
+      for (let i = 1; i <= 3; i++) await insertAuthor({ first_name: `a${i}`, age: i });
+      const em = newEntityManager();
+      // And the first author is already loaded
+      const existing = await em.load(Author, "a:1");
+      // When batching two overlapping pages
+      const pages = await Promise.all([
+        em.find(Author, { age: { gte: 1 } }, { limit: 2, orderBy: { firstName: "ASC" } }),
+        em.find(Author, { age: { gte: 2 } }, { limit: 2, orderBy: { firstName: "ASC" } }),
+      ]);
+      // Then both pages retain their authors even when duplicate wire rows are compacted
+      expect(pages[0]).toMatchEntity([existing, { firstName: "a2" }]);
+      expect(pages[1]).toMatchEntity([pages[0][1], { firstName: "a3" }]);
+      // And the newly-loaded author is backed by our WireRowData
+      const wire = getInstanceData(pages[0][1]).rowData as WireRowData;
+      expect(wire).toBeInstanceOf(WireRowData);
+      expect(wire.rowCount).toBe(4);
+      // But because a) already-loaded author was skipped by hydrate, and b) em.find called finalize
+      // which saw >20% of bytes were not claimed by hydrate, then compaction was triggered,
+      // which means the already-loaded-entities row 0 is gone from memory.
+      expect(() => wire.get(0, "first_name")).toThrow("compacted away");
+    });
   });
 });
 

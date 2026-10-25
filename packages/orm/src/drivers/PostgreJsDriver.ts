@@ -38,14 +38,6 @@ export interface PostgreJsDriverOpts {
   preloadPlugin?: PreloadPlugin;
   /** Observes SQL before submission to PostgreJS. */
   onQuery?: (sql: string) => void;
-  /**
-   * Uses PostgreJS's public decoder hook for lazy entity hydration. Defaults to true.
-   *
-   * Applies to unpaginated entity finds/loads and o2m/o2o/recursive loads. Paginated finds,
-   * m2m join-table rows, lazy columns and id/count queries still use eager results.
-   * Set false to eagerly decode all results. Deferred parser errors surface on field access.
-   */
-  lazyRows?: boolean;
 }
 
 /** PostgreSQL over native PostgreJS pools and transaction connections. */
@@ -53,9 +45,6 @@ export class PostgreJsDriver implements Driver<Connection> {
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
   private readonly onQuery: PostgreJsDriverOpts["onQuery"];
-  readonly lazyRows: boolean;
-  /** Its presence is the lazy-read capability signal checked by EntityManager. */
-  readonly executeFindRowData: Driver["executeFindRowData"];
 
   constructor(
     readonly pool: Pool,
@@ -66,11 +55,6 @@ export class PostgreJsDriver implements Driver<Connection> {
 
     this.#idAssigner =
       opts?.idAssigner ?? new SequenceIdAssigner(async (sql) => (await this.query(undefined, sql, [])).rows);
-
-    this.lazyRows = opts?.lazyRows ?? true;
-    this.executeFindRowData = this.lazyRows
-      ? (em, parsed, settings) => this.findRowData(em, parsed, settings)
-      : undefined;
   }
 
   /** Executes through the native pool or the transaction's native connection. */
@@ -114,8 +98,14 @@ export class PostgreJsDriver implements Driver<Connection> {
     return { preloadPlugin: this.#preloadPlugin };
   }
 
-  /** Supplies Joist's RowData lifecycle using only PostgreJS's public decoder hook. */
-  private async findRowData(
+  /**
+   * Supplies lazy entity rows through PostgreJS's native decoder hook.
+   *
+   * EntityManager uses this for unpaginated finds/loads and o2m/o2o/recursive loads.
+   * Paginated finds, m2m join-table rows, lazy columns and id/count queries use eager results.
+   * Deferred parser errors surface on field access.
+   */
+  async executeFindRowData(
     em: EntityManager,
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },

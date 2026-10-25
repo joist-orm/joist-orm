@@ -2,9 +2,11 @@
 
 The follow-up [PostgreJS driver support](POSTGREJS-DRIVER.md) covers writes,
 transactions and the complete test suite. The results below preserve the initial
-read-only experiment. The benchmark now also supports `postgrejs-full-eager` and
-`postgrejs-full-lazy`; use `BENCH_MODES` to select a comma-separated subset, or
-omit it to run all six modes.
+read-only experiment. The benchmark also supports `postgrejs-full-lazy` for the
+production driver, which always uses lazy entity rows. The former
+`postgrejs-full-eager` mode has been removed. Use `BENCH_MODES` to select a
+comma-separated subset, or omit it to run all five modes. The read-only prototype
+retains its eager control for decoding comparisons.
 
 ## Results (2026-10-16)
 

@@ -17,7 +17,7 @@ describe("PostgreJsDriver", () => {
     await pool.close();
   });
 
-  it("hydrates eager results with the same public entity values as lazy results", async () => {
+  it("hydrates paginated finds with the same public entity values as lazy loads", async () => {
     // Given an author with exact bigint, bytea and native array values
     await insertAuthor({
       first_name: "Native",
@@ -25,14 +25,15 @@ describe("PostgreJsDriver", () => {
       certificate: Buffer.from([0, 128, 255]),
       nick_names: ["N"],
     });
-    const eager = new EntityManager({}, { driver: new PostgreJsDriver(pool, { lazyRows: false }) });
+    // And separate identity maps keep both hydration paths independent
+    const eager = new EntityManager({}, { driver: new PostgreJsDriver(pool) });
     const lazy = new EntityManager({}, { driver: new PostgreJsDriver(pool) });
 
-    // When each decoding mode loads the author
-    const eagerAuthor = await eager.load(Author, "a:1");
+    // When a paginated find and a lazy load retrieve the same author
+    const [eagerAuthor] = await eager.find(Author, { id: "a:1" }, { limit: 1 });
     const lazyAuthor = await lazy.load(Author, "a:1");
 
-    // Then eager hydration exposes the same domain values
+    // Then the paginated author exposes the same domain values
     expect(eagerAuthor).toMatchEntity({
       firstName: lazyAuthor.firstName,
       numberOfAtoms: lazyAuthor.numberOfAtoms,

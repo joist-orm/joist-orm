@@ -17,16 +17,10 @@ import { Author, type AuthorId } from "./src/entities";
 const url = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist_stock";
 const sizes = (process.env.BENCH_SIZES ?? "1,100,10000,50000").split(",").map(Number);
 const iterations = Number(process.env.BENCH_ITERATIONS ?? 7);
-const allModes = [
-  "pg-stock",
-  "pg-wire",
-  "postgrejs-eager",
-  "postgrejs-lazy",
-  "postgrejs-full-eager",
-  "postgrejs-full-lazy",
-] as const;
+const allModes = ["pg-stock", "pg-wire", "postgrejs-eager", "postgrejs-lazy", "postgrejs-full-lazy"] as const;
 type Mode = (typeof allModes)[number];
 const modes = process.env.BENCH_MODES ? (process.env.BENCH_MODES.split(",") as Mode[]) : allModes;
+for (const mode of modes) assert.ok(allModes.includes(mode), `Unknown benchmark mode: ${mode}`);
 type Scenario = "hydrate" | "sparse" | "selective" | "full" | "reverse" | "identity";
 type Measurement = {
   mode: Mode;
@@ -144,7 +138,7 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   const driver: Driver = mode.startsWith("pg-")
     ? new PostgresDriver(pgPool, { lazyRows: mode === "pg-wire" })
     : mode.startsWith("postgrejs-full-")
-      ? new PostgreJsDriver(fullPool, { lazyRows: mode === "postgrejs-full-lazy" })
+      ? new PostgreJsDriver(fullPool)
       : new PostgreJsPrototype(jsPool, mode === "postgrejs-lazy");
   try {
     await verifyRetainedEntities(driver);

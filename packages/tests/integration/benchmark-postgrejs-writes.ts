@@ -14,7 +14,7 @@ import { Author, type AuthorId } from "./src/entities";
 const source = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist_stock";
 const size = Number(process.env.BENCH_WRITE_SIZE ?? 100);
 const iterations = Number(process.env.BENCH_ITERATIONS ?? 15);
-const modes = ["pg-stock", "pg-wire", "postgrejs-full-eager", "postgrejs-full-lazy"] as const;
+const modes = ["pg-stock", "pg-wire", "postgrejs-full-lazy"] as const;
 type Mode = (typeof modes)[number];
 type Scenario = "insert" | "load-update" | "transaction-cycle";
 
@@ -73,7 +73,7 @@ async function child(mode: Mode, url: string, output: string): Promise<void> {
   const native = new Pool(url);
   const driver = mode.startsWith("pg-")
     ? new PostgresDriver(pool, { lazyRows: mode === "pg-wire" })
-    : new PostgreJsDriver(native, { lazyRows: mode === "postgrejs-full-lazy" });
+    : new PostgreJsDriver(native);
   const samples = [];
   try {
     await pool.query("select flush_database()");

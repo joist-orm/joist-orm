@@ -25,11 +25,15 @@ const nativePool = new Pool(process.env.DATABASE_URL);
 // Choose one driver at application setup; entity code is identical.
 const stock = new PostgresDriver(pgPool);
 const patched = new PostgresDriver(pgPool, { lazyRows: true });
-const native = new PostgreJsDriver(nativePool); // lazyRows defaults to true
-const nativeEager = new PostgreJsDriver(nativePool, { lazyRows: false });
+const native = new PostgreJsDriver(nativePool); // always uses lazy entity rows
 
 // On shutdown: await pgPool.end(); await nativePool.close();
 ```
+
+PostgreJS always exposes its native lazy entity-row path; it has no `lazyRows`
+option. Paginated finds and other loaders that require eager results still use
+the driver's ordinary query path. The eager PostgreJS measurements below are
+historical benchmark controls, not a supported production configuration.
 
 `PostgreJsDriver` implements Joist's driver boundary directly, using native
 `Pool.acquire`, `Connection.query` and `Connection.close`. The earlier
@@ -71,8 +75,8 @@ integration fixture. `JOIST_DRIVER` selects the ORM transport. Knex fixture
 helpers and explicit node-pg protocol tests retain a separate pg pool. They do
 not route ORM entity operations through pg in the PostgreJS pass.
 
-Focused real-database tests in `PostgreJsDriver.test.ts` cover eager/lazy value
-parity and the native transaction boundary without adding another full pass.
+Focused real-database tests in `PostgreJsDriver.test.ts` cover value parity between
+eager paginated finds and lazy loads, plus the native transaction boundary.
 
 ### Compatibility fixes found by the suite
 
@@ -183,7 +187,7 @@ change. Existing integration tests caught the compatibility issues above.
 Full read comparison (same scenarios and memory methodology as the first pass):
 
 ```sh
-BENCH_MODES=pg-stock,pg-wire,postgrejs-full-eager,postgrejs-full-lazy \
+BENCH_MODES=pg-stock,pg-wire,postgrejs-full-lazy \
 BENCH_OUTPUT=../../../artifacts/postgrejs-cutover \
 yarn workspace joist-tests-integration benchmark:postgrejs
 ```

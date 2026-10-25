@@ -46,8 +46,6 @@ export class PostgresTestDriver implements TestDriver {
     const opts = {
       preloadPlugin,
       onQuery: (sql: string) => recordQuery(sql),
-      // Allows running the test suite against lazy/columnar RowData results, i.e. `JOIST_ROW_DATA=1 yarn test`
-      lazyRows: process.env.JOIST_ROW_DATA === "1",
     };
     if (process.env.JOIST_DRIVER === "postgrejs") {
       const { ssl, ...config } = newPgConnectionConfig();
@@ -60,7 +58,11 @@ export class PostgresTestDriver implements TestDriver {
       });
       this.driver = new PostgreJsDriver(this.nativePool, opts);
     } else {
-      this.driver = new PostgresDriver(this.pool, opts);
+      this.driver = new PostgresDriver(this.pool, {
+        ...opts,
+        // Allows running node-pg against lazy/columnar RowData results, i.e. `JOIST_ROW_DATA=1 yarn test`
+        lazyRows: process.env.JOIST_ROW_DATA === "1",
+      });
     }
   }
 

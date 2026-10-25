@@ -217,16 +217,18 @@ function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], option
 /** Keeps Temporal's microseconds through decoding instead of rounding through Date. */
 function mappingOptions(lazy = false): QueryOptions {
   const temporal = getRuntimeConfig().temporal;
+  const nativeTemporal = temporal && lazy && typeof globalThis.Temporal !== "undefined";
   return {
     rowDecoder: "object",
     fetchCount: 0,
     rollbackOnError: false,
     typeMap: joistTypeMap,
     unknownTypesAsString: true,
-    temporalTypes: temporal && lazy ? [1082, 1083, 1114, 1184] : false,
-    // Joist raw-query callers still expect pg-compatible strings, while lazy hydration can use
-    // native Temporal objects. Both retain microseconds and preserve array nulls.
-    fetchAsString: temporal && !lazy ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
+    temporalTypes: nativeTemporal ? [1082, 1083, 1114, 1184] : false,
+    // PostgreJS only reads global Temporal; Joist's polyfill is module-local. Without the global,
+    // keep lossless strings for Joist's codecs, just like node-pg's text path. Raw-query callers
+    // also expect strings. Both paths retain microseconds and preserve array nulls.
+    fetchAsString: temporal && !nativeTemporal ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
   };
 }
 

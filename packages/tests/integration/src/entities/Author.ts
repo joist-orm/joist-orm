@@ -448,6 +448,15 @@ export class Author extends AuthorCodegen {
     a.books.get.map((b) => b.title).join(", "),
   );
 
+  readonly bookRatings: AsyncMethod<Author, [], number[]> = hasAsyncMethod({ books: "reviews" }, (a) =>
+    a.books.get.flatMap((b) => b.reviews.get.map((r) => r.rating)),
+  );
+
+  // Example of an AsyncMethod that calls another AsyncMethod, so its hint is just the nested method
+  readonly bookRatingsSummary: AsyncMethod<Author, [], string> = hasAsyncMethod("bookRatings", (a) =>
+    a.bookRatings.call().join(", "),
+  );
+
   // Example of a reactive getter that can always be gotten
   readonly hasLowerCaseFirstName: ReactiveGetter<Author, boolean> = hasReactiveGetter(
     "hasLowerCaseFirstName",

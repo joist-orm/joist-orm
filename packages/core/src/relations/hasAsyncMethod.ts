@@ -30,7 +30,6 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   A,
   V
 > {
-  private loaded = false;
   private loadPromise: Promise<any> | undefined;
 
   readonly #entity: T;
@@ -48,8 +47,11 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   async load(...args: A): Promise<V> {
     // Are we being called by `em.populate`? If so, we don't have the real args, so avoid invoking fn
     const isPopulate = args && typeof args[0] === "object" && AsyncMethodPopulateSecret in (args as any)[0];
-    if (!this.loaded) {
-      this.loadPromise ??= this.#entity.em.populate(this.#entity, this.#hint!).then((loaded) => (this.loaded = true));
+    // Always re-check, since a new child can unload the hint after we've loaded it
+    if (!this.isLoaded) {
+      this.loadPromise ??= this.#entity.em
+        .populate(this.#entity, this.#hint!)
+        .finally(() => (this.loadPromise = undefined));
       await this.loadPromise;
     }
     return isPopulate ? (undefined as any) : this.call(...args);
@@ -63,7 +65,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   }
 
   get isLoaded() {
-    return this.loaded || isLoaded(this.#entity, this.#hint);
+    return isLoaded(this.#entity, this.#hint);
   }
 
   [AsyncMethodM]: undefined;

@@ -52,7 +52,7 @@
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
     "kelonio": "^0.12.0",
-    "postgrejs": "3.14.0",
+    "postgrejs": "3.14.1",
     "postgres": "^3.4.9",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",

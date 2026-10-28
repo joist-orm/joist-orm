@@ -237,7 +237,7 @@
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
     "pg-types": "^4.1.0",
-    "postgrejs": "3.14.0",
+    "postgrejs": "3.14.1",
     "postgres-array": "^3.0.4"
   },
   "peerDependenciesMeta": {
@@ -260,7 +260,7 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
-    "postgrejs": "3.14.0",
+    "postgrejs": "3.14.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"
   }

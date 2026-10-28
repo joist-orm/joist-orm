@@ -1,8 +1,7 @@
 # PostgreJS read-path prototype
 
-The follow-up [PostgreJS driver support](POSTGREJS-DRIVER.md) covers writes,
-transactions and the complete test suite. The results below preserve the initial
-read-only experiment. The benchmark also supports `postgrejs-full-lazy` for the
+The results below preserve the initial read-only experiment. The benchmark also
+supports `postgrejs-full-lazy` for the
 production driver, which always uses lazy entity rows. The former
 `postgrejs-full-eager` mode has been removed. Use `BENCH_MODES` to select a
 comma-separated subset, or omit it to run all five modes. The read-only prototype
@@ -102,9 +101,7 @@ There is no PostgreJS protocol patch and no copy of each incoming row. PostgreJS
 still allocates its own temporary result array of decoder return values.
 
 The final experiment uses PostgreJS **3.14.0**, with explicit `fetchCount: 0`
-(unlimited; Joist's SQL entity limit still applies). Initial smoke testing of
-3.3.0, the issue's original release, caught its 100-row default; that old release
-is not used for the reported measurements. SELECT command counts are absent from
+(unlimited; Joist's SQL entity limit still applies). SELECT command counts are absent from
 PostgreJS's `rowsAffected`; this prototype does not claim complete `executeQuery`
 count parity.
 

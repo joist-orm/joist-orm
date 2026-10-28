@@ -93,7 +93,7 @@ async function main(): Promise<void> {
       iterations,
       fields,
       pg: "8.23.0",
-      postgrejs: "3.14.0",
+      postgrejs: "3.14.1",
       results,
     };
     writeFileSync(resolve(output, "results.json"), JSON.stringify(metadata, null, 2));

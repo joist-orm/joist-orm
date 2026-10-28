@@ -11087,7 +11087,7 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-test-utils: "workspace:*"
     joist-utils: "workspace:*"
-    postgrejs: "npm:3.14.0"
+    postgrejs: "npm:3.14.1"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
   peerDependencies:
@@ -11095,7 +11095,7 @@ __metadata:
     node-pg-migrate: ^9.0.0
     pg: ^8.23.0
     pg-types: ^4.1.0
-    postgrejs: 3.14.0
+    postgrejs: 3.14.1
     postgres-array: ^3.0.4
   peerDependenciesMeta:
     knex:
@@ -11251,7 +11251,7 @@ __metadata:
     kelonio: "npm:^0.12.0"
     knex: "npm:3.3.0"
     mitata: "npm:^1.0.34"
-    postgrejs: "npm:3.14.0"
+    postgrejs: "npm:3.14.1"
     postgres: "npm:^3.4.9"
     superstruct: "npm:^2.0.2"
     tsconfig-paths: "npm:^4.2.0"
@@ -11348,7 +11348,7 @@ __metadata:
     joist-test-utils: "workspace:*"
     joist-utils: "workspace:*"
     node-pg-migrate: "npm:^9.0.0"
-    postgrejs: "npm:3.14.0"
+    postgrejs: "npm:3.14.1"
     superstruct: "npm:^2.0.2"
     temporal-polyfill: "npm:^1.0.6"
     tsconfig-paths: "npm:^4.2.0"
@@ -14942,9 +14942,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgrejs@npm:3.14.0":
-  version: 3.14.0
-  resolution: "postgrejs@npm:3.14.0"
+"postgrejs@npm:3.14.1":
+  version: 3.14.1
+  resolution: "postgrejs@npm:3.14.1"
   dependencies:
     "@jsopen/objects": "npm:^2.3.4"
     doublylinked: "npm:^2.5.6"
@@ -14954,7 +14954,7 @@ __metadata:
     putil-promisify: "npm:^1.10.1"
     putil-varhelpers: "npm:^1.7.0"
     tslib: "npm:^2.8.1"
-  checksum: 10/fd689e2daa005508af43d50b5680be48e8886d62f3b1970843ebc62e8f71190eeba618d111998d863cc6354f907b60b07a933c77dbe19c3fa9f9ccdf7abdc079
+  checksum: 10/e039e98329d7ac59f3fd97f9b582f1fbcafc8fffc407a7e5865492a952bd25cb73934d3bcda1e1a89d36a1a97b0094b9cdf39ab5c39a68786429787688bd68cd
   languageName: node
   linkType: hard
 

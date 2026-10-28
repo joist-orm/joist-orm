@@ -117,7 +117,6 @@ export class PostgreJsDriver implements Driver<Connection> {
     const client = (em.txn as Connection | undefined) ?? this.pool;
     await client.query(pgSql, {
       ...mappingOptions(true),
-      pipeline: false,
       params: bindings.map(prepareValue),
       rowDecoder: decoder,
     });
@@ -238,12 +237,9 @@ async function executeNativeQuery(
   sql: string,
   params: readonly unknown[],
 ): Promise<DriverQueryResult> {
-  // A cached statement must not overtake an earlier query still being prepared.
-  // Flush can issue several updates to one row, whose oplocks require submission order.
   return client
     .query(sql, {
       ...mappingOptions(),
-      pipeline: client instanceof native.Connection ? false : undefined,
       params: params.map(prepareValue),
     })
     .then(toDriverResult);
@@ -305,17 +301,10 @@ function createTypeMap(): native.DataTypeMap {
 /**
  * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
  *
- * Binary views need Buffer normalization because PostgreJS otherwise infers JSON; even
- * an explicit bytea BindParam expects Buffer methods. Temporal normalization is different:
- * native inputs work with temporalTypes enabled, but eager/raw results deliberately keep
+ * Native Temporal inputs work with temporalTypes enabled, but eager/raw results deliberately keep
  * pg-compatible representations. Strings preserve write precision without enabling it.
- * See packages/tests/integration/POSTGREJS_BUG_TYPED_BYTE_ARRAYS.md for the native
- * reproduction and the supported-input distinction.
  */
 function prepareValue(value: unknown): unknown {
-  if (ArrayBuffer.isView(value) && !Buffer.isBuffer(value)) {
-    return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  }
   if (Array.isArray(value)) return value.map(prepareValue);
   if (value !== null && typeof value === "object") {
     const tag = Object.prototype.toString.call(value);

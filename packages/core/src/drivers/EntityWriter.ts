@@ -12,7 +12,7 @@ import { getField, isChangeableField } from "src/fields.ts";
 import type { Todo } from "src/flush/Todo.ts";
 import { keyToNumber } from "src/keys.ts";
 import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
-import { groupBy } from "src/utils.ts";
+import { groupBy, indexBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 export type OpColumn = {
@@ -231,8 +231,8 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
 
-  // Several STI subtypes can share a field, but the batch UPDATE must name each physical column once.
-  const columns: BindingColumn[] = [...new Map(allColumns.map((column) => [column.columnName, column])).values()];
+  // Unique columns by name because subtype-specific STI fields can share the same physical column.
+  const columns: BindingColumn[] = [...indexBy(allColumns, (column) => column.columnName).values()];
 
   // If we're using class table inheritance, base/child tables may not have any columns to update
   if (columns.length === 1) {

@@ -648,7 +648,7 @@ describe("SingleTableInheritance", () => {
     ]);
   });
 
-  it("moves both participating subtypes between loaded reverse collections", async () => {
+  it("updates loaded reverse collections immediately for both participating subtypes", async () => {
     // Given both participating subtypes share an author
     await insertAuthor({ id: 1, first_name: "a1" });
     await insertTask({ id: 1, type: "NEW", author_id: 1 });
@@ -664,8 +664,7 @@ describe("SingleTableInheritance", () => {
     // When both tasks move to the second author
     nt.author.set(replacement);
     ot.author.set(replacement);
-    await em.flush();
-    // Then the original reverse collection no longer has either task
+    // Then both reverse collections immediately reflect the new author without flushing
     expect(author.authoredTasks.get).toMatchEntity([]);
     expect(replacement.authoredTasks.get).toMatchEntity([{ id: "task:1" }, { id: "task:2" }]);
   });

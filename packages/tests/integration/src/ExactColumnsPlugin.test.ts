@@ -6,24 +6,27 @@ import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from 
 
 describe("ExactColumnsPlugin", () => {
   it("narrows after the profile union stays stable for three invocations", async () => {
+    // Given an author endpoint that reads only firstName.
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     const { plugin, outcomes } = observe();
     async function endpoint(em: EntityManager): Promise<void> {
       const a = await em.load(Author, "a:1");
       expect(a.firstName).toBe("a1");
     }
+    // When the endpoint discovers firstName and approaches its settling threshold.
     for (let i = 0; i < 3; i++) {
       await invoke(plugin, "get-author", endpoint);
     }
-    // The 4th invocation supplies the 3rd no-growth observation, but itself still uses full rows.
+    // When the 4th invocation supplies the 3rd no-growth observation, it still uses full rows.
     resetQueryCount();
     await invoke(plugin, "get-author", endpoint);
+    // Then this final learning invocation retains the full-row projection.
     expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT "a".* FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
      ]
     `);
-    expect(outcomes).toEqual(
+    expect(outcomes).toMatchObject(
       Array(4).fill({
         endpointKey: "get-author",
         optimized: false,
@@ -33,10 +36,11 @@ describe("ExactColumnsPlugin", () => {
         columnsOmitted: 0,
       }),
     );
-    // The 5th invocation narrows to `firstName` + the always-kept pk/timestamp columns.
+    // When the 5th invocation narrows to firstName plus the always-kept pk/timestamp columns.
     resetQueryCount();
     await invoke(plugin, "get-author", endpoint);
-    expect(outcomes.at(-1)).toEqual({
+    // Then the endpoint omits unused columns without a retry.
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "get-author",
       optimized: true,
       retried: false,
@@ -111,8 +115,10 @@ describe("ExactColumnsPlugin", () => {
       expect(a1.firstName).toBe("a1");
       expect(a2.firstName).toBe("a2");
     }
+    // When both author filters stabilize under the same endpoint.
     await settle(plugin, "find-two", endpoint);
-    expect(outcomes).toEqual(
+    // Then both logical projections contribute to learning telemetry.
+    expect(outcomes).toMatchObject(
       Array(4).fill({
         endpointKey: "find-two",
         optimized: false,
@@ -123,8 +129,10 @@ describe("ExactColumnsPlugin", () => {
       }),
     );
     resetQueryCount();
+    // When the settled endpoint serves both filters again.
     await invoke(plugin, "find-two", endpoint);
-    expect(outcomes.at(-1)).toEqual({
+    // Then telemetry counts both projections even though SQL batches them together.
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "find-two",
       optimized: true,
       retried: false,
@@ -173,8 +181,10 @@ describe("ExactColumnsPlugin", () => {
       const [cached] = await em.find(Author, { firstName: "a1" });
       expect(cached).toBe(a);
     }
+    // When the repeated author lookup stabilizes.
     await settle(plugin, "cached", endpoint);
-    expect(outcomes).toEqual(
+    // Then both logical projections contribute even when the second one reuses cached rows.
+    expect(outcomes).toMatchObject(
       Array(4).fill({
         endpointKey: "cached",
         optimized: false,
@@ -185,8 +195,10 @@ describe("ExactColumnsPlugin", () => {
       }),
     );
     resetQueryCount();
+    // When the settled endpoint repeats its cached lookup.
     await invoke(plugin, "cached", endpoint);
-    expect(outcomes.at(-1)).toEqual({
+    // Then both logical projections report their narrowed column counts.
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "cached",
       optimized: true,
       retried: false,
@@ -234,9 +246,10 @@ describe("ExactColumnsPlugin", () => {
       return readLast ? a.lastName : a.firstName;
     }
     await settle(plugin, "get-author", (em) => endpoint(em, false));
-    // The narrowed invocation takes a novel branch; track sees the missing-column error, widens, and re-invokes with full rows.
+    // When the narrowed invocation takes a novel branch, track widens and re-invokes with full rows.
     resetQueryCount();
     await expect(invoke(plugin, "get-author", (em) => endpoint(em, true))).resolves.toBe("l1");
+    // Then the novel branch succeeds through one narrowed attempt and one full-row retry.
     expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.id, a.first_name, a.deleted_at, a.created_at, a.updated_at FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
@@ -245,7 +258,7 @@ describe("ExactColumnsPlugin", () => {
     `);
     expect(missingColumns).toMatchObject([{ fieldName: "lastName", endpointKey: "get-author" }]);
     expect(outcomes).toHaveLength(5);
-    expect(outcomes.at(-1)).toEqual({
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "get-author",
       optimized: true,
       retried: true,
@@ -253,14 +266,15 @@ describe("ExactColumnsPlugin", () => {
       columnsBefore: 74,
       columnsOmitted: 32,
     });
-    // The retry is the first stable observation; four more full-row calls settle the post-fault profile.
+    // When the retry supplies the first stable observation, four more full-row calls settle the profile.
     for (let i = 0; i < 4; i++) {
       await invoke(plugin, "get-author", (em) => endpoint(em, true));
       expect(outcomes.at(-1)?.optimized).toBe(false);
     }
-    // The next invocation narrows again with both learned fields.
+    // When the next invocation narrows again with both learned fields.
     resetQueryCount();
     await expect(invoke(plugin, "get-author", (em) => endpoint(em, true))).resolves.toBe("l1");
+    // Then both observed name fields remain selected.
     expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT a.id, a.first_name, a.last_name, a.deleted_at, a.created_at, a.updated_at FROM authors AS a WHERE a.id = ANY($1) ORDER BY a.id ASC LIMIT $2",
@@ -268,14 +282,15 @@ describe("ExactColumnsPlugin", () => {
     `);
     expect(outcomes.at(-1)).toMatchObject({ optimized: true, retried: false });
 
-    // A second novel branch deoptimizes again and advances the settling requirement from 5 to 8.
+    // When a second novel branch deoptimizes again, it advances the settling requirement from 5 to 8.
     await expect(
       invoke(plugin, "get-author", async (em) => {
         const a = await em.load(Author, "a:1");
         return a.age;
       }),
     ).resolves.toBe(40);
-    expect(outcomes.at(-1)).toEqual({
+    // Then the age branch reports another full-row retry.
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "get-author",
       optimized: true,
       retried: true,
@@ -420,7 +435,7 @@ describe("ExactColumnsPlugin", () => {
        ]
       `);
     }
-    expect(outcomes.at(-1)).toEqual({
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "get-author",
       optimized: true,
       retried: false,
@@ -463,7 +478,9 @@ describe("ExactColumnsPlugin", () => {
   });
 
   it("never narrows STI or CTI entities", async () => {
+    // Given an STI task and a CTI publisher whose hydration needs full rows.
     await insertTask({ type: "NEW" });
+    // And a publisher selected by the same endpoint.
     await insertPublisher({ name: "p1" });
     const { plugin, outcomes } = observe();
     async function endpoint(em: EntityManager): Promise<void> {
@@ -473,10 +490,11 @@ describe("ExactColumnsPlugin", () => {
       expect(p.name).toBe("p1");
     }
     await settle(plugin, "get-both", endpoint);
-    // Both selects keep their `.*`s, i.e. STI discriminator probing and CTI joins stay intact
+    // When the settled endpoint selects both inheritance models again.
     resetQueryCount();
     await invoke(plugin, "get-both", endpoint);
-    expect(outcomes).toEqual(
+    // Then both selects keep their stars, so discriminator probing and CTI joins stay intact.
+    expect(outcomes).toMatchObject(
       Array(5).fill({
         endpointKey: "get-both",
         optimized: false,
@@ -495,6 +513,7 @@ describe("ExactColumnsPlugin", () => {
   });
 
   it("never narrows findByUnique", async () => {
+    // Given an author selected through a unique SSN lookup.
     await insertAuthor({ first_name: "a1", ssn: "123-45-6789" });
     const { plugin, outcomes } = observe();
     async function endpoint(em: EntityManager): Promise<void> {
@@ -502,10 +521,11 @@ describe("ExactColumnsPlugin", () => {
       expect(a!.firstName).toBe("a1");
     }
     await settle(plugin, "by-ssn", endpoint);
-    // findByUnique groups raw rows by the unique column, so it always fetches full rows
+    // When the settled endpoint repeats its unique lookup.
     resetQueryCount();
     await invoke(plugin, "by-ssn", endpoint);
-    expect(outcomes).toEqual(
+    // Then findByUnique retains full rows for grouping by the unique column.
+    expect(outcomes).toMatchObject(
       Array(5).fill({
         endpointKey: "by-ssn",
         optimized: false,
@@ -523,6 +543,7 @@ describe("ExactColumnsPlugin", () => {
   });
 
   it("composes with lazy columns", async () => {
+    // Given a parent group with lazy data written without first loading it.
     await insertParentGroup({ name: "pg1", bulk_data: { key: "before" }, required_data: {} });
     const { plugin, outcomes } = observe();
     async function endpoint(em: EntityManager, key: string): Promise<void> {
@@ -533,23 +554,26 @@ describe("ExactColumnsPlugin", () => {
       await em.flush();
     }
     await settle(plugin, "set-bulk", (em) => endpoint(em, "one"));
+    // When the settled endpoint changes the lazy data again.
     resetQueryCount();
     await invoke(plugin, "set-bulk", (em) => endpoint(em, "two"));
-    // The load still excludes the lazy columns (nothing else was prunable)
+    // Then the load excludes lazy columns and the unused eagerEmbedding column.
     expect(queries[0]).toMatchInlineSnapshot(
       `"SELECT pg.id, pg.name, pg.created_at, pg.updated_at FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2"`,
     );
     expect(await select("parent_groups")).toMatchObject([{ id: 1, name: "pg1", bulk_data: { key: "two" } }]);
-    expect(outcomes).toEqual(
-      Array(5).fill({
+    // Then learning includes eagerEmbedding, which the final narrowed invocation can omit.
+    expect(outcomes).toMatchObject([
+      ...Array(4).fill({
         endpointKey: "set-bulk",
         optimized: false,
         retried: false,
         missingColumnFailure: false,
-        columnsBefore: 4,
+        columnsBefore: 5,
         columnsOmitted: 0,
       }),
-    );
+      { optimized: true, retried: false, missingColumnFailure: false, columnsBefore: 5, columnsOmitted: 1 },
+    ]);
   });
 
   it("hydrates populated children fully without false missing-column errors", async () => {
@@ -570,11 +594,13 @@ describe("ExactColumnsPlugin", () => {
     // Given an endpoint that never loads an entity.
     const { plugin, outcomes } = observe();
     resetQueryCount();
+    // When the endpoint completes five requests without accessing the database.
     for (let i = 0; i < 5; i++) {
       await expect(plugin.track("empty", async () => "result")).resolves.toBe("result");
     }
+    // Then it reports each request with no selected or omitted columns.
     expect(queries).toEqual([]);
-    expect(outcomes).toEqual(
+    expect(outcomes).toMatchObject(
       Array(5).fill({
         endpointKey: "empty",
         optimized: false,
@@ -592,13 +618,15 @@ describe("ExactColumnsPlugin", () => {
     // And a callback that records failed invocations.
     const { plugin, outcomes } = observe();
     const error = new Error("application failed");
+    // When an ordinary application error escapes after loading an author.
     await expect(
       invoke(plugin, "failure", async (em) => {
         await em.load(Author, "a:1");
         throw error;
       }),
     ).rejects.toBe(error);
-    expect(outcomes).toEqual([
+    // Then telemetry reports the failed learning invocation without a retry.
+    expect(outcomes).toMatchObject([
       {
         endpointKey: "failure",
         optimized: false,
@@ -611,13 +639,15 @@ describe("ExactColumnsPlugin", () => {
     // And the same endpoint now has a settled firstName projection before another ordinary failure.
     await settle(plugin, "failure", async (em) => (await em.load(Author, "a:1")).firstName);
     outcomes.length = 0;
+    // When the same application error occurs after the author profile has settled.
     await expect(
       invoke(plugin, "failure", async (em) => {
         expect((await em.load(Author, "a:1")).firstName).toBe("a1");
         throw error;
       }),
     ).rejects.toBe(error);
-    expect(outcomes).toEqual([
+    // Then the failed narrowed invocation retains its optimization telemetry.
+    expect(outcomes).toMatchObject([
       {
         endpointKey: "failure",
         optimized: true,
@@ -639,6 +669,7 @@ describe("ExactColumnsPlugin", () => {
     const error = new Error("retry failed");
     outcomes.length = 0;
     let attempts = 0;
+    // When the novel lastName branch fails after triggering a full-row retry.
     await expect(
       invoke(plugin, "retry-failure", async (em) => {
         attempts++;
@@ -646,8 +677,9 @@ describe("ExactColumnsPlugin", () => {
         throw error;
       }),
     ).rejects.toBe(error);
+    // Then one outcome covers both attempts, including the failed retry.
     expect(attempts).toBe(2);
-    expect(outcomes).toEqual([
+    expect(outcomes).toMatchObject([
       {
         endpointKey: "retry-failure",
         optimized: true,
@@ -671,20 +703,24 @@ describe("ExactColumnsPlugin", () => {
       },
     });
     await settle(plugin, "throwing-hook", async (em) => (await em.load(Author, "a:1")).firstName);
+    // When lastName requires a retry despite the throwing telemetry hook.
     await expect(invoke(plugin, "throwing-hook", async (em) => (await em.load(Author, "a:1")).lastName)).resolves.toBe(
       "l1",
     );
+    // Then the hook cannot prevent the retry from returning lastName.
     expect(outcomes).toHaveLength(5);
     expect(outcomes.at(-1)?.retried).toBe(true);
     // And an application failure must still escape unchanged.
     const error = new Error("application failed");
+    // When the endpoint itself fails while telemetry also throws.
     await expect(
       plugin.track("throwing-hook", async () => {
         throw error;
       }),
     ).rejects.toBe(error);
+    // Then the original application error and its outcome survive the telemetry failure.
     expect(outcomes).toHaveLength(6);
-    expect(outcomes.at(-1)).toEqual({
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "throwing-hook",
       optimized: false,
       retried: false,
@@ -712,10 +748,12 @@ describe("ExactColumnsPlugin", () => {
     });
     await loaded.promise;
     try {
+      // When a concurrent invocation discovers lastName and retries.
       await expect(invoke(plugin, "concurrent", async (em) => (await em.load(Author, "a:1")).lastName)).resolves.toBe(
         "l1",
       );
-      expect(outcomes).toEqual([
+      // Then only that invocation reports a retry.
+      expect(outcomes).toMatchObject([
         {
           endpointKey: "concurrent",
           optimized: true,
@@ -726,11 +764,13 @@ describe("ExactColumnsPlugin", () => {
         },
       ]);
     } finally {
+      // When the original firstName invocation resumes after the other request's retry.
       release.resolve();
       await expect(first).resolves.toBe("a1");
     }
+    // Then its original narrowed outcome remains isolated from the other request.
     expect(outcomes).toHaveLength(2);
-    expect(outcomes[1]).toEqual({
+    expect(outcomes[1]).toMatchObject({
       endpointKey: "concurrent",
       optimized: true,
       retried: false,
@@ -741,9 +781,9 @@ describe("ExactColumnsPlugin", () => {
   });
 
   it("counts lazy primary projections without counting on-demand lazy loads", async () => {
-    // Given a ParentGroup with lazy data outside its four-column primary projection.
+    // Given a ParentGroup with lazy data outside its five-column primary projection.
     await insertParentGroup({ name: "pg1", bulk_data: { key: "value" }, required_data: {} });
-    // And an endpoint that only reads its timestamp and lazy data, leaving name prunable.
+    // And an endpoint that only reads its timestamp and lazy data, leaving name and eagerEmbedding prunable.
     const { plugin, outcomes } = observe();
     /** Loads lazy data separately from the primary ParentGroup projection. */
     async function endpoint(em: EntityManager): Promise<void> {
@@ -751,25 +791,29 @@ describe("ExactColumnsPlugin", () => {
       expect(pg.createdAt).toBeInstanceOf(Date);
       expect(await pg.bulkData.load()).toEqual({ key: "value" });
     }
+    // When the endpoint learns its primary projection independently of its lazy loads.
     await settle(plugin, "lazy", endpoint);
-    expect(outcomes).toEqual(
+    // Then the primary projection includes five non-lazy columns during learning.
+    expect(outcomes).toMatchObject(
       Array(4).fill({
         endpointKey: "lazy",
         optimized: false,
         retried: false,
         missingColumnFailure: false,
-        columnsBefore: 4,
+        columnsBefore: 5,
         columnsOmitted: 0,
       }),
     );
+    // When the settled endpoint serves another request.
     await invoke(plugin, "lazy", endpoint);
-    expect(outcomes.at(-1)).toEqual({
+    // Then it omits both unused primary columns without counting lazy loads.
+    expect(outcomes.at(-1)).toMatchObject({
       endpointKey: "lazy",
       optimized: true,
       retried: false,
       missingColumnFailure: false,
-      columnsBefore: 4,
-      columnsOmitted: 1,
+      columnsBefore: 5,
+      columnsOmitted: 2,
     });
   });
 });

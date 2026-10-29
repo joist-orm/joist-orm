@@ -16,7 +16,7 @@
     "test-lazy": "TEST_VARIANT=lazy DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
     "test-lazy-preloading": "TEST_VARIANT=lazy-preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy_preloading JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
     "codegen": "env-cmd tsx ../../codegen && graphql-codegen --config graphql-codegen.mjs",
-    "docker:up": "docker compose up -d db",
+    "docker:up": "docker compose up -d db valkey",
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
@@ -35,6 +35,7 @@
     "@homebound/graphql-typescript-resolver-scaffolding": "^2.50.0",
     "@homebound/graphql-typescript-scalar-type-policies": "^2.14.0",
     "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
+    "@redis/client": "^6.3.0",
     "@swc/core": "1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",

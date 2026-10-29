@@ -262,6 +262,16 @@ export {
   type ExactColumnsTrackOutcome,
   MissingColumnError,
 } from "./plugins/ExactColumnsPlugin.ts";
+export type {
+  ExactColumnsStoreAdapter,
+  ExactColumnsStoreKey,
+  ExactColumnsStoreUpdate,
+  ExactColumnsStoredProfile,
+  ExactColumnsSnapshot,
+  ExactColumnsPersistenceOpts,
+  ExactColumnsCacheEvent,
+} from "./plugins/ExactColumnsStoreAdapter.ts";
+export { RedisExactColumnsStore, type RedisExactColumnsStoreOpts } from "./plugins/RedisExactColumnsStore.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,

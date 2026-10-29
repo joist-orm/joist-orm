@@ -7,14 +7,23 @@ import { getInstanceData } from "../BaseEntity.ts";
 import { loadOperation } from "../batchloaders/loadBatchLoader.ts";
 import { oneToManyLoadOperation } from "../batchloaders/oneToManyBatchLoader.ts";
 import { oneToOneLoadOperation } from "../batchloaders/oneToOneBatchLoader.ts";
+import { getMetadataForType } from "../configure.ts";
 import { findOperation } from "../dataloaders/findDataLoader.ts";
 import { oneToManyFindOperation } from "../dataloaders/oneToManyFindDataLoader.ts";
 import { type Entity } from "../Entity.ts";
 import { type FindOperation, type MaybeAbstractEntityConstructor } from "../EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
 import { Plugin } from "../PluginManager.ts";
+import { ExactColumnsStore } from "./ExactColumnsStore.ts";
+import type {
+  ExactColumnsPersistenceOpts,
+  ExactColumnsSnapshot,
+  ExactColumnsStoredProfile,
+} from "./ExactColumnsStoreAdapter.ts";
 
 export interface ExactColumnsPluginOpts {
+  /** Omit for entirely in-memory learning, with no cache dependency or background work. */
+  persistence?: ExactColumnsPersistenceOpts;
   /** Called when a narrowed endpoint reads an un-fetched column, i.e. for telemetry, before the retry/rethrow. */
   onMissingColumn?: (err: MissingColumnError) => void;
   /** Synchronously reports once when track finishes, including errors and retries. Callback throws are ignored. */
@@ -22,7 +31,9 @@ export interface ExactColumnsPluginOpts {
 }
 
 /** Whether an endpoint profile is observing full rows or issuing narrowed SELECTs. */
-type ExactColumnsProfileMode = "learning" | "narrow";
+type ExactColumnsProfileMode = "learning" | "provisional" | "narrow";
+
+type ProfileOrigin = "local" | "l2_version" | "l2_seed";
 
 /**
  * One invocation's outcomes; the plugin owns learning and the application owns aggregation.
@@ -33,6 +44,9 @@ type ExactColumnsProfileMode = "learning" | "narrow";
  */
 export interface ExactColumnsTrackOutcome {
   readonly endpointKey: string;
+  readonly lookupSource: "l1" | "l2_version" | "l2_seed" | "cold";
+  readonly profileOrigin: ProfileOrigin;
+  readonly startingMode: ExactColumnsProfileMode;
   /** Whether at least one supported query projection had columns removed. */
   readonly optimized: boolean;
   /** Whether a missing-column retry started, regardless of whether it succeeded. */
@@ -91,18 +105,91 @@ export class MissingColumnError extends Error {
  *
  * Requirements: each `track(fn)` invocation must create its own EntityManager (the missing-column retry
  * re-invokes `fn`, and an EM whose flush aborted is not reusable), and an EM must not span two
- * track scopes. Entity reads must happen inside the tracked callback. Profiles are in-memory only,
- * so each process restart re-learns.
+ * track scopes. Entity reads must happen inside the tracked callback. Profiles are in-memory by
+ * default; optional persistence reuses settled profiles across processes and deployments.
  */
 export class ExactColumnsPlugin extends Plugin {
   readonly #onMissingColumn: ((err: MissingColumnError) => void) | undefined;
   readonly #onTrack: ExactColumnsPluginOpts["onTrack"];
   readonly #profiles: Map<string, EndpointProfile> = new Map();
+  readonly #initializing = new Map<string, Promise<EndpointProfile>>();
+  readonly #persistence: ExactColumnsStore | undefined;
+  readonly #codeVersion: string | undefined;
 
   constructor(opts: ExactColumnsPluginOpts = {}) {
     super();
     this.#onMissingColumn = opts.onMissingColumn;
     this.#onTrack = opts.onTrack;
+    this.#persistence = opts.persistence ? new ExactColumnsStore(opts.persistence) : undefined;
+    this.#codeVersion = opts.persistence?.codeVersion;
+  }
+
+  /** Best-effort persistence drain; call after tracked requests finish during graceful shutdown. */
+  async flushPersistence(): Promise<void> {
+    await this.#persistence?.flush();
+  }
+
+  /** Drain persistence and stop its background refresh; does not close the application's Redis client. */
+  async close(): Promise<void> {
+    await this.#persistence?.close();
+  }
+
+  /**
+   * Initialize an endpoint with a single cold lookup shared by concurrent callers.
+   *
+   * Exact-version learning overrides inherited readiness. Seeds instead narrow provisionally,
+   * earning a version-specific settled profile through successful requests on this build.
+   */
+  private async initialize(key: string): Promise<EndpointProfile> {
+    const profile = createProfile(key);
+    const persistence = this.#persistence!;
+    const cached = await persistence.load(key);
+    const stored = cached?.version ?? cached?.seed;
+    if (stored) {
+      const validVersion = !cached?.version || stored.codeVersion === this.#codeVersion;
+      if (validVersion && mergeProfile(profile, stored, false)) {
+        profile.origin = cached?.version ? "l2_version" : "l2_seed";
+        profile.mode = stored.state === "learning" ? "learning" : cached?.version ? "narrow" : "provisional";
+        persistence.emit({
+          endpointKey: key,
+          operation: "adopt",
+          result: "success",
+          sourceCodeVersion: stored.codeVersion,
+          revision: stored.revision,
+          mode: profile.mode,
+        });
+      } else {
+        persistence.emit({ endpointKey: key, operation: "reject", result: "error" });
+      }
+    } else if (cached) {
+      persistence.emit({ endpointKey: key, operation: "load", result: "miss" });
+    }
+    // A same-build model mismatch indicates corrupt data or a reused build id. Do not republish it.
+    if (cached?.version && profile.origin === "local") {
+      this.#profiles.set(key, profile);
+      return profile;
+    }
+    persistence.register(
+      key,
+      {
+        snapshot: () => snapshotProfile(profile),
+        isProvisional: () => profile.mode === "provisional",
+        merge: (remote, reset) => mergeProfile(profile, remote, reset),
+      },
+      cached?.version?.revision,
+    );
+    profile.changed = (invalidate, settled, previousMode) => {
+      persistence.changed(key, invalidate, settled);
+      if (invalidate || settled)
+        persistence.emit({
+          endpointKey: key,
+          operation: invalidate ? "deoptimize" : previousMode === "provisional" ? "promote" : "settle",
+          result: "success",
+          mode: previousMode,
+        });
+    };
+    this.#profiles.set(key, profile);
+    return profile;
   }
 
   /**
@@ -114,23 +201,28 @@ export class ExactColumnsPlugin extends Plugin {
    */
   async track<T>(key: string, fn: () => Promise<T>): Promise<T> {
     let profile = this.#profiles.get(key);
+    const l1 = profile !== undefined;
     if (!profile) {
-      // A key starts conservatively with full rows and no evidence that its field union is complete.
-      profile = {
-        key,
-        mode: "learning",
-        stableRuns: 0,
-        instability: 0,
-        cleanRuns: 0,
-        perMeta: new Map(),
-      };
-      this.#profiles.set(key, profile);
+      if (this.#persistence) {
+        let initializing = this.#initializing.get(key);
+        if (!initializing) {
+          initializing = this.initialize(key).finally(() => this.#initializing.delete(key));
+          this.#initializing.set(key, initializing);
+        }
+        profile = await initializing;
+      } else {
+        // A key starts conservatively with full rows and no evidence that its field union is complete.
+        profile = createProfile(key);
+        this.#profiles.set(key, profile);
+      }
     }
+    this.#persistence?.touch(key);
     // Snapshot the mode for this invocation; a concurrent call may change the profile's next mode.
     // I.e. a call that started learning remains full-row even if another call settles the profile.
     const scope: TrackScope = {
       profile,
       mode: profile.mode,
+      epoch: profile.epoch,
       flushed: false,
       discoveredNewField: false,
       columns: this.#onTrack ? { before: 0, omitted: 0 } : undefined,
@@ -161,6 +253,7 @@ export class ExactColumnsPlugin extends Plugin {
       const retryScope: TrackScope = {
         profile,
         mode: "learning",
+        epoch: profile.epoch,
         flushed: false,
         discoveredNewField: false,
         columns: scope.columns,
@@ -172,6 +265,9 @@ export class ExactColumnsPlugin extends Plugin {
       try {
         this.#onTrack?.({
           endpointKey: key,
+          lookupSource: l1 ? "l1" : profile.origin === "local" ? "cold" : profile.origin,
+          profileOrigin: profile.origin,
+          startingMode: scope.mode,
           optimized: scope.columns!.omitted > 0,
           retried,
           missingColumnFailure,
@@ -221,7 +317,7 @@ export class ExactColumnsPlugin extends Plugin {
    */
   beforeFind(meta: EntityMetadata, operation: FindOperation, query: ParsedFindQuery): void {
     const scope = scopes.getStore();
-    if (!scope || (scope.mode !== "narrow" && !scope.columns)) return;
+    if (!scope || (scope.mode === "learning" && !scope.columns)) return;
     // STI/CTI hydration probes discriminator/subtype columns outside of getField, so never narrow them
     if (meta.inheritanceType !== undefined) return;
     if (!narrowableOperations.has(operation)) return;
@@ -234,7 +330,7 @@ export class ExactColumnsPlugin extends Plugin {
     if (scope.columns) {
       scope.columns.before += countSelectedColumns(meta, query, alias, starIndex !== -1);
     }
-    if (scope.mode !== "narrow") return;
+    if (scope.mode === "learning") return;
     // Only narrow metas we saw reads for; a type first touched post-learning keeps full rows
     // (and gets recorded by the read hook), so the next invocation narrows it without a missing-column error
     const metaProfile = scope.profile.perMeta.get(meta.cstr);
@@ -271,6 +367,10 @@ export class ExactColumnsPlugin extends Plugin {
 
 interface EndpointProfile {
   key: string;
+  origin: ProfileOrigin;
+  /** Local field/invalidation epoch prevents in-flight calls settling a profile they did not observe. */
+  epoch: number;
+  changed?: (invalidate: boolean, settled: boolean, previousMode?: ExactColumnsProfileMode) => void;
   /** The mode new invocations snapshot when they start. */
   mode: ExactColumnsProfileMode;
   /** Consecutive successful learning calls that added no fields. */
@@ -294,6 +394,7 @@ interface TrackScope {
   profile: EndpointProfile;
   /** The profile mode captured when this invocation started. */
   mode: ExactColumnsProfileMode;
+  epoch: number;
   /** Whether this invocation has flushed writes, i.e. after which a missing-column error must not auto-retry. */
   flushed: boolean;
   /** Whether this invocation added a field to the profile's learned union. */
@@ -355,6 +456,7 @@ function countSelectedColumns(meta: EntityMetadata, query: ParsedFindQuery, alia
  */
 function completeInvocation(scope: TrackScope): void {
   const { profile } = scope;
+  if (scope.epoch !== profile.epoch || scope.mode !== profile.mode) return;
   if (scope.mode === "narrow") {
     profile.cleanRuns++;
     // Sustained clean use suggests prior variation was transient, so future faults can settle faster again.
@@ -364,12 +466,13 @@ function completeInvocation(scope: TrackScope): void {
       profile.cleanRuns = 0;
     }
   } else if (!scope.discoveredNewField) {
-    // A full-row invocation with no new fields is evidence that the learned union has stabilized.
+    // Full-row learning or successful speculative reuse supplies evidence for this exact union.
     profile.stableRuns++;
     if (profile.stableRuns >= requiredStableRuns(profile)) {
       // This full-row call supplied the final evidence; the next invocation can narrow.
       profile.mode = "narrow";
       profile.cleanRuns = 0;
+      profile.changed?.(false, true, scope.mode);
     }
   }
 }
@@ -379,10 +482,13 @@ function completeInvocation(scope: TrackScope): void {
  * I.e. the first missing-column error changes the next learning target from 3 stable calls to 5.
  */
 function deoptimize(profile: EndpointProfile): void {
+  const previousMode = profile.mode;
   profile.mode = "learning";
   profile.stableRuns = 0;
   profile.cleanRuns = 0;
   profile.instability++;
+  profile.epoch++;
+  profile.changed?.(true, false, previousMode);
 }
 
 /**
@@ -406,7 +512,82 @@ function recordField(profile: EndpointProfile, cstr: MaybeAbstractEntityConstruc
   // Set.add does not report insertion, so compare sizes to distinguish discovery from a repeated read.
   const size = metaProfile.fields.size;
   metaProfile.fields.add(fieldName);
-  return metaProfile.fields.size !== size;
+  const grew = metaProfile.fields.size !== size;
+  if (grew) {
+    profile.epoch++;
+    profile.stableRuns = 0;
+    profile.changed?.(false, false);
+  }
+  return grew;
+}
+
+/** A fresh endpoint has no evidence that narrowing is useful or safe to speculate on. */
+function createProfile(key: string): EndpointProfile {
+  return {
+    key,
+    origin: "local",
+    epoch: 0,
+    mode: "learning",
+    stableRuns: 0,
+    instability: 0,
+    cleanRuns: 0,
+    perMeta: new Map(),
+  };
+}
+
+/** Serialize logical fields, never constructors or derived SQL projections. */
+function snapshotProfile(profile: EndpointProfile): ExactColumnsSnapshot {
+  const entities: ExactColumnsSnapshot["entities"] = Object.create(null);
+  for (const [cstr, entry] of profile.perMeta) {
+    const meta = getMetadata(cstr);
+    entities[meta.type] = {
+      table: meta.tableName,
+      fields: Object.fromEntries([...entry.fields].map((field) => [field, true as const])),
+    };
+  }
+  return { entities, state: profile.mode === "narrow" ? "settled" : "learning", instability: profile.instability };
+}
+
+/**
+ * Validate the entire cached model before merging; partial imports must not authorize narrowing.
+ *
+ * Remote fields only widen the local union. A remote invalidation also fences in-flight learning
+ * observations, so calls that started before that invalidation cannot immediately settle it again.
+ */
+function mergeProfile(profile: EndpointProfile, stored: ExactColumnsStoredProfile, reset: boolean): boolean {
+  const resolved: [EntityMetadata, string[]][] = [];
+  try {
+    for (const [type, entry] of Object.entries(stored.entities)) {
+      const meta = getMetadataForType(type);
+      const fields = Object.keys(entry.fields);
+      if (meta.tableName !== entry.table || fields.some((field) => !meta.allFields[field]?.serde)) return false;
+      resolved.push([meta, fields]);
+    }
+  } catch {
+    return false;
+  }
+  let grew = false;
+  for (const [meta, fields] of resolved) {
+    let entry = profile.perMeta.get(meta.cstr);
+    if (!entry) {
+      entry = { fields: new Set() };
+      profile.perMeta.set(meta.cstr, entry);
+    }
+    for (const field of fields) {
+      if (!entry.fields.has(field)) {
+        entry.fields.add(field);
+        grew = true;
+      }
+    }
+  }
+  profile.instability = Math.max(profile.instability, stored.instability);
+  if (grew || reset) {
+    profile.epoch++;
+    profile.stableRuns = 0;
+    profile.cleanRuns = 0;
+    profile.mode = "learning";
+  }
+  return true;
 }
 
 /**

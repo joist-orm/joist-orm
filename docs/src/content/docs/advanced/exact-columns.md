@@ -46,9 +46,6 @@ The plugin uses two modes, learning and narrowed, with self-healing returning it
 
    The top-level `track` catches it, falls back to "learning mode", and retries once with full rows.
 
-Ideally these
-
-
 The auto-retry only happens if the invocation hasn't flushed yet — a missing-column error *after* a committed `em.flush` propagates (failing that one request) rather than re-executing the committed writes, and the widened profile still fixes the next invocation. A missing-column error *during* a flush aborts that flush's transaction, so nothing commits and the retry stays safe.
 
 ```typescript
@@ -91,6 +88,9 @@ The exported `ExactColumnsTrackOutcome` has these readonly fields:
 | Field | Meaning |
 | --- | --- |
 | `endpointKey: string` | The stable key passed to `track()`. |
+| `lookupSource` | `cold`, `l1`, `l2_version`, or `l2_seed`. Concurrent callers sharing initialization report the same L2 source. |
+| `profileOrigin` | `local`, `l2_version`, or `l2_seed`; retained across subsequent L1 hits. |
+| `startingMode` | `learning`, `provisional`, or `narrow`, captured before the first attempt. |
 | `optimized: boolean` | Whether any columns were removed in a supported query preparation. |
 | `retried: boolean` | Whether a retry due to a missing-column error started, regardless of whether it succeeded. |
 | `missingColumnFailure: boolean` | Whether committed writes prevented a retry due to a missing-column error, not whether a retry failed. |
@@ -136,12 +136,89 @@ Calculate each rate from summed counts over the same window, not by averaging pe
 
 Monitor `sum:joist.exact_columns.missing_column_failures{*}.as_count()` separately as a safety signal, ideally zero. Keep `onMissingColumn` for logging the specific entity and field, not counting retries: it runs before the plugin decides whether to retry or fail.
 
+## Optional Redis / Valkey persistence
+
+The same plugin supports **L1 only** (the default) or **L1 + L2**. Without `persistence`, it creates no cache timers or queues and requires no Redis client. With persistence, field reads and query preparation still use only L1.
+
+```typescript
+import { createClient } from "redis";
+import { ExactColumnsPlugin, RedisExactColumnsStore } from "joist-orm";
+
+const client = createClient({ url: process.env.VALKEY_URL });
+client.on("error", (error) => log.warn({ error }, "Valkey connection error"));
+await client.connect();
+
+export const exactColumns = new ExactColumnsPlugin({
+  persistence: {
+    store: new RedisExactColumnsStore({
+      sendCommand: (args) => client.sendCommand(args),
+      // ttlSeconds defaults to seven days.
+    }),
+    namespace: "my-app:production",
+    codeVersion: buildSha,
+    onCacheEvent: (event) => {
+      // Aggregate cache operations; log transitions/errors rather than every successful operation.
+      cacheMetrics.record(event);
+    },
+  },
+  onTrack: (outcome) => requestMetrics.record(outcome),
+});
+
+// After requests finish during graceful shutdown:
+await exactColumns.close();
+await client.close();
+```
+
+Joist does not depend on a Redis client. `sendCommand` accepts command arguments and returns the client's decoded result. For ioredis, use `sendCommand: (args) => client.call(args[0], ...args.slice(1))`. The application owns connection setup, reconnection, command timeouts, and offline-queue limits; bound those queues as well as Joist's queue. Cache errors after startup fall back to local learning. Applications that must also start without Valkey should handle connection failure in their own startup policy.
+
+Use an immutable build identifier for `codeVersion`. Include application, environment, and model/database identity in `namespace` when those can differ. Redis keys include an internal format version and hashed identities; version and seed keys share a Redis Cluster slot. The cache contains field identities and learning state, never entity row values.
+
+### Deployment reuse
+
+Each endpoint has a version-specific entry plus a cross-version **seed snapshot**:
+
+| First lookup | Behavior |
+| --- | --- |
+| Same-version settled profile | Narrow immediately. |
+| Same-version learning profile | Restore its field union and backoff; use full-row learning. |
+| Seed only | Narrow immediately in provisional mode. |
+| Miss, timeout, or incompatible profile | Learn locally using full rows. |
+
+An exact-version learning entry always wins over the seed. This prevents workers from resurrecting a seed after the running version has discovered a missing field.
+
+An inherited seed earns settled status after three successful, no-growth invocations, increased by its inherited instability backoff. **Those invocations already use narrowed SELECTs.** New fields reset that progress; a missing field invokes the usual widen/retry/backoff behavior. Promotion publishes the versioned profile and replaces the seed. A settled profile remains speculative: neither a matching build identifier nor a few clean requests proves coverage of every branch.
+
+Same-version workers merge field sets atomically. Revisions prevent stale workers from marking a wider or invalidated profile settled. Stability counters stay local. Active endpoints refresh their shared union and renew their version entry's TTL in the background, approximately once per minute with jitter. Remote invalidations return a worker to full-row learning. There is a propagation window during which another worker may independently encounter the same missing field.
+
+Only earned settlement publishes a seed; ordinary TTL renewal does not. The last settled publication wins, including during rolling deployments. Seeds are replaced rather than unioned across historical versions, although inherited unused fields can remain in the profile. Change the namespace to explicitly reset learning. Unknown cached fields/entities are rejected; added model fields can be discovered normally. A same-version incompatible profile disables persistence for that endpoint in the current process rather than republishing incompatible data.
+
+### Availability and lifecycle
+
+Persistence options default to:
+
+| Option | Default |
+| --- | --- |
+| `timeoutMs` | 50 ms per cache operation |
+| `refreshIntervalMs` | 60,000 ms, jittered |
+| `maxPending` | 1,000 queued endpoint writes |
+| Store `ttlSeconds` | 604,800 seconds (seven days) |
+
+Cold reads are deduplicated per endpoint. Writes are asynchronous and coalesced, with deoptimizations prioritized. Errors trigger exponential backoff; timed-out reads cannot later overwrite local learning. Cache-operation deadlines bound waiting, not the execution of an already submitted Redis command. Revision checks also protect against delayed stale publications.
+
+`flushPersistence()` drains pending writes best-effort without stopping refreshes. `close()` stops refreshes and drains best-effort; call it after requests finish. Neither method closes the application's Redis connection. During an outage, draining can leave unpersisted observations; local behavior is unaffected.
+
+### Cache observability
+
+`onCacheEvent` reports loads, merges, refreshes, adoption, provisional promotion, local settlement, deoptimization, and rejected profiles. Events include operation/result, optional latency/error, and version/revision information for structured logs. Its synchronous exceptions are ignored, like `onTrack`.
+
+Use `lookupSource`, `profileOrigin`, and `startingMode` as low-cardinality request dimensions. Track seed promotion versus provisional deoptimization, retries by profile origin, and post-write missing-column failures. Keep build SHAs, revisions, and arbitrary operation hashes out of metric labels.
+
 ## Requirements & caveats
 
 - **Entity reads must happen inside the tracked callback.** Return response data rather than entities that will be read after `track()` returns; reads outside the scope do not contribute to the profile and cannot trigger a retry.
 - **Each `track` invocation must create its own `EntityManager`** (the usual per-request pattern). A retry due to a missing-column error re-invokes your whole function, and an `EntityManager` whose flush aborted is not reusable; similarly, one `EntityManager` must not span two `track` scopes.
 - **Pre-flush retries re-run your endpoint**: database writes are protected automatically (no retry after a committed flush, per above), but Joist can't see non-database side effects — an email or queue publish performed *before* a missing-column error will re-run on the retry. Keep such effects after your reads (or idempotent), or accept the rare one-time-per-branch repeat. Aggregate `onTrack`'s `retried` and `missingColumnFailure` outcomes to see how often either path fires.
-- **Profiles are in-memory**, so each process restart re-learns from scratch. Stable endpoints narrow after the initial field-discovery invocation and three no-growth observations.
+- **Profiles are in-memory by default**, so each process restart re-learns from scratch unless optional persistence is configured. Stable local endpoints narrow after the initial field-discovery invocation and three no-growth observations; settled L2 profiles narrow immediately.
 - Don't swallow `MissingColumnError` in broad `try/catch`es — re-reads keep throwing (the value is never cached), and `track` needs to see the error to widen the profile.
 
 ## What is (and isn't) narrowed

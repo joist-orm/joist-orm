@@ -4484,6 +4484,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@redis/client@npm:^6.3.0":
+  version: 6.3.0
+  resolution: "@redis/client@npm:6.3.0"
+  peerDependencies:
+    "@node-rs/xxhash": ^1.1.0
+    "@opentelemetry/api": ">=1 <2"
+  peerDependenciesMeta:
+    "@node-rs/xxhash":
+      optional: true
+    "@opentelemetry/api":
+      optional: true
+  checksum: 10/d957cc6d7cfa90a2bb85b0dea1802817eec649109a6aaf3270bc3016b7c9756b4ad3f8e75e599aadc6141cae96058e066e3cc9b183033e3b0278ea48b61c5444
+  languageName: node
+  linkType: hard
+
 "@repeaterjs/repeater@npm:^3.0.4, @repeaterjs/repeater@npm:^3.0.6":
   version: 3.0.6
   resolution: "@repeaterjs/repeater@npm:3.0.6"
@@ -11407,6 +11422,7 @@ __metadata:
     "@homebound/graphql-typescript-resolver-scaffolding": "npm:^2.50.0"
     "@homebound/graphql-typescript-scalar-type-policies": "npm:^2.14.0"
     "@homebound/graphql-typescript-simple-resolvers": "npm:^1.59.0"
+    "@redis/client": "npm:^6.3.0"
     "@swc/core": "npm:1.16.18"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"

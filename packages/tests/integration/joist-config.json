@@ -141,6 +141,7 @@
         "publishers": { "stiType": "TaskOld" },
         "selfReferential": { "skipRecursiveRelations": true, "stiType": "TaskNew" },
         "selfReferentialTasks": { "stiType": "TaskNew" },
+        "slot": { "notNull": true, "stiType": ["TaskNew", "TaskOld"] },
         "specialNewAuthor": { "stiType": "TaskNew" },
         "tasks": { "stiType": "TaskOld" }
       },

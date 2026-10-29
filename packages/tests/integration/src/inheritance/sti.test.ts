@@ -1,9 +1,11 @@
 import { getProperties } from "joist-orm";
 import {
+  Author,
   Task,
   TaskItem,
   TaskNew,
   TaskOld,
+  TaskThird,
   TaskType,
   newAuthor,
   newTaskItem,
@@ -11,7 +13,7 @@ import {
   newTaskOld,
   newTaskThird,
 } from "src/entities";
-import { insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
+import { insertAuthor, insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("SingleTableInheritance", () => {
@@ -260,14 +262,19 @@ describe("SingleTableInheritance", () => {
   });
 
   it("can bulk-update tasks of each type", async () => {
-    await insertTask({ type: "NEW", special_new_field: 1 });
-    await insertTask({ type: "NEW", special_new_field: 1 });
-    await insertTask({ type: "OLD", special_old_field: 1 });
-    await insertTask({ type: "OLD", special_old_field: 1 });
+    // Given both task subtypes have their required slot
+    await insertAuthor({ id: 1, first_name: "slot" });
+    // And each subtype has two persisted tasks
+    await insertTask({ type: "NEW", special_new_field: 1, slot_id: 1 });
+    await insertTask({ type: "NEW", special_new_field: 1, slot_id: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1, slot_id: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1, slot_id: 1 });
 
     const em = newEntityManager();
     const [nt1, nt2] = await em.find(TaskNew, {});
     const [ot1, ot2] = await em.find(TaskOld, {});
+
+    // When each subtype changes its own field
     nt1.specialNewField = 2;
     nt2.specialNewField = 2;
     ot1.specialOldField++;
@@ -275,6 +282,7 @@ describe("SingleTableInheritance", () => {
     await em.flush();
 
     const rows = await select("tasks");
+    // Then all four tasks retain their subtype-specific values
     expect(rows).toMatchObject([
       { id: 1, type_id: 2, special_new_field: 2 },
       { id: 2, type_id: 2, special_new_field: 2 },
@@ -508,5 +516,180 @@ describe("SingleTableInheritance", () => {
     await insertTask({ type: "NEW", special_new_field: 1 });
     const em = newEntityManager();
     await expect(em.loadAll(TaskOld, ["task:1"])).rejects.toThrow("TaskNew:1 were not of type TaskOld");
+  });
+
+  it("updates a required relation shared by two STI subtypes", async () => {
+    // Given TaskNew and TaskOld share slot, like ItemTemplateItem and ProjectCustomItem
+    const em = newEntityManager();
+    const task = newTaskNew(em);
+    // And a persisted slot that can replace the task's original slot
+    const slot = newAuthor(em);
+    await em.flush();
+
+    // When a persisted TaskNew changes its slot
+    task.slot.set(slot);
+    await em.flush();
+
+    // Then its new slot is persisted without an ambiguous slot_id column
+    expect(await select("tasks")).toMatchObject([{ id: 1, slot_id: Number(slot.idUntagged) }]);
+  });
+
+  it("preserves shared fields when updating all three STI subtypes together", async () => {
+    // Given both slot-bearing subtypes and TaskThird, like TakeoffLineItemVersion without slot
+    const em = newEntityManager();
+    const newTask = newTaskNew(em, { sharedSubtypeField: 1, slot: {} });
+    const oldTask = newTaskOld(em, { sharedSubtypeField: 2, slot: {} });
+    const unchangedTask = newTaskOld(em, { sharedSubtypeField: 3, slot: {} });
+    const thirdTask = newTaskThird(em);
+    // And distinct replacement slots for the two slot-bearing subtypes
+    const newSlot = newAuthor(em);
+    const oldSlot = newAuthor(em);
+    await em.flush();
+    // And reloaded tasks have not accessed their unchanged shared values
+    const em2 = newEntityManager();
+    const [nt, ot, unchanged, third] = await Promise.all([
+      em2.load(TaskNew, newTask.id),
+      em2.load(TaskOld, oldTask.id),
+      em2.load(TaskOld, unchangedTask.id),
+      em2.load(TaskThird, thirdTask.id),
+    ]);
+
+    // When both slots change while other tasks change only base fields
+    nt.slot.set(await em2.load(Author, newSlot.id));
+    nt.sharedSubtypeField = 10;
+    ot.slot.set(await em2.load(Author, oldSlot.id));
+    ot.sharedSubtypeField = 20;
+    unchanged.durationInDays = 30;
+    third.durationInDays = 40;
+    await em2.flush();
+
+    // Then changed values, unchanged shared values, and the subtype without slot are preserved
+    expect(await select("tasks")).toMatchObject([
+      { id: Number(nt.idUntagged), slot_id: Number(newSlot.idUntagged), shared_subtype_field: 10 },
+      { id: Number(ot.idUntagged), slot_id: Number(oldSlot.idUntagged), shared_subtype_field: 20 },
+      {
+        id: Number(unchanged.idUntagged),
+        slot_id: Number(unchanged.slot.idUntagged),
+        shared_subtype_field: 3,
+        duration_in_days: 30,
+      },
+      { id: Number(third.idUntagged), slot_id: null, shared_subtype_field: null, duration_in_days: 40 },
+    ]);
+  });
+
+  it("keeps a shared subtype relation off the base and the nonparticipating subtype", () => {
+    // Given TaskThird does not participate in the slot relation
+    const em = newEntityManager();
+    const third = newTaskThird(em);
+
+    // When inspecting its generated relation and the abstract base's fields
+    // Then neither exposes slot, including in the generated TypeScript API
+    // @ts-expect-error TaskThird has no slot relation
+    expect(third.slot).toBeUndefined();
+    expect(Task.metadata.allFields.slot).toBeUndefined();
+  });
+
+  it("loads both participating subtypes through the reverse relation", async () => {
+    // Given both slot-bearing subtypes point at the same slot
+    const em = newEntityManager();
+    const slot = newAuthor(em);
+    newTaskNew(em, { slot });
+    newTaskOld(em, { slot });
+    // And the nonparticipating subtype has no slot
+    newTaskThird(em);
+    await em.flush();
+
+    // When the slot's tasks are loaded in a fresh EntityManager
+    const em2 = newEntityManager();
+    const reloaded = await em2.load(Author, slot.id);
+    const tasks = await reloaded.slottedTasks.load();
+
+    // Then neither participating subtype is excluded by an implicit discriminator filter
+    expect(tasks).toMatchEntity([{ type: TaskType.New }, { type: TaskType.Old }]);
+  });
+
+  it("names each physical column once in a mixed-subtype batch UPDATE", async () => {
+    // Given all three subtypes share a table, but only TaskNew and TaskOld have slot
+    const em = newEntityManager();
+    const nt = newTaskNew(em);
+    const ot = newTaskOld(em);
+    const third = newTaskThird(em);
+    // And a replacement slot already exists
+    const slot = newAuthor(em);
+    await em.flush();
+
+    // When a batch changes both shared fields and a base field
+    nt.slot.set(slot);
+    ot.slot.set(slot);
+    nt.sharedSubtypeField = 1;
+    ot.sharedSubtypeField = 2;
+    third.durationInDays = 30;
+    resetQueryCount();
+    await em.flush();
+
+    // Then the data CTE and SET clause each name slot_id and shared_subtype_field once
+    expect(queries.filter((q) => q.startsWith("WITH"))).toMatchInlineSnapshot(`
+     [
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as duration_in_days, unnest($3::timestamp with time zone[]) as updated_at, unnest($4::int[]) as shared_subtype_field, unnest($5::int[]) as slot_id, unnest($6::timestamptz[]) as __original_updated_at) UPDATE tasks SET duration_in_days = data.duration_in_days, updated_at = data.updated_at, shared_subtype_field = data.shared_subtype_field, slot_id = data.slot_id FROM data WHERE tasks.id = data.id AND date_trunc('milliseconds', tasks.updated_at) = data.__original_updated_at RETURNING tasks.id",
+     ]
+    `);
+  });
+
+  it("inserts shared relations for both participating subtypes in the same flush", async () => {
+    // Given distinct slots for the two participating subtypes
+    const em = newEntityManager();
+    const newSlot = newAuthor(em);
+    const oldSlot = newAuthor(em);
+
+    // When all three task subtypes are inserted in one flush
+    newTaskNew(em, { slot: newSlot });
+    newTaskOld(em, { slot: oldSlot });
+    newTaskThird(em);
+    await em.flush();
+
+    // Then each subtype writes its own slot and the nonparticipating subtype leaves it null
+    expect(await select("tasks")).toMatchObject([
+      { type_id: 2, slot_id: Number(newSlot.idUntagged) },
+      { type_id: 1, slot_id: Number(oldSlot.idUntagged) },
+      { type_id: 3, slot_id: null },
+    ]);
+  });
+
+  it("moves both participating subtypes between loaded reverse collections", async () => {
+    // Given both participating subtypes share a slot
+    const em = newEntityManager();
+    const slot = newAuthor(em);
+    const nt = newTaskNew(em, { slot });
+    const ot = newTaskOld(em, { slot });
+    // And a second slot has an empty reverse collection
+    const replacement = newAuthor(em);
+    await em.flush();
+
+    // When both tasks move to the second slot
+    nt.slot.set(replacement);
+    ot.slot.set(replacement);
+    await em.flush();
+
+    // Then the original reverse collection no longer has either task
+    expect(slot.slottedTasks.get).toMatchEntity([]);
+    expect(replacement.slottedTasks.get).toMatchEntity([{ id: nt.id }, { id: ot.id }]);
+  });
+
+  it("deletes all three subtypes after inserting shared relations", async () => {
+    // Given persisted tasks of all three subtypes
+    const em = newEntityManager();
+    const nt = newTaskNew(em);
+    const ot = newTaskOld(em);
+    const third = newTaskThird(em);
+    await em.flush();
+
+    // When all three subtypes are deleted in one flush
+    em.delete(nt);
+    em.delete(ot);
+    em.delete(third);
+    await em.flush();
+
+    // Then the shared relation does not interfere with deleting their rows
+    expect(await select("tasks")).toEqual([]);
   });
 });

@@ -216,7 +216,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     }
   }
 
-  const columns: Array<BindingColumn> = (
+  const allColumns = (
     meta.inheritanceType === "sti"
       ? // Hack this one handling of STI into here...
         getBaseSelfAndSubMetas(meta).flatMap((meta) =>
@@ -230,6 +230,9 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     .filter((f) => !lazyFieldNames.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
+
+  // Several STI subtypes can share a field, but the batch UPDATE must name each physical column once.
+  const columns: BindingColumn[] = [...new Map(allColumns.map((column) => [column.columnName, column])).values()];
 
   // If we're using class table inheritance, base/child tables may not have any columns to update
   if (columns.length === 1) {

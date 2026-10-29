@@ -32,6 +32,7 @@ type TaskNew {
   selfReferential: TaskNew
   selfReferentialTasks: [TaskNew!]!
   sharedSubtypeField: Int
+  slot: Author!
 }
 
 input SaveTaskNewInput {
@@ -47,6 +48,7 @@ input SaveTaskNewInput {
   asyncDefault_2: String
   selfReferentialId: ID
   sharedSubtypeField: Int
+  slotId: ID
 }
 
 type SaveTaskNewResult {
@@ -75,4 +77,5 @@ input TaskNewFilter {
   selfReferentialId: [ID!]
   specialNewAuthorId: [ID!]
   sharedSubtypeField: [Int!]
+  slotId: [ID!]
 }

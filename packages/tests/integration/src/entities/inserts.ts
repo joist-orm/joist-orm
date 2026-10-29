@@ -60,6 +60,7 @@ export function insertTask(row: {
   type: "OLD" | "NEW";
   special_new_field?: number | null;
   special_old_field?: number | null;
+  slot_id?: number;
   duration_in_days?: number;
 }) {
   const { type, ...rest } = row;

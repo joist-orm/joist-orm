@@ -519,17 +519,18 @@ describe("SingleTableInheritance", () => {
   });
 
   it("updates a required relation shared by two STI subtypes", async () => {
-    // Given TaskNew and TaskOld share the author relation
-    const em = newEntityManager();
-    const task = newTaskNew(em);
+    // Given a persisted TaskNew whose author relation is shared with TaskOld
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertTask({ id: 1, type: "NEW", author_id: 1 });
     // And a persisted author that can replace the task's original author
-    const author = newAuthor(em);
-    await em.flush();
+    await insertAuthor({ id: 2, first_name: "a2" });
+    const em = newEntityManager();
+    const task = await em.load(TaskNew, "task:1");
     // When a persisted TaskNew changes its author
-    task.author.set(author);
+    task.author.set(await em.load(Author, "a:2"));
     await em.flush();
     // Then its new author is persisted without an ambiguous author_id column
-    expect(await select("tasks")).toMatchObject([{ id: 1, author_id: Number(author.idUntagged) }]);
+    expect(await select("tasks")).toMatchObject([{ id: 1, author_id: 2 }]);
   });
 
   it("preserves shared fields when updating all three STI subtypes together", async () => {
@@ -571,10 +572,11 @@ describe("SingleTableInheritance", () => {
     ]);
   });
 
-  it("keeps a shared subtype relation off the base and the nonparticipating subtype", () => {
+  it("keeps a shared subtype relation off the base and the nonparticipating subtype", async () => {
     // Given TaskThird does not participate in the author relation
+    await insertTask({ id: 1, type: "THIRD" });
     const em = newEntityManager();
-    const third = newTaskThird(em);
+    const third = await em.load(TaskThird, "task:1");
     // When inspecting its generated relation and the abstract base's fields
     // Then neither exposes author, including in the generated TypeScript API
     // @ts-expect-error TaskThird has no author relation
@@ -584,30 +586,32 @@ describe("SingleTableInheritance", () => {
 
   it("loads both participating subtypes through the reverse relation", async () => {
     // Given both participating subtypes point at the same author
-    const em = newEntityManager();
-    const author = newAuthor(em);
-    newTaskNew(em, { author });
-    newTaskOld(em, { author });
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertTask({ id: 1, type: "NEW", author_id: 1 });
+    await insertTask({ id: 2, type: "OLD", special_old_field: 1, author_id: 1 });
     // And the nonparticipating subtype has no author
-    newTaskThird(em);
-    await em.flush();
+    await insertTask({ id: 3, type: "THIRD" });
     // When the author's tasks are loaded in a fresh EntityManager
-    const em2 = newEntityManager();
-    const reloaded = await em2.load(Author, author.id);
-    const tasks = await reloaded.authoredTasks.load();
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    const tasks = await author.authoredTasks.load();
     // Then neither participating subtype is excluded by an implicit discriminator filter
     expect(tasks).toMatchEntity([{ type: TaskType.New }, { type: TaskType.Old }]);
   });
 
   it("names each physical column once in a mixed-subtype batch UPDATE", async () => {
     // Given all three subtypes share a table, but only TaskNew and TaskOld have author
-    const em = newEntityManager();
-    const nt = newTaskNew(em);
-    const ot = newTaskOld(em);
-    const third = newTaskThird(em);
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertTask({ id: 1, type: "NEW", author_id: 1 });
+    await insertTask({ id: 2, type: "OLD", special_old_field: 1, author_id: 1 });
+    await insertTask({ id: 3, type: "THIRD" });
     // And a replacement author already exists
-    const author = newAuthor(em);
-    await em.flush();
+    await insertAuthor({ id: 2, first_name: "a2" });
+    const em = newEntityManager();
+    const nt = await em.load(TaskNew, "task:1");
+    const ot = await em.load(TaskOld, "task:2");
+    const third = await em.load(TaskThird, "task:3");
+    const author = await em.load(Author, "a:2");
     // When a batch changes both shared fields and a base field
     nt.author.set(author);
     ot.author.set(author);
@@ -619,16 +623,18 @@ describe("SingleTableInheritance", () => {
     // Then the data CTE and SET clause each name author_id and shared_subtype_field once
     expect(queries.filter((q) => q.startsWith("WITH"))).toMatchInlineSnapshot(`
      [
-       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as duration_in_days, unnest($3::timestamp with time zone[]) as updated_at, unnest($4::int[]) as shared_subtype_field, unnest($5::int[]) as author_id, unnest($6::timestamptz[]) as __original_updated_at) UPDATE tasks SET duration_in_days = data.duration_in_days, updated_at = data.updated_at, shared_subtype_field = data.shared_subtype_field, author_id = data.author_id FROM data WHERE tasks.id = data.id AND date_trunc('milliseconds', tasks.updated_at) = data.__original_updated_at RETURNING tasks.id",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as duration_in_days, unnest($3::text[]) as sync_derived, unnest($4::text[]) as async_derived, unnest($5::timestamp with time zone[]) as updated_at, unnest($6::int[]) as shared_subtype_field, unnest($7::int[]) as author_id, unnest($8::timestamptz[]) as __original_updated_at) UPDATE tasks SET duration_in_days = data.duration_in_days, sync_derived = data.sync_derived, async_derived = data.async_derived, updated_at = data.updated_at, shared_subtype_field = data.shared_subtype_field, author_id = data.author_id FROM data WHERE tasks.id = data.id AND date_trunc('milliseconds', tasks.updated_at) = data.__original_updated_at RETURNING tasks.id",
      ]
     `);
   });
 
   it("inserts shared relations for both participating subtypes in the same flush", async () => {
     // Given distinct authors for the two participating subtypes
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertAuthor({ id: 2, first_name: "a2" });
     const em = newEntityManager();
-    const newTaskAuthor = newAuthor(em);
-    const oldTaskAuthor = newAuthor(em);
+    const newTaskAuthor = await em.load(Author, "a:1");
+    const oldTaskAuthor = await em.load(Author, "a:2");
     // When all three task subtypes are inserted in one flush
     newTaskNew(em, { author: newTaskAuthor });
     newTaskOld(em, { author: oldTaskAuthor });
@@ -636,41 +642,44 @@ describe("SingleTableInheritance", () => {
     await em.flush();
     // Then each subtype writes its own author and the nonparticipating subtype leaves it null
     expect(await select("tasks")).toMatchObject([
-      { type_id: 2, author_id: Number(newTaskAuthor.idUntagged) },
-      { type_id: 1, author_id: Number(oldTaskAuthor.idUntagged) },
+      { type_id: 2, author_id: 1 },
+      { type_id: 1, author_id: 2 },
       { type_id: 3, author_id: null },
     ]);
   });
 
   it("moves both participating subtypes between loaded reverse collections", async () => {
     // Given both participating subtypes share an author
-    const em = newEntityManager();
-    const author = newAuthor(em);
-    const nt = newTaskNew(em, { author });
-    const ot = newTaskOld(em, { author });
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertTask({ id: 1, type: "NEW", author_id: 1 });
+    await insertTask({ id: 2, type: "OLD", special_old_field: 1, author_id: 1 });
     // And a second author has an empty reverse collection
-    const replacement = newAuthor(em);
-    await em.flush();
+    await insertAuthor({ id: 2, first_name: "a2" });
+    // And both reverse collections are loaded before either task changes its author
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1", "authoredTasks");
+    const replacement = await em.load(Author, "a:2", "authoredTasks");
+    const nt = await em.load(TaskNew, "task:1");
+    const ot = await em.load(TaskOld, "task:2");
     // When both tasks move to the second author
     nt.author.set(replacement);
     ot.author.set(replacement);
     await em.flush();
     // Then the original reverse collection no longer has either task
     expect(author.authoredTasks.get).toMatchEntity([]);
-    expect(replacement.authoredTasks.get).toMatchEntity([{ id: nt.id }, { id: ot.id }]);
+    expect(replacement.authoredTasks.get).toMatchEntity([{ id: "task:1" }, { id: "task:2" }]);
   });
 
   it("deletes all three subtypes after inserting shared relations", async () => {
     // Given persisted tasks of all three subtypes
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertTask({ id: 1, type: "NEW", author_id: 1 });
+    await insertTask({ id: 2, type: "OLD", special_old_field: 1, author_id: 1 });
+    await insertTask({ id: 3, type: "THIRD" });
     const em = newEntityManager();
-    const nt = newTaskNew(em);
-    const ot = newTaskOld(em);
-    const third = newTaskThird(em);
-    await em.flush();
+    const tasks = await em.find(Task, {});
     // When all three subtypes are deleted in one flush
-    em.delete(nt);
-    em.delete(ot);
-    em.delete(third);
+    for (const task of tasks) em.delete(task);
     await em.flush();
     // Then the shared relation does not interfere with deleting their rows
     expect(await select("tasks")).toEqual([]);

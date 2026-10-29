@@ -525,55 +525,49 @@ describe("SingleTableInheritance", () => {
     // And a persisted author that can replace the task's original author
     const author = newAuthor(em);
     await em.flush();
-
     // When a persisted TaskNew changes its author
     task.author.set(author);
     await em.flush();
-
     // Then its new author is persisted without an ambiguous author_id column
     expect(await select("tasks")).toMatchObject([{ id: 1, author_id: Number(author.idUntagged) }]);
   });
 
   it("preserves shared fields when updating all three STI subtypes together", async () => {
-    // Given TaskNew and TaskOld have authors, but TaskThird has no author relation
-    const em = newEntityManager();
-    const newTask = newTaskNew(em, { sharedSubtypeField: 1, author: {} });
-    const oldTask = newTaskOld(em, { sharedSubtypeField: 2, author: {} });
-    const unchangedTask = newTaskOld(em, { sharedSubtypeField: 3, author: {} });
-    const thirdTask = newTaskThird(em);
+    // Given an author shared by persisted TaskNew and TaskOld rows
+    await insertAuthor({ id: 1, first_name: "a1" });
+    // And both participating subtypes have shared primitive values
+    await insertTask({ id: 1, type: "NEW", shared_subtype_field: 1, author_id: 1 });
+    await insertTask({ id: 2, type: "OLD", special_old_field: 1, shared_subtype_field: 2, author_id: 1 });
+    await insertTask({ id: 3, type: "OLD", special_old_field: 1, shared_subtype_field: 3, author_id: 1 });
+    // And TaskThird has neither an author nor the shared primitive field
+    await insertTask({ id: 4, type: "THIRD" });
     // And distinct replacement authors for the two participating subtypes
-    const newTaskAuthor = newAuthor(em);
-    const oldTaskAuthor = newAuthor(em);
-    await em.flush();
-    // And reloaded tasks have not accessed their unchanged shared values
-    const em2 = newEntityManager();
+    await insertAuthor({ id: 2, first_name: "a2" });
+    await insertAuthor({ id: 3, first_name: "a3" });
+    // And loaded tasks have not accessed their unchanged shared values
+    const em = newEntityManager();
     const [nt, ot, unchanged, third] = await Promise.all([
-      em2.load(TaskNew, newTask.id),
-      em2.load(TaskOld, oldTask.id),
-      em2.load(TaskOld, unchangedTask.id),
-      em2.load(TaskThird, thirdTask.id),
+      em.load(TaskNew, "task:1"),
+      em.load(TaskOld, "task:2"),
+      em.load(TaskOld, "task:3"),
+      em.load(TaskThird, "task:4"),
     ]);
 
     // When both authors change while other tasks change only base fields
-    nt.author.set(await em2.load(Author, newTaskAuthor.id));
+    nt.author.set(await em.load(Author, "a:2"));
     nt.sharedSubtypeField = 10;
-    ot.author.set(await em2.load(Author, oldTaskAuthor.id));
+    ot.author.set(await em.load(Author, "a:3"));
     ot.sharedSubtypeField = 20;
     unchanged.durationInDays = 30;
     third.durationInDays = 40;
-    await em2.flush();
+    await em.flush();
 
     // Then changed values, unchanged shared values, and the subtype without author are preserved
     expect(await select("tasks")).toMatchObject([
-      { id: Number(nt.idUntagged), author_id: Number(newTaskAuthor.idUntagged), shared_subtype_field: 10 },
-      { id: Number(ot.idUntagged), author_id: Number(oldTaskAuthor.idUntagged), shared_subtype_field: 20 },
-      {
-        id: Number(unchanged.idUntagged),
-        author_id: Number(unchanged.author.idUntagged),
-        shared_subtype_field: 3,
-        duration_in_days: 30,
-      },
-      { id: Number(third.idUntagged), author_id: null, shared_subtype_field: null, duration_in_days: 40 },
+      { id: 1, author_id: 2, shared_subtype_field: 10 },
+      { id: 2, author_id: 3, shared_subtype_field: 20 },
+      { id: 3, author_id: 1, shared_subtype_field: 3, duration_in_days: 30 },
+      { id: 4, author_id: null, shared_subtype_field: null, duration_in_days: 40 },
     ]);
   });
 
@@ -581,7 +575,6 @@ describe("SingleTableInheritance", () => {
     // Given TaskThird does not participate in the author relation
     const em = newEntityManager();
     const third = newTaskThird(em);
-
     // When inspecting its generated relation and the abstract base's fields
     // Then neither exposes author, including in the generated TypeScript API
     // @ts-expect-error TaskThird has no author relation
@@ -598,12 +591,10 @@ describe("SingleTableInheritance", () => {
     // And the nonparticipating subtype has no author
     newTaskThird(em);
     await em.flush();
-
     // When the author's tasks are loaded in a fresh EntityManager
     const em2 = newEntityManager();
     const reloaded = await em2.load(Author, author.id);
     const tasks = await reloaded.authoredTasks.load();
-
     // Then neither participating subtype is excluded by an implicit discriminator filter
     expect(tasks).toMatchEntity([{ type: TaskType.New }, { type: TaskType.Old }]);
   });
@@ -617,7 +608,6 @@ describe("SingleTableInheritance", () => {
     // And a replacement author already exists
     const author = newAuthor(em);
     await em.flush();
-
     // When a batch changes both shared fields and a base field
     nt.author.set(author);
     ot.author.set(author);
@@ -626,7 +616,6 @@ describe("SingleTableInheritance", () => {
     third.durationInDays = 30;
     resetQueryCount();
     await em.flush();
-
     // Then the data CTE and SET clause each name author_id and shared_subtype_field once
     expect(queries.filter((q) => q.startsWith("WITH"))).toMatchInlineSnapshot(`
      [
@@ -640,13 +629,11 @@ describe("SingleTableInheritance", () => {
     const em = newEntityManager();
     const newTaskAuthor = newAuthor(em);
     const oldTaskAuthor = newAuthor(em);
-
     // When all three task subtypes are inserted in one flush
     newTaskNew(em, { author: newTaskAuthor });
     newTaskOld(em, { author: oldTaskAuthor });
     newTaskThird(em);
     await em.flush();
-
     // Then each subtype writes its own author and the nonparticipating subtype leaves it null
     expect(await select("tasks")).toMatchObject([
       { type_id: 2, author_id: Number(newTaskAuthor.idUntagged) },
@@ -664,12 +651,10 @@ describe("SingleTableInheritance", () => {
     // And a second author has an empty reverse collection
     const replacement = newAuthor(em);
     await em.flush();
-
     // When both tasks move to the second author
     nt.author.set(replacement);
     ot.author.set(replacement);
     await em.flush();
-
     // Then the original reverse collection no longer has either task
     expect(author.authoredTasks.get).toMatchEntity([]);
     expect(replacement.authoredTasks.get).toMatchEntity([{ id: nt.id }, { id: ot.id }]);
@@ -682,13 +667,11 @@ describe("SingleTableInheritance", () => {
     const ot = newTaskOld(em);
     const third = newTaskThird(em);
     await em.flush();
-
     // When all three subtypes are deleted in one flush
     em.delete(nt);
     em.delete(ot);
     em.delete(third);
     await em.flush();
-
     // Then the shared relation does not interfere with deleting their rows
     expect(await select("tasks")).toEqual([]);
   });

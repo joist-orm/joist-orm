@@ -57,14 +57,16 @@ export function insertAuthor(row: {
 
 export function insertTask(row: {
   id?: number;
-  type: "OLD" | "NEW";
+  type: "OLD" | "NEW" | "THIRD";
   special_new_field?: number | null;
   special_old_field?: number | null;
+  shared_subtype_field?: number | null;
+  author_id?: number;
   duration_in_days?: number;
 }) {
   const { type, ...rest } = row;
   return testDriver.insert("tasks", {
-    type_id: type === "OLD" ? 1 : 2,
+    type_id: { OLD: 1, NEW: 2, THIRD: 3 }[type],
     duration_in_days: 0,
     ...rest,
   });

@@ -147,10 +147,11 @@ export interface AuthorFields {
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
+  authoredTasks: { kind: "o2m"; type: TaskNew };
   schedules: { kind: "o2m"; type: AuthorSchedule };
   comments: { kind: "o2m"; type: Comment };
-  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   tasks: { kind: "o2m"; type: TaskNew };
+  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
   image: { kind: "o2o"; type: Image };
   userOneToOne: { kind: "o2o"; type: User };
 }
@@ -291,10 +292,11 @@ export interface AuthorOpts {
   mentees?: Author[];
   books?: Book[];
   reviewerBooks?: Book[];
+  authoredTasks?: TaskNew[];
   schedules?: AuthorSchedule[];
   comments?: Comment[];
-  spotlightAuthorPublishers?: Publisher[];
   tasks?: TaskNew[];
+  spotlightAuthorPublishers?: Publisher[];
   tags?: Tag[];
 }
 
@@ -307,10 +309,11 @@ export interface AuthorIdsOpts {
   menteeIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   reviewerBookIds?: BookId[] | null;
+  authoredTaskIds?: TaskNewId[] | null;
   scheduleIds?: AuthorScheduleId[] | null;
   commentIds?: CommentId[] | null;
-  spotlightAuthorPublisherIds?: PublisherId[] | null;
   taskIds?: TaskNewId[] | null;
+  spotlightAuthorPublisherIds?: PublisherId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -359,8 +362,10 @@ export interface AuthorFilter {
   mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  authoredTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   spotlightAuthorPublishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityFilter<
     LargePublisher,
@@ -374,7 +379,6 @@ export interface AuthorFilter {
     FilterOf<SmallPublisher>,
     null
   >;
-  tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   menteesClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
@@ -441,8 +445,10 @@ export interface AuthorGraphQLFilter {
   mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  authoredTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   spotlightAuthorPublishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   spotlightAuthorPublishersLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
@@ -456,7 +462,6 @@ export interface AuthorGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
-  tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   mentorsClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   menteesClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
@@ -589,10 +594,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly mentees: Collection<Author, Author> = hasMany();
   readonly books: Collection<Author, Book> = hasMany();
   readonly reviewerBooks: Collection<Author, Book> = hasMany();
+  readonly authoredTasks: Collection<Author, TaskNew> = hasMany();
   readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
   readonly comments: Collection<Author, Comment> = hasMany();
-  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly tasks: Collection<Author, TaskNew> = hasMany();
+  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
   /**

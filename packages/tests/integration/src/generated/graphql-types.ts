@@ -156,6 +156,7 @@ export interface AdvanceStatusDetailResolvers {
 
 export interface AuthorResolvers {
   age: Resolver<Author, {}, number | null | undefined>;
+  authoredTasks: Resolver<Author, {}, readonly TaskNew[]>;
   bookComments: Resolver<Author, {}, string | null | undefined>;
   books: Resolver<Author, {}, readonly Book[]>;
   createdAt: Resolver<Author, {}, Date>;
@@ -630,6 +631,7 @@ export interface TaskNewResolvers {
   asyncDefault_1: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskNew, {}, string | null | undefined>;
+  author: Resolver<TaskNew, {}, Author>;
   comments: Resolver<TaskNew, {}, readonly Comment[]>;
   createdAt: Resolver<TaskNew, {}, Date>;
   deletedAt: Resolver<TaskNew, {}, Date | null | undefined>;
@@ -657,6 +659,7 @@ export interface TaskOldResolvers {
   asyncDefault_1: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskOld, {}, string | null | undefined>;
+  author: Resolver<TaskOld, {}, Author>;
   comments: Resolver<TaskOld, {}, readonly Comment[]>;
   createdAt: Resolver<TaskOld, {}, Date>;
   deletedAt: Resolver<TaskOld, {}, Date | null | undefined>;
@@ -1975,6 +1978,7 @@ export interface SaveTaskItemInput {
 export interface SaveTaskNewInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
@@ -1990,6 +1994,7 @@ export interface SaveTaskNewInput {
 export interface SaveTaskOldInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
@@ -2086,6 +2091,7 @@ export interface TaskNewFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;
@@ -2105,6 +2111,7 @@ export interface TaskOldFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;

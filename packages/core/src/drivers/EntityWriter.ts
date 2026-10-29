@@ -12,7 +12,7 @@ import { getField, isChangeableField } from "src/fields.ts";
 import type { Todo } from "src/flush/Todo.ts";
 import { keyToNumber } from "src/keys.ts";
 import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
-import { groupBy } from "src/utils.ts";
+import { groupBy, indexBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 export type OpColumn = {
@@ -216,7 +216,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     }
   }
 
-  const columns: Array<BindingColumn> = (
+  const allColumns = (
     meta.inheritanceType === "sti"
       ? // Hack this one handling of STI into here...
         getBaseSelfAndSubMetas(meta).flatMap((meta) =>
@@ -230,6 +230,10 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     .filter((f) => !lazyFieldNames.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
+
+  // Unique columns by name because subtype-specific STI fields can share the same physical column.
+  const columns: BindingColumn[] =
+    meta.inheritanceType === "sti" ? [...indexBy(allColumns, (column) => column.columnName).values()] : allColumns;
 
   // If we're using class table inheritance, base/child tables may not have any columns to update
   if (columns.length === 1) {

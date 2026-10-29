@@ -232,7 +232,8 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     .flatMap((f) => f.serde.columns);
 
   // Unique columns by name because subtype-specific STI fields can share the same physical column.
-  const columns: BindingColumn[] = [...indexBy(allColumns, (column) => column.columnName).values()];
+  const columns: BindingColumn[] =
+    meta.inheritanceType === "sti" ? [...indexBy(allColumns, (column) => column.columnName).values()] : allColumns;
 
   // If we're using class table inheritance, base/child tables may not have any columns to update
   if (columns.length === 1) {

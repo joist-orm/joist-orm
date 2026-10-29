@@ -156,6 +156,7 @@ export interface AdvanceStatusDetailResolvers {
 
 export interface AuthorResolvers {
   age: Resolver<Author, {}, number | null | undefined>;
+  authoredTasks: Resolver<Author, {}, readonly TaskNew[]>;
   bookComments: Resolver<Author, {}, string | null | undefined>;
   books: Resolver<Author, {}, readonly Book[]>;
   createdAt: Resolver<Author, {}, Date>;
@@ -188,7 +189,6 @@ export interface AuthorResolvers {
   numberOfPublicReviews2: Resolver<Author, {}, number | null | undefined>;
   publisher: Resolver<Author, {}, Publisher | null | undefined>;
   rangeOfBooks: Resolver<Author, {}, BookRange | null | undefined>;
-  slottedTasks: Resolver<Author, {}, readonly TaskNew[]>;
   ssn: Resolver<Author, {}, string | null | undefined>;
   tags: Resolver<Author, {}, readonly Tag[]>;
   tagsOfAllBooks: Resolver<Author, {}, string>;
@@ -631,6 +631,7 @@ export interface TaskNewResolvers {
   asyncDefault_1: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskNew, {}, string | null | undefined>;
+  author: Resolver<TaskNew, {}, Author>;
   comments: Resolver<TaskNew, {}, readonly Comment[]>;
   createdAt: Resolver<TaskNew, {}, Date>;
   deletedAt: Resolver<TaskNew, {}, Date | null | undefined>;
@@ -643,7 +644,6 @@ export interface TaskNewResolvers {
   selfReferential: Resolver<TaskNew, {}, TaskNew | null | undefined>;
   selfReferentialTasks: Resolver<TaskNew, {}, readonly TaskNew[]>;
   sharedSubtypeField: Resolver<TaskNew, {}, number | null | undefined>;
-  slot: Resolver<TaskNew, {}, Author>;
   specialNewAuthor: Resolver<TaskNew, {}, Author | null | undefined>;
   specialNewField: Resolver<TaskNew, {}, number | null | undefined>;
   syncDefault: Resolver<TaskNew, {}, string | null | undefined>;
@@ -659,6 +659,7 @@ export interface TaskOldResolvers {
   asyncDefault_1: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskOld, {}, string | null | undefined>;
+  author: Resolver<TaskOld, {}, Author>;
   comments: Resolver<TaskOld, {}, readonly Comment[]>;
   createdAt: Resolver<TaskOld, {}, Date>;
   deletedAt: Resolver<TaskOld, {}, Date | null | undefined>;
@@ -669,7 +670,6 @@ export interface TaskOldResolvers {
   parentOldTask: Resolver<TaskOld, {}, Task | null | undefined>;
   publishers: Resolver<TaskOld, {}, readonly Publisher[]>;
   sharedSubtypeField: Resolver<TaskOld, {}, number | null | undefined>;
-  slot: Resolver<TaskOld, {}, Author>;
   specialNewAuthor: Resolver<TaskOld, {}, Author | null | undefined>;
   specialOldField: Resolver<TaskOld, {}, number | null | undefined>;
   specialOldFieldWithDefault: Resolver<TaskOld, {}, number>;
@@ -1978,13 +1978,13 @@ export interface SaveTaskItemInput {
 export interface SaveTaskNewInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
   selfReferentialId?: string | null | undefined;
   sharedSubtypeField?: number | null | undefined;
-  slotId?: string | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialNewField?: number | null | undefined;
   syncDefault?: string | null | undefined;
@@ -1994,12 +1994,12 @@ export interface SaveTaskNewInput {
 export interface SaveTaskOldInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
   parentOldTaskId?: string | null | undefined;
   sharedSubtypeField?: number | null | undefined;
-  slotId?: string | null | undefined;
   specialNewAuthorId?: string | null | undefined;
   specialOldField?: number | null | undefined;
   specialOldFieldWithDefault?: number | null | undefined;
@@ -2091,6 +2091,7 @@ export interface TaskNewFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;
@@ -2098,7 +2099,6 @@ export interface TaskNewFilter {
   id?: string[] | null | undefined;
   selfReferentialId?: string[] | null | undefined;
   sharedSubtypeField?: number[] | null | undefined;
-  slotId?: string[] | null | undefined;
   specialNewAuthorId?: string[] | null | undefined;
   specialNewField?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;
@@ -2111,6 +2111,7 @@ export interface TaskOldFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;
@@ -2118,7 +2119,6 @@ export interface TaskOldFilter {
   id?: string[] | null | undefined;
   parentOldTaskId?: string[] | null | undefined;
   sharedSubtypeField?: number[] | null | undefined;
-  slotId?: string[] | null | undefined;
   specialOldField?: number[] | null | undefined;
   specialOldFieldWithDefault?: number[] | null | undefined;
   syncDefault?: string[] | null | undefined;

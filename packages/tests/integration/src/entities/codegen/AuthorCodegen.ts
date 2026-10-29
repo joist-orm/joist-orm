@@ -147,7 +147,7 @@ export interface AuthorFields {
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
-  slottedTasks: { kind: "o2m"; type: TaskNew };
+  authoredTasks: { kind: "o2m"; type: TaskNew };
   schedules: { kind: "o2m"; type: AuthorSchedule };
   comments: { kind: "o2m"; type: Comment };
   tasks: { kind: "o2m"; type: TaskNew };
@@ -292,7 +292,7 @@ export interface AuthorOpts {
   mentees?: Author[];
   books?: Book[];
   reviewerBooks?: Book[];
-  slottedTasks?: TaskNew[];
+  authoredTasks?: TaskNew[];
   schedules?: AuthorSchedule[];
   comments?: Comment[];
   tasks?: TaskNew[];
@@ -309,7 +309,7 @@ export interface AuthorIdsOpts {
   menteeIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   reviewerBookIds?: BookId[] | null;
-  slottedTaskIds?: TaskNewId[] | null;
+  authoredTaskIds?: TaskNewId[] | null;
   scheduleIds?: AuthorScheduleId[] | null;
   commentIds?: CommentId[] | null;
   taskIds?: TaskNewId[] | null;
@@ -362,7 +362,7 @@ export interface AuthorFilter {
   mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  slottedTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
+  authoredTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
@@ -445,7 +445,7 @@ export interface AuthorGraphQLFilter {
   mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  slottedTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
+  authoredTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
@@ -594,7 +594,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly mentees: Collection<Author, Author> = hasMany();
   readonly books: Collection<Author, Book> = hasMany();
   readonly reviewerBooks: Collection<Author, Book> = hasMany();
-  readonly slottedTasks: Collection<Author, TaskNew> = hasMany();
+  readonly authoredTasks: Collection<Author, TaskNew> = hasMany();
   readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
   readonly comments: Collection<Author, Comment> = hasMany();
   readonly tasks: Collection<Author, TaskNew> = hasMany();

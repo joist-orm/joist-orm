@@ -70,8 +70,8 @@ export interface TaskNewFields extends Omit<TaskFields, "id" | "copiedFrom"> {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   sharedSubtypeField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  slot: { kind: "m2o"; type: Author; nullable: never; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   newTaskTaskItems: { kind: "o2m"; type: TaskItem };
@@ -85,8 +85,8 @@ export interface TaskNewColumns extends TaskColumns {
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
   sharedSubtypeField?: number | null;
+  author: Author | AuthorId;
   selfReferential?: TaskNew | TaskNewId | null;
-  slot: Author | AuthorId;
   specialNewAuthor?: Author | AuthorId | null;
   newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
@@ -94,8 +94,8 @@ export interface TaskNewOpts extends TaskOpts {
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
+  authorId?: AuthorId | null;
   selfReferentialId?: TaskNewId | null;
-  slotId?: AuthorId | null;
   specialNewAuthorId?: AuthorId | null;
   copiedFromId?: TaskNewId | null;
   newTaskTaskItemIds?: TaskItemId[] | null;
@@ -106,8 +106,8 @@ export interface TaskNewIdsOpts extends TaskIdsOpts {
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
   sharedSubtypeField?: ValueFilter<number, null>;
+  author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
-  slot?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
@@ -118,10 +118,10 @@ export interface TaskNewFilter extends TaskFilter {
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
   sharedSubtypeField?: ValueGraphQLFilter<number>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   selfReferentialId?: ValueGraphQLFilter<TaskNewId>;
-  slot?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
-  slotId?: ValueGraphQLFilter<AuthorId>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   specialNewAuthorId?: ValueGraphQLFilter<AuthorId>;
   copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
@@ -134,8 +134,8 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
 export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
   sharedSubtypeField?: OrderBy;
+  author?: AuthorOrder;
   selfReferential?: TaskNewOrder;
-  slot?: AuthorOrder;
   specialNewAuthor?: AuthorOrder;
   copiedFrom?: TaskNewOrder;
 }
@@ -152,7 +152,7 @@ export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
 export const taskNewScope = newScopeFn<TaskNew, TaskNewScope>("TaskNew");
 
-taskNewConfig.addRule(newRequiredRule("slot"));
+taskNewConfig.addRule(newRequiredRule("author"));
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
@@ -185,8 +185,8 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany();
   readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany();
   readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany();
+  readonly author: ManyToOneReference<TaskNew, Author, never> = hasOne();
   readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
-  readonly slot: ManyToOneReference<TaskNew, Author, never> = hasOne();
   readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne();
   readonly copiedFrom: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly copiedFromsRecursive: ReadOnlyCollection<TaskNew, TaskNew> = hasRecursiveParents(

@@ -133,6 +133,7 @@
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld", "THIRD": "TaskThird" } }
       },
       "relations": {
+        "author": { "notNull": true, "stiType": ["TaskNew", "TaskOld"] },
         "comments": { "stiType": "TaskOld" },
         "copiedFrom": { "subType": "self" },
         "newTaskTaskItems": { "stiType": "TaskNew" },
@@ -141,7 +142,6 @@
         "publishers": { "stiType": "TaskOld" },
         "selfReferential": { "skipRecursiveRelations": true, "stiType": "TaskNew" },
         "selfReferentialTasks": { "stiType": "TaskNew" },
-        "slot": { "notNull": true, "stiType": ["TaskNew", "TaskOld"] },
         "specialNewAuthor": { "stiType": "TaskNew" },
         "tasks": { "stiType": "TaskOld" }
       },

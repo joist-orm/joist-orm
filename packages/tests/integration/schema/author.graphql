@@ -48,7 +48,7 @@ type Author {
   mentorsClosure: [Author!]!
   menteeNames: String
   imageFileName: String
-  slottedTasks: [TaskNew!]!
+  authoredTasks: [TaskNew!]!
 }
 
 input SaveAuthorInput {

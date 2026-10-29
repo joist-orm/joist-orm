@@ -410,7 +410,7 @@ export function up(b: MigrationBuilder): void {
     // A column pushed down to both subtypes at once, i.e. off the base but on each subtype
     shared_subtype_field: { type: "int", notNull: false },
     // Required on TaskNew and TaskOld, but absent from TaskThird
-    slot_id: foreignKey("authors", { notNull: false, otherFieldName: "slottedTasks" }),
+    author_id: foreignKey("authors", { notNull: false, otherFieldName: "authoredTasks" }),
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
     // Self-referential for both subtypes, but specialized to the specific one

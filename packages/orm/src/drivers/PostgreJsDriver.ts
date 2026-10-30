@@ -163,13 +163,37 @@ export class PostgreJsRowDecoder extends native.RowDecoder {
   readonly rows = new WireRowData(0);
   #chunk: Buffer | undefined;
 
-  /** Supports the view-based fallback of PostgreJS's public decoder contract. */
+  /**
+   * Records a row when PostgreJS supplies its payload as a Buffer slice.
+   *
+   * PostgreJS calls this on paths that collect raw DataRow messages before decoding them.
+   * For example, if a query needs the server's money format, it buffers the rows, finishes
+   * the SQL response, obtains that format, and then calls decode for each buffered row
+   * before resolving the query. These paths call decode even when decodeAt is implemented.
+   *
+   * `data` is a view of one row's payload within a larger backing ArrayBuffer, not a copy.
+   * We reuse one Buffer spanning that backing allocation and forward the row's offset and
+   * length to decodeAt. Neither method parses field values; WireRowData does that later
+   * when Joist accesses an entity field.
+   */
   decode(parsers: AnyParseFunction[], data: Buffer, count: number, options: DataMappingOptions, fields: FieldInfo[]) {
     if (this.#chunk?.buffer !== data.buffer) this.#chunk = Buffer.from(data.buffer);
     return this.decodeAt(parsers, this.#chunk!, data.byteOffset, data.byteLength, count, options, fields);
   }
 
-  /** Shares socket buffers directly, avoiding even a per-row Buffer view. */
+  /**
+   * Records a row directly from PostgreJS's incoming socket buffer.
+   *
+   * On the streaming query path, PostgreJS first receives RowDescription and resolves the
+   * column metadata and parsers. As each subsequent DataRow arrives, it prefers decodeAt
+   * over decode when this method exists, passing the socket buffer plus the row payload's
+   * offset and length. This avoids allocating a separate Buffer slice for every row.
+   *
+   * The first row installs column decoders; every call retains the raw row bytes. PostgreJS
+   * stores our undefined return value in its ordinary result.rows, which Joist ignores.
+   * Once the query completes, executeFindRowData returns this decoder's WireRowData for
+   * entity hydration. Actual field parsing remains deferred until a field is accessed.
+   */
   override decodeAt(
     parsers: AnyParseFunction[],
     buffer: Buffer,

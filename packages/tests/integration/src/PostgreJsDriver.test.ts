@@ -122,4 +122,18 @@ describe("PostgreJsDriver", () => {
     // Then the final name belongs to the last submitted rename
     expect(name).toEqual("Last");
   });
+
+  it("preserves native numeric values in raw query results", async () => {
+    // Given small and large integers, integer arrays, and exact decimals returned by PostgreJS
+    const sql = `select 42::int8 as small, 9007199254740993::int8 as large,
+      array[42, 9007199254740993]::int8[] as integers,
+      12.340::numeric as decimal, 12345678901234567890.123456789::numeric as precise`;
+    const native = await pool.query(sql, { rowDecoder: "object" });
+    const driver = new PostgreJsDriver(pool);
+    const em = new EntityManager({}, { driver });
+    // When the same query goes through Joist's driver boundary
+    const result = await driver.executeQuery(em, sql, []);
+    // Then the driver preserves PostgreJS's values instead of converting them to pg-style strings
+    expect(result.rows).toEqual(native.rows);
+  });
 });

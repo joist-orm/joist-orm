@@ -16,7 +16,7 @@ import { requireTemporal } from "joist-core";
  *   explicitly with {@link setBinaryTypeParser} — text-like types can use
  *   {@link binaryTextParser}, arrays of registered elements can use {@link binaryArrayParser}.
  * - A query selecting a column whose oid has no registered parser **fails** with a descriptive
- *   error (see `pgColumnDecoders` in RowDataQuery), rather than guessing at a lossy decoding.
+ *   error (see `pgColumnDecoders` in PostgresDriver), rather than guessing at a lossy decoding.
  *
  * Values produced here should match what the classic text path produces for the same column
  * (i.e. `numeric` stays a string, `int8` stays a string, Date-mode timestamps become `Date`s),

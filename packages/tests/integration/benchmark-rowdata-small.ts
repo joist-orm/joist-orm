@@ -1,8 +1,10 @@
+import { performance } from "node:perf_hooks";
+
 import { PojoRowData, setDefaultEntityLimit } from "joist-orm";
+
+import { pgColumnDecoders } from "../../orm/build/drivers/PostgresDriver";
 // WireRowData is deliberately not public API; this benchmark reaches into the build directly
 import { WireRowData } from "../../orm/build/drivers/WireRowData";
-import { pgColumnDecoders } from "../../orm/build/drivers/RowDataQuery";
-import { performance } from "node:perf_hooks";
 import { Author } from "./src/entities";
 import { newEntityManager, pool, testDriver } from "./src/testEm";
 
@@ -124,11 +126,7 @@ function microBenchmark(): void {
 }
 
 /** Builds a WireRowData with `n` copies of the synthetic payload. */
-function buildWire(
-  fields: Array<{ name: string; dataTypeID: number }>,
-  payload: Buffer,
-  n: number,
-): WireRowData {
+function buildWire(fields: Array<{ name: string; dataTypeID: number }>, payload: Buffer, n: number): WireRowData {
   const wire = new WireRowData();
   wire.setColumnDecoders(pgColumnDecoders(fields));
   for (let i = 0; i < n; i++) wire.addRow(payload, 0, payload.length);

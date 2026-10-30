@@ -26,15 +26,15 @@ describe("PostgreJsDriver", () => {
       nick_names: ["N"],
     });
     // And separate identity maps keep both hydration paths independent
-    const eager = new EntityManager({}, { driver: new PostgreJsDriver(pool) });
+    const paginated = new EntityManager({}, { driver: new PostgreJsDriver(pool) });
     const lazy = new EntityManager({}, { driver: new PostgreJsDriver(pool) });
 
     // When a paginated find and a lazy load retrieve the same author
-    const [eagerAuthor] = await eager.find(Author, { id: "a:1" }, { limit: 1 });
+    const [pagedAuthor] = await paginated.find(Author, { id: "a:1" }, { limit: 1 });
     const lazyAuthor = await lazy.load(Author, "a:1");
 
     // Then the paginated author exposes the same domain values
-    expect(eagerAuthor).toMatchEntity({
+    expect(pagedAuthor).toMatchEntity({
       firstName: lazyAuthor.firstName,
       numberOfAtoms: lazyAuthor.numberOfAtoms,
       certificate: lazyAuthor.certificate,

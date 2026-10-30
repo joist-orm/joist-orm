@@ -11,13 +11,13 @@ import { PostgreJsDriver } from "joist-orm/postgrejs";
 import pg from "pg";
 import { Pool } from "postgrejs";
 
-import { JoistRowDecoder, PostgreJsPrototype } from "./postgrejs-prototype.ts";
+import { PostgreJsRowDecoder } from "../../orm/src/drivers/PostgreJsDriver.ts";
 import { Author, type AuthorId } from "./src/entities";
 
 const url = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist_stock";
 const sizes = (process.env.BENCH_SIZES ?? "1,100,10000,50000").split(",").map(Number);
 const iterations = Number(process.env.BENCH_ITERATIONS ?? 7);
-const allModes = ["pg-stock", "pg-wire", "postgrejs-eager", "postgrejs-lazy", "postgrejs-full-lazy"] as const;
+const allModes = ["pg-stock", "pg-wire", "postgrejs-lazy"] as const;
 type Mode = (typeof allModes)[number];
 const modes = process.env.BENCH_MODES ? (process.env.BENCH_MODES.split(",") as Mode[]) : allModes;
 for (const mode of modes) assert.ok(allModes.includes(mode), `Unknown benchmark mode: ${mode}`);
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
 async function child(mode: Mode, schema: string, output: string): Promise<void> {
   const pgPool = new pg.Pool({ connectionString: url, max: 1, options: `-c search_path=${schema},public` });
   const parsed = new URL(url);
-  const fullPool = new Pool({
+  const jsPool = new Pool({
     host: parsed.hostname,
     port: Number(parsed.port),
     user: parsed.username,
@@ -123,23 +123,9 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
     timezone: "UTC",
     asyncErrorHandling: false,
   });
-  const jsPool = new Pool({
-    host: parsed.hostname,
-    port: Number(parsed.port),
-    user: parsed.username,
-    password: parsed.password,
-    database: parsed.pathname.slice(1),
-    schema,
-    max: 1,
-    asyncErrorHandling: false,
-    // Match node-pg's unnamed statements rather than also measuring a prepared-statement cache.
-    prepare: false,
-  });
   const driver: Driver = mode.startsWith("pg-")
     ? new PostgresDriver(pgPool, { lazyRows: mode === "pg-wire" })
-    : mode.startsWith("postgrejs-full-")
-      ? new PostgreJsDriver(fullPool)
-      : new PostgreJsPrototype(jsPool, mode === "postgrejs-lazy");
+    : new PostgreJsDriver(jsPool);
   try {
     await verifyRetainedEntities(driver);
     if (mode === "postgrejs-lazy") await verifyDecoder(jsPool);
@@ -175,7 +161,6 @@ async function child(mode: Mode, schema: string, output: string): Promise<void> 
   } finally {
     await pgPool.end();
     await jsPool.close();
-    await fullPool.close();
   }
 }
 
@@ -215,7 +200,7 @@ async function retainedMemory(driver: Driver, size: number, scenario: Scenario) 
   };
 }
 
-/** Uses a fresh identity map for each request, without pagination (which deliberately bypasses lazy rows). */
+/** Uses a fresh identity map for each request with the same ordered author range. */
 async function find(driver: Driver, size: number, em = new EntityManager({}, { driver })): Promise<Author[]> {
   return em.find(Author, { id: { lte: `a:${size}` as AuthorId } }, { orderBy: { id: "ASC" } });
 }
@@ -280,7 +265,7 @@ async function verifyDecoder(pool: Pool): Promise<void> {
   // Given actual binary rows with scalar, JSON, array, date, unicode and null fields
   const sql = "select * from authors order by id limit 100";
   const eager = await pool.query(sql, { rowDecoder: "object" });
-  const decoder = new JoistRowDecoder();
+  const decoder = new PostgreJsRowDecoder();
   await pool.query(sql, { rowDecoder: decoder });
   // When every cell is materialized through the headerless wire-row path
   const rows = decoder.rows.toRows();

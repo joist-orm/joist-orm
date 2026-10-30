@@ -39,8 +39,8 @@ export interface PostgresDriverOpts {
   /**
    * Keeps entity find results as raw wire bytes and decodes cells on field access. Defaults to false.
    *
-   * Applies to unpaginated em.find/em.load and o2m/o2o/recursive relation loads. Other loaders
-   * deliberately stay classic: paginated finds (small pages, measured neutral), m2m join-table
+   * Applies to em.find (including paginated finds), em.load and o2m/o2o/recursive relation loads.
+   * Other loaders deliberately stay classic: m2m join-table
    * rows (narrow, fully read and mutated by JoinRows), lazy columns, and id/count loaders.
    *
    * Binary cells use Joist's parser registry; JOIST_LAZY_BINARY=0 requests text results instead.

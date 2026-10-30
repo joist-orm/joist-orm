@@ -1,11 +1,10 @@
-# PostgreJS read-path prototype
+# PostgreJS read benchmarks
 
-The results below preserve the initial read-only experiment. The benchmark also
-supports `postgrejs-full-lazy` for the
-production driver, which always uses lazy entity rows. The former
-`postgrejs-full-eager` mode has been removed. Use `BENCH_MODES` to select a
-comma-separated subset, or omit it to run all five modes. The read-only prototype
-retains its eager control for decoding comparisons.
+The results below preserve the initial read-only experiment. The current benchmark
+uses production drivers in three modes: `pg-stock`, `pg-wire`, and `postgrejs-lazy`.
+Use `BENCH_MODES` to select a comma-separated subset, or omit it to run all three.
+The prototype and its eager control have been removed; historical prototype
+measurements below are not measurements of the current production driver.
 
 ## Results (2026-10-16)
 
@@ -86,10 +85,9 @@ yarn exec tsc --project packages/tests/integration/tsconfig.postgrejs.json
 
 ## Implementation
 
-`postgrejs-prototype.ts` implements Joist's read-side `Driver` interface. It is
-deliberately an experiment: ID assignment, flush, and transactions throw.
-Ordinary queries use PostgreJS object rows; entity loaders use its public
-`RowDecoder` hook. The eager PostgreJS mode disables that hook.
+The current benchmark uses `PostgreJsDriver` for ORM operations and its
+`PostgreJsRowDecoder` for raw-row parity and compaction checks. Entity finds,
+including paginated finds, use lazy rows. Ordinary raw queries use object rows.
 
 The custom decoder passes PostgreJS's own per-column parsers and immutable bytes
 to the existing `WireRowData`. Two small extensions allow externally supplied
@@ -100,19 +98,14 @@ even a per-row Buffer view; the `decode` fallback deduplicates subarrays by thei
 There is no PostgreJS protocol patch and no copy of each incoming row. PostgreJS
 still allocates its own temporary result array of decoder return values.
 
-The final experiment uses PostgreJS **3.14.0**, with explicit `fetchCount: 0`
-(unlimited; Joist's SQL entity limit still applies). SELECT command counts are absent from
-PostgreJS's `rowsAffected`; this prototype does not claim complete `executeQuery`
-count parity.
+The current driver uses `fetchCount: 0` (unlimited; Joist's SQL entity limit still
+applies). The fixture's populated types are checked through generated entity
+field serdes. The current PostgreJS mode retains native prepared-statement caching.
 
-This is not yet a replacement package: the reused WireRowData module still
-imports pg, and PostgreJS's type mappings have not been audited across every
-Joist type/custom parser, Temporal configuration, or timezone. The fixture's
-populated types are checked through actual generated entity field serdes.
+## Historical measurement method
 
-## Method
-
-Four fresh child processes isolate stock node-pg from the lazy protocol patch:
+The original experiment used four fresh child processes to isolate stock node-pg
+from the lazy protocol patch:
 
 1. Joist + node-pg, eager text rows.
 2. Joist + node-pg `lazyRows`, binary WireRowData.

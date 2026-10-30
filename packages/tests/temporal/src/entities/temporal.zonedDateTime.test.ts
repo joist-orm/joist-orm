@@ -55,14 +55,33 @@ describe("zonedDateTime", () => {
     expect(book.publishedAt).toEqual(jan1DateTime);
   });
 
-  it.each(["pg", "postgrejs"])("preserves named-zone DST rules in %s lazy loads", async (driver) => {
+  it("preserves named-zone DST rules in pg lazy loads", async () => {
     // Given a book stored at a known instant
     await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
     await knex.insert({ author_id: 1, title: "b1", published_at: "2026-01-15T17:00:00Z" }).into("book");
     // And a session whose TimeZone is not UTC
     const nyPool = new pg.Pool({ ...newPgConnectionConfig(), options: "-c TimeZone=America/New_York" });
+    try {
+      // When the book is loaded as a native Temporal value and advanced into summer
+      const lazyEm = newEntityManager();
+      lazyEm.driver = new PostgresDriver(nyPool, { lazyRows: true });
+      const lazyBook = await lazyEm.load(Book, "b:1");
+      // Then New York's daylight-saving offset applies instead of retaining winter's fixed offset
+      expect(lazyBook.publishedAt.add({ months: 6 }).toString()).toBe("2026-07-15T12:00:00-04:00[America/New_York]");
+    } finally {
+      // Restore the shared UTC session zone captured by the lazy driver's auto-registration.
+      await registerDatabaseBinaryParsers(pool);
+      await nyPool.end();
+    }
+  });
+
+  it("preserves named-zone DST rules in PostgreJS lazy loads", async () => {
+    // Given a book stored at a known instant
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
+    await knex.insert({ author_id: 1, title: "b1", published_at: "2026-01-15T17:00:00Z" }).into("book");
+    // And a session whose TimeZone is not UTC
     const { ssl, ...config } = newPgConnectionConfig();
-    const nativePool = new Pool({
+    const postgreJsPool = new Pool({
       ...config,
       ssl: ssl ? {} : undefined,
       requireSSL: !!ssl,
@@ -71,16 +90,12 @@ describe("zonedDateTime", () => {
     try {
       // When the book is loaded as a native Temporal value and advanced into summer
       const lazyEm = newEntityManager();
-      lazyEm.driver =
-        driver === "pg" ? new PostgresDriver(nyPool, { lazyRows: true }) : new PostgreJsDriver(nativePool);
+      lazyEm.driver = new PostgreJsDriver(postgreJsPool);
       const lazyBook = await lazyEm.load(Book, "b:1");
       // Then New York's daylight-saving offset applies instead of retaining winter's fixed offset
       expect(lazyBook.publishedAt.add({ months: 6 }).toString()).toBe("2026-07-15T12:00:00-04:00[America/New_York]");
     } finally {
-      // Restore the shared UTC session zone captured by the lazy driver's auto-registration.
-      await registerDatabaseBinaryParsers(pool);
-      await nyPool.end();
-      await nativePool.close();
+      await postgreJsPool.close();
     }
   });
 

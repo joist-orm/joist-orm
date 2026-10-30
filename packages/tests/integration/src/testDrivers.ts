@@ -35,7 +35,7 @@ export class PostgresTestDriver implements TestDriver {
   public knex: Knex;
   public pool: pg.Pool;
   public isInMemory = false;
-  readonly nativePool: Pool | undefined;
+  readonly postgreJsPool: Pool | undefined;
 
   constructor(isPreloadingEnabled: boolean) {
     // Fixture helpers and explicit pg-protocol tests keep their own pg connection.
@@ -49,14 +49,14 @@ export class PostgresTestDriver implements TestDriver {
     };
     if (process.env.JOIST_DRIVER === "postgrejs") {
       const { ssl, ...config } = newPgConnectionConfig();
-      this.nativePool = new Pool({
+      this.postgreJsPool = new Pool({
         ...config,
         ssl: ssl ? {} : undefined,
         requireSSL: !!ssl,
         timezone: "UTC",
         asyncErrorHandling: false,
       });
-      this.driver = new PostgreJsDriver(this.nativePool, opts);
+      this.driver = new PostgreJsDriver(this.postgreJsPool, opts);
     } else {
       this.driver = new PostgresDriver(this.pool, {
         ...opts,
@@ -72,7 +72,7 @@ export class PostgresTestDriver implements TestDriver {
 
   async destroy() {
     await this.pool.end();
-    await this.nativePool?.close();
+    await this.postgreJsPool?.close();
   }
 
   select(tableName: string): Promise<readonly any[]> {

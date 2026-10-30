@@ -214,20 +214,29 @@ function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], option
   }));
 }
 
-/** Keeps Temporal's microseconds through decoding instead of rounding through Date. */
+let cachedMappingOptions: { lazy: QueryOptions; eager: QueryOptions } | undefined;
+
+/** Lazily captures application-wide mapping settings after generated metadata initializes them. */
 function mappingOptions(lazy = false): QueryOptions {
-  const temporal = getRuntimeConfig().temporal;
-  if (temporal) requireTemporal();
-  return {
-    rowDecoder: "object",
-    fetchCount: 0,
-    rollbackOnError: false,
-    typeMap: joistTypeMap,
-    unknownTypesAsString: true,
-    temporalTypes: temporal ? [1082, 1083, 1114, 1184] : false,
+  if (!cachedMappingOptions) {
+    const temporal = getRuntimeConfig().temporal;
+    if (temporal) requireTemporal();
+    const options: QueryOptions = {
+      rowDecoder: "object",
+      fetchCount: 0,
+      rollbackOnError: false,
+      typeMap: joistTypeMap,
+      unknownTypesAsString: true,
+      temporalTypes: temporal ? [1082, 1083, 1114, 1184] : false,
+      fetchAsString: temporal ? [] : [1083],
+    };
     // Accept Temporal parameters on both paths, but retain lossless strings for raw-query callers.
-    fetchAsString: temporal && !lazy ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
-  };
+    cachedMappingOptions = {
+      lazy: options,
+      eager: { ...options, fetchAsString: temporal ? [1082, 1083, 1114, 1184] : [1083] },
+    };
+  }
+  return lazy ? cachedMappingOptions.lazy : cachedMappingOptions.eager;
 }
 
 /** Executes with Joist's value representations without changing the caller's pool configuration. */

@@ -39,7 +39,7 @@ export interface PostgresDriverOpts {
   /**
    * Keeps entity find results as raw wire bytes and decodes cells on field access. Defaults to false.
    *
-   * Applies to em.find (including paginated finds), em.load and o2m/o2o/recursive relation loads.
+   * Applies to em.find, em.load and o2m/o2o/recursive relation loads.
    * Other loaders deliberately stay classic: m2m join-table
    * rows (narrow, fully read and mutated by JoinRows), lazy columns, and id/count loaders.
    *
@@ -89,7 +89,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   /** Uses the transaction's socket when a transaction is active. */
   private query(txn: pg.PoolClient | undefined, sql: string, bindings: readonly unknown[]) {
     this.onQuery?.(sql);
-    return (txn ?? this.pool).query(sql, [...bindings]);
+    return (txn ?? this.pool).query(sql, bindings as unknown[]);
   }
 
   /** Executes an entity find with the EntityManager's default limit. */
@@ -149,7 +149,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     try {
       if (!isRowDataCapableClient(client)) {
         warnUnsupportedClientOnce();
-        return new PojoRowData((await (client as pg.PoolClient).query(pgSql, [...bindings])).rows);
+        return new PojoRowData((await (client as pg.PoolClient).query(pgSql, bindings as unknown[])).rows);
       }
       return await executeRowDataQuery(client, pgSql, bindings);
     } finally {

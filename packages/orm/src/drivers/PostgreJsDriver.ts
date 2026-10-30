@@ -101,7 +101,7 @@ export class PostgreJsDriver implements Driver<Connection> {
   /**
    * Supplies lazy entity rows through PostgreJS's native decoder hook.
    *
-   * EntityManager uses this for finds (including paginated finds), loads and o2m/o2o/recursive loads.
+   * EntityManager uses this for finds, loads and o2m/o2o/recursive loads.
    * M2m join-table rows, lazy columns and id/count queries use eager results.
    * Deferred parser errors surface on field access.
    */

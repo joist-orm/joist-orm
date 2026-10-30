@@ -1,13 +1,11 @@
+import { createRequire } from "node:module";
+
 import {
-  type DeleteOp,
   type Driver,
   type DriverQueryResult,
   type EntityManager,
   type IdAssigner,
-  type InsertOp,
-  JoinRowOperation,
   type JoinRowTodo,
-  type OpColumn,
   type ParsedFindQuery,
   PojoRowData,
   type PreloadPlugin,
@@ -15,118 +13,86 @@ import {
   type RuntimeConfig,
   SequenceIdAssigner,
   type Todo,
-  type UpdateOp,
   buildRawQuery,
-  cleanSql,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
   driverBeforeCommit,
-  ensureRectangularArraySizes,
   fail,
-  generateOps,
   getRuntimeConfig,
-  kq,
-  kqDot,
-  partition,
 } from "joist-core";
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 
-import { registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers.ts";
+import { getBinaryTypeParser, registerDatabaseBinaryParsers, registerTemporalBinaryParsers } from "./binaryParsers.ts";
 import { ensureLazyDataRows } from "./patchPgProtocol.ts";
-import { executeRowDataQuery, isRowDataCapableClient } from "./WireRowData.ts";
+import { flushPostgres, toPgParams } from "./postgresSql.ts";
+import { WireRowData } from "./WireRowData.ts";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
   /** Sets a default `PreloadPlugin` for any `EntityManager` that uses this driver. */
   preloadPlugin?: PreloadPlugin;
-  /** Called after each query is executed, useful for testing/debugging. */
+  /** Observes SQL before submission; node-pg does not expose a query event. */
   onQuery?: (sql: string) => void;
   /**
-   * Experimental: keeps entity find results as raw wire bytes and decodes each row/column cell
-   * lazily on field access, instead of eagerly materializing POJO rows.
+   * Keeps entity find results as raw wire bytes and decodes cells on field access. Defaults to false.
    *
-   * Applies to unpaginated `em.find`, `em.load`, and o2m/o2o/recursive relation loads against
-   * the pure-JS pg client. Other loaders deliberately stay classic: paginated finds (small
-   * pages, measured neutral), m2m join-table rows (narrow + fully read, where materialized rows
-   * measured faster, and `JoinRows` owns/mutates them), lazy columns, and id/count loaders.
+   * Applies to em.find, em.load and o2m/o2o/recursive relation loads.
+   * Other loaders deliberately stay classic: m2m join-table
+   * rows (narrow, fully read and mutated by JoinRows), lazy columns, and id/count loaders.
    *
-   * Lazy queries also request *binary* result format (prototype), decoding int/bool/float/text
-   * cells — and, via the fast paths `setupLatestPgTypes` registers, date/timestamptz cells —
-   * wire-bytes -> value with no intermediate strings; numeric/exotic cells render to pg's
-   * canonical text and reuse the active text parsers for parity. `JOIST_LAZY_BINARY=0`
-   * reverts lazy queries to text-format results. It
-   * uses classic rows when the choice is knowable up-front (patching pg-protocol failed, or the
-   * client is unsupported, i.e. pg-native — both warn once). If a connection turns out
-   * mid-query to use an unpatched pg-protocol copy (a duplicate `pg` install), the query fails
-   * with a descriptive error — a misconfiguration CI builds/smoketests will catch immediately.
-   * Note deferred decoding also defers custom-parser errors from `await em.find` to first field
-   * access. See JS-ROW-STORE-DESIGN.md.
+   * Binary cells use Joist's parser registry; JOIST_LAZY_BINARY=0 requests text results instead.
+   * If patching pg-protocol fails or the client is unsupported (i.e. pg-native), we warn and
+   * use classic rows. An unpatched duplicate pg-protocol discovered mid-query fails loudly
+   * rather than silently degrading. Deferred parsing also defers custom-parser errors from
+   * await em.find to field access. See JS-ROW-STORE-DESIGN.md.
    */
   lazyRows?: boolean;
 }
 
-/**
- * Provides a callback for tests/debugging.
- *
- * We used to get this for-free from knex, but node-pg does not have a `query` event.
- */
-type OnQuery = ((sql: string) => void) | undefined;
-
-/**
- * Implements the `Driver` interface for Postgres.
- *
- * This is the canonical driver implementation and leverages several aspects of
- * Postgres for the best performance, i.e.:
- *
- * - Deferred foreign key constraints are used to allow bulk inserting/updating
- * all entities without any topographic sorting/ordering issues.
- *
- * - Sequences are used to bulk-assign + then bulk-insert all entities, to again
- * avoid issues with ordering issues (cannot bulk insert A w/o knowing the id of B).
- *
- * - We use a pg-specific bulk update syntax.
- *
- * Query pipelining is enabled for clients created after driver construction unless the pool was
- * configured with `pipeline: false`.
- */
+/** PostgreSQL over node-pg, with optional patched lazy row decoding. */
 export class PostgresDriver implements Driver<pg.PoolClient> {
+  #databaseBinaryParsers: Promise<void> | undefined;
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
-  readonly #onQuery: OnQuery;
+  private readonly onQuery: PostgresDriverOpts["onQuery"];
   readonly lazyRows: boolean;
-  /** Defined only when `lazyRows` is enabled; its presence is the capability signal the EM checks. */
+  /** Its presence is the lazy-read capability signal checked by EntityManager. */
   readonly executeFindRowData: Driver["executeFindRowData"];
-  #databaseBinaryParsers: Promise<void> | undefined = undefined;
 
   constructor(
     readonly pool: pg.Pool,
     opts?: PostgresDriverOpts,
   ) {
+    this.onQuery = opts?.onQuery;
+    this.#preloadPlugin = opts?.preloadPlugin;
+
+    // Sequences assign IDs before bulk insertion, including mutually dependent new entities.
+    this.#idAssigner =
+      opts?.idAssigner ?? new SequenceIdAssigner(async (sql) => (await this.query(undefined, sql, [])).rows);
+
+    this.lazyRows = !!opts?.lazyRows && ensureLazyDataRows();
+    this.executeFindRowData = this.lazyRows
+      ? (em, parsed, settings) => this.findRowData(em, parsed, settings)
+      : undefined;
+
     // Set the option before pg creates clients, but preserve an explicit consumer opt-out.
     pool.options.pipeline ??= true;
-    this.#idAssigner =
-      opts?.idAssigner ??
-      new SequenceIdAssigner(async (sql: string) => {
-        this.#onQuery?.(sql);
-        return (await pool.query(sql)).rows;
-      });
-    this.#preloadPlugin = opts?.preloadPlugin;
-    this.#onQuery = opts?.onQuery;
-    // Lazy rows require pg-protocol to emit lazy DataRows, which we patch in at runtime; if the
-    // patch cannot be applied/verified (i.e. future pg-protocol internals changed), stay classic
-    this.lazyRows = (opts?.lazyRows ?? false) && ensureLazyDataRows();
     if (opts?.lazyRows && !this.lazyRows) {
       console.warn("joist-orm: lazyRows was requested, but patching pg-protocol failed; using classic rows.");
     }
-    this.executeFindRowData = this.lazyRows
-      ? (em, parsed, settings) => this.#executeFindRowData(em, parsed, settings)
-      : undefined;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
+  /** Uses the transaction's socket when a transaction is active. */
+  private query(txn: pg.PoolClient | undefined, sql: string, bindings: readonly unknown[]) {
+    this.onQuery?.(sql);
+    return (txn ?? this.pool).query(sql, bindings as unknown[]);
+  }
+
+  /** Executes an entity find with the EntityManager's default limit. */
   async executeFind(
     em: EntityManager,
     parsed: ParsedFindQuery,
@@ -136,61 +102,80 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     return (await this.executeQuery(em, sql, bindings)).rows;
   }
 
-  async #executeFindRowData(
+  /** Returns native command counts and rows, including null counts for DDL. */
+  async executeQuery(em: EntityManager, sql: string, bindings: readonly unknown[]): Promise<DriverQueryResult> {
+    const { rowCount, rows } = await this.query(em.txn as pg.PoolClient | undefined, toPgParams(sql), bindings);
+    return { rowCount, rows };
+  }
+
+  /** Assigns identifiers with the configured strategy before dependent writes. */
+  async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
+    await this.#idAssigner.assignNewIds(todos);
+  }
+
+  /** Flushes PostgreSQL operations on the active node-pg transaction. */
+  async flush(
+    em: EntityManager,
+    entityTodos: Record<string, Todo>,
+    joinRows: Record<string, JoinRowTodo>,
+  ): Promise<void> {
+    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as pg.PoolClient;
+    await this.#idAssigner.assignNewIds(entityTodos);
+    await flushPostgres((sql, bindings) => this.query(txn, sql, bindings), entityTodos, joinRows);
+  }
+
+  get defaultPlugins() {
+    return { preloadPlugin: this.#preloadPlugin };
+  }
+
+  /** Decodes immutable pg-protocol rows, falling back only for known unsupported clients. */
+  private async findRowData(
     em: EntityManager,
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },
   ): Promise<RowData> {
     // Auto-register binary parsers for the db's dynamic-oid text-likes (native enums, citext)
-    // once, before our first lazy query; on failure, reset so the next query retries
+    // once, before our first lazy query; on failure, reset so the next query retries.
     await (this.#databaseBinaryParsers ??= registerDatabaseBinaryParsers(this.pool).catch((err) => {
       this.#databaseBinaryParsers = undefined;
       throw err;
     }));
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
     const pgSql = toPgParams(sql);
-    this.#onQuery?.(pgSql);
-    // Centralize client checkout here (pg-pool rejects Submittables in pool.query), and decide
-    // classic-vs-lazy *before* submitting anything, i.e. unsupported clients like pg-native fall
-    // back to classic rows rather than failing mid-query
-    const txnClient = em.txn as pg.PoolClient | undefined;
-    const client = txnClient ?? (await this.pool.connect());
+    this.onQuery?.(pgSql);
+    // pg-pool rejects Submittables in pool.query; choose classic-vs-lazy before submitting.
+    const txn = em.txn as pg.PoolClient | undefined;
+    const client = txn ?? (await this.pool.connect());
     try {
       if (!isRowDataCapableClient(client)) {
         warnUnsupportedClientOnce();
-        return new PojoRowData((await (client as pg.PoolClient).query(pgSql, bindings as any[])).rows);
+        return new PojoRowData((await (client as pg.PoolClient).query(pgSql, bindings as unknown[])).rows);
       }
       return await executeRowDataQuery(client, pgSql, bindings);
     } finally {
-      if (!txnClient) client.release();
+      if (!txn) client.release();
     }
   }
 
-  /** Returns PostgreSQL's native command count and raw rows, including null counts for DDL. */
-  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<DriverQueryResult> {
-    const pgSql = toPgParams(sql);
-    this.#onQuery?.(pgSql);
-    const client = this.getMaybeInTxnClient(em);
-    const { rowCount, rows } = await client.query(pgSql, bindings as any[]);
-    return { rowCount, rows };
-  }
-
+  /**
+   * Runs hooks and SQL on one checked-out native pg client.
+   *
+   * Nested calls reuse the active transaction rather than starting a second one.
+   */
   async transaction<T>(em: EntityManager, fn: (txn: pg.PoolClient) => Promise<T>): Promise<T> {
-    if (em.txn) {
-      return fn(em.txn as pg.PoolClient);
-    }
+    if (em.txn) return fn(em.txn as pg.PoolClient);
     const client = await this.pool.connect();
     let result: T;
     try {
       await driverBeforeBegin(em, client);
-      this.#onQuery?.("BEGIN;");
+      this.onQuery?.("BEGIN;");
       await client.query("BEGIN");
       em.txn = client;
       try {
         await driverAfterBegin(em, client);
         result = await fn(client);
         await driverBeforeCommit(em, client);
-        this.#onQuery?.("COMMIT;");
+        this.onQuery?.("COMMIT;");
         await client.query("COMMIT");
       } catch (e) {
         await client.query("ROLLBACK");
@@ -204,252 +189,200 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     }
     return result;
   }
-
-  async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    return this.#idAssigner.assignNewIds(todos);
-  }
-
-  async flush(
-    em: EntityManager,
-    entityTodos: Record<string, Todo>,
-    joinRows: Record<string, JoinRowTodo>,
-  ): Promise<void> {
-    const client = (em.txn ?? fail("Expected EntityManager.txn to be set")) as pg.PoolClient;
-    await this.#idAssigner.assignNewIds(entityTodos);
-    const ops = generateOps(entityTodos);
-    const onQuery = this.#onQuery;
-    // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
-    // See https://github.com/joist-orm/joist-orm/issues/591
-    await Promise.all([
-      ...ops.inserts.map((op) => batchInsert(client, op, onQuery)),
-      ...ops.updates.map((op) => batchUpdate(client, op, onQuery)),
-      ...ops.deletes.map((op) => batchDelete(client, op, onQuery)),
-      ...Object.entries(joinRows).flatMap(([joinTableName, todo]) => {
-        return [
-          m2mBatchInsert(client, joinTableName, todo, onQuery),
-          m2mBatchDelete(client, joinTableName, todo, onQuery),
-        ];
-      }),
-    ]);
-  }
-
-  get defaultPlugins() {
-    return { preloadPlugin: this.#preloadPlugin };
-  }
-
-  private getMaybeInTxnClient(em: EntityManager): pg.PoolClient | pg.Pool {
-    return (em.txn as pg.PoolClient) || this.pool;
-  }
-}
-
-async function batchInsert(client: pg.PoolClient, op: InsertOp, onQuery: OnQuery): Promise<unknown> {
-  const { tableName, columns, columnValues } = op;
-  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
-  const sql = cleanSql(`
-    ${cte}
-    INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
-    SELECT * FROM data
-  `);
-  const pgSql = toPgParams(sql);
-  onQuery?.(pgSql);
-  return client.query(pgSql, bindings);
-}
-
-async function batchUpdate(client: pg.PoolClient, op: UpdateOp, onQuery: OnQuery): Promise<void> {
-  const { tableName, columns, columnValues, updatedAt } = op;
-
-  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
-
-  // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
-  // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
-  // the pg data to match what we have in the JS Date.
-  //
-  // ...but Temporal's types don't have this flaw.
-  const truncateToMills = !getRuntimeConfig().temporal;
-  const maybeUpdatedAt =
-    updatedAt && truncateToMills
-      ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt)}) = data.__original_updated_at`
-      : updatedAt
-        ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`
-        : "";
-
-  const sql = `
-    ${cte}
-    UPDATE ${kq(tableName)}
-    SET ${columns
-      .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
-      .map((c) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
-      .join(", ")}
-    FROM data
-    WHERE ${kq(tableName)}.id = data.id ${maybeUpdatedAt}
-    RETURNING ${kq(tableName)}.id
-  `;
-
-  const pgSql = toPgParams(cleanSql(sql));
-  onQuery?.(pgSql);
-  const result = await client.query(pgSql, bindings);
-  const results = result.rows;
-
-  const ids = columnValues[0]; // assume id is the 1st column
-  if (results.length !== ids.length) {
-    const updated = new Set(results.map((r: any) => r.id));
-    const missing = ids.filter((id) => !updated.has(id));
-    throw new Error(`Oplock failure for ${tableName} rows ${missing.join(", ")}`);
-  }
-}
-
-async function batchDelete(client: pg.PoolClient, op: DeleteOp, onQuery: OnQuery): Promise<void> {
-  const { tableName, ids } = op;
-  const pgSql = toPgParams(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`);
-  onQuery?.(pgSql);
-  await client.query(pgSql, [ids]);
-}
-
-/** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
-function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: any[][]): [string, any[][]] {
-  ensureRectangularArraySizes(columns, columnValues);
-  const selects = columns.map((c) => {
-    if (c.dbType.endsWith("[]")) {
-      if (c.isNullableArray) {
-        return `unnest_arrays(?::${c.dbType}[], true) as ${kq(c.columnName)}`;
-      } else {
-        return `unnest_arrays(?::${c.dbType}[]) as ${kq(c.columnName)}`;
-      }
-    } else {
-      return `unnest(?::${c.dbType}[]) as ${kq(c.columnName)}`;
-    }
-  });
-  const sql = `WITH ${tableName} AS (SELECT ${selects.join(", ")})`;
-  return [sql, columnValues];
-}
-
-async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
-  const { m2m, newRows } = todo;
-  if (newRows.length === 0) return;
-  const col1Values = newRows.map((row) => todo.dbValue(row, m2m.columnName));
-  const col2Values = newRows.map((row) => todo.dbValue(row, m2m.otherColumnName));
-  if (m2m.hasJoinTableId) {
-    const sql = cleanSql(`
-      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-      SELECT * FROM data
-      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
-      RETURNING id;
-    `);
-    const pgSql = toPgParams(sql);
-    onQuery?.(pgSql);
-    const { rows } = await client.query(pgSql, [col1Values, col2Values]);
-    for (let i = 0; i < rows.length; i++) {
-      newRows[i].id = rows[i].id;
-      newRows[i].op = JoinRowOperation.Flushed;
-      newRows[i].persisted = true;
-    }
-  } else {
-    // Id-less join tables have no surrogate id to return; the FK pair is the PK, so just
-    // insert and let any duplicate be a no-op.
-    const sql = cleanSql(`
-      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-      SELECT * FROM data
-      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO NOTHING;
-    `);
-    const pgSql = toPgParams(sql);
-    onQuery?.(pgSql);
-    await client.query(pgSql, [col1Values, col2Values]);
-    for (const row of newRows) {
-      row.op = JoinRowOperation.Flushed;
-      row.persisted = true;
-    }
-  }
-}
-
-async function m2mBatchDelete(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
-  const { m2m, deletedRows } = todo;
-  if (deletedRows.length === 0) return;
-  // Rows with a surrogate id are deleted by id; rows without one — id-less tables, or `remove`s
-  // done against an unloaded ManyToManyCollection — are deleted by their (col1, col2) composite.
-  const [haveIds, noIds] = partition(deletedRows, (r) => {
-    // We used to use `id !== -1` as a marker for "row is/is-not persisted in the db" -- but when adding support
-    // for id-column-less m2m tables, we couldn't use `id === -1` as this marker anymore, so now rely on a dedicated
-    // `persisted` key instead.
-    //
-    // So, ideally, this `id !== -1` could go away _except_ that our internal verisoning plugin leverages this "m2m rows
-    // with an id=-1 delete by their FK values" to handle our versioned m2m tables. And for now it's easier to
-    // keep/restore this `id !== -1` than refactor that.
-    return r.id !== undefined && r.id !== -1;
-  });
-  if (haveIds.length > 0) {
-    const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
-    onQuery?.(pgSql);
-    await client.query(pgSql, [haveIds.map((r) => r.id!)]);
-  }
-  if (noIds.length > 0) {
-    const data = noIds
-      // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
-      // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-      .filter((row) => !todo.isNew(row, m2m.columnName) && !todo.isNew(row, m2m.otherColumnName))
-      .map((row) => [todo.dbValue(row, m2m.columnName), todo.dbValue(row, m2m.otherColumnName)] as any);
-    if (data.length > 0) {
-      const pgSql = toPgParams(`
-        DELETE FROM ${kq(joinTableName)}
-        WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
-          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
-        )`);
-      onQuery?.(pgSql);
-      await client.query(pgSql, [JSON.stringify(data)]);
-    }
-  }
-  deletedRows.forEach((row) => {
-    row.id = undefined;
-    row.persisted = false;
-    row.op = JoinRowOperation.Flushed;
-  });
 }
 
 /**
  * Configures the `pg` driver with the best type parsers.
  *
  * In particular, pg's default `TIMESTAMPTZ` parser is very inefficient, and even just
- * pulling in the latest `pg-types` and installing the fixed parser makes a noticable
- * difference.
+ * pulling in the latest `pg-types` and installing the fixed parser makes a noticeable difference.
  */
 export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   if (temporal) {
     // Don't eagerly parse the strings, instead defer to the serde logic. This only governs
     // classic *text* results (knex, pool.query, non-lazy drivers); binary lazy cells construct
     // Temporal values directly, with no strings involved (see registerTemporalBinaryParsers).
-    const noop = (s: string) => s;
-    const noopArray = (s: string) => array.parse(s, noop);
-
+    function noop(s: string) {
+      return s;
+    }
+    function noopArray(s: string) {
+      return array.parse(s, noop);
+    }
     const { TIMESTAMP, TIMESTAMPTZ, DATE } = pg.types.builtins;
     pg.types.setTypeParser(DATE, noop);
     pg.types.setTypeParser(TIMESTAMP, noop);
     pg.types.setTypeParser(TIMESTAMPTZ, noop);
-
-    // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
+    // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up.
     pg.types.setTypeParser(1182 as number, noopArray); // date[]
     pg.types.setTypeParser(1115 as number, noopArray); // timestamp[]
     pg.types.setTypeParser(1185 as number, noopArray); // timestamptz[]
-
     registerTemporalBinaryParsers();
   } else {
     pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
-    // The binary registry's date/timestamp/timestamptz builtins already decode to Dates
+    // The binary registry's date/timestamp/timestamptz builtins already decode to Dates.
   }
 }
 
-const questionMarks = /(?<!@)\?/g;
+let warnedUnsupportedClient = false;
 
-/**
- * Converts our knex-style `?` placeholders to pg-native `$1, $2, ...` numbered parameters.
- *
- * We skipping postgres operators like `@?`. */
-function toPgParams(sql: string): string {
-  let i = 0;
-  return sql.replace(questionMarks, () => `$${++i}`);
+const runtimeRequire = createRequire(import.meta.url);
+
+// pg's internal-but-exported Query class; subclassing it reuses its extended-protocol
+// submit/bind logic while letting us intercept row handling (the same seam pg-cursor uses).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const PgQuery: any = runtimeRequire("pg/lib/query");
+
+// The prototype escape hatch for binary results, i.e. for A/B benchmarking; read once at load.
+const BINARY_BY_DEFAULT = process.env.JOIST_LAZY_BINARY !== "0";
+
+/** A pg Query that diverts DataRows into a {@link WireRowData} instead of a `Result`. */
+class RowDataQuery extends PgQuery {
+  #wire = new WireRowData();
+
+  constructor(
+    config: { text: string; values: any[]; binary?: boolean; queryMode?: string },
+    callback: (err: unknown) => void,
+  ) {
+    super(config, undefined, callback);
+  }
+
+  /**
+   * The query's result rows, i.e. once our callback has fired.
+   *
+   * If a small-result materialization threshold ever seems attractive, this is where it would
+   * go — but see the "Small results deliberately stay lazy" note on WireRowData: lazy
+   * won the measured comparison at every row count for sparse access, so no threshold exists.
+   */
+  get rowData(): RowData {
+    return this.#wire;
+  }
+
+  handleRowDescription(msg: any): void {
+    if (this._canceledDueToError) return;
+    try {
+      super.handleRowDescription(msg);
+      // Resolve active text parsers through the client's TypeOverrides chain (client.js
+      // injects `_types` at submit time). Binary fields use Joist's binary registry instead
+      // of pg's broken binary parsing of UTF-8 strings.
+      const types = this._result?._types;
+      this.#wire.setColumnDecoders(
+        pgColumnDecoders(msg.fields, types && ((oid: number) => types.getTypeParser(oid, "text"))),
+      );
+    } catch (err) {
+      // Mirror pg's Query error containment: record + reject at ReadyForQuery, keeping the
+      // connection's protocol state intact.
+      this._canceledDueToError = err;
+    }
+  }
+
+  handleDataRow(msg: any): void {
+    if (this._canceledDueToError) return;
+    try {
+      if (msg.bytes === undefined) {
+        // This connection's pg-protocol copy is unpatched (i.e. the pool came from a different
+        // `pg` install than the one joist-orm patched), so lazyRows cannot work — fail loudly
+        // rather than silently degrade; any CI build/smoketest will surface this immediately.
+        throw new Error(
+          "joist-orm: lazyRows is enabled, but this connection's pg-protocol emits classic" +
+            " DataRows (likely a duplicate pg install); fix the install or disable lazyRows.",
+        );
+      }
+      // `msg.length` includes the int32 length field itself, so the payload is `length - 4`;
+      // our patched message carries the real length from `handlePacket`'s argument.
+      this.#wire.addRow(msg.bytes, msg.offset, msg.length - 4);
+    } catch (err) {
+      this._canceledDueToError = err;
+    }
+  }
 }
 
-let warnedUnsupportedClient = false;
+/**
+ * Executes `sql` on an already-checked-out client, returning a {@link RowData} instead of
+ * materialized POJO rows.
+ *
+ * Uses a `pg` Query subclass that records each DataRow's raw payload bytes into the result
+ * (via the lazy DataRow message from `patchPgProtocol`) and never materializes per-cell
+ * strings or per-row objects. If the client's connection turns out to use an unpatched
+ * pg-protocol copy (i.e. the app's pool was built from a different `pg` install than the one
+ * joist-orm patched), the query fails with a descriptive error — a misconfiguration any CI
+ * build/smoketest will surface immediately, so we fail loudly rather than silently degrade.
+ * The rows already streamed are discarded; the connection itself stays usable.
+ *
+ * By default the query requests binary result format via the extended protocol.
+ * Pass `binary: false` for classic text-format results, or set `JOIST_LAZY_BINARY=0`
+ * for A/B benchmarking or as an escape hatch.
+ */
+export function executeRowDataQuery(
+  client: pg.PoolClient,
+  sql: string,
+  bindings: readonly any[],
+  opts?: { binary?: boolean },
+): Promise<RowData> {
+  const binary = opts?.binary ?? BINARY_BY_DEFAULT;
+  return new Promise((resolve, reject) => {
+    const query = new RowDataQuery(
+      // Binary results require the extended protocol; `queryMode` forces it for bindings-less queries.
+      binary
+        ? { text: sql, values: bindings as any[], binary: true, queryMode: "extended" }
+        : { text: sql, values: bindings as any[] },
+      (err: unknown) => {
+        if (err) reject(err);
+        else resolve(query.rowData);
+      },
+    );
+    client.query(query as any);
+  });
+}
+
+/** Returns whether `client` supports the lazy row-data query path, before submitting anything. */
+function isRowDataCapableClient(client: unknown): client is pg.PoolClient {
+  // Require the pure-JS pg client (pg-native has no `connection` and different query internals).
+  return (
+    typeof client === "object" &&
+    client !== null &&
+    typeof (client as any).query === "function" &&
+    (client as any).connection !== undefined &&
+    (client as any).native === undefined
+  );
+}
+
+/**
+ * Resolves each column's decoder from the query's RowDescription.
+ *
+ * Binary-format fields decode through Joist's own binary registry only (see
+ * `setBinaryTypeParser`) — `pg.types`/`TypeOverrides` are never consulted, and a column whose
+ * oid has no registered binary parser fails the query here, before any rows arrive, rather
+ * than guessing at a lossy decoding. Text-format fields (the `binary: false` escape hatch)
+ * decode by utf8-slicing the cell into the active text parser, resolved via `getTypeParser`
+ * (i.e. the pool/client `TypeOverrides` chain) or the global registry.
+ */
+export function pgColumnDecoders(
+  fields: Array<{ name: string; dataTypeID: number; format?: string }>,
+  getTypeParser?: (dataTypeID: number) => (value: any) => any,
+) {
+  return fields.map((field) => {
+    const { name, dataTypeID, format } = field;
+    let decode;
+    if (format === "binary") {
+      decode = getBinaryTypeParser(dataTypeID);
+      if (decode === undefined) {
+        throw new Error(
+          `joist-orm: no binary type parser registered for oid ${dataTypeID} (column "${name}");` +
+            ` register one with setBinaryTypeParser (i.e. binaryTextParser for text-like types)`,
+        );
+      }
+    } else {
+      const parse = getTypeParser?.(dataTypeID) ?? pg.types.getTypeParser(dataTypeID, "text");
+      decode = textCellDecoder(parse);
+    }
+    return { name, decode };
+  });
+}
+
+/** Builds a text-format cell decoder: utf8-slice the cell bytes into the active text parser. */
+function textCellDecoder(parse: (value: any) => any): (chunk: Buffer, start: number, length: number) => any {
+  return (chunk, start, length) => parse(chunk.toString("utf8", start, start + length));
+}
 
 /** Warns once when lazyRows degrades to classic rows for an unsupported client, i.e. pg-native. */
 function warnUnsupportedClientOnce(): void {

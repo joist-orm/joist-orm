@@ -127,7 +127,7 @@ If you have multiple test databases (i.e. one per Jest work), you can set the pa
 
 ### `temporal`
 
-Joist has native support for the new [temporal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal) standard via either the native implementation itself (if `Temporal` is available at runtime), or the `temporal-polyfill` and `@js-temporal/polyfill` polyfills.
+Joist supports the [Temporal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal) standard through the runtime's native implementation or `temporal-polyfill`. When native Temporal is unavailable, install `temporal-polyfill`; Joist loads its `/global` entry point on demand so Joist and database clients share `globalThis.Temporal`.
 
 When enabled, all `timestamptz`, `date`, etc., columns will use their respective `Temporal.ZonedDateTime` and `Temporal.PlainDate` types.
 

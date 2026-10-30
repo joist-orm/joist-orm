@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 
 const runtimeRequire = createRequire(import.meta.url);
 
-// Native Temporal and both supported polyfills expose this shape; use the shared spec types instead of duplicating it.
+// Native Temporal and temporal-polyfill expose this shape; use the shared spec types instead of duplicating it.
 type TemporalModule = typeof import("temporal-spec");
 let temporal: TemporalModule | undefined | false;
 
@@ -48,7 +48,7 @@ export declare namespace Temporal {
 }
 
 /**
- * Conditionally/dynamically requires `temporal-polyfill`.
+ * Installs temporal-polyfill globally when native Temporal is unavailable.
  *
  * We want to avoid directly importing/requiring `temporal-polyfill` because
  * it will introduce the dependency to all users of Joist.
@@ -58,25 +58,21 @@ export function maybeRequireTemporal(): TemporalModule | undefined {
   if (temporal === false) return undefined;
   // if we already required temporal, just return that
   if (temporal) return temporal;
-  // use built in temporal if present
-  if ("Temporal" in global && "Intl" in global) {
+  // Share one implementation with database clients that resolve Temporal from the global.
+  if (typeof globalThis.Temporal === "undefined") {
+    try {
+      runtimeRequire("temporal-polyfill/global");
+    } catch (e) {}
+  }
+  // use built in temporal or the installed polyfill
+  if (typeof globalThis.Temporal !== "undefined") {
     temporal = {
-      Temporal: global.Temporal as typeof globalThis.Temporal,
+      Temporal: globalThis.Temporal,
       toTemporalInstant: Date.prototype.toTemporalInstant,
-      Intl: global.Intl,
+      Intl: globalThis.Intl,
     };
     return temporal;
   }
-  // preferentially try to use temporal-polyfill
-  try {
-    temporal = runtimeRequire("temporal-polyfill");
-    return temporal as TemporalModule;
-  } catch (e) {}
-  // last resort, try to use @js-temporal/polyfill
-  try {
-    temporal = runtimeRequire("@js-temporal/polyfill");
-    return temporal as TemporalModule;
-  } catch (e) {}
   // don't try to load temporal again
   temporal = false;
   return undefined;

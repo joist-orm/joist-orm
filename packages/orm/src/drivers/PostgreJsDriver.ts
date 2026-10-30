@@ -17,6 +17,7 @@ import {
   driverBeforeCommit,
   fail,
   getRuntimeConfig,
+  requireTemporal,
 } from "joist-core";
 import * as native from "postgrejs";
 import type {
@@ -117,7 +118,7 @@ export class PostgreJsDriver implements Driver<Connection> {
     const client = (em.txn as Connection | undefined) ?? this.pool;
     await client.query(pgSql, {
       ...mappingOptions(true),
-      params: bindings.map(prepareValue),
+      params: [...bindings],
       rowDecoder: decoder,
     });
     return decoder.rows;
@@ -216,18 +217,16 @@ function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], option
 /** Keeps Temporal's microseconds through decoding instead of rounding through Date. */
 function mappingOptions(lazy = false): QueryOptions {
   const temporal = getRuntimeConfig().temporal;
-  const nativeTemporal = temporal && lazy && typeof globalThis.Temporal !== "undefined";
+  if (temporal) requireTemporal();
   return {
     rowDecoder: "object",
     fetchCount: 0,
     rollbackOnError: false,
     typeMap: joistTypeMap,
     unknownTypesAsString: true,
-    temporalTypes: nativeTemporal ? [1082, 1083, 1114, 1184] : false,
-    // PostgreJS only reads global Temporal; Joist's polyfill is module-local. Without the global,
-    // keep lossless strings for Joist's codecs, just like node-pg's text path. Raw-query callers
-    // also expect strings. Both paths retain microseconds and preserve array nulls.
-    fetchAsString: temporal && !nativeTemporal ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
+    temporalTypes: temporal ? [1082, 1083, 1114, 1184] : false,
+    // Accept Temporal parameters on both paths, but retain lossless strings for raw-query callers.
+    fetchAsString: temporal && !lazy ? [1082, 1083, 1114, 1184] : temporal ? [] : [1083],
   };
 }
 
@@ -240,7 +239,7 @@ async function executeNativeQuery(
   return client
     .query(sql, {
       ...mappingOptions(),
-      params: params.map(prepareValue),
+      params: [...params],
     })
     .then(toDriverResult);
 }
@@ -296,25 +295,6 @@ function createTypeMap(): native.DataTypeMap {
     decodeTextBuffer: (buffer, offset, length) => buffer.toString("utf8", offset, offset + length),
   });
   return types;
-}
-
-/**
- * Normalizes pg-compatible parameters before PostgreJS infers their wire types.
- *
- * Native Temporal inputs work with temporalTypes enabled, but eager/raw results deliberately keep
- * pg-compatible representations. Strings preserve write precision without enabling it.
- */
-function prepareValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(prepareValue);
-  if (value !== null && typeof value === "object") {
-    const tag = Object.prototype.toString.call(value);
-    if (tag === "[object Temporal.ZonedDateTime]") {
-      // PostgreSQL accepts the UTC offset, but not Temporal's bracketed zone annotation.
-      return (value as Temporal.ZonedDateTime).toString({ timeZoneName: "never" });
-    }
-    if (tag.startsWith("[object Temporal.")) return String(value);
-  }
-  return value;
 }
 
 /** Joist's text serde uses the server-rendered offset, not a named zone with future DST rules. */

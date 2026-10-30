@@ -9,8 +9,6 @@
     "directory": "packages/tests/integration"
   },
   "scripts": {
-    "benchmark:postgrejs": "node --expose-gc --import tsx benchmark-postgrejs.ts",
-    "benchmark:postgrejs-writes": "node --expose-gc --import tsx benchmark-postgrejs-writes.ts",
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "concurrently --kill-others-on-fail --names stock,lazy,postgrejs,lazy-preloading \"yarn test-stock\" \"yarn test-lazy\" \"yarn test-postgrejs\" \"yarn test-lazy-preloading\"",
     "test-stock": "TEST_VARIANT=stock DATABASE_URL=postgres://joist:local@localhost:5435/joist_stock JOIST_DRIVER=pg JOIST_ROW_DATA=0 PLUGINS= jest --runInBand --logHeapUsage",

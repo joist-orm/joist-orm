@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "composite": false
-  },
-  "include": ["benchmark-postgrejs.ts", "benchmark-postgrejs-writes.ts"]
-}

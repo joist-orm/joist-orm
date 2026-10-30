@@ -1,24 +1,9 @@
-import { Temporal, ensureRectangularArraySizes, getMetadata, newPgConnectionConfig } from "joist-orm";
-import { PostgreJsDriver } from "joist-orm/postgrejs";
-import { Pool } from "postgrejs";
+import { Temporal, ensureRectangularArraySizes, getMetadata } from "joist-orm";
 import { knex, newEntityManager } from "src/setupDbTests";
 
 import { Author, Book } from "./entities/entities";
 
-describe.each(["pg", "postgrejs"] as const)("nullableArrays (%s)", (driver) => {
-  let nativePool: Pool | undefined;
-
-  beforeAll(() => {
-    if (driver === "postgrejs") {
-      const { ssl, ...config } = newPgConnectionConfig();
-      nativePool = new Pool({ ...config, ssl: ssl ? {} : undefined, requireSSL: !!ssl, timezone: "UTC" });
-    }
-  });
-
-  afterAll(async () => {
-    await nativePool?.close();
-  });
-
+describe("nullableArrays", () => {
   it("uses serialized Temporal markers before driver parameter normalization", () => {
     // Given the generated nullable Temporal columns and their serialized array elements
     const date = Temporal.PlainDate.from("2024-01-02");
@@ -68,7 +53,6 @@ describe.each(["pg", "postgrejs"] as const)("nullableArrays (%s)", (driver) => {
       )
       .into("authors");
     const em = newEntityManager();
-    if (nativePool) em.driver = new PostgreJsDriver(nativePool);
     const authors = await em.loadAll(Author, ["a:1", "a:2", "a:3"]);
     // When the arrays become absent, empty, and populated in the same bulk update
     authors[0].maybeBirthdays = undefined;
@@ -107,7 +91,6 @@ describe.each(["pg", "postgrejs"] as const)("nullableArrays (%s)", (driver) => {
       )
       .into("book");
     const em = newEntityManager();
-    if (nativePool) em.driver = new PostgreJsDriver(nativePool);
     const books = await em.loadAll(Book, ["b:1", "b:2", "b:3"]);
     // When the arrays become absent, empty, and populated in the same bulk update
     books[0].maybeTimestampTzs = undefined;

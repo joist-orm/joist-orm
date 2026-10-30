@@ -8,7 +8,6 @@ import {
   type PreloadPlugin,
   type RowData,
   SequenceIdAssigner,
-  type Temporal,
   type Todo,
   buildRawQuery,
   driverAfterBegin,
@@ -227,25 +226,23 @@ function decodingOptions(options: DataMappingOptions): DataMappingOptions {
   };
 }
 
-/** Adapts native parsers to Joist's column decoders and Temporal time-zone representation. */
+/** Adapts native parsers to Joist's column decoders without changing their values. */
 function columnDecoders(parsers: AnyParseFunction[], fields: FieldInfo[], options: DataMappingOptions) {
   return fields.map((field, index) => ({
     name: field.fieldName,
-    decode:
-      options.temporalTypes && (field.dataTypeId === 1184 || field.dataTypeId === 1185)
-        ? (chunk: Buffer, start: number, len: number) => normalizeTimeZone(parsers[index](chunk, start, len, options))
-        : (chunk: Buffer, start: number, len: number) => parsers[index](chunk, start, len, options),
+    decode: (chunk: Buffer, start: number, len: number) => parsers[index](chunk, start, len, options),
   }));
 }
 
-let cachedMappingOptions: { lazy: QueryOptions; eager: QueryOptions } | undefined;
+let lazyMappingOptions: QueryOptions | undefined;
+let eagerMappingOptions: QueryOptions | undefined;
 
 /** Lazily captures application-wide mapping settings after generated metadata initializes them. */
 function mappingOptions(lazy = false): QueryOptions {
-  if (!cachedMappingOptions) {
+  if (!lazyMappingOptions || !eagerMappingOptions) {
     const temporal = getRuntimeConfig().temporal;
     if (temporal) requireTemporal();
-    const options: QueryOptions = {
+    lazyMappingOptions = {
       rowDecoder: "object",
       fetchCount: 0,
       rollbackOnError: false,
@@ -254,13 +251,12 @@ function mappingOptions(lazy = false): QueryOptions {
       temporalTypes: temporal ? [1082, 1083, 1114, 1184] : false,
       fetchAsString: temporal ? [] : [1083],
     };
-    // Accept Temporal parameters on both paths, but retain lossless strings for raw-query callers.
-    cachedMappingOptions = {
-      lazy: options,
-      eager: { ...options, fetchAsString: temporal ? [1082, 1083, 1114, 1184] : [1083] },
-    };
+    // Accept Temporal parameters on both paths, but return strings for raw queries to preserve
+    // Joist's node-pg-compatible result types. Parsing through Date would lose microseconds;
+    // returning Temporal objects would change the values callers receive when switching drivers.
+    eagerMappingOptions = { ...lazyMappingOptions, fetchAsString: temporal ? [1082, 1083, 1114, 1184] : [1083] };
   }
-  return lazy ? cachedMappingOptions.lazy : cachedMappingOptions.eager;
+  return lazy ? lazyMappingOptions : eagerMappingOptions;
 }
 
 /** Executes with Joist's value representations without changing the caller's pool configuration. */
@@ -328,12 +324,4 @@ function createTypeMap(): native.DataTypeMap {
     decodeTextBuffer: (buffer, offset, length) => buffer.toString("utf8", offset, offset + length),
   });
   return types;
-}
-
-/** Joist's text serde uses the server-rendered offset, not a named zone with future DST rules. */
-function normalizeTimeZone(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(normalizeTimeZone);
-  if (value === null) return null;
-  const date = value as Temporal.ZonedDateTime;
-  return date.withTimeZone(date.offset === "+00:00" ? "UTC" : date.offset);
 }

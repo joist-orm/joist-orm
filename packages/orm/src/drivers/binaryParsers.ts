@@ -47,8 +47,7 @@ export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 export async function registerDatabaseBinaryParsers(pool: {
   query(sql: string): Promise<{ rows: any[] }>;
 }): Promise<void> {
-  // Also capture the session's TimeZone, which zones temporal-mode timestamptz loads to match
-  // what classic text parsing would have produced (pg renders timestamps in the session zone)
+  // Binary timestamptz carries only an instant, so capture the session's TimeZone for Temporal loads.
   const [{ rows: settings }, { rows }] = await Promise.all([
     pool.query(`select current_setting('TimeZone') as tz`),
     pool.query(
@@ -177,9 +176,8 @@ export function binaryTimestamptzToDate(chunk: Buffer, start: number): any {
  * `Temporal` values *directly* from the wire µs/days — no intermediate strings, no
  * `temporalMappers.fromDb` parsing (the mappers pass already-constructed instances through).
  *
- * `timestamptz` matches the text path's zoning exactly: classic parsing zones the value by the
- * offset the session's `TimeZone` rendered (normalizing `+00` to `UTC`), so we compute the
- * session zone's offset at each instant (see `setSessionTimeZone`; the configured
+ * `timestamptz` retains the session's time zone, including its DST rules, rather than
+ * reducing it to the fixed offset available in text results (see `setSessionTimeZone`; the configured
  * `temporal.timeZone` only governs `now`-conversions, not loads).
  */
 export function registerTemporalBinaryParsers(): void {
@@ -222,11 +220,7 @@ export function registerTemporalBinaryParsers(): void {
     const pgMicros = chunk.readBigInt64BE(start);
     if (pgMicros === INFINITY_US || pgMicros === NEG_INFINITY_US) failTemporalInfinity("timestamptz");
     const instant = t.Instant.fromEpochNanoseconds((pgMicros + PG_EPOCH_US) * 1000n);
-    if (sessionTimeZone === "UTC") return instant.toZonedDateTimeISO("UTC");
-    // Zone by the session zone's offset at this instant, i.e. what pg's text rendering carries
-    const zoned = instant.toZonedDateTimeISO(sessionTimeZone);
-    const { offset } = zoned;
-    return offset === "+00:00" ? zoned.withTimeZone("UTC") : zoned.withTimeZone(offset);
+    return instant.toZonedDateTimeISO(sessionTimeZone);
   });
 }
 

@@ -60,6 +60,7 @@ export class RunPlugin extends Plugin {
 
   #syncEntityData(entityTodos: Record<string, Todo>) {
     const { em } = this;
+    const { isLoadedCache } = getEmInternalApi(em);
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
         const row = createRowFromEntityData(newEntity, { preferOriginalData: false });
@@ -98,6 +99,9 @@ export class RunPlugin extends Plugin {
               value = column.rowValue(newData);
             }
             oldData[fieldName] = serde.fromRow(new PojoRowData([column ? { [column.columnName]: value } : {}]), 0);
+            // Mirror setField's cache invalidation for these changed fields without making test entities dirty
+            // or queuing business reactions that the isolated EM has already processed.
+            isLoadedCache.resetIsLoaded(oldEntity, fieldName);
           });
       });
       todo.deletes.forEach((newEntity) => {

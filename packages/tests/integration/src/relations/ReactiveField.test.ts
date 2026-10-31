@@ -685,4 +685,78 @@ describe("ReactiveField", () => {
     // Then the RF was invalidated (by IsLoadedCache, not a true ReactionsManager-driven async recalc)
     expect(a.tagsOfAllBooks.get).toBe("age-20");
   });
+
+  it("preserves the sorted collection cache when recalculating an unchanged reactive field", async () => {
+    // Given an author whose book count has already been calculated
+    await insertAuthor({ first_name: "a1", number_of_books: 2 });
+    // And two books whose insertion order differs from their display order
+    await insertBook({ title: "b1", author_id: 1, order: 2 });
+    await insertBook({ title: "b2", author_id: 1, order: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    await a.numberOfBooks.load();
+    const books = a.books.get;
+    // When the count is explicitly recalculated without changing any books
+    await a.numberOfBooks.load();
+    // Then the calculation's no-op write does not evict the sorted books
+    expect(a.books.get === books).toBe(true);
+  });
+
+  it("does not recalculate a cached reactive field for a normalized no-op dependency write", async () => {
+    // Given an author with a cached book count that also depends on firstName
+    await insertAuthor({ first_name: "a1", number_of_books: 0 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    await a.numberOfBooks.load();
+    const calculations = a.transientFields.numberOfBooksCalcInvoked;
+    // When firstName is assigned a value that sanitizes to its current value
+    a.firstName = " a1 ";
+    void a.numberOfBooks.get;
+    // Then the cached calculation is reused
+    expect(a.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
+  });
+
+  it("reuses a cached derived array for an equal array dependency write", async () => {
+    // Given an author with cached uppercase nicknames
+    await insertAuthor({ first_name: "a1", nick_names: ["one", "two"] });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const upper = await a.nickNamesUpper.load();
+    // When the nicknames are assigned an equal but distinct array
+    a.nickNames = ["one", "two"];
+    // Then field equality preserves the derived array's identity
+    expect(a.nickNamesUpper.get).toBe(upper);
+  });
+
+  it("updates a cached derived value when a dependency changes", async () => {
+    // Given an author with cached search text based on a book's title
+    await insertAuthor({ first_name: "a1" });
+    // And a persisted book included in the search text
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    await a.search.load();
+    // When the book's title changes
+    a.books.get[0].title = "b2";
+    // Then the cached search text reflects the new title immediately
+    expect(a.search.get).toBe("a:1 a1 b2");
+  });
+
+  it("updates a cached derived value when a dirty dependency reverts to its original value", async () => {
+    // Given an author with cached search text based on a persisted book
+    await insertAuthor({ first_name: "a1" });
+    // And a book with its original title
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    const b = a.books.get[0];
+    await a.search.load();
+    // And search text has been cached for a dirty title
+    b.title = "b2";
+    void a.search.get;
+    // When the title reverts to its persisted value
+    b.title = "b1";
+    // Then the cached search text reflects the original title immediately
+    expect(a.search.get).toBe("a:1 a1 b1");
+  });
 });

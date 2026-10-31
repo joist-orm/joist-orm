@@ -31,7 +31,7 @@
     "build"
   ],
   "dependencies": {
-    "dotenv": "^18.0.8"
+    "dotenv": "^18.0.9"
   },
   "peerDependencies": {
     "joist-core": "workspace:*",

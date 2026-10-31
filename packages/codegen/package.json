@@ -55,7 +55,7 @@
   "dependencies": {
     "@dprint/formatter": "^0.6.0",
     "@dprint/json": "^0.25.2",
-    "@inquirer/prompts": "^8.7.3",
+    "@inquirer/prompts": "^8.7.4",
     "@types/jscodeshift": "^17.3.0",
     "@types/pluralize": "^0.0.33",
     "change-case": "^5.4.4",

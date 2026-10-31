@@ -14,7 +14,7 @@
     "test-skip": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
-    "bun-types": "^1.4.3",
+    "bun-types": "^1.4.4",
     "joist-driver-bun-pg": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^9.0.0"

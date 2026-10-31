@@ -68,9 +68,6 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // If we're flushing, only allow writes from hooks
   api.checkWritesAllowed();
 
-  // Tell any `#isLoaded` or `#value` caches that they might be stale
-  isLoadedCache.resetIsLoaded(entity, fieldName);
-
   const instanceData = getInstanceData(entity);
   const { data, originalData, flushedData } = instanceData;
 
@@ -83,6 +80,14 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentValue = getField(entity, fieldName, true);
   const isReference = field.kind === "m2o" || field.kind === "poly";
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
+
+  // Tell any `#isLoaded` or `#value` caches that they might be stale, but only
+  // after we've checked if the current value changed. Also we do it here,
+  // before the "reverting a dirty value to the original" check below,
+  // because caches might have already observed the dirty value, so would
+  // still need to refresh.
+  if (!currentEqualsNew) isLoadedCache.resetIsLoaded(entity, fieldName);
+
   // Check `config.setTransitions` tables while the change is still synchronous, before we change anything,
   // and record the transition for `em.flush` to run its (async) guards and reactions
   if (field.kind === "enum" && !currentEqualsNew) rm.queueTransition(entity, fieldName, currentValue, newValue);

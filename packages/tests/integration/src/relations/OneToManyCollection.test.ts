@@ -940,4 +940,66 @@ describe("OneToManyCollection", () => {
       expect(a1.books.getWithDeleted).toMatchEntity([{ title: "b1" }]);
     });
   });
+
+  it("reuses the ordered collection cache when a book's order is unchanged", async () => {
+    // Given an author's books cached in order
+    await insertAuthor({ first_name: "a1" });
+    // And two books whose insertion order differs from their display order
+    await insertBook({ title: "b1", author_id: 1, order: 2 });
+    await insertBook({ title: "b2", author_id: 1, order: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    const books = a.books.get;
+    // When the first book is assigned its existing order
+    books[0].order = 1;
+    // Then the filtered and sorted array is reused
+    expect(a.books.get === books).toBe(true);
+  });
+
+  it("reuses the with-deleted collection cache when a book's order is unchanged", async () => {
+    // Given an author's cached books, including a soft-deleted book
+    await insertAuthor({ first_name: "a1" });
+    // And a soft-deleted book that is included in the cached array
+    await insertBook({ title: "b1", author_id: 1, order: 1, deleted_at: jan1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    const books = a.books.getWithDeleted;
+    // When the book is assigned its existing order
+    books[0].order = 1;
+    // Then the with-deleted sorted array is reused
+    expect(a.books.getWithDeleted === books).toBe(true);
+  });
+
+  it("re-sorts cached books when a book's order changes", async () => {
+    // Given an author's books cached in order
+    await insertAuthor({ first_name: "a1" });
+    // And two books ordered b2 before b1
+    await insertBook({ title: "b1", author_id: 1, order: 2 });
+    await insertBook({ title: "b2", author_id: 1, order: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    const [b2, b1] = a.books.get;
+    // When b1 moves ahead of b2
+    b1.order = 0;
+    // Then the cached collection reflects the new order
+    expect(a.books.get).toMatchEntity([b1, b2]);
+  });
+
+  it("re-sorts cached books when a dirty order reverts to its original value", async () => {
+    // Given an author's books originally ordered b2 before b1
+    await insertAuthor({ first_name: "a1" });
+    // And two books with persisted orders
+    await insertBook({ title: "b1", author_id: 1, order: 2 });
+    await insertBook({ title: "b2", author_id: 1, order: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "books");
+    const [b2, b1] = a.books.get;
+    // And b1 has moved to the front of the cached collection
+    b1.order = 0;
+    void a.books.get;
+    // When b1's order reverts to its persisted value
+    b1.order = 2;
+    // Then the cached collection returns to its original order
+    expect(a.books.get).toMatchEntity([b2, b1]);
+  });
 });

@@ -61,11 +61,11 @@
     "env-cmd": "^11.0.0",
     "expect-type": "^1.4.0",
     "mprocs": "^0.9.6",
-    "oxfmt": "0.73.0",
-    "oxlint": "1.88.0",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.89.0",
     "pg": "^8.23.1",
     "semantic-release": "^25.0.9",
-    "tsdown": "0.23.1",
+    "tsdown": "0.23.2",
     "typescript": "7.0.2"
   },
   "resolutions": {

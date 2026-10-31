@@ -28,7 +28,7 @@
   "devDependencies": {
     "@graphql-codegen/cli": "^7.4.6",
     "@graphql-tools/graphql-file-loader": "^9.0.6",
-    "@graphql-tools/load": "^8.1.21",
+    "@graphql-tools/load": "^9.0.6",
     "@homebound/graphql-typescript-possible-types": "^2.20.0",
     "@homebound/graphql-typescript-resolver-scaffolding": "^2.50.0",
     "@homebound/graphql-typescript-scalar-type-policies": "^2.14.0",

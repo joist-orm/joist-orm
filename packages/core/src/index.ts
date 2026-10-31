@@ -257,6 +257,22 @@ export {
   type WithSource,
 } from "src/queries/sql/query.ts";
 export {
+  ExactColumnsPlugin,
+  type ExactColumnsPluginOpts,
+  type ExactColumnsTrackOutcome,
+  MissingColumnError,
+} from "./plugins/ExactColumnsPlugin.ts";
+export type {
+  ExactColumnsStoreAdapter,
+  ExactColumnsStoreKey,
+  ExactColumnsStoreUpdate,
+  ExactColumnsStoredProfile,
+  ExactColumnsSnapshot,
+  ExactColumnsPersistenceOpts,
+  ExactColumnsCacheEvent,
+} from "./plugins/ExactColumnsStoreAdapter.ts";
+export { RedisExactColumnsStore, type RedisExactColumnsStoreOpts } from "./plugins/RedisExactColumnsStore.ts";
+export {
   convertToLoadHint,
   isTypeOrSubType,
   type Reactable,

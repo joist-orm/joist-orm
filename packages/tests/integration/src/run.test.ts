@@ -1,13 +1,17 @@
 import { run } from "joist-test-utils";
 import { Context } from "src/context";
 import {
+  AdvanceStatus,
   Author,
+  Book,
+  BookAdvance,
   Comment,
   LargePublisher,
   ParentGroup,
   User,
   newAuthor,
   newBook,
+  newBookAdvance,
   newComment,
   newLargePublisher,
   newSmallPublisher,
@@ -206,5 +210,123 @@ describe("run", () => {
     });
     // Then the test entity's lazy value remains synchronously readable
     expect(pg.bulkData.get).toEqual({ key: "value" });
+  });
+
+  it.withCtx("re-sorts cached books when run changes a book's order", async (ctx) => {
+    // Given an author's books ordered b1 before b2
+    const author = newAuthor(ctx.em);
+    // And two persisted books whose sorted collection is cached in the test EM
+    const b1 = newBook(ctx.em, { author, order: 1 });
+    const b2 = newBook(ctx.em, { author, order: 2 });
+    await ctx.em.flush();
+    void author.books.get;
+    // When run moves b2 ahead of b1 without changing its author
+    await run(ctx, async (ctx) => {
+      const book = await ctx.em.load(Book, b2.id);
+      book.order = 0;
+      await ctx.em.flush();
+    });
+    // Then the test EM's cached collection reflects the new order
+    expect(author.books.get).toMatchEntity([b2, b1]);
+  });
+
+  it.withCtx("re-sorts cached books including soft-deleted books when run changes an order", async (ctx) => {
+    // Given an author's books ordered b1 before soft-deleted b2
+    const author = newAuthor(ctx.em);
+    // And both persisted books are cached in the test EM's with-deleted collection
+    const b1 = newBook(ctx.em, { author, order: 1 });
+    const b2 = newBook(ctx.em, { author, order: 2, deletedAt: jan1 });
+    await ctx.em.flush();
+    void author.books.getWithDeleted;
+    // When run moves b1 after b2 without changing collection membership
+    await run(ctx, async (ctx) => {
+      const book = await ctx.em.load(Book, b1.id);
+      book.order = 3;
+      await ctx.em.flush();
+    });
+    // Then the test EM's with-deleted cache reflects the new order
+    expect(author.books.getWithDeleted).toMatchEntity([b2, b1]);
+  });
+
+  it.withCtx("invalidates cached reactive values when run changes a read-only dependency", async (ctx) => {
+    // Given a publisher whose cached advance snapshot observes status without reacting to it
+    const publisher = newSmallPublisher(ctx.em, { name: "p1" });
+    // And a persisted pending advance included in the cached snapshot
+    const advance = newBookAdvance(ctx.em, { publisher, status: AdvanceStatus.Pending });
+    await ctx.em.flush();
+    void publisher.bookAdvanceTitlesSnapshot.get;
+    // When run signs the advance without recalculating the publisher's persisted snapshot
+    await run(ctx, async (ctx) => {
+      const ba = await ctx.em.load(BookAdvance, advance.id);
+      ba.status = AdvanceStatus.Signed;
+      await ctx.em.flush();
+    });
+    // Then the test EM calculates a fresh snapshot from the mirrored status
+    expect(publisher.bookAdvanceTitlesSnapshot.get).toBe("p1,SIGNED");
+  });
+
+  it.withCtx("preserves unrelated cached reactive values when run changes a book's order", async (ctx) => {
+    // Given an author with a cached book count
+    const author = newAuthor(ctx.em);
+    // And a persisted book whose order does not affect the count
+    const book = newBook(ctx.em, { author, order: 1 });
+    await ctx.em.flush();
+    void author.numberOfBooks.get;
+    const calculations = author.transientFields.numberOfBooksCalcInvoked;
+    // When run changes only the book's order
+    await run(ctx, async (ctx) => {
+      const b = await ctx.em.load(Book, book.id);
+      b.order = 2;
+      await ctx.em.flush();
+    });
+    void author.numberOfBooks.get;
+    // Then the unrelated cached count is reused
+    expect(author.transientFields.numberOfBooksCalcInvoked).toBe(calculations);
+  });
+
+  it.withCtx("does not dirty test entities when run mirrors a scalar change", async (ctx) => {
+    // Given a persisted book in the test EM
+    const book = newBook(ctx.em, { order: 1 });
+    await ctx.em.flush();
+    // When run changes the book's order
+    await run(ctx, async (ctx) => {
+      const b = await ctx.em.load(Book, book.id);
+      b.order = 2;
+      await ctx.em.flush();
+    });
+    // Then flushing the test EM has no writes to repeat
+    expect(await ctx.em.flush()).toEqual([]);
+  });
+
+  it.withCtx("does not enqueue test-entity reactions when run mirrors a scalar change", async (ctx) => {
+    // Given a persisted author whose ssn reaction has already run in the test EM
+    const author = newAuthor(ctx.em, { ssn: "before" });
+    await ctx.em.flush();
+    const reactions = author.transientFields.reactions.afterMetadata;
+    // When run changes the author's ssn and the test EM is subsequently flushed
+    await run(ctx, async (ctx) => {
+      const a = await ctx.em.load(Author, author.id);
+      a.ssn = "after";
+      await ctx.em.flush();
+    });
+    await ctx.em.flush();
+    // Then the business reaction is not repeated in the test EM
+    expect(author.transientFields.reactions.afterMetadata).toBe(reactions);
+  });
+
+  it.withCtx("preserves cached books when run assigns an unchanged order", async (ctx) => {
+    // Given a persisted book in its author's cached collection
+    const book = newBook(ctx.em, { order: 1 });
+    await ctx.em.flush();
+    const author = book.author.get;
+    const books = author.books.get;
+    // When run assigns the book its existing order
+    await run(ctx, async (ctx) => {
+      const b = await ctx.em.load(Book, book.id);
+      b.order = 1;
+      await ctx.em.flush();
+    });
+    // Then the test EM reuses the same filtered and sorted array
+    expect(author.books.get === books).toBe(true);
   });
 });

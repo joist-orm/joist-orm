@@ -23,8 +23,8 @@
   "devDependencies": {
     "@graphql-codegen/add": "^7.1.1",
     "@graphql-codegen/cli": "^7.4.6",
-    "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
-    "@swc/core": "1.16.18",
+    "@homebound/graphql-typescript-simple-resolvers": "^1.60.0",
+    "@swc/core": "1.16.20",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",

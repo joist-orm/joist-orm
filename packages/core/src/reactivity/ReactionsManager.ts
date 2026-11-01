@@ -149,6 +149,7 @@ export class ReactionsManager {
   queueDownstreamReactables(entity: Entity, fieldName: string): void {
     // Use the reverse index of Reactables that configureMetadata sets up
     for (const r of this.getReactablesByField(entity, fieldName)) {
+      if (r.kind === "cache") continue;
       // We always queue the reactable/entity, even if we're mid-flush or even mid-recalc, to avoid:
       // - firstName is changed from a1 to a2
       // - this triggers firstName's reactable to `Author.initials` to be queued
@@ -167,6 +168,7 @@ export class ReactionsManager {
   dequeueDownstreamReactables(entity: Entity, fieldName: string): void {
     // Use the reverse index of Reactables that configureMetadata sets up
     for (const r of this.getReactablesByField(entity, fieldName)) {
+      if (r.kind === "cache") continue;
       const pending = this.getPending(r);
       if (pending.done.has(entity)) {
         // Ironically, if we've already run this reactable, asking to dequeue probably means
@@ -191,6 +193,7 @@ export class ReactionsManager {
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     for (const r of this.getReactables(entity)) {
+      if (r.kind === "cache") continue;
       this.getPending(r).todo.add(entity);
       this.#needsRecalc[r.kind] = true;
       this.logger.logQueuedAll(entity, reason, r);

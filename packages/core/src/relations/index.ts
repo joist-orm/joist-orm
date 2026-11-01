@@ -8,6 +8,7 @@ export {
 } from "src/relations/EnumCollection.ts";
 export { CustomReference, hasCustomReference } from "src/relations/CustomReference.ts";
 export { type AsyncMethod, type LoadedMethod, hasAsyncMethod } from "src/relations/hasAsyncMethod.ts";
+export { hasReactiveAsyncMethod } from "src/relations/hasReactiveAsyncMethod.ts";
 export {
   type LoadedProperty,
   type Property,

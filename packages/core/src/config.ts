@@ -629,7 +629,11 @@ export interface ReactiveRule {
  * a `ReactiveFields` with fields `["title"]`, path `books`, and name `displayName`.
  */
 export interface ReactiveField {
-  kind: "populate" | "query";
+  /**
+   * `cache` is used by `onInvalidate` callbacks, which need invalidation like `populate` and `query`,
+   * but have no async work to perform during `em.flush`.
+   */
+  kind: "populate" | "query" | "cache";
   /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
   /** Read-only/immutable fields that are used in the derived field. */

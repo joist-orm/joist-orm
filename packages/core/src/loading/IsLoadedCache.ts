@@ -37,7 +37,7 @@ export class IsLoadedCache {
   // Counter to fast-path resetIsLoaded when the naive cache is empty.
   #naiveDirtySets = 0;
 
-  /** Adds a ReactiveField/Relation/Collection to be invalidated when its dependencies change. */
+  /** Adds a cache to invalidate when its field or explicitly reactive async method's dependencies change. */
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
     const set = ((this.#smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
@@ -98,7 +98,8 @@ export class IsLoadedCache {
           // Is this target itself a RF/RR? If so, transitively reset its cache as well.
           const otherMeta = getMetadata(target.entity);
           const otherField = otherMeta.allFields[target.fieldName];
-          if ("derived" in otherField && otherField.derived) {
+          // Check otherField b/c it won't be set for hasReactiveAsyncMethods
+          if (otherField && "derived" in otherField && otherField.derived) {
             this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
           }
         }

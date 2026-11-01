@@ -2,7 +2,7 @@ import { type Entity } from "src/Entity.ts";
 import { type LoadHint, type Loaded, isLoaded } from "src/loading/loadHints.ts";
 import { lazyField } from "src/newEntity.ts";
 
-const AsyncMethodM = Symbol();
+export const AsyncMethodM = Symbol();
 export const AsyncMethodPopulateSecret = Symbol();
 
 export interface AsyncMethod<T extends Entity, A extends unknown[], V> {

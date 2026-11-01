@@ -12,6 +12,48 @@ In Joist, Derived Properties are values that can be calculated/derived from othe
 
 Derived Properties **are not stored in the database**, but are calculated on-the-fly when accessed. Joist also supports [Reactive Fields](./reactive-fields), which are similar to Derived Properties but **are stored in the database**.
 
+## Application-cached Async Methods
+
+`hasReactiveAsyncMethod` is a flavor of `hasAsyncMethod` that takes a reactive hint instead of a load hint, and allows applications to pass an `onInvalidate` callback that is called whenever these upstream dependencies change.
+
+This allows the method's implementation to cache expensive operations, typically on the entity's `transientFields`, and know when to reset the cache because an in-progress mutation has changed the data.
+
+For example, suppose an author has an expensive book-search method that ranks book titles for a query using each book's title and tags. Caching is particularly useful if `rankedBookTitles` is called many times in a loop by other business logic. The application caches the ranked titles by query:
+
+```ts
+class Author extends AuthorCodegen {
+  readonly transientFields = {
+    rankedBookTitles: new Map<string, string[]>(),
+  };
+
+  readonly rankedBookTitles: AsyncMethod<Author, [string], string[]> = hasReactiveAsyncMethod(
+    { books: { title: {}, tags: "name" } },
+    (author, query) => {
+      const cache = author.transientFields.rankedBookTitles;
+      if (!cache.has(query)) {
+        cache.set(query, rankBookTitles(author.books.get, query));
+      }
+      return cache.get(query)!;
+    },
+    {
+      onInvalidate: (author) => author.transientFields.rankedBookTitles.clear(),
+    },
+  );
+}
+```
+
+Here, `rankBookTitles` is the application's ranking function. Adding or removing a book, editing a title, changing a book's tags, or renaming a tag (i.e. changing any data in the reactive hint) clears the cached results.
+
+`hasReactiveField` accepts the same optional third argument for application-owned intermediate caches:
+
+```ts
+readonly searchIndex = hasReactiveField(
+  { books: "title" },
+  (author) => buildSearchIndex(author.books.get, author.transientFields.searchTokens),
+  { onInvalidate: (author) => author.transientFields.searchTokens.clear() },
+);
+```
+
 ## Sync Properties
 
 Synchronous properties calculate their value from other values immediately available on the same entity; because of this, they can always be accessed, and are just getters:
@@ -114,4 +156,3 @@ export class Author {
 ```
 
 This is similar to regular `hasProperty`s, except that the hint declares the specific fields that the lambda uses, and the lambda will be restricted from using any field not declared in the hint. 
-

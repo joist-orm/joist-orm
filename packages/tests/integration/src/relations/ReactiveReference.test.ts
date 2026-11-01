@@ -291,7 +291,7 @@ describe("ReactiveReference", () => {
        "Validating from 3 changed entities... (em.entities=3)↩",
        "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:134) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:500) to validate↩",
+       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:524) to validate↩",
        "    [ b:1 ] -> [ a:1 ]↩",
        "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:86) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",

@@ -15,6 +15,7 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasProperty,
+  hasReactiveAsyncMethod,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveManyToMany,
@@ -161,6 +162,8 @@ export class Author extends AuthorCodegen {
   readonly thisTestProp: Property<Author, any> = hasProperty({}, () => this.search);
 
   public transientFields = {
+    taggedBooks: new Map<string, Book[]>(), // For testing invalidation of cached results in hasReactiveAsyncMethod.
+    numberOfBooksCache: undefined as number | undefined, // For testing intermediate cache invalidation in hasReactiveField.
     beforeFlushRan: false,
     beforeCreateRan: false,
     beforeCreateAsyncRan: false,
@@ -282,8 +285,9 @@ export class Author extends AuthorCodegen {
     ["books", "firstName"],
     (a) => {
       a.transientFields.numberOfBooksCalcInvoked++;
-      return a.books.get.length;
+      return (a.transientFields.numberOfBooksCache ??= a.books.get.length);
     },
+    { onInvalidate: (a) => (a.transientFields.numberOfBooksCache = undefined) },
   );
 
   /**
@@ -437,9 +441,29 @@ export class Author extends AuthorCodegen {
     (a) => `books=${a.numberOfBooks.get}`,
   );
 
-  readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasAsyncMethod("books", (a, title) =>
-    // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
-    title.trim().length > 0 ? a.books.get.filter((b) => b.title.includes(title)) : [],
+  readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasReactiveAsyncMethod(
+    { books: "title" },
+    (a, title) =>
+      // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
+      title.trim().length > 0
+        ? a.books.get.filter((b) => b.title.includes(title)).map((b) => b.fullNonReactiveAccess)
+        : [],
+  );
+
+  readonly taggedBooksWithTitle: AsyncMethod<Author, [string, string], Book[]> = hasReactiveAsyncMethod(
+    { booksWithTitle: {}, books: { tags: "name" } },
+    (a, title, tag) => {
+      const key = JSON.stringify([title, tag]);
+      const cache = a.transientFields.taggedBooks;
+      if (cache.has(key)) return cache.get(key)!;
+      const titled = a.booksWithTitle.call(title);
+      const result = a.books.get
+        .filter((b) => titled.includes(b.fullNonReactiveAccess) && b.tags.get.some((t) => t.name === tag))
+        .map((b) => b.fullNonReactiveAccess);
+      cache.set(key, result);
+      return result;
+    },
+    { onInvalidate: (a) => a.transientFields.taggedBooks.clear() },
   );
 
   // Example of an AsyncMethod without params, i.e. for a calc that we only want calculated when

@@ -69,10 +69,11 @@ export interface ReactiveField<T extends Entity, V> {
 export function hasReactiveField<T extends Entity, const H extends ReactiveHint<T>, V>(
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
+  opts?: { onInvalidate?: (entity: T) => void },
 ): ReactiveField<T, V> {
   return lazyField((entity: T, fieldName) => {
     const field = getMetadata(entity).allFields[fieldName] as PrimitiveField;
-    return new ReactiveFieldImpl(entity, field, hint, fn);
+    return new ReactiveFieldImpl(entity, field, hint, fn, opts?.onInvalidate);
   });
 }
 
@@ -92,6 +93,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     field: PrimitiveField,
     reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => V,
+    private onInvalidate?: (entity: T) => void,
   ) {
     super(entity);
     this.#field = field;
@@ -181,6 +183,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // is still loaded (as it did before we added caching), so users won't see false positive.
     this.#isLoaded = undefined;
     this.resetCacheUnlessFactoryPinned();
+    this.onInvalidate?.(this.entity);
   }
 
   get loadHint(): any {

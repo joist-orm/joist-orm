@@ -759,4 +759,36 @@ describe("ReactiveField", () => {
     // Then the cached search text reflects the original title immediately
     expect(a.search.get).toBe("a:1 a1 b1");
   });
+
+  it("clears an application intermediate cache before flush and resumes tracking on recalculation", async () => {
+    // Given an author whose book count has populated an application-owned cache
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    await em.flush();
+    await author.numberOfBooks.load();
+    // When a book joins the author's collection
+    newBook(em, { author });
+    // Then the intermediate cache is cleared before flush
+    expect(author.transientFields.numberOfBooksCache).toBeUndefined();
+    // When the field is recalculated from the new membership
+    const count = author.numberOfBooks.get;
+    // Then the application cache was rebuilt with the new count
+    expect(count).toBe(1);
+    // When another book joins after recalculation
+    newBook(em, { author });
+    // Then automatic tracking clears the rebuilt cache
+    expect(author.transientFields.numberOfBooksCache).toBeUndefined();
+  });
+
+  it("preserves an application intermediate cache for unrelated writes", async () => {
+    // Given an author with a cached book count
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    await em.flush();
+    await author.numberOfBooks.load();
+    // When a field outside the count's dependencies changes
+    author.lastName = "Changed";
+    // Then the cached intermediate value survives
+    expect(author.transientFields.numberOfBooksCache).toBe(0);
+  });
 });

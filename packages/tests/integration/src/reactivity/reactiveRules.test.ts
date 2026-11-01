@@ -404,8 +404,35 @@ describe("reactiveRules", () => {
   });
 
   it.withCtx("creates the right reactive field targets", async () => {
+    // Given the configured Author methods and reactive fields
     let i = 0;
+    // When we inspect the dependencies triggered by Book changes
     const bRfs = getReactables(Book);
+    // Then the cache targets precede the persisted field targets
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "booksWithTitle",
+      fields: ["author", "deletedAt", "title"],
+      path: ["author"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "taggedBooksWithTitle",
+      fields: ["author", "deletedAt", "title"],
+      path: ["author"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "taggedBooksWithTitle",
+      fields: ["author", "deletedAt", "tags"],
+      path: ["author"],
+      runOnce: false,
+    });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Author",

@@ -15,6 +15,7 @@ import { getProperties } from "src/getProperties.ts";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "src/keys.ts";
 import { reverseReactiveHint } from "src/reactivity/reactiveHints.ts";
 import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
+import { ReactiveAsyncMethodImpl } from "src/relations/hasReactiveAsyncMethod.ts";
 import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "src/relations/index.ts";
 import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "src/rules.ts";
@@ -381,6 +382,23 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           path,
           fn,
           runOnce,
+        });
+      }
+    }
+
+    // Look for hasReactiveAsyncMethods whose cached isLoaded state and onInvalidate callbacks need watching.
+    // Even without onInvalidate, dependency changes must reset the method's cached isLoaded state.
+    for (const [name, method] of Object.entries(getProperties(meta))) {
+      if (!(method instanceof ReactiveAsyncMethodImpl)) continue;
+      for (const { kind, entity, path, fields } of reverseReactiveHint(meta.cstr, meta.cstr, method.reactiveHint)) {
+        getMetadata(entity).config.__data.reactables.push({
+          kind: "cache",
+          cstr: meta.cstr,
+          isReadOnly: kind === "read-only",
+          name,
+          path,
+          fields,
+          runOnce: false,
         });
       }
     }

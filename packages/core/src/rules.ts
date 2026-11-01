@@ -2,6 +2,7 @@ import { type Changes, type EntityChanges } from "src/changes.ts";
 import { type Entity } from "src/Entity.ts";
 import { getEmInternalApi } from "src/EntityManager.ts";
 import { getField } from "src/fields.ts";
+import type { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import type { ReactiveHint } from "src/reactivity/reactiveHints.ts";
 import { type ManyToOneReferenceImpl, isAsyncReactiveField, isLoadedReference } from "src/relations/index.ts";
 import { type FieldsOf } from "src/typeMap.ts";
@@ -33,6 +34,11 @@ export type ValidationRuleInternal<T extends Entity> = {
   name: string;
   hint: ReactiveHint<T> | undefined;
   fn: ValidationRule<T>;
+};
+
+/** A non-reactive rule prepared for one concrete entity type, including inherited rules. */
+export type SimpleRule = ValidationRuleInternal<Entity> & {
+  evaluation: EvaluationSlot;
 };
 
 /** A generic error which contains a message, and optional field/codes. */

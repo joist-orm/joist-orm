@@ -1,6 +1,7 @@
 import { resetConstructorMap } from "src/configure.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
 import { assertHintUnchanged } from "src/flush/ReadDrift.ts";
 import {
   type EntityConstructor,
@@ -17,6 +18,7 @@ import {
   fail,
   getMetadata,
 } from "src/index.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { type ValidationRule, type ValidationRuleInternal, type ValidationRuleResult } from "src/rules.ts";
 import {
@@ -351,19 +353,23 @@ export class ConfigApi<T extends Entity, C> {
     this.ensureUniqueReactionName(name, "addReaction");
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
-    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
+    const loadHints = new Map<EntityMetadata, { hint: LoadHint<T>; evaluation: EvaluationSlot }>();
     async function wrappedFn(entity: T, ctx: C) {
       const meta = getMetadata(entity);
-      let loadHint = loadHints.get(meta);
-      if (loadHint === undefined) {
-        loadHint = convertToLoadHint<T>(meta, hint);
-        loadHints.set(meta, loadHint);
+      let prepared = loadHints.get(meta);
+      if (prepared === undefined) {
+        prepared = {
+          hint: convertToLoadHint<T>(meta, hint),
+          evaluation: new EvaluationSlot(`${meta.type}.${name}`),
+        };
+        loadHints.set(meta, prepared);
       }
+      const loadHint = prepared.hint;
       if (Object.keys(loadHint).length > 0) {
         await entity.em.populate(entity, loadHint);
       }
       if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
-      return fn(entity as Loaded<T, H>, ctx);
+      return invokeReaction(entity as Loaded<T, H>, fn, ctx, prepared.evaluation);
     }
     this.__data.reactions.push({ name, fn: wrappedFn, hint, runOnce });
   }
@@ -497,11 +503,13 @@ export class ConfigApi<T extends Entity, C> {
     this.fieldTransitions(fieldName).callbacks.push({
       name,
       match,
-      run(entity, ctx, step) {
+      run(entity, ctx, step, evaluation) {
         const transition = toTransition(step);
         return hint === undefined
-          ? fn(entity, ctx, transition)
-          : entity.em.populate(entity, hint).then((loaded) => fn(loaded, ctx, transition));
+          ? invokeTransitionReaction(entity, fn, ctx, transition, evaluation)
+          : entity.em
+              .populate(entity, hint)
+              .then((loaded) => invokeTransitionReaction(loaded, fn, ctx, transition, evaluation));
       },
     });
   }
@@ -833,20 +841,90 @@ function pushValidationRule<T extends Entity>(
     const hint = ruleOrHint;
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
-    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
+    const loadHints = new Map<EntityMetadata, { hint: LoadHint<T>; evaluation: EvaluationSlot }>();
     async function fn(entity: T) {
       const meta = getMetadata(entity);
-      let loadHint = loadHints.get(meta);
-      if (loadHint === undefined) {
-        loadHint = convertToLoadHint<T>(meta, hint);
-        loadHints.set(meta, loadHint);
+      let prepared = loadHints.get(meta);
+      if (prepared === undefined) {
+        prepared = {
+          hint: convertToLoadHint<T>(meta, hint),
+          evaluation: new EvaluationSlot(`${meta.type}.${name}`),
+        };
+        loadHints.set(meta, prepared);
       }
+      const loadHint = prepared.hint;
       if (Object.keys(loadHint).length > 0) {
         await entity.em.populate(entity, loadHint);
       }
       if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
-      return maybeRule!(entity);
+      // Population is prerequisite work, not part of evaluating the application's rule.
+      const metrics = getEmInternalApi(entity.em).metrics;
+      if (!metrics) return maybeRule!(entity);
+
+      const totals = metrics.start(prepared.evaluation);
+      const started = performance.now();
+      let value: MaybePromise<ValidationRuleResult>;
+      try {
+        value = maybeRule!(entity);
+      } catch (error) {
+        metrics.finish(totals, started);
+        throw error;
+      }
+      return metrics.finish(totals, started, value);
     }
     rules.push({ name, fn, hint });
   }
+}
+
+/**
+ * Times an ordinary reaction callback after its hinted data has been loaded.
+ *
+ * Reuse its registration's slot instead of resolving a counter on every invocation.
+ */
+function invokeReaction<T extends Entity, C>(
+  entity: T,
+  fn: HookFn<T, C>,
+  ctx: C,
+  evaluation: EvaluationSlot,
+): MaybePromise<unknown> {
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return fn(entity, ctx);
+
+  const totals = metrics.start(evaluation);
+  const started = performance.now();
+  let value: MaybePromise<unknown>;
+  try {
+    value = fn(entity, ctx);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return metrics.finish(totals, started, value);
+}
+
+/**
+ * Times a transition callback after its hinted data has been loaded.
+ *
+ * Keep its third argument explicit instead of allocating an argument array for each invocation.
+ */
+function invokeTransitionReaction<T extends Entity, C, V>(
+  entity: T,
+  fn: TransitionFn<T, C, V>,
+  ctx: C,
+  transition: Transition<V>,
+  evaluation: EvaluationSlot,
+): MaybePromise<unknown> {
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return fn(entity, ctx, transition);
+
+  const totals = metrics.start(evaluation);
+  const started = performance.now();
+  let value: MaybePromise<unknown>;
+  try {
+    value = fn(entity, ctx, transition);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return metrics.finish(totals, started, value);
 }

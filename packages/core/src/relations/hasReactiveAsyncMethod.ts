@@ -3,6 +3,7 @@ import { getEmInternalApi } from "src/EntityManager.ts";
 import { getMetadata } from "src/EntityMetadata.ts";
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { isLoaded } from "src/loading/loadHints.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { type AsyncMethod, AsyncMethodM, AsyncMethodPopulateSecret } from "src/relations/hasAsyncMethod.ts";
@@ -13,9 +14,11 @@ export function hasReactiveAsyncMethod<T extends Entity, const H extends Reactiv
   fn: (entity: Reacted<T, H>, ...args: A) => V,
   opts?: { onInvalidate?: (entity: T) => void },
 ): AsyncMethod<T, A, V> {
-  return lazyField(
-    (entity: T, fieldName) => new ReactiveAsyncMethodImpl(entity, fieldName, hint, fn, opts?.onInvalidate),
-  );
+  let evaluation: EvaluationSlot | undefined;
+  return lazyField((entity: T, fieldName) => {
+    evaluation ??= new EvaluationSlot(`${getMetadata(entity).type}.${fieldName}`);
+    return new ReactiveAsyncMethodImpl(entity, fieldName, hint, fn, evaluation, opts?.onInvalidate);
+  });
 }
 
 export class ReactiveAsyncMethodImpl<T extends Entity, H extends ReactiveHint<T>, A extends unknown[], V>
@@ -30,6 +33,7 @@ export class ReactiveAsyncMethodImpl<T extends Entity, H extends ReactiveHint<T>
     readonly fieldName: string,
     readonly reactiveHint: H,
     private fn: (entity: Reacted<T, H>, ...args: A) => V,
+    private readonly evaluation: EvaluationSlot,
     private onInvalidate?: (entity: T) => void,
   ) {}
 
@@ -52,7 +56,19 @@ export class ReactiveAsyncMethodImpl<T extends Entity, H extends ReactiveHint<T>
   /** Calculates a result; the caller manages any cached results. */
   call(...args: A): V {
     if (!this.isLoaded) throw new Error("hasReactiveAsyncMethod.call was called but not loaded");
-    return this.fn(this.entity as Reacted<T, H>, ...args);
+    const metrics = getEmInternalApi(this.entity.em).metrics;
+    if (!metrics) return this.fn(this.entity as Reacted<T, H>, ...args);
+
+    const totals = metrics.start(this.evaluation);
+    const started = performance.now();
+    let value: V;
+    try {
+      value = this.fn(this.entity as Reacted<T, H>, ...args);
+    } catch (error) {
+      metrics.finish(totals, started);
+      throw error;
+    }
+    return metrics.finish(totals, started, value);
   }
 
   get isLoaded(): boolean {

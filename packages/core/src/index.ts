@@ -95,6 +95,7 @@ export * from "src/queries/find/EntityFilter.ts";
 export * from "src/queries/find/EntityGraphQLFilter.ts";
 export * from "src/EntityManager.ts";
 export { ReadDriftError, type ReadDrift } from "src/flush/ReadDrift.ts";
+export { EntityMetrics, type EntityMetricsSnapshot, type EvaluationStats } from "src/metrics/EntityMetrics.ts";
 export * from "src/EntityMetadata.ts";
 export type {
   DeleteStatement,

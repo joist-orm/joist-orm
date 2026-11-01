@@ -1,5 +1,8 @@
 import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { getMetadata } from "src/EntityMetadata.ts";
 import { type LoadHint, type Loaded, isLoaded } from "src/loading/loadHints.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { lazyField } from "src/newEntity.ts";
 
 export const AsyncMethodM = Symbol();
@@ -20,8 +23,10 @@ export function hasAsyncMethod<T extends Entity, const H extends LoadHint<T>, A 
   loadHint: H,
   fn: (entity: Loaded<T, H>, ...args: A) => V,
 ): AsyncMethod<T, A, V> {
-  return lazyField((entity: T) => {
-    return new AsyncMethodImpl(entity, loadHint, fn);
+  let evaluation: EvaluationSlot | undefined;
+  return lazyField((entity: T, fieldName) => {
+    evaluation ??= new EvaluationSlot(`${getMetadata(entity).type}.${fieldName}`);
+    return new AsyncMethodImpl(entity, loadHint, fn, evaluation);
   });
 }
 
@@ -39,6 +44,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
     entity: T,
     hint: H,
     private fn: (entity: Loaded<T, H>, ...args: A) => V,
+    private readonly evaluation: EvaluationSlot,
   ) {
     this.#entity = entity;
     this.#hint = hint;
@@ -59,7 +65,19 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
     if (!this.isLoaded) {
       throw new Error("hasAsyncMethod.call was called but not loaded");
     }
-    return this.fn(this.#entity as Loaded<T, H>, ...args);
+    const metrics = getEmInternalApi(this.#entity.em).metrics;
+    if (!metrics) return this.fn(this.#entity as Loaded<T, H>, ...args);
+
+    const totals = metrics.start(this.evaluation);
+    const started = performance.now();
+    let value: V;
+    try {
+      value = this.fn(this.#entity as Loaded<T, H>, ...args);
+    } catch (error) {
+      metrics.finish(totals, started);
+      throw error;
+    }
+    return metrics.finish(totals, started, value);
   }
 
   get isLoaded() {

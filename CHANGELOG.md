@@ -1,3 +1,40 @@
+# [2.5.0](https://github.com/joist-orm/joist-orm/compare/v2.4.0...v2.5.0) (2026-11-02)
+
+
+### Bug Fixes
+
+* Avoid polymorphic type collisions with generated symbols. ([#2117](https://github.com/joist-orm/joist-orm/issues/2117)) ([8127383](https://github.com/joist-orm/joist-orm/commit/8127383e0bf7a4c01ba1caad113feb46e1e41f38))
+* Deduplicate shared STI columns in batch updates ([#2134](https://github.com/joist-orm/joist-orm/issues/2134)) ([6d9a07a](https://github.com/joist-orm/joist-orm/commit/6d9a07ae3d7e774af1c641b130d5542d4cc14250))
+* Fix reacting to lazy fields. ([#2088](https://github.com/joist-orm/joist-orm/issues/2088)) ([8e4b37c](https://github.com/joist-orm/joist-orm/commit/8e4b37c6932b39813093d063fb462e05fe7dccfa))
+* Invalidate caches for RunPlugin mirrored field changes. ([#2140](https://github.com/joist-orm/joist-orm/issues/2140)) ([e96c658](https://github.com/joist-orm/joist-orm/commit/e96c6583133bad90309edccf79b45898f52469de))
+* Preload mirrored lazy fields in RunPlugin. ([#2093](https://github.com/joist-orm/joist-orm/issues/2093)) ([7f6a914](https://github.com/joist-orm/joist-orm/commit/7f6a91441c6656da02d3bb42f1ac8b6dddac0df1))
+* Preserve caches for no-op field assignments. ([#2139](https://github.com/joist-orm/joist-orm/issues/2139)) ([54577ec](https://github.com/joist-orm/joist-orm/commit/54577ec6615f6a4d0f82982a61b1f094fcab4dc5))
+* Rename transition methods. ([#2105](https://github.com/joist-orm/joist-orm/issues/2105)) ([f1911ca](https://github.com/joist-orm/joist-orm/commit/f1911cabfa6de95cb5ba96a328b62307778b26b7))
+* Resurrect soft-deleted entities by array identities ([#2083](https://github.com/joist-orm/joist-orm/issues/2083)) ([0fcb8f8](https://github.com/joist-orm/joist-orm/commit/0fcb8f84c0df9ad19853a16a6ce37bcb42dbc520))
+* serialize nullable array markers with column codecs ([#2132](https://github.com/joist-orm/joist-orm/issues/2132)) ([7b854dd](https://github.com/joist-orm/joist-orm/commit/7b854ddec091c773d161d98c49bb17c0df993d1d))
+* Skip deleted entities when building indexes. ([#2082](https://github.com/joist-orm/joist-orm/issues/2082)) ([a6c2e4e](https://github.com/joist-orm/joist-orm/commit/a6c2e4eb42a13596179487eb94ef22f51bc46e1e))
+* Support lazy fields in toMatchEntity. ([#2092](https://github.com/joist-orm/joist-orm/issues/2092)) ([7566904](https://github.com/joist-orm/joist-orm/commit/756690480d7ae57e9dd2ae7ae9a946b5b907f174))
+* Tell AI to stop using getEntities. ([#2106](https://github.com/joist-orm/joist-orm/issues/2106)) ([2c43817](https://github.com/joist-orm/joist-orm/commit/2c4381716cc3ccf47cd61f2059efe86661ada86d))
+
+
+### Features
+
+* Add config.transitions, guardTransition, and onTransition. ([#2091](https://github.com/joist-orm/joist-orm/issues/2091)) ([1f00c98](https://github.com/joist-orm/joist-orm/commit/1f00c98e423167b2a7ba0dcbdca7457f048013c8))
+* Add opt-in read drift detection ([#2127](https://github.com/joist-orm/joist-orm/issues/2127)) ([cf5c0f8](https://github.com/joist-orm/joist-orm/commit/cf5c0f84b19879cdcda75715f3ea07d31784406d))
+* Add reactive async methods and cache invalidation callbacks ([#2141](https://github.com/joist-orm/joist-orm/issues/2141)) ([9ef896e](https://github.com/joist-orm/joist-orm/commit/9ef896e702cfd3a49986fb6ed7a711b2af8149bf))
+* add request-scoped entity metrics ([#2142](https://github.com/joist-orm/joist-orm/issues/2142)) ([36ac37f](https://github.com/joist-orm/joist-orm/commit/36ac37f4a55611bdf5046af863c2e97032c0a6f3))
+* Add type-safe clone callback maps. ([#2126](https://github.com/joist-orm/joist-orm/issues/2126)) ([a978bcd](https://github.com/joist-orm/joist-orm/commit/a978bcdf946ff657b301979934d469741b2c69f3))
+* Let transaction hooks force write-less transactions. ([#2123](https://github.com/joist-orm/joist-orm/issues/2123)) ([cc973ea](https://github.com/joist-orm/joist-orm/commit/cc973eac48114a7aa50e31a057bc9861a47098ee))
+* Support creation-time overrides in em.clone. ([#2118](https://github.com/joist-orm/joist-orm/issues/2118)) ([c1f63dc](https://github.com/joist-orm/joist-orm/commit/c1f63dcfe293eaf6ca06c21a31a77cd2140475e5))
+* Support pgvector `vector(N)` columns as `number[]` fields with cosine distance queries ([#2067](https://github.com/joist-orm/joist-orm/issues/2067)) ([77e8c27](https://github.com/joist-orm/joist-orm/commit/77e8c27d47aab2a2785a34dabc44d7267a85f710))
+* Support PostgreJS driver ([#2119](https://github.com/joist-orm/joist-orm/issues/2119)) ([f65ab39](https://github.com/joist-orm/joist-orm/commit/f65ab3959ae50cc68d7d523bb43377395ddd5530))
+
+
+### Performance Improvements
+
+* Memoize a query value's output shape ([#2079](https://github.com/joist-orm/joist-orm/issues/2079)) ([1128e8b](https://github.com/joist-orm/joist-orm/commit/1128e8b2ac7025113c1f353a89291b251e6f5f0b))
+* Use lazy wire rows for paginated finds ([#2133](https://github.com/joist-orm/joist-orm/issues/2133)) ([60cb3ec](https://github.com/joist-orm/joist-orm/commit/60cb3ec292ee78f793e169de12b1bfd4dbc3e8ae))
+
 # [2.4.0](https://github.com/joist-orm/joist-orm/compare/v2.3.0...v2.4.0) (2026-09-28)
 
 

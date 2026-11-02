@@ -20,7 +20,7 @@
     "typecheck:consumers": "tsc --project tsconfig.unit-tests.json --composite false && yarn workspaces foreach --all --include 'joist-tests-*' exec tsc --project tsconfig.json --composite false",
     "typecheck:watch": "tsc --build --watch --emitDeclarationOnly --preserveWatchOutput",
     "docker": "docker-compose build",
-    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen && yarn db:clone",
+    "db": "docker compose up db valkey --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen && yarn db:clone",
     "psql": "docker compose exec db ./console.sh"
   },
   "private": true,
@@ -30,6 +30,7 @@
     "packages/core",
     "packages/drivers/bun-pg",
     "packages/graphql-codegen",
+    "packages/graphql-plugins",
     "packages/graphql-resolver-utils",
     "packages/knex",
     "packages/migration-utils",

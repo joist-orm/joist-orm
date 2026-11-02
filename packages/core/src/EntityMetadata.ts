@@ -5,6 +5,7 @@ import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "src/EntityManager.ts";
 import { type EnumMetadata } from "src/EnumMetadata.ts";
 import type { DeepNew } from "src/loading/loadHints.ts";
+import type { SimpleRule } from "src/rules.ts";
 import type { Column, ColumnDescriptors } from "src/serde/columns.ts";
 import type { FieldSerde, PolymorphicKeySerde } from "src/serde/fieldSerde.ts";
 import type { FieldTransitions } from "src/transitions.ts";
@@ -84,6 +85,10 @@ export interface EntityMetadata<T extends Entity = any> {
   reactiveRules?: ReactiveRule[];
   /** The lazy list of reactive *commit* rules (post-flush/pre-commit) for this metadata and its subtypes. */
   reactiveCommitRules?: ReactiveRule[];
+  /** The lazy list of non-reactive validation rules, prepared for this concrete type. */
+  simpleRules?: SimpleRule[];
+  /** The lazy list of non-reactive commit rules, prepared for this concrete type. */
+  simpleCommitRules?: SimpleRule[];
   /** Lazily-cached: whether flushing an entity of this type could trigger any `addCommitRule` work. */
   hasCommitRules?: boolean;
   /** The lazily-cached set of own `lazy` primitive field names, i.e. columns excluded from the default SELECT. */

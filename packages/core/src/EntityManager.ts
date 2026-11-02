@@ -10,7 +10,7 @@ import { populateBatchLoader, type populateOperation } from "src/batchloaders/po
 import { type recursiveChildrenOperation } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
 import { type recursiveM2mOperation } from "src/batchloaders/recursiveM2mBatchLoader.ts";
 import { type recursiveParentsOperation } from "src/batchloaders/recursiveParentsBatchLoader.ts";
-import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
+import { type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
 import { getConstructorFromTag, getMetadataForType } from "src/configure.ts";
 import { findByUniqueDataLoader, type findByUniqueOperation } from "src/dataloaders/findByUniqueDataLoader.ts";
 import {
@@ -66,7 +66,6 @@ import {
   type ValidationError,
   ValidationErrors,
   type ValidationRule,
-  type ValidationRuleInternal,
   type ValidationRuleResult,
   asConcreteCstr,
   assertLoaded,
@@ -101,6 +100,7 @@ import {
 import { type WriteFn } from "src/logging/FactoryLogger.ts";
 import { noopFieldLogger } from "src/logging/FieldLogger.ts";
 import { type ReactionWalk } from "src/logging/ReactionLogger.ts";
+import type { EntityMetrics } from "src/metrics/EntityMetrics.ts";
 import { newEntity } from "src/newEntity.ts";
 import { resetFactoryCreated } from "src/newTestInstance.ts";
 import { PluginManager } from "src/PluginManager.ts";
@@ -140,6 +140,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
+import type { SimpleRule } from "src/rules.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf, type TypeMap } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -367,6 +368,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #readSet = new Set<EntityW>();
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger = noopFieldLogger;
+  #metrics: EntityMetrics | undefined;
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
   /** Track `a#1`, `a#2`, etc indexes for `em.create`-d entities. */
@@ -464,6 +466,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get fieldLogger() {
         return em.#fieldLogger;
+      },
+
+      get metrics() {
+        return em.#metrics;
       },
 
       clearDataloaders() {
@@ -2093,7 +2099,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         try {
           // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
           this.#isValidating = true;
-          await validateSimpleRules(entityTodos, (config) => config.commitRules);
+          await validateSimpleRules(entityTodos, (meta) => meta.simpleCommitRules!);
           await validateReactiveRules(
             this,
             this.#rm.logger,
@@ -2755,6 +2761,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await Promise.all(relationsToCleanup.map((r) => r.cleanupOnEntityDeleted()));
   }
 
+  /** Attaches request-owned metrics, or disables collection without resetting the collector. */
+  setMetrics(metrics: EntityMetrics | undefined): void {
+    this.#metrics = metrics;
+  }
+
   setReactionLogging(logger: ReactionLogger): void;
   setReactionLogging(enabled: boolean): void;
   setReactionLogging(arg: boolean | ReactionLogger): void {
@@ -3183,6 +3194,7 @@ export interface EntityManagerInternalApi {
   checkWritesAllowed: () => void;
   isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger;
+  readonly metrics: EntityMetrics | undefined;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
   clearDataloaders(): void;
@@ -3357,8 +3369,8 @@ async function validateReactiveRules(
 // to mark only the rules that need to run.
 async function validateSimpleRules(
   todos: Record<string, Todo>,
-  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `commitRules`
-  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
+  // Which prepared rules to run, i.e. pre-flush validation or post-flush commit rules.
+  getRules: (meta: EntityMetadata) => SimpleRule[] = (meta) => meta.simpleRules!,
 ): Promise<void> {
   let p: Promise<ValidationError[]>[] | undefined = undefined;
   for (const todoKey in todos) {
@@ -3366,11 +3378,8 @@ async function validateSimpleRules(
     for (const entities of [inserts, updates]) {
       for (const entity of entities) {
         if (entity.isDeletedEntity) continue;
-        for (const m of getBaseAndSelfMetas(getMetadata(entity))) {
-          for (const rule of getRules(m.config.__data)) {
-            if (rule.hint !== undefined) continue;
-            (p ??= []).push(invokeRule(entity, rule.fn));
-          }
+        for (const rule of getRules(getMetadata(entity))) {
+          (p ??= []).push(invokeSimpleRule(entity, rule));
         }
       }
     }
@@ -3388,6 +3397,25 @@ export async function invokeRule(
   fn: (entity: any) => MaybePromise<ValidationRuleResult>,
 ): Promise<ValidationError[]> {
   return coerceError(entity, await fn(entity));
+}
+
+/** Evaluates a non-reactive validation or commit rule using its required registration name. */
+async function invokeSimpleRule(entity: Entity, rule: SimpleRule): Promise<ValidationError[]> {
+  // Keep the original rule function in metadata: cannotBeUpdated carries immutable-field flags.
+  const { fn } = rule;
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return coerceError(entity, await fn(entity));
+
+  const totals = metrics.start(rule.evaluation);
+  const started = performance.now();
+  let value: MaybePromise<ValidationRuleResult>;
+  try {
+    value = fn(entity);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return coerceError(entity, await metrics.finish(totals, started, value));
 }
 
 export function driverBeforeBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {

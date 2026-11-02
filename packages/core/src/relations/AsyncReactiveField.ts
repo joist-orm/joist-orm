@@ -1,7 +1,9 @@
 import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
 import { getMetadata } from "src/EntityMetadata.ts";
 import { getField, isFieldSet, setField } from "src/fields.ts";
 import { type ReactiveField, deepNormalizeHint, isLoaded } from "src/index.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
@@ -25,8 +27,10 @@ export function hasAsyncReactiveField<
   const H2 extends ReactiveHint<T>,
   V,
 >(loadHint: H1, reactiveHint: H2, fn: (entity: Reacted<T, H1>) => Promise<V>): ReactiveField<T, V> {
+  let evaluation: EvaluationSlot | undefined;
   return lazyField((entity: T, fieldName) => {
-    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, loadHint, reactiveHint, fn);
+    evaluation ??= new EvaluationSlot(`${getMetadata(entity).type}.${fieldName}`);
+    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, loadHint, reactiveHint, fn, evaluation);
   });
 }
 
@@ -46,6 +50,7 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
     loadHint: H1,
     reactiveHint: H2,
     private fn: (entity: Reacted<T, H1>) => Promise<V>,
+    private readonly evaluation: EvaluationSlot,
   ) {
     super(entity);
     this.#loadHint = loadHint;
@@ -73,7 +78,20 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
       .populate(this.entity, { hint: this.loadHint } as any)
       .then(() => {
         // Even if the factory used a `with...`, we'll still go through the RFQ logic, but just ignore the new value
-        return this.#useFactoryValue ? this.fieldValue : this.fn(this.entity as Reacted<T, H1>);
+        if (this.#useFactoryValue) return this.fieldValue;
+        const metrics = getEmInternalApi(this.entity.em).metrics;
+        if (!metrics) return this.fn(this.entity as Reacted<T, H1>);
+
+        const totals = metrics.start(this.evaluation);
+        const started = performance.now();
+        let value: Promise<V>;
+        try {
+          value = this.fn(this.entity as Reacted<T, H1>);
+        } catch (error) {
+          metrics.finish(totals, started);
+          throw error;
+        }
+        return metrics.finish(totals, started, value);
       })
       .then((newValue) => {
         setField(this.entity, this.fieldName, newValue);

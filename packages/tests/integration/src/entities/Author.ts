@@ -472,6 +472,14 @@ export class Author extends AuthorCodegen {
     a.books.get.map((b) => b.title).join(", "),
   );
 
+  /**
+   * For testing metrics on a promise-returning AsyncMethod that counts persisted books.
+   * @generated Author.md
+   */
+  readonly persistedBookCount: AsyncMethod<Author, [], Promise<number>> = hasAsyncMethod({}, (a) =>
+    a.em.findCount(Book, { author: a.id }),
+  );
+
   // Example of a reactive getter that can always be gotten
   readonly hasLowerCaseFirstName: ReactiveGetter<Author, boolean> = hasReactiveGetter(
     "hasLowerCaseFirstName",

@@ -13,6 +13,7 @@ import {
 } from "src/EntityMetadata.ts";
 import { getProperties } from "src/getProperties.ts";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "src/keys.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { reverseReactiveHint } from "src/reactivity/reactiveHints.ts";
 import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
 import { ReactiveAsyncMethodImpl } from "src/relations/hasReactiveAsyncMethod.ts";
@@ -125,6 +126,19 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
     defineLazyGetter(meta, "reactiveCommitRules", function buildReactiveCommitRules() {
       // Same "AndSub" reasoning as `reactiveRules`, just for the post-flush/pre-commit commit rules.
       return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveCommitRules);
+    });
+    // Base-type rule callbacks are shared, but each concrete type needs its own metric name.
+    defineLazyGetter(meta, "simpleRules", function buildSimpleRules() {
+      return getBaseAndSelfMetas(meta)
+        .flatMap((m) => m.config.__data.rules)
+        .filter((rule) => rule.hint === undefined)
+        .map((rule) => ({ ...rule, evaluation: new EvaluationSlot(`${meta.type}.${rule.name}`) }));
+    });
+    defineLazyGetter(meta, "simpleCommitRules", function buildSimpleCommitRules() {
+      return getBaseAndSelfMetas(meta)
+        .flatMap((m) => m.config.__data.commitRules)
+        .filter((rule) => rule.hint === undefined)
+        .map((rule) => ({ ...rule, evaluation: new EvaluationSlot(`${meta.type}.${rule.name}`) }));
     });
     defineLazyGetter(meta, "hasCommitRules", function buildHasCommitRules() {
       // True if flushing an entity of this type could trigger commit-rule work, so `em.flush` can

@@ -131,7 +131,7 @@ export class ReactionsManager {
       const results = await Promise.allSettled(
         wave.map(async (pending) => {
           if (!pending.entity.isDeletedEntity) {
-            await pending.callback.run(pending.entity, this.em.ctx, pending.step);
+            await pending.callback.run(pending.entity, this.em.ctx, pending.step, pending.callback.evaluation);
           }
         }),
       );
@@ -478,7 +478,7 @@ export class ReactionsManager {
       if (callback.phase === "commit") {
         this.pendingCommitTransitions.push({ entity, callback, step });
       } else {
-        await callback.run(entity, this.em.ctx, step);
+        await callback.run(entity, this.em.ctx, step, callback.evaluation);
       }
     }
   }

@@ -1,5 +1,6 @@
 import type { Entity } from "src/Entity.ts";
 import { type EntityMetadata, getBaseAndSelfMetas } from "src/EntityMetadata.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import type { ValidationRuleResult } from "src/rules.ts";
 import { type MaybePromise, fail } from "src/utils.ts";
 
@@ -59,11 +60,15 @@ export interface TransitionGuardConfig<T extends Entity = Entity> {
   run(entity: T, step: TransitionStep): MaybePromise<ValidationRuleResult>;
 }
 
-/** An `addTransitionReaction` as registered in config, with its `match` still using accessors. */
+/**
+ * An `addTransitionReaction` as registered in config, with its `match` still using accessors.
+ *
+ * @internal Joist invokes `run`; the application callback does not receive the metrics slot.
+ */
 export interface TransitionCallbackConfig<T extends Entity = Entity, C = unknown> {
   name: string;
   match: OnTransitionMatch<string>;
-  run(entity: T, ctx: C, step: TransitionStep): MaybePromise<unknown>;
+  run(entity: T, ctx: C, step: TransitionStep, evaluation: EvaluationSlot): MaybePromise<unknown>;
 }
 
 /** One field's `setTransitions`, `addTransitionRule`, and `addTransitionReaction` config on a single entity type. */
@@ -95,7 +100,8 @@ export interface TransitionCallback {
   name: string;
   phase: "flush" | "commit";
   matcher: TransitionMatcher;
-  run(entity: Entity, ctx: unknown, step: TransitionStep): MaybePromise<unknown>;
+  evaluation: EvaluationSlot;
+  run(entity: Entity, ctx: unknown, step: TransitionStep, evaluation: EvaluationSlot): MaybePromise<unknown>;
 }
 
 /** One field's transition config from an entity type and its base types, with accessors converted to codes. */
@@ -128,7 +134,13 @@ export function buildFieldTransitions(meta: EntityMetadata): Map<string, FieldTr
       }
       for (const { name, match, run } of config.callbacks) {
         const matcher = toMatcher(meta, fieldName, match);
-        merged.callbacks.push({ name, phase: match.phase ?? "flush", matcher, run });
+        merged.callbacks.push({
+          name,
+          phase: match.phase ?? "flush",
+          matcher,
+          evaluation: new EvaluationSlot(`${meta.type}.${name}`),
+          run,
+        });
       }
     }
   }

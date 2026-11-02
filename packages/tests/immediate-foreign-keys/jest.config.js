@@ -1,5 +1,5 @@
 module.exports = {
-  transform: { "^.+\\.tsx?$": "@swc/jest" },
+  ...require("../jest-postgrejs.cjs"),
   moduleNameMapper: {
     "^src/(.*)": "<rootDir>/src/$1",
   },

@@ -28,6 +28,7 @@ import {
   Publisher,
   PublisherGroup,
   PublisherSize,
+  PublisherStatus,
   PublisherType,
   SmallPublisher,
   SmallPublisherGroup,
@@ -68,6 +69,7 @@ export interface Resolvers {
   Publisher: PublisherResolvers;
   PublisherGroup: PublisherGroupResolvers;
   PublisherSizeDetail: PublisherSizeDetailResolvers;
+  PublisherStatusDetail: PublisherStatusDetailResolvers;
   PublisherTypeDetail: PublisherTypeDetailResolvers;
   Query: QueryResolvers;
   SmallPublisher: SmallPublisherResolvers;
@@ -138,6 +140,7 @@ export interface Resolvers {
 
 export type UnionResolvers = {
   CommentParent: { __resolveType(o: Author | Book | BookReview | Publisher | TaskOld): string };
+  CommentScopePoly: { __resolveType(o: ChildGroup | ParentGroup): string };
   UserFavoritePublisher: { __resolveType(o: LargePublisher | SmallPublisher): string };
 };
 
@@ -153,6 +156,7 @@ export interface AdvanceStatusDetailResolvers {
 
 export interface AuthorResolvers {
   age: Resolver<Author, {}, number | null | undefined>;
+  authoredTasks: Resolver<Author, {}, readonly TaskNew[]>;
   bookComments: Resolver<Author, {}, string | null | undefined>;
   books: Resolver<Author, {}, readonly Book[]>;
   createdAt: Resolver<Author, {}, Date>;
@@ -207,9 +211,11 @@ export interface AuthorStatResolvers {
   bigserial: Resolver<AuthorStat, {}, bigint>;
   createdAt: Resolver<AuthorStat, {}, Date>;
   decimal: Resolver<AuthorStat, {}, number>;
+  deletedAt: Resolver<AuthorStat, {}, Date | null | undefined>;
   doublePrecision: Resolver<AuthorStat, {}, number>;
   id: Resolver<AuthorStat, {}, string>;
   integer: Resolver<AuthorStat, {}, number>;
+  name: Resolver<AuthorStat, {}, string | null | undefined>;
   nullableInteger: Resolver<AuthorStat, {}, number | null | undefined>;
   nullableText: Resolver<AuthorStat, {}, string | null | undefined>;
   real: Resolver<AuthorStat, {}, number>;
@@ -275,6 +281,7 @@ export interface ChildResolvers {
 
 export interface ChildGroupResolvers {
   childGroup: Resolver<ChildGroup, {}, ChildGroup | null | undefined>;
+  comments: Resolver<ChildGroup, {}, readonly Comment[]>;
   createdAt: Resolver<ChildGroup, {}, Date>;
   id: Resolver<ChildGroup, {}, string>;
   name: Resolver<ChildGroup, {}, string | null | undefined>;
@@ -302,6 +309,7 @@ export interface CommentResolvers {
   likedByUsers: Resolver<Comment, {}, readonly User[]>;
   parent: Resolver<Comment, {}, CommentParent | null | undefined>;
   parentTags: Resolver<Comment, {}, string>;
+  scope: Resolver<Comment, {}, CommentScopePoly | null | undefined>;
   text: Resolver<Comment, {}, string | null | undefined>;
   updatedAt: Resolver<Comment, {}, Date>;
   user: Resolver<Comment, {}, User | null | undefined>;
@@ -375,6 +383,7 @@ export interface LargePublisherResolvers {
   rating: Resolver<LargePublisher, {}, number>;
   sharedColumn: Resolver<LargePublisher, {}, string | null | undefined>;
   size: Resolver<LargePublisher, {}, PublisherSize | null | undefined>;
+  status: Resolver<LargePublisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<LargePublisher, {}, readonly Tag[]>;
   tasks: Resolver<LargePublisher, {}, readonly Task[]>;
   type: Resolver<LargePublisher, {}, PublisherType>;
@@ -414,6 +423,7 @@ export interface PageInfoResolvers {
 }
 
 export interface ParentGroupResolvers {
+  comments: Resolver<ParentGroup, {}, readonly Comment[]>;
   createdAt: Resolver<ParentGroup, {}, Date>;
   id: Resolver<ParentGroup, {}, string>;
   name: Resolver<ParentGroup, {}, string | null | undefined>;
@@ -445,6 +455,7 @@ export interface PublisherResolvers {
   numberOfBookReviews: Resolver<Publisher, {}, number | null | undefined>;
   rating: Resolver<Publisher, {}, number | null | undefined>;
   size: Resolver<Publisher, {}, PublisherSize | null | undefined>;
+  status: Resolver<Publisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<Publisher, {}, readonly Tag[]>;
   tasks: Resolver<Publisher, {}, readonly Task[]>;
   type: Resolver<Publisher, {}, PublisherType | null | undefined>;
@@ -465,6 +476,11 @@ export interface PublisherGroupResolvers {
 export interface PublisherSizeDetailResolvers {
   code: Resolver<PublisherSize, {}, PublisherSize>;
   name: Resolver<PublisherSize, {}, string>;
+}
+
+export interface PublisherStatusDetailResolvers {
+  code: Resolver<PublisherStatus, {}, PublisherStatus>;
+  name: Resolver<PublisherStatus, {}, string>;
 }
 
 export interface PublisherTypeDetailResolvers {
@@ -554,6 +570,7 @@ export interface SmallPublisherResolvers {
   sharedColumn: Resolver<SmallPublisher, {}, string | null | undefined>;
   size: Resolver<SmallPublisher, {}, PublisherSize | null | undefined>;
   smallPublishers: Resolver<SmallPublisher, {}, readonly SmallPublisher[]>;
+  status: Resolver<SmallPublisher, {}, PublisherStatus | null | undefined>;
   tags: Resolver<SmallPublisher, {}, readonly Tag[]>;
   tasks: Resolver<SmallPublisher, {}, readonly Task[]>;
   type: Resolver<SmallPublisher, {}, PublisherType>;
@@ -614,6 +631,7 @@ export interface TaskNewResolvers {
   asyncDefault_1: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskNew, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskNew, {}, string | null | undefined>;
+  author: Resolver<TaskNew, {}, Author>;
   comments: Resolver<TaskNew, {}, readonly Comment[]>;
   createdAt: Resolver<TaskNew, {}, Date>;
   deletedAt: Resolver<TaskNew, {}, Date | null | undefined>;
@@ -641,6 +659,7 @@ export interface TaskOldResolvers {
   asyncDefault_1: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDefault_2: Resolver<TaskOld, {}, string | null | undefined>;
   asyncDerived: Resolver<TaskOld, {}, string | null | undefined>;
+  author: Resolver<TaskOld, {}, Author>;
   comments: Resolver<TaskOld, {}, readonly Comment[]>;
   createdAt: Resolver<TaskOld, {}, Date>;
   deletedAt: Resolver<TaskOld, {}, Date | null | undefined>;
@@ -695,6 +714,7 @@ export interface AllEnumDetailsResolvers {
   color: Resolver<AllEnumDetails, {}, readonly Color[]>;
   imageType: Resolver<AllEnumDetails, {}, readonly ImageType[]>;
   publisherSize: Resolver<AllEnumDetails, {}, readonly PublisherSize[]>;
+  publisherStatus: Resolver<AllEnumDetails, {}, readonly PublisherStatus[]>;
   publisherType: Resolver<AllEnumDetails, {}, readonly PublisherType[]>;
   taskType: Resolver<AllEnumDetails, {}, readonly TaskType[]>;
 }
@@ -1242,6 +1262,7 @@ export interface AllEnumDetails {
   color: MaybePromise<Color[]>;
   imageType: MaybePromise<ImageType[]>;
   publisherSize: MaybePromise<PublisherSize[]>;
+  publisherStatus: MaybePromise<PublisherStatus[]>;
   publisherType: MaybePromise<PublisherType[]>;
   taskType: MaybePromise<TaskType[]>;
 }
@@ -1537,9 +1558,11 @@ export interface AuthorStatFilter {
   bigserial?: bigint[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   decimal?: number[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
   doublePrecision?: number[] | null | undefined;
   id?: string[] | null | undefined;
   integer?: number[] | null | undefined;
+  name?: string[] | null | undefined;
   nullableInteger?: number[] | null | undefined;
   nullableText?: string[] | null | undefined;
   real?: number[] | null | undefined;
@@ -1618,6 +1641,7 @@ export interface CommentFilter {
   parentId?: string[] | null | undefined;
   parentTaggedId?: string[] | null | undefined;
   parentTags?: string[] | null | undefined;
+  scopeId?: string[] | null | undefined;
   text?: string[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
   userId?: string[] | null | undefined;
@@ -1679,6 +1703,7 @@ export interface LargePublisherFilter {
   sharedColumn?: string[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -1718,6 +1743,7 @@ export interface PublisherFilter {
   rating?: number[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -1765,9 +1791,11 @@ export interface SaveAuthorStatInput {
   bigint?: bigint | null | undefined;
   bigserial?: bigint | null | undefined;
   decimal?: number | null | undefined;
+  deletedAt?: Date | null | undefined;
   doublePrecision?: number | null | undefined;
   id?: string | null | undefined;
   integer?: number | null | undefined;
+  name?: string | null | undefined;
   nullableInteger?: number | null | undefined;
   nullableText?: string | null | undefined;
   real?: number | null | undefined;
@@ -1811,6 +1839,7 @@ export interface SaveCommentInput {
   id?: string | null | undefined;
   parentId?: string | null | undefined;
   parentTags?: string | null | undefined;
+  scopeId?: string | null | undefined;
   text?: string | null | undefined;
   userId?: string | null | undefined;
 }
@@ -1855,6 +1884,7 @@ export interface SaveLargePublisherInput {
   rating?: number | null | undefined;
   sharedColumn?: string | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
 }
 
@@ -1888,6 +1918,7 @@ export interface SavePublisherInput {
   name?: string | null | undefined;
   rating?: number | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
   updatedAt?: Date | null | undefined;
 }
@@ -1911,6 +1942,7 @@ export interface SaveSmallPublisherInput {
   selfReferentialId?: string | null | undefined;
   sharedColumn?: string | null | undefined;
   size?: PublisherSize | null | undefined;
+  status?: PublisherStatus | null | undefined;
   type?: PublisherType | null | undefined;
 }
 
@@ -1946,6 +1978,7 @@ export interface SaveTaskItemInput {
 export interface SaveTaskNewInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
@@ -1961,6 +1994,7 @@ export interface SaveTaskNewInput {
 export interface SaveTaskOldInput {
   asyncDefault_1?: string | null | undefined;
   asyncDefault_2?: string | null | undefined;
+  authorId?: string | null | undefined;
   deletedAt?: Date | null | undefined;
   durationInDays?: number | null | undefined;
   id?: string | null | undefined;
@@ -2006,6 +2040,7 @@ export interface SmallPublisherFilter {
   sharedColumn?: string[] | null | undefined;
   size?: PublisherSize[] | null | undefined;
   spotlightAuthorId?: string[] | null | undefined;
+  status?: PublisherStatus[] | null | undefined;
   titlesOfFavoriteBooks?: string[] | null | undefined;
   type?: PublisherType[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
@@ -2056,6 +2091,7 @@ export interface TaskNewFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;
@@ -2075,6 +2111,7 @@ export interface TaskOldFilter {
   asyncDefault_1?: string[] | null | undefined;
   asyncDefault_2?: string[] | null | undefined;
   asyncDerived?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
   copiedFromId?: string[] | null | undefined;
   createdAt?: Date[] | null | undefined;
   deletedAt?: Date[] | null | undefined;
@@ -2116,15 +2153,20 @@ export { ImageType } from "src/entities";
 
 export { PublisherSize } from "src/entities";
 
+export { PublisherStatus } from "src/entities";
+
 export { PublisherType } from "src/entities";
 
 export { TaskType } from "src/entities";
 
 export type CommentParent = Author | Book | BookReview | Publisher | TaskOld;
 
+export type CommentScopePoly = ChildGroup | ParentGroup;
+
 export type UserFavoritePublisher = LargePublisher | SmallPublisher;
 
 export const possibleTypes = {
   CommentParent: ["Author", "Book", "BookReview", "Publisher", "TaskOld"],
+  CommentScopePoly: ["ChildGroup", "ParentGroup"],
   UserFavoritePublisher: ["LargePublisher", "SmallPublisher"],
 };

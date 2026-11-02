@@ -1,3 +1,12 @@
+extend type Query {
+  publisher(id: ID!): Publisher!
+  publishers(filter: PublisherFilter, limit: Int, offset: Int): PublishersPage!
+}
+
+extend type Mutation {
+  savePublisher(input: SavePublisherInput!): SavePublisherResult!
+}
+
 type Publisher {
   id: ID!
   name: String!
@@ -19,6 +28,7 @@ type Publisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int
+  status: PublisherStatusDetail
 }
 
 input SavePublisherInput {
@@ -36,19 +46,11 @@ input SavePublisherInput {
   baseSyncDefault: String
   baseAsyncDefault: String
   rating: Int
+  status: PublisherStatus
 }
 
 type SavePublisherResult {
   publisher: Publisher!
-}
-
-extend type Mutation {
-  savePublisher(input: SavePublisherInput!): SavePublisherResult!
-}
-
-extend type Query {
-  publisher(id: ID!): Publisher!
-  publishers(filter: PublisherFilter, limit: Int, offset: Int): PublishersPage!
 }
 
 type PublishersPage {
@@ -78,4 +80,5 @@ input PublisherFilter {
   favoriteAuthorId: [ID!]
   groupId: [ID!]
   spotlightAuthorId: [ID!]
+  status: [PublisherStatus!]
 }

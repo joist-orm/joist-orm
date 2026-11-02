@@ -17,6 +17,8 @@ This means that entities must be loaded from the `EntityManager`, i.e. via `em.l
 
 All work is made off of the Joist entity manager. When `.flush()` is called on the entity manager, Joist will perform all the hooks and validation checks before writing to the database. Flush can be called multiple times as work is done an entities.
 
+If an `em.flush` fails, i.e. with a validation error, the `EntityManager` cannot flush again, and later `em.flush` calls throw a `FailedFlushError`. A failed flush may have already run hooks, reactions, or SQL statements, so Joist doesn't try to resume from it; start over with a new `EntityManager` instead.
+
 For example:
 
 ```ts

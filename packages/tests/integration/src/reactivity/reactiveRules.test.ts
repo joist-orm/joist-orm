@@ -303,8 +303,8 @@ describe("reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt", "title"], path: ["author"], fn },
       // Author's "cannot have 13 books" rule
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt"], path: ["author"], fn },
-      // Book's noop rule on author.firstName, if author changes
-      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
+      // Book's noop rule on author.firstName and acknowledgements
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author", "acknowledgements"], path: [], fn },
       // Book's "too many colors" rule, if author changes
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
@@ -404,8 +404,35 @@ describe("reactiveRules", () => {
   });
 
   it.withCtx("creates the right reactive field targets", async () => {
+    // Given the configured Author methods and reactive fields
     let i = 0;
+    // When we inspect the dependencies triggered by Book changes
     const bRfs = getReactables(Book);
+    // Then the cache targets precede the persisted field targets
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "booksWithTitle",
+      fields: ["author", "deletedAt", "title"],
+      path: ["author"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "taggedBooksWithTitle",
+      fields: ["author", "deletedAt", "title"],
+      path: ["author"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "cache",
+      cstr: "Author",
+      name: "taggedBooksWithTitle",
+      fields: ["author", "deletedAt", "tags"],
+      path: ["author"],
+      runOnce: false,
+    });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Author",
@@ -482,7 +509,7 @@ describe("reactiveRules", () => {
       kind: "reaction",
       cstr: "Book",
       name: "Book.ts:139",
-      fields: ["notes"],
+      fields: ["notes", "author"],
       path: [],
       runOnce: false,
       fn: expect.any(Function),

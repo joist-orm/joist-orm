@@ -15,6 +15,7 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasProperty,
+  hasReactiveAsyncMethod,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveManyToMany,
@@ -161,6 +162,8 @@ export class Author extends AuthorCodegen {
   readonly thisTestProp: Property<Author, any> = hasProperty({}, () => this.search);
 
   public transientFields = {
+    taggedBooks: new Map<string, Book[]>(), // For testing invalidation of cached results in hasReactiveAsyncMethod.
+    numberOfBooksCache: undefined as number | undefined, // For testing intermediate cache invalidation in hasReactiveField.
     beforeFlushRan: false,
     beforeCreateRan: false,
     beforeCreateAsyncRan: false,
@@ -282,8 +285,9 @@ export class Author extends AuthorCodegen {
     ["books", "firstName"],
     (a) => {
       a.transientFields.numberOfBooksCalcInvoked++;
-      return a.books.get.length;
+      return (a.transientFields.numberOfBooksCache ??= a.books.get.length);
     },
+    { onInvalidate: (a) => (a.transientFields.numberOfBooksCache = undefined) },
   );
 
   /**
@@ -437,15 +441,43 @@ export class Author extends AuthorCodegen {
     (a) => `books=${a.numberOfBooks.get}`,
   );
 
-  readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasAsyncMethod("books", (a, title) =>
-    // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
-    title.trim().length > 0 ? a.books.get.filter((b) => b.title.includes(title)) : [],
+  readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasReactiveAsyncMethod(
+    { books: "title" },
+    (a, title) =>
+      // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
+      title.trim().length > 0
+        ? a.books.get.filter((b) => b.title.includes(title)).map((b) => b.fullNonReactiveAccess)
+        : [],
+  );
+
+  readonly taggedBooksWithTitle: AsyncMethod<Author, [string, string], Book[]> = hasReactiveAsyncMethod(
+    { booksWithTitle: {}, books: { tags: "name" } },
+    (a, title, tag) => {
+      const key = JSON.stringify([title, tag]);
+      const cache = a.transientFields.taggedBooks;
+      if (cache.has(key)) return cache.get(key)!;
+      const titled = a.booksWithTitle.call(title);
+      const result = a.books.get
+        .filter((b) => titled.includes(b.fullNonReactiveAccess) && b.tags.get.some((t) => t.name === tag))
+        .map((b) => b.fullNonReactiveAccess);
+      cache.set(key, result);
+      return result;
+    },
+    { onInvalidate: (a) => a.transientFields.taggedBooks.clear() },
   );
 
   // Example of an AsyncMethod without params, i.e. for a calc that we only want calculated when
   // explicitly called, vs. AsyncProperties that implicitly call `.get` whenever loaded.
   readonly booksTitles: AsyncMethod<Author, [], string> = hasAsyncMethod("books", (a) =>
     a.books.get.map((b) => b.title).join(", "),
+  );
+
+  /**
+   * For testing metrics on a promise-returning AsyncMethod that counts persisted books.
+   * @generated Author.md
+   */
+  readonly persistedBookCount: AsyncMethod<Author, [], Promise<number>> = hasAsyncMethod({}, (a) =>
+    a.em.findCount(Book, { author: a.id }),
   );
 
   // Example of a reactive getter that can always be gotten
@@ -672,3 +704,7 @@ config.afterCommit((author) => {
 });
 
 config.addConstraintMessage("authors_publisher_id_unique_index", "There is already a publisher with a Jim");
+// For testing guards on a derived enum field that has no transition callbacks.
+config.addTransitionRule("rangeOfBooks", { to: "Lot" }, (a) => {
+  if (a.firstName === "BlockedByGuard") return "Cannot give a blocked author a lot of books";
+});

@@ -430,7 +430,7 @@ describe("em.query / ctes", () => {
         join: [{ inner: earlier, on: earlier.authorId.eq(a.id) }],
         select: a,
       }),
-    ).rejects.toThrow("Subquery 'later' is declared later in this query's `with`");
+    ).rejects.toThrow("Query value 'later' is declared later in this query's `with`");
   });
 
   it("rejects the same CTE value used twice", async () => {
@@ -450,7 +450,7 @@ describe("em.query / ctes", () => {
         ],
         select: a,
       }),
-    ).rejects.toThrow("Subquery 'book_stats' is already in this query's `from`/`join`");
+    ).rejects.toThrow("Query value 'book_stats' is already in this query's `from`/`join`");
   });
 
   it("rejects an entity-mode CTE", async () => {

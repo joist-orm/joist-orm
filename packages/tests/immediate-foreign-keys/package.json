@@ -17,10 +17,10 @@
     "joist-orm": "workspace:*"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.1",
+    "@swc/core": "1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.5",
     "env-cmd": "^11.0.0",
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
@@ -31,7 +31,7 @@
     "joist-utils": "workspace:*",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "7.0.2"
   }
 }

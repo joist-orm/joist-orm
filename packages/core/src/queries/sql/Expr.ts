@@ -518,6 +518,45 @@ export class FnExpr extends BaseExpr {
   }
 }
 
+/**
+ * An infix operator between two expressions, i.e. `(pg."embedding" <=> ?)`.
+ *
+ * A literal right-hand side is bound through the left expression's codec, and Postgres infers
+ * the parameter's type from the operator, so no cast is needed.
+ */
+export class OperatorExpr extends BaseExpr {
+  private right: BaseExpr;
+
+  constructor(
+    private left: BaseExpr,
+    private op: string,
+    right: unknown,
+    private opts: { outputType?: TypeInfo } = {},
+  ) {
+    super();
+    this.right = isExpr(right) ? asNode(right) : new BindingExpr(left.encode(right));
+  }
+
+  get outputType(): TypeInfo | undefined {
+    return this.opts.outputType;
+  }
+
+  get sqlNullable(): boolean | undefined {
+    const { left, right } = this;
+    if (left.sqlNullable || right.sqlNullable) return true;
+    return left.sqlNullable === false && right.sqlNullable === false ? false : undefined;
+  }
+
+  get sqlSource(): object | undefined {
+    return this.left.sqlSource;
+  }
+
+  toSql(ctx: ExprContext): SqlFragment {
+    const joined = joinFragments([this.left.toSql(ctx), this.right.toSql(ctx)], ` ${this.op} `);
+    return { ...joined, sql: `(${joined.sql})` };
+  }
+}
+
 /** A bound literal, i.e. the `?` in `coalesce(x, ?)`. */
 export class BindingExpr extends BaseExpr {
   constructor(private value: unknown) {

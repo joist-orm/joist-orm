@@ -53,11 +53,13 @@ import {
   Book,
   type BookId,
   BookReview,
+  ChildGroup,
   type Comment,
   commentMeta,
   type Entity,
   EntityManager,
   newComment,
+  ParentGroup,
   Publisher,
   type Task,
   TaskOld,
@@ -75,6 +77,13 @@ export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<C
 export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentParent {
   return isEntity(maybeEntity) && getCommentParentConstructors().some((type) => maybeEntity instanceof type);
 }
+export type CommentScopePoly = ChildGroup | ParentGroup;
+export function getCommentScopePolyConstructors(): MaybeAbstractEntityConstructor<CommentScopePoly>[] {
+  return [ChildGroup, ParentGroup];
+}
+export function isCommentScopePoly(maybeEntity: unknown): maybeEntity is CommentScopePoly {
+  return isEntity(maybeEntity) && getCommentScopePolyConstructors().some((type) => maybeEntity instanceof type);
+}
 
 export interface CommentFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
@@ -85,6 +94,7 @@ export interface CommentFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
+  scope: { kind: "poly"; type: CommentScopePoly; nullable: undefined };
   likedByUsers: { kind: "m2m"; type: User };
   books: { kind: "o2m"; type: Book };
 }
@@ -123,12 +133,29 @@ export interface CommentColumns {
     update: false;
   };
   parentTaskId: { fieldName: never; type: IdOf<Task>; entity: Task; nullable: true; insert: "never"; update: false };
+  scopeChildGroupId: {
+    fieldName: never;
+    type: IdOf<ChildGroup>;
+    entity: ChildGroup;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
+  scopeParentGroupId: {
+    fieldName: never;
+    type: IdOf<ParentGroup>;
+    entity: ParentGroup;
+    nullable: true;
+    insert: "never";
+    update: false;
+  };
 }
 
 export interface CommentOpts {
   text?: string | null;
   user?: User | UserId | null;
   parent: CommentParent;
+  scope?: CommentScopePoly;
   books?: Book[];
   likedByUsers?: User[];
 }
@@ -136,6 +163,7 @@ export interface CommentOpts {
 export interface CommentIdsOpts {
   userId?: UserId | null;
   parentId?: IdOf<CommentParent> | null;
+  scopeId?: IdOf<CommentScopePoly> | null;
   bookIds?: BookId[] | null;
   likedByUserIds?: UserId[] | null;
 }
@@ -157,6 +185,9 @@ export interface CommentFilter {
   parentBookReview?: EntityFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
   parentPublisher?: EntityFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
   parentTaskOld?: EntityFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
+  scope?: EntityFilter<CommentScopePoly, IdOf<CommentScopePoly>, never, null>;
+  scopeChildGroup?: EntityFilter<ChildGroup, IdOf<ChildGroup>, FilterOf<ChildGroup>, null>;
+  scopeParentGroup?: EntityFilter<ParentGroup, IdOf<ParentGroup>, FilterOf<ParentGroup>, null>;
 }
 
 export interface CommentGraphQLFilter {
@@ -178,6 +209,10 @@ export interface CommentGraphQLFilter {
   parentBookReview?: EntityGraphQLFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
   parentPublisher?: EntityGraphQLFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
   parentTaskOld?: EntityGraphQLFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
+  scope?: EntityGraphQLFilter<CommentScopePoly, IdOf<CommentScopePoly>, never, null>;
+  scopeId?: ValueGraphQLFilter<IdOf<CommentScopePoly>>;
+  scopeChildGroup?: EntityGraphQLFilter<ChildGroup, IdOf<ChildGroup>, FilterOf<ChildGroup>, null>;
+  scopeParentGroup?: EntityGraphQLFilter<ParentGroup, IdOf<ParentGroup>, FilterOf<ParentGroup>, null>;
 }
 
 export interface CommentOrder {
@@ -238,6 +273,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   readonly user: ManyToOneReference<Comment, User, undefined> = hasOne();
   readonly likedByUsers: Collection<Comment, User> = hasManyToMany(); // users_to_comments comment_id liked_by_user_id
   readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic();
+  readonly scope: PolymorphicReference<Comment, CommentScopePoly, undefined> = hasOnePolymorphic();
 
   get id(): CommentId {
     return this.idMaybe || failNoIdYet("Comment");

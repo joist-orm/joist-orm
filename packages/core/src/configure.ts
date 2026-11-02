@@ -13,13 +13,16 @@ import {
 } from "src/EntityMetadata.ts";
 import { getProperties } from "src/getProperties.ts";
 import { maybeResolveReferenceToId, setTaggedIdDelimiter, tagFromId } from "src/keys.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { reverseReactiveHint } from "src/reactivity/reactiveHints.ts";
 import { AsyncReactiveFieldImpl } from "src/relations/AsyncReactiveField.ts";
+import { ReactiveAsyncMethodImpl } from "src/relations/hasReactiveAsyncMethod.ts";
 import { type ReactiveManyToManyImpl, type ReactiveReferenceImpl, type Reference } from "src/relations/index.ts";
 import { type ReactiveFieldImpl } from "src/relations/ReactiveField.ts";
 import { isCannotBeUpdatedRule } from "src/rules.ts";
 import { maybeGetRuntimeConfig } from "src/runtimeConfig.ts";
 import { SimpleFieldSerde } from "src/serde/fieldSerde.ts";
+import { buildFieldTransitions } from "src/transitions.ts";
 import { defineLazyGetter, fail } from "src/utils.ts";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -94,6 +97,10 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
 /** Installs lazy getters for reactivity caches after reactivity has been reverse-indexed. */
 function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
   for (const meta of metas) {
+    // Config-dependent getters are installed after afterMetadata callbacks finish adding config.
+    defineLazyGetter(meta, "transitions", function buildTransitions() {
+      return buildFieldTransitions(meta);
+    });
     defineLazyGetter(meta, "reactables", function buildReactables() {
       return getBaseAndSelfMetas(meta)
         .flatMap((m) => m.config.__data.reactables)
@@ -119,6 +126,19 @@ function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
     defineLazyGetter(meta, "reactiveCommitRules", function buildReactiveCommitRules() {
       // Same "AndSub" reasoning as `reactiveRules`, just for the post-flush/pre-commit commit rules.
       return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveCommitRules);
+    });
+    // Base-type rule callbacks are shared, but each concrete type needs its own metric name.
+    defineLazyGetter(meta, "simpleRules", function buildSimpleRules() {
+      return getBaseAndSelfMetas(meta)
+        .flatMap((m) => m.config.__data.rules)
+        .filter((rule) => rule.hint === undefined)
+        .map((rule) => ({ ...rule, evaluation: new EvaluationSlot(`${meta.type}.${rule.name}`) }));
+    });
+    defineLazyGetter(meta, "simpleCommitRules", function buildSimpleCommitRules() {
+      return getBaseAndSelfMetas(meta)
+        .flatMap((m) => m.config.__data.commitRules)
+        .filter((rule) => rule.hint === undefined)
+        .map((rule) => ({ ...rule, evaluation: new EvaluationSlot(`${meta.type}.${rule.name}`) }));
     });
     defineLazyGetter(meta, "hasCommitRules", function buildHasCommitRules() {
       // True if flushing an entity of this type could trigger commit-rule work, so `em.flush` can
@@ -376,6 +396,23 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           path,
           fn,
           runOnce,
+        });
+      }
+    }
+
+    // Look for hasReactiveAsyncMethods whose cached isLoaded state and onInvalidate callbacks need watching.
+    // Even without onInvalidate, dependency changes must reset the method's cached isLoaded state.
+    for (const [name, method] of Object.entries(getProperties(meta))) {
+      if (!(method instanceof ReactiveAsyncMethodImpl)) continue;
+      for (const { kind, entity, path, fields } of reverseReactiveHint(meta.cstr, meta.cstr, method.reactiveHint)) {
+        getMetadata(entity).config.__data.reactables.push({
+          kind: "cache",
+          cstr: meta.cstr,
+          isReadOnly: kind === "read-only",
+          name,
+          path,
+          fields,
+          runOnce: false,
         });
       }
     }

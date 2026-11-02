@@ -3,8 +3,9 @@ import { whereFilterHash } from "src/dataloaders/findDataLoader.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityConstructor, type EntityManager, TooManyError, sameEntity } from "src/EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
+import { equalArrays } from "src/fields.ts";
 import { type ManyToOneReference, type PolymorphicReference, isLoadedReference } from "src/relations/index.ts";
-import { resurrectIfSoftDeleted } from "src/resurrection.ts";
+import { newWhereEqual, resurrectIfSoftDeleted } from "src/resurrection.ts";
 import type { OptsOf } from "src/typeMap.ts";
 import { cleanStringValue, fail } from "src/utils.ts";
 
@@ -90,8 +91,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       // If we didn't find it in the EM, do the db query/em.create
       const entities = await em.find(
         type,
-        // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
-        Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
+        newWhereEqual(meta, where) as any,
         // Always include soft-deleted rows so findOrCreate can resurrect them instead of creating duplicates.
         { softDeletes: "include" },
       );
@@ -125,7 +125,10 @@ export function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<
       case "enum":
         return entity[fn] === value;
       case "primitive":
-        if (field.citext) {
+        if (meta.columns[fieldName]?.isArray) {
+          const current = entity[fn];
+          return Array.isArray(current) && Array.isArray(value) ? equalArrays(current, value) : current === value;
+        } else if (field.citext) {
           return compareCaseInsensitive(entity[fn], value);
         } else {
           return entity[fn] === value;

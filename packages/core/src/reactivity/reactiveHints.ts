@@ -16,6 +16,8 @@ import {
 import { getProperties } from "src/getProperties.ts";
 import type { LoadHint, Loadable, Loaded } from "src/loading/loadHints.ts";
 import { type NormalizeHint, type SuffixSeperator, normalizeHint, suffixRe } from "src/normalizeHints.ts";
+import { type AsyncMethod, AsyncMethodImpl, type LoadedMethod } from "src/relations/hasAsyncMethod.ts";
+import { ReactiveAsyncMethodImpl } from "src/relations/hasReactiveAsyncMethod.ts";
 import {
   type Collection,
   type EnumCollection,
@@ -109,7 +111,9 @@ export type Reacted<T extends Entity, H> = Entity & {
               ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
               : T[K] extends Property<any, infer V>
                 ? LoadedProperty<any, V>
-                : T[K];
+                : T[K] extends AsyncMethod<any, infer A, infer V>
+                  ? T[K] & LoadedMethod<T, A, V>
+                  : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.
@@ -319,7 +323,15 @@ function reverseSubHint(
     // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
     // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
     const p = getProperties(meta)[key];
-    if (p instanceof PropertyImpl) {
+    if (p instanceof AsyncMethodImpl || p instanceof ReactiveAsyncMethodImpl) {
+      if (isReadOnly) return [];
+      if (p instanceof AsyncMethodImpl) {
+        throw new Error(
+          `Method ${key} cannot be used in reactive hints in ${rootType.name}.ts; use hasReactiveAsyncMethod instead`,
+        );
+      }
+      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
+    } else if (p instanceof PropertyImpl) {
       // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
       // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
       // they are readonly.
@@ -592,7 +604,8 @@ export function convertToLoadHint<T extends Entity>(
           break;
         case "primitive":
         case "enum":
-          if (field.derived === "async") {
+          // Lazy primitives are excluded from the default SELECT, so rules need them loaded before using `.get`.
+          if (field.derived === "async" || (field.kind === "primitive" && field.lazy)) {
             mergeNormalizedHints(loadHint, { [key]: {} });
           }
           continue;

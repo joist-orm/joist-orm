@@ -2,7 +2,7 @@ import { Column, type ColumnDescriptors, configureMetadata, type Entity as Entit
 import type { Context } from "../../context.js";
 import { Author } from "../Author.js";
 import { Book } from "../Book.js";
-import { authorConfig, bookConfig, Colors, newAuthor, newBook } from "../entities.js";
+import { authorConfig, bookConfig, Color, Colors, newAuthor, newBook } from "../entities.js";
 
 setRuntimeConfig({ temporal: { "timeZone": "UTC" } });
 
@@ -40,7 +40,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new SimpleFieldSerde("delete", authorMetaColumns["delete"]), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("createdAt", authorMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new SimpleFieldSerde("updatedAt", authorMetaColumns["updatedAt"]), immutable: false },
-    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new SimpleFieldSerde("favoriteColors", authorMetaColumns["favoriteColors"]), immutable: false, default: "schema" },
+    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, enumType: Color, serde: new SimpleFieldSerde("favoriteColors", authorMetaColumns["favoriteColors"]), immutable: false, default: "schema" },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "authorId", serde: undefined, immutable: false },
   },
   columns: authorMetaColumns,

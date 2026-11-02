@@ -45,17 +45,17 @@
     "joist-utils": "workspace:*"
   },
   "dependencies": {
-    "ansis": "^4.3.1",
+    "ansis": "^4.4.0",
     "dataloader": "^2.2.3",
     "temporal-spec": "^1.0.1"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.1",
+    "@swc/core": "1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.5",
     "jest": "30.4.2",
-    "temporal-polyfill": "^1.0.4",
+    "temporal-polyfill": "^1.0.6",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"
   }

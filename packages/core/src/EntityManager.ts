@@ -10,7 +10,7 @@ import { populateBatchLoader, type populateOperation } from "src/batchloaders/po
 import { type recursiveChildrenOperation } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
 import { type recursiveM2mOperation } from "src/batchloaders/recursiveM2mBatchLoader.ts";
 import { type recursiveParentsOperation } from "src/batchloaders/recursiveParentsBatchLoader.ts";
-import { type ConfigData, type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
+import { type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
 import { getConstructorFromTag, getMetadataForType } from "src/configure.ts";
 import { findByUniqueDataLoader, type findByUniqueOperation } from "src/dataloaders/findByUniqueDataLoader.ts";
 import {
@@ -33,6 +33,7 @@ import { getField, setField } from "src/fields.ts";
 import { FlushLock } from "src/flush/FlushLock.ts";
 import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
 import type { PendingChange } from "src/flush/PendingChanges.ts";
+import { checkReadDrift } from "src/flush/ReadDrift.ts";
 import { type JoinRowTodo, Todo, combineJoinRows, createTodos, getTodo } from "src/flush/Todo.ts";
 import {
   CustomCollection,
@@ -65,7 +66,6 @@ import {
   type ValidationError,
   ValidationErrors,
   type ValidationRule,
-  type ValidationRuleInternal,
   type ValidationRuleResult,
   asConcreteCstr,
   assertLoaded,
@@ -100,6 +100,7 @@ import {
 import { type WriteFn } from "src/logging/FactoryLogger.ts";
 import { noopFieldLogger } from "src/logging/FieldLogger.ts";
 import { type ReactionWalk } from "src/logging/ReactionLogger.ts";
+import type { EntityMetrics } from "src/metrics/EntityMetrics.ts";
 import { newEntity } from "src/newEntity.ts";
 import { resetFactoryCreated } from "src/newTestInstance.ts";
 import { PluginManager } from "src/PluginManager.ts";
@@ -122,12 +123,12 @@ import {
   type QueryRow,
   type QuerySelect,
   type QuerySource,
+  type QueryTable,
   type ResolvedJoins,
   type SetOperand,
   type SetQuery,
   type SetQueryRow,
-  type Subquery,
-  parseUserQuery,
+  parseRootQuery,
 } from "src/queries/sql/query.ts";
 import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
@@ -139,8 +140,9 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
+import type { SimpleRule } from "src/rules.ts";
 import { runInTrustedContext } from "src/trusted.ts";
-import { type OptsOf, type OrderOf } from "src/typeMap.ts";
+import { type OptsOf, type OrderOf, type TypeMap } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
 import {
   type MaybePromise,
@@ -213,11 +215,40 @@ export type IdOf<T> = T extends { id: infer I } ? I : never;
 
 export type TaggedId = string;
 
+/** Creation options for any registered entity type, since deep clones can include more than the root type. */
+export type CloneOverrides = Partial<TypeMap[keyof TypeMap]["optsType"]>;
+
+/** Skips entities using either a shared predicate or predicates for specific entity types. */
+export type CloneSkipIf<E extends EntityW = EntityW> =
+  | ((original: E) => boolean)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"]) => boolean };
+
+/** Supplies creation options using either a shared callback or callbacks with type-specific options. */
+export type CloneOverridesCallback<E extends EntityW = EntityW> =
+  | ((original: E) => CloneOverrides)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"]) => Partial<TypeMap[K]["optsType"]> };
+
+/** Customizes clones using either a shared callback or callbacks for specific entity types. */
+export type ClonePostClone<E extends EntityW = EntityW> =
+  | ((original: E, clone: E) => void)
+  | { [K in keyof TypeMap]?: (original: TypeMap[K]["entityType"], clone: TypeMap[K]["entityType"]) => void };
+
 export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
 
 export type EntityManagerHook = "beforeBegin" | "afterBegin" | "beforeCommit" | "afterCommit";
+
+/** Options for EntityManager transaction hooks. */
+export interface EntityManagerHookOptions {
+  /**
+   * Runs the transaction lifecycle even on write-less flushes. Defaults to false.
+   *
+   * The transaction still starts after pre-transaction reactivity and validation, or reuses an
+   * existing transaction. Like the hooks, this option persists across flushes and forks.
+   */
+  forceTransaction?: boolean;
+}
 
 type HookFn<TX> = (em: EntityManager, txn: TX) => MaybePromise<any>;
 
@@ -303,6 +334,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
+  /** The error that failed a previous `em.flush`, after which this EntityManager can't flush again. */
+  #flushError: unknown = undefined;
   // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
   #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
@@ -330,8 +363,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     beforeCommit: [],
     afterCommit: [],
   };
+  // Hooks persist across flushes, so a forced hook keeps requiring a transaction on each flush.
+  #forceTransaction = false;
+  #readSet = new Set<EntityW>();
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger = noopFieldLogger;
+  #metrics: EntityMetrics | undefined;
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
   /** Track `a#1`, `a#2`, etc indexes for `em.create`-d entities. */
@@ -359,6 +396,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
+      this.#forceTransaction = opts.em.#forceTransaction;
       opts.em.__api.pluginManager.cloneTo(pluginManager);
     }
 
@@ -428,6 +466,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get fieldLogger() {
         return em.#fieldLogger;
+      },
+
+      get metrics() {
+        return em.#metrics;
       },
 
       clearDataloaders() {
@@ -566,7 +608,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Population runs after the query, using the same relation loaders as `em.populate`.
    * This method is not batched: these are custom queries, too unique to batch.
    */
-  public query<R>(q: Subquery<R, any>): Promise<R[]>;
+  public query<R>(q: QueryTable<R, any>): Promise<R[]>;
   public query<T extends Entity>(q: EntityQuery<T>): Promise<T[]>;
   public query<T extends Entity, const H extends LoadHint<T>>(
     q: EntityQuery<T>,
@@ -589,7 +631,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#assertFindAllowed("query");
     const em = this;
     return (async function query() {
-      const plan = parseUserQuery(q);
+      const plan = parseRootQuery(q);
       if (options?.populate && plan.output.kind !== "entity") {
         fail("em.query populate requires an entity selection");
       }
@@ -611,7 +653,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public execute<const M extends MutationInput>(
     statement: M & CheckMutation<M>,
   ): Promise<ExecuteResult<MutationRow<M>>>;
-  public execute<R>(statement: Subquery<R, any>): Promise<ExecuteResult<R>>;
+  public execute<R>(statement: QueryTable<R, any>): Promise<ExecuteResult<R>>;
   public execute<T extends Entity>(statement: EntityQuery<T>): Promise<ExecuteResult<T>>;
   public execute<const Q extends SetQuery<readonly SetOperand[]>>(
     statement: Q & CheckSetQuery<Q>,
@@ -1110,8 +1152,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
-   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
-   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   *   @param skipIf - Shared or per-type predicates that skip entities and their children
+   *   @param overrides - Shared or per-type callbacks that supply creation options before defaults run
+   *   @param postClone - Shared or per-type callbacks for any original/clone post-processing needed
    * @returns The `Loaded` cloned entity or fails if the clone could not be made
    *
    * @example
@@ -1139,8 +1182,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: K;
-      skipIf?: (entity: Entity) => boolean;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H>>;
 
@@ -1151,8 +1195,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
    *   @param skip - Keys that will be skipped in the clone
-   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
-   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   *   @param skipIf - Shared or per-type predicates that skip entities and their children
+   *   @param overrides - Shared or per-type callbacks that supply creation options before defaults run
+   *   @param postClone - Shared or per-type callbacks for any original/clone post-processing needed
    * @returns Array of `Loaded` cloned entities from the provided list or empty array if all are skipped
    *
    * @example
@@ -1165,7 +1210,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * @example
    * // This will duplicate the author's books, and assign them to a different author
-   * const duplicatedBooks = await em.clone(author.books.get, { postClone: (_original, clone) => clone.author.set(author2) })
+   * const duplicatedBooks = await em.clone(author.books.get, { overrides: () => ({ author: author2 }) })
    *
    * @example
    * // This will duplicate the author's books, but skip any book where the title includes `sea`
@@ -1176,8 +1221,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: K;
-      skipIf?: (entity: Entity) => boolean;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H>[]>;
 
@@ -1186,25 +1232,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     opts?: {
       deep?: H;
       skip?: object;
-      skipIf?: (entity: Entity) => boolean;
-      postClone?: (original: Entity, clone: Entity) => void;
+      skipIf?: CloneSkipIf<Entity>;
+      overrides?: CloneOverridesCallback<Entity>;
+      postClone?: ClonePostClone<Entity>;
     },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
-    const { deep = {}, skipIf, skip = {}, postClone } = opts ?? {};
+    const { deep = {}, skipIf, skip = {}, overrides, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
     const todo = new Set<Entity>();
     const skipMap = new WeakMap<Entity, string[]>();
 
     // 1. Find all entities w/o mutating them yet
     await crawl(todo, skipMap, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
-      skipIf: skipIf as any,
+      skipIf: (entity) => invokeCloneCallback(skipIf, entity as Entity) ?? false,
       skip,
     });
 
     // 2. Clone each found entity
     const deferredRelations: [Entity, string, Entity][] = [];
+    const overrideMap = new WeakMap<Entity, object>();
     const clones = [...todo].map((entity) => {
       const skip = skipMap.get(entity) ?? [];
+      const override: Record<string, unknown> = invokeCloneCallback(overrides, entity) ?? {};
+      overrideMap.set(entity, override);
+
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
       // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
       // by `em.register`).
@@ -1212,6 +1263,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const copy = Object.fromEntries(
         Object.values(meta.allFields)
           .map((f) => {
+            // Overrides are passed to create below instead of copying the source value.
+            // I.e. { currentDraftBook: undefined } must not add the original draft to deferredRelations,
+            // which would later replace undefined with the cloned draft.
+            if (Object.hasOwn(override, f.fieldName)) return [f.fieldName, override[f.fieldName]];
             if (skip.includes(f.fieldName)) return undefined;
             switch (f.kind) {
               case "primitive":
@@ -1234,7 +1289,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                   isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
                 ) as Entity | undefined;
                 // Defer relations within the cloned subgraph because setting a clone field before remapping can update
-                // its other side, and that update is not fixed up later.
+                // its other side, and that update is not fixed up later. Even for o2m collections that are fixed up,
+                // briefly attaching a cloned child to its source parent would queue reactions on the source parent.
                 if (target && todo.has(target)) {
                   deferredRelations.push([entity, f.fieldName, target]);
                   return [f.fieldName, undefined];
@@ -1258,7 +1314,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       // Call `new` just like the user would do
       // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
-      const clone = this.create(asConcreteCstr(meta.cstr), copy);
+      const clone = this.create(asConcreteCstr(meta.cstr), { ...copy, ...override });
 
       return [entity, clone] as const;
     });
@@ -1266,8 +1322,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // 3. Now mutate the m2o relations. We focus on only m2o's because they "own" the field/column,
     // and will drive percolation to keep the other-side o2m & o2o updated.
-    clones.forEach(([, clone]) => {
+    clones.forEach(([original, clone]) => {
       getRelationEntries(clone).forEach(([fieldName, value]) => {
+        // Overridden references already have their final values and do not need fixup.
+        if (Object.hasOwn(overrideMap.get(original)!, fieldName)) return;
         if (
           value instanceof ManyToOneReferenceImpl ||
           value instanceof PolymorphicReferenceImpl ||
@@ -1292,7 +1350,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
 
     if (postClone) {
-      await Promise.all(clones.map(([original, clone]) => postClone(original, clone)));
+      await Promise.all(clones.map((pair) => invokeCloneCallback(postClone, ...pair)));
     }
 
     return Array.isArray(entityOrArray)
@@ -1867,6 +1925,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     if (this.mode === "read-only") throw new ReadOnlyError();
+    if (this.#flushError !== undefined) throw new FailedFlushError(this.#flushError);
 
     const { skipValidation = false } = flushOptions;
 
@@ -2040,7 +2099,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         try {
           // `isValidating` keeps derived-field reads from creating (now-unflushable) dirty state.
           this.#isValidating = true;
-          await validateSimpleRules(entityTodos, (config) => config.commitRules);
+          await validateSimpleRules(entityTodos, (meta) => meta.simpleCommitRules!);
           await validateReactiveRules(
             this,
             this.#rm.logger,
@@ -2103,10 +2162,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
-      if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+      if (
+        Object.keys(entityTodos).length > 0 ||
+        Object.keys(joinRowTodos).length > 0 ||
+        this.#rm.hasPendingCommitTransitions() ||
+        this.#readSet.size > 0 ||
+        this.#forceTransaction
+      ) {
+        const checkedReads = new Set<EntityW>();
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
+            if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
               // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
@@ -2156,6 +2223,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           }
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
+          await this.#rm.runCommitTransitions();
+          // Commit rules and callbacks can assert dependencies after the last write loop.
+          if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
           if (this.mode === "in-memory-writes") {
             throw new InMemoryRollbackError();
           }
@@ -2192,15 +2262,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         this.#dataloaders = {};
         this.#batchLoaders = {};
         this.#preloadedRelations = new Map();
-        this.#rm.clear();
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
+      this.#rm.clear();
+      this.#readSet.clear();
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
+      // A failed flush may have already run reactions, hooks, or SQL, so we don't try to resume from it
+      if (!(e instanceof InMemoryRollbackError)) this.#flushError = e;
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
         // Look up a custom cycle message — check both the exact field name and its opposite
@@ -2477,6 +2550,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
+   * Protects loaded read dependencies at the next flush, then clears them on success.
+   *
+   * New entities are ignored. Written entities use oplocks instead. Types without updatedAt
+   * cannot be protected. A drift requires retrying the whole unit of work in a fresh EM.
+   */
+  assertUnchanged(entity: EntityW): void;
+  assertUnchanged(entities: readonly EntityW[]): void;
+  assertUnchanged(entityOrEntities: EntityW | readonly EntityW[]): void {
+    const entities = isEntity(entityOrEntities) ? [entityOrEntities] : entityOrEntities;
+    for (const entity of entities) {
+      if (entity.em !== this) throw new Error("assertUnchanged requires entities from this EntityManager");
+      if (entity.isNewEntity) continue;
+      if (!getBaseMeta(getMetadata(entity)).timestampFields?.updatedAt) {
+        throw new Error(`assertUnchanged requires updatedAt on ${entity}`);
+      }
+      this.#readSet.add(entity);
+    }
+  }
+
+  /**
    * Mark an entity as needing to be flushed regardless of its state.
    *
    * This will:
@@ -2576,20 +2669,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.#rm.recalcPendingReactables("reactables");
   }
 
-  public beforeBegin(fn: HookFn<TX>) {
+  /** Registers a hook to run before the transaction begins. */
+  public beforeBegin(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.beforeBegin.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public afterBegin(fn: HookFn<TX>) {
+  /** Registers a hook to run after the transaction begins. */
+  public afterBegin(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.afterBegin.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public beforeCommit(fn: HookFn<TX>) {
+  /** Registers a hook to run before the transaction commits. */
+  public beforeCommit(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.beforeCommit.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
 
-  public afterCommit(fn: HookFn<TX>) {
+  /** Registers a hook to run after the transaction commits. */
+  public afterCommit(fn: HookFn<TX>, opts: EntityManagerHookOptions = {}) {
     this.#hooks.afterCommit.push(fn);
+    this.#forceTransaction ||= opts.forceTransaction ?? false;
   }
   /**
    * Returns an EntityManager-scoped (i.e. request scoped) data loader.
@@ -2660,6 +2761,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await Promise.all(relationsToCleanup.map((r) => r.cleanupOnEntityDeleted()));
   }
 
+  /** Attaches request-owned metrics, or disables collection without resetting the collector. */
+  setMetrics(metrics: EntityMetrics | undefined): void {
+    this.#metrics = metrics;
+  }
+
   setReactionLogging(logger: ReactionLogger): void;
   setReactionLogging(enabled: boolean): void;
   setReactionLogging(arg: boolean | ReactionLogger): void {
@@ -2707,6 +2813,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
+    // Don't hide the original flush error behind a `SuppressedError` of our `FailedFlushError`
+    if (this.#flushError !== undefined) return;
     await this.flush();
   }
 
@@ -3086,6 +3194,7 @@ export interface EntityManagerInternalApi {
   checkWritesAllowed: () => void;
   isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger;
+  readonly metrics: EntityMetrics | undefined;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
   clearDataloaders(): void;
@@ -3260,8 +3369,8 @@ async function validateReactiveRules(
 // to mark only the rules that need to run.
 async function validateSimpleRules(
   todos: Record<string, Todo>,
-  // Which config list to pull rules from, i.e. the pre-flush `rules` or the post-flush `commitRules`
-  getRules: (config: ConfigData<any, any>) => ValidationRuleInternal<any>[] = (config) => config.rules,
+  // Which prepared rules to run, i.e. pre-flush validation or post-flush commit rules.
+  getRules: (meta: EntityMetadata) => SimpleRule[] = (meta) => meta.simpleRules!,
 ): Promise<void> {
   let p: Promise<ValidationError[]>[] | undefined = undefined;
   for (const todoKey in todos) {
@@ -3269,11 +3378,8 @@ async function validateSimpleRules(
     for (const entities of [inserts, updates]) {
       for (const entity of entities) {
         if (entity.isDeletedEntity) continue;
-        for (const m of getBaseAndSelfMetas(getMetadata(entity))) {
-          for (const rule of getRules(m.config.__data)) {
-            if (rule.hint !== undefined) continue;
-            (p ??= []).push(invokeRule(entity, rule.fn));
-          }
+        for (const rule of getRules(getMetadata(entity))) {
+          (p ??= []).push(invokeSimpleRule(entity, rule));
         }
       }
     }
@@ -3286,11 +3392,30 @@ async function validateSimpleRules(
 }
 
 /** Invokes a single validation rule, coercing its result/sync throws into a promise. */
-async function invokeRule(
+export async function invokeRule(
   entity: Entity,
   fn: (entity: any) => MaybePromise<ValidationRuleResult>,
 ): Promise<ValidationError[]> {
   return coerceError(entity, await fn(entity));
+}
+
+/** Evaluates a non-reactive validation or commit rule using its required registration name. */
+async function invokeSimpleRule(entity: Entity, rule: SimpleRule): Promise<ValidationError[]> {
+  // Keep the original rule function in metadata: cannotBeUpdated carries immutable-field flags.
+  const { fn } = rule;
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return coerceError(entity, await fn(entity));
+
+  const totals = metrics.start(rule.evaluation);
+  const started = performance.now();
+  let value: MaybePromise<ValidationRuleResult>;
+  try {
+    value = fn(entity);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return coerceError(entity, await metrics.finish(totals, started, value));
 }
 
 export function driverBeforeBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
@@ -3450,6 +3575,25 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
   }
 }
 
+/** Invokes only the most specific handler, falling back to a base type when no concrete-type handler exists. */
+function invokeCloneCallback<A extends [EntityW, ...EntityW[]], R>(
+  callback: ((...args: A) => R) | object | undefined,
+  ...args: A
+): R | undefined {
+  if (typeof callback === "function") return callback(...args);
+  if (!callback) return undefined;
+
+  // The public maps correlate each handler's parameters with its metadata type; dispatch restores that pairing.
+  const handlers = callback as Record<string, ((...args: A) => R) | undefined>;
+  let meta: EntityMetadata | undefined = getMetadata(args[0]);
+  while (meta) {
+    const handler = Object.hasOwn(handlers, meta.type) ? handlers[meta.type] : undefined;
+    if (handler) return handler(...args);
+    meta = meta.baseType ? getMetadataForType(meta.baseType) : undefined;
+  }
+  return undefined;
+}
+
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */
 async function crawl<T extends Entity>(
   found: Set<Entity>,
@@ -3549,7 +3693,7 @@ function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, n
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
         const orm = getInstanceData(e);
-        orm.markFieldDirty(updatedAt, getField(e, updatedAt));
+        orm.markFieldDirty(updatedAt, getField(e, updatedAt, true));
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
         rm.queueDownstreamReactables(e, updatedAt);
@@ -3648,6 +3792,13 @@ function hasPaginationSettings(options: object): boolean {
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */
 class InMemoryRollbackError extends Error {}
+
+/** An error thrown by `em.flush` after a previous `em.flush` on the same EntityManager failed. */
+export class FailedFlushError extends Error {
+  constructor(cause: unknown) {
+    super("EntityManager cannot flush after a previous flush failed, use a new EntityManager", { cause });
+  }
+}
 
 /** An error thrown when `em.mode === "read-only"` but entities are mutated/flushed. */
 export class ReadOnlyError extends Error {

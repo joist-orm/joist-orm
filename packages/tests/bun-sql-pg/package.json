@@ -14,13 +14,13 @@
     "test-skip": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
-    "bun-types": "^1.3.14",
+    "bun-types": "^1.4.4",
     "joist-driver-bun-pg": "workspace:*",
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.4"
+    "node-pg-migrate": "^9.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.5",
     "jest": "30.4.2",
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",

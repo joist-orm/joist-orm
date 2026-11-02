@@ -198,6 +198,9 @@ export function generateEntityCodegenFile(
     ? code`extends ${imp("t:" + baseEntity.entity.graphqlFilterName + "@./entities.ts")}`
     : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
+  const maybeBaseFactoryExtras = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.entity.factoryExtrasName + "@./entities.ts")}`
+    : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
@@ -271,7 +274,7 @@ export function generateEntityCodegenFile(
       ${generateOrderFields(meta)}
     }
 
-    export interface ${entity.factoryExtrasName} {
+    export interface ${entity.factoryExtrasName} ${maybeBaseFactoryExtras} {
       ${generateFactoryExtrasType(meta)}
     }
 
@@ -575,10 +578,13 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
     )}, derived: ${derived !== false}; };`;
   });
   const enums = meta.enums.map((field) => {
-    const { fieldName, enumType, notNull, isArray } = field;
+    const { fieldName, enumType, notNull, isArray, hasTransitions } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; };`;
+    } else if (hasTransitions) {
+      // Lets transition tables and matches use accessor names, i.e. `Draft` instead of `AuthorStatus.Draft`
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; accessors: keyof typeof ${enumType}; };`;
     } else {
       return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)}; };`;
     }
@@ -850,7 +856,7 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
       return code`${withName(fieldName)}?: ${fieldType}${maybeUnionNull(notNull)};`;
     });
   const enums = meta.enums
-    .filter((f) => f.derived === "async")
+    .filter((f) => f.derived === "async" || f.hasTransitions)
     .map((field) => {
       const { fieldName, enumType, notNull, isArray } = field;
       if (isArray) {

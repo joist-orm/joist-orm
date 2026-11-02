@@ -4,6 +4,7 @@ import { type PrimitiveField, getMetadata } from "src/EntityMetadata.ts";
 import { getField, isFieldSet, setField } from "src/fields.ts";
 import { isLoaded } from "src/index.ts";
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
@@ -69,10 +70,15 @@ export interface ReactiveField<T extends Entity, V> {
 export function hasReactiveField<T extends Entity, const H extends ReactiveHint<T>, V>(
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
+  opts?: { onInvalidate?: (entity: T) => void },
 ): ReactiveField<T, V> {
+  // Lazy field definitions are built per concrete type; all its instances share this named slot.
+  let evaluation: EvaluationSlot | undefined;
   return lazyField((entity: T, fieldName) => {
-    const field = getMetadata(entity).allFields[fieldName] as PrimitiveField;
-    return new ReactiveFieldImpl(entity, field, hint, fn);
+    const meta = getMetadata(entity);
+    const field = meta.allFields[fieldName] as PrimitiveField;
+    evaluation ??= new EvaluationSlot(`${meta.type}.${fieldName}`);
+    return new ReactiveFieldImpl(entity, field, hint, fn, evaluation, opts?.onInvalidate);
   });
 }
 
@@ -92,6 +98,8 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     field: PrimitiveField,
     reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => V,
+    private readonly evaluation: EvaluationSlot,
+    private onInvalidate?: (entity: T) => void,
   ) {
     super(entity);
     this.#field = field;
@@ -135,7 +143,21 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // our IsLoadedCache cache that is immediately invalidated on write-path), and if we've drifted to not-loaded, it's
     // better to fail and tell the user.
     if (this.isLoaded) {
-      const newValue = fn(this.entity as Reacted<T, H>);
+      const metrics = getEmInternalApi(this.entity.em).metrics;
+      let newValue: V;
+      if (metrics) {
+        const totals = metrics.start(this.evaluation);
+        const started = performance.now();
+        try {
+          newValue = fn(this.entity as Reacted<T, H>);
+        } catch (error) {
+          metrics.finish(totals, started);
+          throw error;
+        }
+        newValue = metrics.finish(totals, started, newValue);
+      } else {
+        newValue = fn(this.entity as Reacted<T, H>);
+      }
       if (!getEmInternalApi(this.entity.em).isValidating) {
         // setField will immediately invalidate downstream #isLoaded/#isCached values
         setField(this.entity, this.fieldName, newValue);
@@ -181,6 +203,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // is still loaded (as it did before we added caching), so users won't see false positive.
     this.#isLoaded = undefined;
     this.resetCacheUnlessFactoryPinned();
+    this.onInvalidate?.(this.entity);
   }
 
   get loadHint(): any {

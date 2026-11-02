@@ -1,7 +1,7 @@
 import { getInstanceData } from "src/BaseEntity.ts";
 import { getDefaultDependencies } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
-import { type EntityConstructor, type MaybeAbstractEntityConstructor } from "src/EntityManager.ts";
+import { type EntityConstructor, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
 import { type EntityMetadata, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
 import { getField, setField } from "src/fields.ts";
 import { getProperties } from "src/getProperties.ts";
@@ -94,6 +94,8 @@ export type * from "src/EntityFields.ts";
 export * from "src/queries/find/EntityFilter.ts";
 export * from "src/queries/find/EntityGraphQLFilter.ts";
 export * from "src/EntityManager.ts";
+export { ReadDriftError, type ReadDrift } from "src/flush/ReadDrift.ts";
+export { EntityMetrics, type EntityMetricsSnapshot, type EvaluationStats } from "src/metrics/EntityMetrics.ts";
 export * from "src/EntityMetadata.ts";
 export type {
   DeleteStatement,
@@ -161,6 +163,7 @@ export * from "src/RowData.ts";
 export { type JoinRowTodo, Todo } from "src/flush/Todo.ts";
 export * from "src/changes.ts";
 export { ConfigApi, type EntityHook, resetBootFlag } from "src/config.ts";
+export { type GuardTransitionMatch, type OnTransitionMatch, type TransitionTable } from "src/transitions.ts";
 export {
   configureMetadata,
   getConstructorFromTaggedId,
@@ -215,7 +218,7 @@ export { deepNormalizeHint, normalizeHint } from "src/normalizeHints.ts";
 export { ImmutableEntitiesPlugin } from "src/plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "src/plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "src/preloading/JsonAggregatePreloader.ts";
-// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseUserQuery, Plan) stays internal
+// `em.query`'s query surface; the parse pipeline (SubqueryHandle, parseRootQuery, Plan) stays internal
 export {
   type CheckScope,
   type Clauses,
@@ -246,6 +249,8 @@ export {
   query,
   queryMaybe,
   sql,
+  type QueryTable,
+  type QueryTableBrand,
   type Subquery,
   type SubqueryBrand,
   subqueryBrand,
@@ -375,8 +380,9 @@ export function setOpt<T extends Entity>(
   const value = _value === null ? undefined : _value;
 
   // Use `getField` to side-step `id` blowing up on new entities that are setting an
-  // explicit id; otherwise use `entity[key]` to get back the relation.
-  const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+  // explicit id. Read configured fields as internal so applying opts does not mark the entity for read locking.
+  // Otherwise use `entity[key]` to get back the relation.
+  const current = key === "id" || field?.assertUnchanged ? getField(entity, key, true) : (entity as any)[key];
 
   if (current instanceof AbstractRelationImpl) {
     if (calledFromConstructor) {
@@ -400,6 +406,10 @@ export function setOpt<T extends Entity>(
     } else {
       throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
     }
+  } else if (value instanceof FactoryInitialValue) {
+    // A factory's `withStatus`-style opt: trust the created value, so its `addTransitionReaction`s don't fire
+    (entity as any)[key] = value.value;
+    getEmInternalApi(entity.em).rm.forgetCreationTransition(entity, key);
   } else {
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.

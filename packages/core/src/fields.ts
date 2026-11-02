@@ -7,24 +7,26 @@ import { maybeRequireTemporal } from "src/serde/temporal.ts";
 import { fail } from "src/utils.ts";
 
 /**
- * Returns the current value of `fieldName`, this is an internal method that should
- * only be called by the code-generated getters.
+ * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
- * We skip any typing like `fieldName: keyof T` because this method should only be
- * called by trusted codegen anyway.
+ * Generated getters and direct application calls are protected by default. Only ORM
+ * housekeeping should pass `isInternal`, not domain logic in hooks, rules, or reactions.
+ * The field name is a string because generated getters and ORM internals know its type.
  */
-export function getField(entity: Entity, fieldName: string): any {
+export function getField(entity: Entity, fieldName: string, isInternal = false): any {
   const { em } = entity;
   const api = getEmInternalApi(em);
   api.pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
   const instanceData = getInstanceData(entity);
+  const field = instanceData.metadata.allFields[fieldName];
+  if (!isInternal && field?.assertUnchanged) em.assertUnchanged(entity);
+
   const { data } = instanceData;
   if (fieldName in data) {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
-      const field = getMetadata(entity).allFields[fieldName];
       const serde = field?.serde ?? fail(`Missing serde for ${fieldName}`);
       data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
     }
@@ -44,7 +46,7 @@ export function isFieldSet(entity: Entity, fieldName: string): boolean {
   // Avoid calling `getField` on new entities because it populates the field as a side effect.
   if (entity.isNewEntity) return false;
   // We may not have converted the database column value into domain values yet.
-  getField(entity, fieldName);
+  getField(entity, fieldName, true);
   return fieldName in data;
 }
 
@@ -66,9 +68,6 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // If we're flushing, only allow writes from hooks
   api.checkWritesAllowed();
 
-  // Tell any `#isLoaded` or `#value` caches that they might be stale
-  isLoadedCache.resetIsLoaded(entity, fieldName);
-
   const instanceData = getInstanceData(entity);
   const { data, originalData, flushedData } = instanceData;
 
@@ -78,9 +77,20 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     newValue = cleanStringValue(newValue);
   }
 
-  const currentValue = getField(entity, fieldName);
+  const currentValue = getField(entity, fieldName, true);
   const isReference = field.kind === "m2o" || field.kind === "poly";
   const currentEqualsNew = fieldValueEquals(field, currentValue, newValue);
+
+  // Tell any `#isLoaded` or `#value` caches that they might be stale, but only
+  // after we've checked if the current value changed. Also we do it here,
+  // before the "reverting a dirty value to the original" check below,
+  // because caches might have already observed the dirty value, so would
+  // still need to refresh.
+  if (!currentEqualsNew) isLoadedCache.resetIsLoaded(entity, fieldName);
+
+  // Check `config.setTransitions` tables while the change is still synchronous, before we change anything,
+  // and record the transition for `em.flush` to run its (async) guards and reactions
+  if (field.kind === "enum" && !currentEqualsNew) rm.queueTransition(entity, fieldName, currentValue, newValue);
   // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
   if (isReference && !currentEqualsNew) {
     instanceData.rememberReferenceValue(fieldName, currentValue);

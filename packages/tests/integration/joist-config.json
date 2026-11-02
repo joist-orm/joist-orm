@@ -10,6 +10,8 @@
         "address": { "superstruct": "address@src/entities/types" },
         "bookComments": { "derived": "async" },
         "businessAddress": { "zodSchema": "AddressSchema@src/entities/types" },
+        "favoriteColors": { "assertUnchanged": true },
+        "favoriteShape": { "assertUnchanged": true },
         "ignoreEnumFk": { "ignore": true },
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
@@ -39,7 +41,7 @@
       "tag": "a",
       "uniqueBy": [["ssn"]]
     },
-    "AuthorSchedule": { "tag": "authorSchedule" },
+    "AuthorSchedule": { "fields": { "overview": { "assertUnchanged": true } }, "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
     "Book": {
       "fields": { "search": { "derived": "async" } },
@@ -62,7 +64,7 @@
     "ChildItem": { "tag": "ci" },
     "Comment": {
       "fields": { "parentTaggedId": { "derived": "async" }, "parentTags": { "derived": "async" } },
-      "relations": { "parent": { "polymorphic": "notNull" } },
+      "relations": { "parent": { "polymorphic": "notNull" }, "scope": { "polymorphic": true } },
       "tag": "comment"
     },
     "Critic": {
@@ -82,7 +84,7 @@
       "tag": "p"
     },
     "ParentGroup": {
-      "fields": { "bulkData": { "lazy": true }, "requiredData": { "lazy": true } },
+      "fields": { "bulkData": { "lazy": true }, "lazyEmbedding": { "lazy": true }, "requiredData": { "lazy": true } },
       "tag": "parentGroup"
     },
     "ParentItem": { "tag": "pi" },
@@ -93,6 +95,7 @@
         "favoriteAuthorName": { "derived": "async" },
         "numberOfBookAdvancesSnapshot": { "derived": "async" },
         "numberOfBookReviews": { "derived": "async" },
+        "status": { "assertUnchanged": true },
         "titlesOfFavoriteBooks": { "derived": "async" }
       },
       "relations": {
@@ -130,6 +133,7 @@
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld", "THIRD": "TaskThird" } }
       },
       "relations": {
+        "author": { "notNull": true, "stiType": ["TaskNew", "TaskOld"] },
         "comments": { "stiType": "TaskOld" },
         "copiedFrom": { "subType": "self" },
         "newTaskTaskItems": { "stiType": "TaskNew" },

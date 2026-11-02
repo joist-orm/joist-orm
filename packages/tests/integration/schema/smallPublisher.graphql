@@ -1,3 +1,8 @@
+extend type Query {
+  smallPublisher(id: ID!): SmallPublisher!
+  smallPublishers(filter: SmallPublisherFilter, limit: Int, offset: Int): SmallPublishersPage!
+}
+
 extend type Mutation {
   saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
 }
@@ -29,6 +34,7 @@ type SmallPublisher {
   selfReferential: SmallPublisher
   smallPublishers: [SmallPublisher!]!
   rating: Int
+  status: PublisherStatusDetail
 }
 
 input SaveSmallPublisherInput {
@@ -47,15 +53,11 @@ input SaveSmallPublisherInput {
   baseAsyncDefault: String
   selfReferentialId: ID
   rating: Int
+  status: PublisherStatus
 }
 
 type SaveSmallPublisherResult {
   smallPublisher: SmallPublisher!
-}
-
-extend type Query {
-  smallPublisher(id: ID!): SmallPublisher!
-  smallPublishers(filter: SmallPublisherFilter, limit: Int, offset: Int): SmallPublishersPage!
 }
 
 type SmallPublishersPage {
@@ -89,4 +91,5 @@ input SmallPublisherFilter {
   sharedColumn: [String!]
   allAuthorNames: [String!]
   selfReferentialId: [ID!]
+  status: [PublisherStatus!]
 }

@@ -12,10 +12,26 @@ import { getField, isChangeableField } from "src/fields.ts";
 import type { Todo } from "src/flush/Todo.ts";
 import { keyToNumber } from "src/keys.ts";
 import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
-import { groupBy } from "src/utils.ts";
+import { groupBy, indexBy } from "src/utils.ts";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
-export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };
+export type OpColumn = {
+  columnName: string;
+  dbType: string;
+  isNullableArray?: boolean;
+  /**
+   * The unnest null/set marker as the physical db type, removed before storage.
+   *
+   * I.e. strings use "", integers use 1, and Temporal dates use "2000-01-01".
+   * The marker must have the same physical db type as real array elements, even for empty arrays.
+   *
+   * Nullable arrays prepend null for SQL NULL or this marker for a present array, then pad shorter
+   * arrays with nulls to make the batch rectangular. With nullable=true, unnest_arrays checks the
+   * first element: null means SQL NULL; otherwise it discards that marker and removes null padding.
+   * All remaining non-null elements are real values, so null elements within stored arrays are not supported.
+   */
+  readonly notNullMarker?: unknown;
+};
 export type InsertOp = { tableName: string; columns: OpColumn[]; columnValues: any[][] };
 /**
  * A logical `update` operation.
@@ -195,12 +211,12 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
       // Check isChangeableField because we might be updating the base `publishers` table
       // and `originalData` might have fields from a subclass `large_publishers` table.
       if (!(key in data) && isChangeableField(entity, key) && !lazyFieldNames.has(key)) {
-        getField(entity, key);
+        getField(entity, key, true);
       }
     }
   }
 
-  const columns: Array<BindingColumn> = (
+  const allColumns = (
     meta.inheritanceType === "sti"
       ? // Hack this one handling of STI into here...
         getBaseSelfAndSubMetas(meta).flatMap((meta) =>
@@ -214,6 +230,10 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     .filter((f) => !lazyFieldNames.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
+
+  // Unique columns by name because subtype-specific STI fields can share the same physical column.
+  const columns: BindingColumn[] =
+    meta.inheritanceType === "sti" ? [...indexBy(allColumns, (column) => column.columnName).values()] : allColumns;
 
   // If we're using class table inheritance, base/child tables may not have any columns to update
   if (columns.length === 1) {

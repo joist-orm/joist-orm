@@ -8,7 +8,8 @@ import { newEntityManager } from "src/testEm";
 // These are deliberately not part of joist-orm/pg's public API, so this focused test reaches
 // into the build directly
 import { ensureLazyDataRows } from "../../../orm/build/drivers/patchPgProtocol.cjs";
-import { WireRowData, executeRowDataQuery } from "../../../orm/build/drivers/WireRowData.cjs";
+import { executeRowDataQuery, pgColumnDecoders } from "../../../orm/build/drivers/PostgresDriver.cjs";
+import { WireRowData } from "../../../orm/build/drivers/WireRowData.cjs";
 
 const connectionString = process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist";
 
@@ -128,6 +129,14 @@ describe("WireRowData", () => {
       }
     });
 
+    it("auto-registers pgvector's vector to decode as number[]s", async () => {
+      await registerDatabaseBinaryParsers(pool);
+      const [classic, lazy] = await classicAndLazy("select '[0.1,-2.5,3]'::vector as v");
+      // Classic pg has no vector parser and returns the literal, which VectorSerde parses
+      expect(classic[0]).toEqual({ v: "[0.1,-2.5,3]" });
+      expect(lazy.toRow(0)).toEqual({ v: [0.1, -2.5, 3] });
+    });
+
     it("decodes dynamic-oid arrays that classic pg leaves as raw literals", async () => {
       // pg-types has no parsers for tsvector[]/tstzrange[] (classic returns the `{...}` literal
       // string); the binary registry decodes real arrays of the same element values
@@ -159,10 +168,15 @@ describe("WireRowData", () => {
     });
 
     it("decodes binary-format cells via the wire-bytes fast path", () => {
+      // Given a binary integer result
       // Unit-level: an int4 cell with a default parser decodes readInt32BE, no strings involved
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }]);
+      rowData.setColumnDecoders(
+        pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.INT4, format: "binary" }]),
+      );
       rowData.addRow(dataRowPayload([Buffer.from([0, 0, 0, 7])]), 0, 4 + 4 + 2);
+      // When the integer is accessed
+      // Then its value is decoded directly from the wire bytes
       expect(rowData.get(0, "x")).toBe(7);
     });
 
@@ -228,8 +242,9 @@ describe("WireRowData", () => {
     });
 
     it("dedupes consecutive rows sharing an adopted chunk", () => {
+      // Given rows sharing one response buffer
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      rowData.setColumnDecoders(pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]));
       // Three rows inside one buffer (like one socket chunk), plus one from a second buffer
       const payloads = [textPayload("row0"), textPayload("row1"), textPayload("row2")];
       const shared = Buffer.concat(payloads);
@@ -239,14 +254,19 @@ describe("WireRowData", () => {
         offset += payload.length;
       }
       const other = textPayload("row3");
+      // And a row arriving in a separate response buffer
       rowData.addRow(other, 0, other.length);
+      // When the received rows are accessed
+      // Then all four retain their original values
       expect(rowData.rowCount).toBe(4);
       expect(rowData.get(0, "x")).toBe("row0");
       expect(rowData.get(2, "x")).toBe("row2");
       expect(rowData.get(3, "x")).toBe("row3");
       // All retained -> trim only; the shared buffer is counted (pinned) once, not per row
+      // When all four rows are retained after hydration
       for (let i = 0; i < 4; i++) rowData.retain?.(i);
       rowData.finalize();
+      // Then the shared response buffer is counted once
       expect(rowData.memoryBytes).toBe(shared.length + other.length + 4 * 4 * 3);
       expect(rowData.get(1, "x")).toBe("row1");
     });
@@ -265,15 +285,18 @@ describe("WireRowData", () => {
     });
 
     it("compacts unretained rows away and errors on their later access", () => {
+      // Given three result rows of which only the first and last are retained
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      rowData.setColumnDecoders(pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]));
       addTextRow(rowData, "keep0");
       addTextRow(rowData, "drop1");
       addTextRow(rowData, "keep2");
       rowData.retain?.(0);
       rowData.retain?.(2);
       const before = rowData.payloadBytes;
+      // When hydration completes
       rowData.finalize();
+      // Then only retained rows remain readable and their payload is smaller
       expect(rowData.payloadBytes).toBeLessThan(before);
       expect(rowData.get(0, "x")).toBe("keep0");
       expect(rowData.get(2, "x")).toBe("keep2");
@@ -281,15 +304,18 @@ describe("WireRowData", () => {
     });
 
     it("skips compaction when dropped rows are under the 20% byte threshold", () => {
+      // Given ten equal-sized rows with only one unretained row
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      rowData.setColumnDecoders(pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]));
       // 10 equal rows, 1 dropped = 10% of payload bytes: not worth re-copying the other 9
       for (let i = 0; i < 10; i++) addTextRow(rowData, `row${i}`);
       for (let i = 0; i < 10; i++) {
         if (i !== 5) rowData.retain?.(i);
       }
       const before = rowData.payloadBytes;
+      // When hydration completes
       rowData.finalize();
+      // Then copying the retained rows is avoided and the payload remains readable
       expect(rowData.payloadBytes).toBe(before);
       // The unretained row keeps its bytes and simply remains readable-but-unused
       expect(rowData.get(5, "x")).toBe("row5");
@@ -297,40 +323,51 @@ describe("WireRowData", () => {
     });
 
     it("reads cells correctly in any order through the adaptive scan cursor", () => {
+      // Given two wide rows including a null column
       // 20 columns forces the cursor to allocate (ordinal >= 8 faults); read ascending with
       // gaps, then descending (from-start fallback), then re-read (values are never cached)
       const names = Array.from({ length: 20 }, (_, i) => `c${i}`);
       const rowData = new WireRowData();
-      rowData.setRowDescription(names.map((name) => ({ name, dataTypeID: pg.types.builtins.TEXT })));
+      rowData.setColumnDecoders(pgColumnDecoders(names.map((name) => ({ name, dataTypeID: pg.types.builtins.TEXT }))));
       const cells = names.map((name, i) => (i === 10 ? null : Buffer.from(`v${i}`, "utf8")));
       const payload = dataRowPayload(cells);
       rowData.addRow(payload, 0, payload.length);
       rowData.addRow(payload, 0, payload.length);
+      // When fields are accessed in ascending and descending order
+      // Then every field retains its original value
       for (const i of [2, 9, 15, 19, 3, 12, 10, 0, 19]) {
         expect(rowData.get(0, `c${i}`)).toBe(i === 10 ? null : `v${i}`);
       }
       expect(rowData.get(1, "c19")).toBe("v19");
       // The cursor's row-relative offsets stay valid across compaction's payload rewrite
+      // When only the second row is retained after hydration
       rowData.retain?.(1);
       rowData.finalize?.();
+      // Then its fields remain readable after compaction
       expect(rowData.get(1, "c19")).toBe("v19");
       expect(rowData.get(1, "c4")).toBe("v4");
     });
 
     it("validates row indexes and malformed payloads", () => {
+      // Given one valid row
       const rowData = new WireRowData();
-      rowData.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      rowData.setColumnDecoders(pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]));
       addTextRow(rowData, "ok");
+      // When absent rows and an unselected column are accessed
+      // Then absent rows are rejected while the unselected column is undefined
       expect(() => rowData.get(1, "x")).toThrow("Invalid rowIndex");
       expect(() => rowData.get(-1, "x")).toThrow("Invalid rowIndex");
       expect(rowData.get(0, "not_selected")).toBe(undefined);
       // A truncated payload: claims a 100-byte cell but only carries 2 bytes
+      // Given a second result with a truncated cell
       const bad = Buffer.alloc(2 + 4 + 2);
       bad.writeInt16BE(1, 0);
       bad.writeInt32BE(100, 2);
       const malformed = new WireRowData();
-      malformed.setRowDescription([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]);
+      malformed.setColumnDecoders(pgColumnDecoders([{ name: "x", dataTypeID: pg.types.builtins.TEXT }]));
       malformed.addRow(bad, 0, bad.length);
+      // When the truncated cell is accessed
+      // Then the invalid cell length is rejected
       expect(() => malformed.get(0, "x")).toThrow("Malformed cell length");
     });
   });
@@ -427,6 +464,7 @@ describe("WireRowData", () => {
     const itLazy = process.env.JOIST_ROW_DATA === "1" ? it : it.skip;
 
     itLazy("compacts unretained duplicate rows after em.find", async () => {
+      // Given twenty authors, with half already loaded into the identity map
       for (let i = 1; i <= 20; i++) await insertAuthor({ first_name: `a${i}` });
       const em = newEntityManager();
       // Pre-load half the authors, so the later find sees their rows as already-loaded duplicates
@@ -435,7 +473,9 @@ describe("WireRowData", () => {
         Array.from({ length: 10 }, (_, i) => `a:${i + 1}`),
       );
       expect(getInstanceData(preloaded[0]).rowData).toBeInstanceOf(WireRowData);
+      // When a find encounters those same authors alongside fresh entities
       const authors = await em.find(Author, {});
+      // Then both lazy transports retain only the rows needed by the fresh entities
       expect(authors).toHaveLength(20);
       // The 10 fresh entities share the find's result; the pre-loaded 10 keep their em.load result
       const fresh = authors.filter((a) => Number(a.id.split(":")[1]) > 10);
@@ -453,6 +493,41 @@ describe("WireRowData", () => {
       expect(preloaded.map((a) => a.firstName).sort()).toEqual(
         Array.from({ length: 10 }, (_, i) => `a${i + 1}`).sort(),
       );
+    });
+
+    itLazy("keeps paginated find results lazy", async () => {
+      // Given three authors ordered by name
+      for (const name of ["a1", "a2", "a3"]) await insertAuthor({ first_name: name });
+      const em = newEntityManager();
+      // When finding the second author
+      const authors = await em.find(Author, {}, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } });
+      // Then the page retains wire rows and can lazily read the selected author
+      expect(getInstanceData(authors[0]).rowData).toBeInstanceOf(WireRowData);
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    itLazy("returns shared authors in both pages and compacts duplicate rows", async () => {
+      // Given three authors with overlapping age filters
+      for (let i = 1; i <= 3; i++) await insertAuthor({ first_name: `a${i}`, age: i });
+      const em = newEntityManager();
+      // And the first author is already loaded
+      const existing = await em.load(Author, "a:1");
+      // When batching two overlapping pages
+      const pages = await Promise.all([
+        em.find(Author, { age: { gte: 1 } }, { limit: 2, orderBy: { firstName: "ASC" } }),
+        em.find(Author, { age: { gte: 2 } }, { limit: 2, orderBy: { firstName: "ASC" } }),
+      ]);
+      // Then both pages retain their authors even when duplicate wire rows are compacted
+      expect(pages[0]).toMatchEntity([existing, { firstName: "a2" }]);
+      expect(pages[1]).toMatchEntity([pages[0][1], { firstName: "a3" }]);
+      // And the newly-loaded author is backed by our WireRowData
+      const wire = getInstanceData(pages[0][1]).rowData as WireRowData;
+      expect(wire).toBeInstanceOf(WireRowData);
+      expect(wire.rowCount).toBe(4);
+      // But because a) already-loaded author was skipped by hydrate, and b) em.find called finalize
+      // which saw >20% of bytes were not claimed by hydrate, then compaction was triggered,
+      // which means the already-loaded-entities row 0 is gone from memory.
+      expect(() => wire.get(0, "first_name")).toThrow("compacted away");
     });
   });
 });

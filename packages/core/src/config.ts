@@ -1,6 +1,8 @@
 import { resetConstructorMap } from "src/configure.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
+import { getEmInternalApi } from "src/EntityManager.ts";
+import { assertHintUnchanged } from "src/flush/ReadDrift.ts";
 import {
   type EntityConstructor,
   type EntityField,
@@ -16,8 +18,17 @@ import {
   fail,
   getMetadata,
 } from "src/index.ts";
+import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { convertToLoadHint } from "src/reactivity/reactiveHints.ts";
-import { type ValidationRule, type ValidationRuleInternal } from "src/rules.ts";
+import { type ValidationRule, type ValidationRuleInternal, type ValidationRuleResult } from "src/rules.ts";
+import {
+  type FieldTransitionsConfig,
+  type GuardTransitionMatch,
+  type OnTransitionMatch,
+  type Transition,
+  type TransitionTable,
+  toTransition,
+} from "src/transitions.ts";
 import { type MaybePromise } from "src/utils.ts";
 
 export type EntityHook =
@@ -30,7 +41,37 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
-type AddReactionOpts = { runOnce?: boolean; name?: string };
+type AssertUnchangedOpts = {
+  /** Protect reached rows at flush; does not protect collection membership or predicates. */
+  assertUnchanged?: boolean;
+};
+type AddReactionOpts = AssertUnchangedOpts & { runOnce?: boolean; name?: string };
+
+/** An `addTransitionRule` rule, which also gets the transition it is checking, since the entity may have moved on. */
+export type TransitionGuardFn<T extends Entity, V> = (
+  entity: T,
+  transition: Transition<V>,
+) => MaybePromise<ValidationRuleResult>;
+
+/** An `addTransitionReaction` function, which also gets the transition it is handling, since the entity may have moved on. */
+type TransitionFn<T extends Entity, C, V> = (entity: T, ctx: C, transition: Transition<V>) => MaybePromise<unknown>;
+
+/** The enum type of a transition field, i.e. `PublisherStatus`. */
+type TransitionType<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends EntityField
+  ? NonNullable<FieldsOf<T>[K]["type"]>
+  : never;
+
+/**
+ * The state names that `transitions` tables and `match`es accept for an enum field, i.e. `"Draft"` for
+ * `PublisherStatus.Draft`.
+ *
+ * We only accept the enum's accessors, not its codes or members, so every table reads the same way.
+ */
+type TransitionStates<T extends Entity, K extends keyof FieldsOf<T>> = FieldsOf<T>[K] extends {
+  accessors: infer A extends string;
+}
+  ? A
+  : never;
 
 export const constraintNameToValidationError: Record<string, string> = {};
 
@@ -106,12 +147,23 @@ export class ConfigApi<T extends Entity, C> {
    * access the `reacted.entity` property to get a full view of the entity's fields and methods.
    */
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addRule<H extends ReactiveHint<T>>(opts: AssertUnchangedOpts, hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
-  addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+  addRule(
+    ruleOrHint: ValidationRule<T> | any,
+    hintOrRule?: ReactiveHint<T> | ValidationRule<any>,
+    maybeRule?: ValidationRule<any>,
+  ): void {
     // Keep the name for easy debugging/tracing later
     const name = `addRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addRule");
-    pushValidationRule(this.__data.rules, name, ruleOrHint, maybeRule);
+    pushValidationRule(
+      this.__data.rules,
+      name,
+      maybeRule ? hintOrRule : ruleOrHint,
+      maybeRule ?? (hintOrRule as ValidationRule<any> | undefined),
+      maybeRule ? ruleOrHint : {},
+    );
   }
 
   /**
@@ -129,12 +181,27 @@ export class ConfigApi<T extends Entity, C> {
    * hint changes (walking back to the owning entity), and the lambda gets a `Reacted` view.
    */
   addCommitRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
+  addCommitRule<H extends ReactiveHint<T>>(
+    opts: AssertUnchangedOpts,
+    hint: H,
+    rule: ValidationRule<Reacted<T, H>>,
+  ): void;
   addCommitRule(rule: ValidationRule<T>): void;
-  addCommitRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+  addCommitRule(
+    ruleOrHint: ValidationRule<T> | any,
+    hintOrRule?: ReactiveHint<T> | ValidationRule<any>,
+    maybeRule?: ValidationRule<any>,
+  ): void {
     // Keep the name for easy debugging/tracing later
     const name = `addCommitRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addCommitRule");
-    pushValidationRule(this.__data.commitRules, name, ruleOrHint, maybeRule);
+    pushValidationRule(
+      this.__data.commitRules,
+      name,
+      maybeRule ? hintOrRule : ruleOrHint,
+      maybeRule ?? (hintOrRule as ValidationRule<any> | undefined),
+      maybeRule ? ruleOrHint : {},
+    );
   }
 
   /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
@@ -228,6 +295,9 @@ export class ConfigApi<T extends Entity, C> {
    * 4. Can run multiple times per flush, like an RF/RF.  Be careful to avoid creating
    *    circular dependencies in the hint and to make the function idempotent.
    *
+   * Names default to the registration's source location. Pass unique names when registering multiple
+   * reactions from a shared helper or loop; duplicate names on the same config are rejected.
+   *
    * @param hint The fields to watch for changes and load before running the reaction
    * @param fn The reaction function to run
    */
@@ -280,22 +350,168 @@ export class ConfigApi<T extends Entity, C> {
       : {};
     const { name = getCallerName(), runOnce = false } = opts;
     this.ensurePreBoot(name, "addReaction");
+    this.ensureUniqueReactionName(name, "addReaction");
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
-    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-    const wrappedFn = (entity: T, ctx: C) => {
+    const loadHints = new Map<EntityMetadata, { hint: LoadHint<T>; evaluation: EvaluationSlot }>();
+    async function wrappedFn(entity: T, ctx: C) {
       const meta = getMetadata(entity);
-      let loadHint = loadHints.get(meta);
-      if (loadHint === undefined) {
-        loadHint = convertToLoadHint<T>(meta, hint);
-        loadHints.set(meta, loadHint);
+      let prepared = loadHints.get(meta);
+      if (prepared === undefined) {
+        prepared = {
+          hint: convertToLoadHint<T>(meta, hint),
+          evaluation: new EvaluationSlot(`${meta.type}.${name}`),
+        };
+        loadHints.set(meta, prepared);
       }
+      const loadHint = prepared.hint;
       if (Object.keys(loadHint).length > 0) {
-        return entity.em.populate(entity, loadHint).then((loaded) => fn(loaded as Loaded<T, H>, ctx));
+        await entity.em.populate(entity, loadHint);
       }
-      return fn(entity as Loaded<T, H>, ctx);
-    };
+      if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
+      return invokeReaction(entity as Loaded<T, H>, fn, ctx, prepared.evaluation);
+    }
     this.__data.reactions.push({ name, fn: wrappedFn, hint, runOnce });
+  }
+
+  /**
+   * Declares which state transitions of the enum `fieldName` are allowed, i.e. `{ Draft: ["Open"], Open: ["Closed"] }`.
+   *
+   * Keys and values are the enum's accessors as strings, i.e. `"Draft"` for `AuthorStatus.Draft`.
+   *
+   * A state that is missing from the table, or maps to `[]`, is treated as a terminal state & cannot be
+   * changed. Creating an entity is not a transition, so a new entity may start in any state.
+   *
+   * The table is checked by the field's setter, so a disallowed transition throws a `ValidationErrors`
+   * immediately, instead of failing the next `em.flush`.
+   */
+  setTransitions<K extends Settable<T>>(fieldName: K, table: TransitionTable<TransitionStates<T, K>>): void {
+    const name = `setTransitions(${getCallerName()})`;
+    this.ensurePreBoot(name, "setTransitions");
+    const config = this.fieldTransitions(fieldName);
+    // Subtypes add their own tables on their own configs, so a 2nd table on this config is a mistake
+    if (config.table) fail(`config.setTransitions was already called for ${fieldName}, use one table per field`);
+    // Accessors are converted to codes after boot, see `buildFieldTransitions`
+    config.table = table;
+  }
+
+  /**
+   * Checks each matching transition before its callbacks run, and rejects it if the guard returns an error.
+   *
+   * Use this for "a transition is allowed only when ..." checks that depend on other data, while
+   * `setTransitions` declares the transitions that are possible at all. The `hint` is a load hint, like
+   * `beforeFlush`'s, so it's loaded before `rule` runs, but only `fieldName` itself triggers the guard.
+   *
+   * Guards run with reactions, for every matching transition, even if the
+   * field has moved on since. The entity is in its current state, so `rule` also gets the `transition`
+   * it is checking. Guards never run on creation and are not rechecked during final validation.
+   */
+  addTransitionRule<K extends Settable<T>, H extends LoadHint<T>>(
+    fieldName: K,
+    match: GuardTransitionMatch<TransitionStates<T, K>>,
+    hint: H,
+    rule: TransitionGuardFn<Loaded<T, H>, TransitionType<T, K>>,
+  ): void;
+  addTransitionRule<K extends Settable<T>>(
+    fieldName: K,
+    match: GuardTransitionMatch<TransitionStates<T, K>>,
+    rule: TransitionGuardFn<T, TransitionType<T, K>>,
+  ): void;
+  addTransitionRule(fieldName: string, match: GuardTransitionMatch<any>, hintOrRule: any, maybeRule?: any): void {
+    const name = `addTransitionRule(${getCallerName()})`;
+    this.ensurePreBoot(name, "addTransitionRule");
+    const rule: TransitionGuardFn<T, any> = maybeRule ?? hintOrRule;
+    const hint: LoadHint<T> | undefined = maybeRule ? hintOrRule : undefined;
+    // The dispatcher evaluates matching guards once before invoking any callbacks for the transition.
+    this.fieldTransitions(fieldName).guards.push({
+      match,
+      run(entity, step) {
+        const transition = toTransition(step);
+        return hint === undefined
+          ? rule(entity, transition)
+          : entity.em.populate(entity, hint).then((loaded) => rule(loaded, transition));
+      },
+    });
+  }
+
+  /**
+   * Runs `fn` for each state transition of `fieldName` that matches `match`.
+   *
+   * This runs alongside reactions (see `addReaction`), but only state changes queue callbacks.
+   * The `hint` is a load hint, like `beforeFlush`'s, so it is loaded but not reacted to.
+   *
+   * Callbacks run with reactions, once for every matching transition, in order,
+   * even if the field has moved on since. The entity is in its current state, so `fn` also gets the
+   * `transition` it is handling. Transitions that an `addTransitionRule` rejects don't fire.
+   *
+   * Creating an entity with a matching `to` state fires too, unless `match.from` is set or
+   * `match.onCreate` is `false`. Set `match.phase: "commit"` to run in `beforeCommit` instead, i.e.
+   * for enqueueing jobs.
+   *
+   * Callbacks that read a new entity's `id` should use `match.phase: "commit"`. Other callbacks may run
+   * before ids are assigned, and Joist does not rerun them on a `NoIdError` because their side effects
+   * could repeat.
+   *
+   * Pass a unique name as the first argument when registering multiple callbacks from a shared
+   * helper or loop. Duplicate names on the same config are rejected when registered.
+   */
+  addTransitionReaction<K extends Settable<T>, H extends LoadHint<T>>(
+    fieldName: K,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
+    hint: H,
+    fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
+  ): void;
+  addTransitionReaction<K extends Settable<T>>(
+    fieldName: K,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
+    fn: TransitionFn<T, C, TransitionType<T, K>>,
+  ): void;
+  addTransitionReaction<K extends Settable<T>, H extends LoadHint<T>>(
+    name: string,
+    fieldName: K,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
+    hint: H,
+    fn: TransitionFn<Loaded<T, H>, C, TransitionType<T, K>>,
+  ): void;
+  addTransitionReaction<K extends Settable<T>>(
+    name: string,
+    fieldName: K,
+    match: OnTransitionMatch<TransitionStates<T, K>>,
+    fn: TransitionFn<T, C, TransitionType<T, K>>,
+  ): void;
+  addTransitionReaction(
+    nameOrFieldName: string,
+    fieldNameOrMatch: string | OnTransitionMatch<any>,
+    matchOrHintOrFn: any,
+    hintOrFn?: any,
+    maybeFn?: any,
+  ): void {
+    const named = typeof fieldNameOrMatch === "string";
+    const name = named ? nameOrFieldName : `addTransitionReaction(${getCallerName()})`;
+    this.ensurePreBoot(name, "addTransitionReaction");
+    this.ensureUniqueReactionName(name, "addTransitionReaction");
+
+    // Resolve the overloads
+    const fieldName = named ? fieldNameOrMatch : nameOrFieldName;
+    const match: OnTransitionMatch<any> = named ? matchOrHintOrFn : fieldNameOrMatch;
+    const hintOrCallback = named ? hintOrFn : matchOrHintOrFn;
+    const callback = named ? maybeFn : hintOrFn;
+    const fn: TransitionFn<T, C, any> = callback ?? hintOrCallback;
+    const hint: LoadHint<T> | undefined = callback ? hintOrCallback : undefined;
+
+    // Transition queues trigger callbacks; hinted data is only loaded, not watched for changes.
+    this.fieldTransitions(fieldName).callbacks.push({
+      name,
+      match,
+      run(entity, ctx, step, evaluation) {
+        const transition = toTransition(step);
+        return hint === undefined
+          ? invokeTransitionReaction(entity, fn, ctx, transition, evaluation)
+          : entity.em
+              .populate(entity, hint)
+              .then((loaded) => invokeTransitionReaction(loaded, fn, ctx, transition, evaluation));
+      },
+    });
   }
 
   /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
@@ -341,6 +557,21 @@ export class ConfigApi<T extends Entity, C> {
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
    * until the user is ready to use it. */
   placeholder(): void {}
+
+  /** Returns `fieldName`'s transition config, creating it on first use. */
+  private fieldTransitions(fieldName: string): FieldTransitionsConfig<T, C> {
+    return (this.__data.transitions[fieldName] ??= { guards: [], callbacks: [] });
+  }
+
+  /** Requires unique names across ordinary reactions and transition callbacks. */
+  private ensureUniqueReactionName(name: string, op: string): void {
+    if (this.__data.reactionNames.has(name)) {
+      throw new Error(
+        `Duplicate reaction name "${name}" in config.${op}. Pass a unique name when registering reactions from a shared helper or loop.`,
+      );
+    }
+    this.__data.reactionNames.add(name);
+  }
 
   private ensurePreBoot(name: string, op: string): void {
     if (booted) {
@@ -406,7 +637,11 @@ export interface ReactiveRule {
  * a `ReactiveFields` with fields `["title"]`, path `books`, and name `displayName`.
  */
 export interface ReactiveField {
-  kind: "populate" | "query";
+  /**
+   * `cache` is used by `onInvalidate` callbacks, which need invalidation like `populate` and `query`,
+   * but have no async work to perform during `em.flush`.
+   */
+  kind: "populate" | "query" | "cache";
   /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
   /** Read-only/immutable fields that are used in the derived field. */
@@ -461,6 +696,15 @@ export class ConfigData<T extends Entity, C> {
   commitRules: ValidationRuleInternal<T>[] = [];
   /** The reactions for this entity type. */
   reactions: ReactionInternal<T, any, C>[] = [];
+  /** Names shared by addReaction and addTransitionReaction, including commit-phase callbacks. */
+  reactionNames: Set<string> = new Set();
+  /**
+   * Field name -> its `setTransitions`, `addTransitionRule`, and `addTransitionReaction` config, with
+   * accessors not yet converted.
+   *
+   * The keys are also the fields whose factories accept `withX` opts.
+   */
+  transitions: Record<string, FieldTransitionsConfig<T, C>> = {};
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -501,13 +745,21 @@ export function getCallerName(extraFrames: number = 0): string {
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
-export function getFuzzyCallerName(): string {
+export function getFuzzyCallerName(
+  // FactoryLogger wants the test line that called into the factories, i.e. newAuthor(em) at
+  // SomeTest.test.ts:42, so passes true to skip the application's misc /factories/ internals
+  // and find the first "actually a test" line.
+  //
+  // But otherwise other loggers like FieldLogger do want to see "what exact line, even if it's
+  // in a factory, is calling field.set".
+  ignoreFactoryFrames = false,
+): string {
   const err = getStack();
   const lines = err
     .stack!.split("\n")
     // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
     .filter((line) => line.includes(" at "));
-  const line = findUserCodeLine(lines);
+  const line = findUserCodeLine(lines, ignoreFactoryFrames);
   return getFilePath(line);
 }
 
@@ -522,7 +774,7 @@ export function getFilePath(line: string): string {
 }
 
 /** Given a callstack, uses heuristics to find the first line that looks like user code. */
-export function findUserCodeLine(lines: string[]): string {
+export function findUserCodeLine(lines: string[], ignoreFactoryFrames = false): string {
   return (
     lines.find((line) => {
       // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
@@ -540,9 +792,14 @@ export function findUserCodeLine(lines: string[]): string {
       // If this is the `newTestInstance` call
       // What about:
       // recalcSynchronousDerivedFields
+      // Jest's adapter is an implementation detail, not a meaningful source location.
+      const isJestInternal = line.includes("jestAdapterInit.js");
+      const isFactoryHelper = line.includes("/factories/");
       return (
         (isDefault || isDataloader || isUserCode) &&
         !line.includes("Codegen.ts") &&
+        !isJestInternal &&
+        !(ignoreFactoryFrames && isFactoryHelper) &&
         // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
         // !line.includes("entities.ts") &&
         // Ignore loops in joist code like setOpts
@@ -576,6 +833,7 @@ function pushValidationRule<T extends Entity>(
   name: string,
   ruleOrHint: ValidationRule<T> | any,
   maybeRule: ValidationRule<any> | undefined,
+  opts: AssertUnchangedOpts = {},
 ): void {
   if (typeof ruleOrHint === "function") {
     rules.push({ name, fn: ruleOrHint, hint: undefined });
@@ -583,19 +841,90 @@ function pushValidationRule<T extends Entity>(
     const hint = ruleOrHint;
     // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
     // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
-    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
-    const fn = (entity: T) => {
+    const loadHints = new Map<EntityMetadata, { hint: LoadHint<T>; evaluation: EvaluationSlot }>();
+    async function fn(entity: T) {
       const meta = getMetadata(entity);
-      let loadHint = loadHints.get(meta);
-      if (loadHint === undefined) {
-        loadHint = convertToLoadHint<T>(meta, hint);
-        loadHints.set(meta, loadHint);
+      let prepared = loadHints.get(meta);
+      if (prepared === undefined) {
+        prepared = {
+          hint: convertToLoadHint<T>(meta, hint),
+          evaluation: new EvaluationSlot(`${meta.type}.${name}`),
+        };
+        loadHints.set(meta, prepared);
       }
+      const loadHint = prepared.hint;
       if (Object.keys(loadHint).length > 0) {
-        return entity.em.populate(entity, loadHint).then(maybeRule!);
+        await entity.em.populate(entity, loadHint);
       }
-      return maybeRule!(entity);
-    };
+      if (opts.assertUnchanged) assertHintUnchanged(entity, loadHint);
+      // Population is prerequisite work, not part of evaluating the application's rule.
+      const metrics = getEmInternalApi(entity.em).metrics;
+      if (!metrics) return maybeRule!(entity);
+
+      const totals = metrics.start(prepared.evaluation);
+      const started = performance.now();
+      let value: MaybePromise<ValidationRuleResult>;
+      try {
+        value = maybeRule!(entity);
+      } catch (error) {
+        metrics.finish(totals, started);
+        throw error;
+      }
+      return metrics.finish(totals, started, value);
+    }
     rules.push({ name, fn, hint });
   }
+}
+
+/**
+ * Times an ordinary reaction callback after its hinted data has been loaded.
+ *
+ * Reuse its registration's slot instead of resolving a counter on every invocation.
+ */
+function invokeReaction<T extends Entity, C>(
+  entity: T,
+  fn: HookFn<T, C>,
+  ctx: C,
+  evaluation: EvaluationSlot,
+): MaybePromise<unknown> {
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return fn(entity, ctx);
+
+  const totals = metrics.start(evaluation);
+  const started = performance.now();
+  let value: MaybePromise<unknown>;
+  try {
+    value = fn(entity, ctx);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return metrics.finish(totals, started, value);
+}
+
+/**
+ * Times a transition callback after its hinted data has been loaded.
+ *
+ * Keep its third argument explicit instead of allocating an argument array for each invocation.
+ */
+function invokeTransitionReaction<T extends Entity, C, V>(
+  entity: T,
+  fn: TransitionFn<T, C, V>,
+  ctx: C,
+  transition: Transition<V>,
+  evaluation: EvaluationSlot,
+): MaybePromise<unknown> {
+  const metrics = getEmInternalApi(entity.em).metrics;
+  if (!metrics) return fn(entity, ctx, transition);
+
+  const totals = metrics.start(evaluation);
+  const started = performance.now();
+  let value: MaybePromise<unknown>;
+  try {
+    value = fn(entity, ctx, transition);
+  } catch (error) {
+    metrics.finish(totals, started);
+    throw error;
+  }
+  return metrics.finish(totals, started, value);
 }

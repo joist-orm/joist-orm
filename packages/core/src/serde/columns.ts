@@ -39,6 +39,9 @@ export class Column {
   get isNullableArray(): boolean {
     return this.codec.isArray && this.sqlNullable;
   }
+  get notNullMarker(): unknown {
+    return this.codec.notNullMarker;
+  }
 
   /** Resolve ID metadata only after all generated entity modules have initialized. */
   get outputType(): TypeInfo | undefined {

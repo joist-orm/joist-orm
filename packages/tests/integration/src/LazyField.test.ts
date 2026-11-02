@@ -38,7 +38,7 @@ describe("LazyField", () => {
     // The load lists columns explicitly and omits `bulk_data`
     expect(queries).toMatchInlineSnapshot(`
      [
-       "SELECT pg.id, pg.name, pg.created_at, pg.updated_at FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2",
+       "SELECT pg.id, pg.name, pg.created_at, pg.updated_at, pg.eager_embedding FROM parent_groups AS pg WHERE pg.id = ANY($1) ORDER BY pg.id ASC LIMIT $2",
      ]
     `);
   });
@@ -239,5 +239,29 @@ describe("LazyField", () => {
     expect(r1.bulkData.get).toEqual({ key: "one-updated" });
     expect(r2.bulkData.get).toEqual({ key: "two" });
     expect(r2.name).toBe("pg2-updated");
+  });
+
+  it("preloads a lazy field declared in a validation rule hint", async () => {
+    // Given a ParentGroup whose bulk data is stored in an unloaded lazy column
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "value" } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+    // When another field changes, triggering a rule that watches both columns
+    pg.requiredData.set({ key: "updated" });
+    await em.flush();
+    // Then the rule reads the persisted bulk data synchronously
+    expect(pg.transientFields.observedBulkData).toEqual([{ key: "value" }]);
+  });
+
+  it("runs a validation rule when its lazy field changes", async () => {
+    // Given a ParentGroup with persisted bulk data
+    await insertParentGroup({ name: "pg1", bulk_data: { key: "before" } });
+    const em = newEntityManager();
+    const pg = await em.load(ParentGroup, "parentGroup:1");
+    // When changing the bulk data
+    pg.bulkData.set({ key: "after" });
+    await em.flush();
+    // Then the rule observes the changed bulk data
+    expect(pg.transientFields.observedBulkData).toEqual([{ key: "after" }]);
   });
 });

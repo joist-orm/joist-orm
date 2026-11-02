@@ -67,9 +67,10 @@ export function findPaginatedDataLoader<T extends Entity>(
           const { query, findSettings } = entries[0];
           const { preloader } = getEmInternalApi(em);
           const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, false);
-          const entities = em.hydrate(type, rows);
-          preloadHydrator?.(rows, entities);
+          const rowData = await em["executePreparedFindRowData"](meta, findOperation, query, findSettings, false);
+          const entities = em["hydrateAndFinalize"](type, rowData, {
+            sidecars: (entities) => preloadHydrator?.(rowData, entities),
+          });
           return [filterDeletedEntities(em, entities)];
         }
 
@@ -98,25 +99,26 @@ export function findPaginatedDataLoader<T extends Entity>(
           orderBys: [],
         };
 
-        const rows = await em["executePreparedFind"](
+        const rowData = await em["executePreparedFindRowData"](
           meta,
           findOperation,
           query2,
           { ...findSettings, limit: undefined, offset: undefined },
           false,
         );
-        const entities = em.hydrate(type, rows);
-        preloadHydrator?.(rows, entities);
-
         const results = entries.map(() => [] as T[]);
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const entity = entities[i];
-          if (!entity.isDeletedEntity) {
-            results[row.tag].push(entity);
-          }
-          delete row.tag;
-        }
+        em["hydrateAndFinalize"](type, rowData, {
+          sidecars: (entities) => {
+            preloadHydrator?.(rowData, entities);
+            // Read tags before compaction drops rows already present in the identity map.
+            for (let i = 0; i < entities.length; i++) {
+              const entity = entities[i];
+              if (!entity.isDeletedEntity) {
+                results[rowData.get(i, "tag")].push(entity);
+              }
+            }
+          },
+        });
         return results;
       },
       { cacheKeyFn: queryFilterHash },

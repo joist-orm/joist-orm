@@ -28,6 +28,7 @@ import {
   PrimitiveSerde,
   SimpleFieldSerde,
   SuperstructSerde,
+  VectorSerde,
   ZodSerde,
   ZonedDateTimeSerde,
   polymorphicField,
@@ -37,6 +38,7 @@ import { mapSimpleDbTypeToTypescriptType, q } from "./utils.ts";
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, createdAt, updatedAt, deletedAt } = meta;
 
+  validateAssertUnchangedFields(config, meta);
   const fields = generateFields(config, dbMeta, meta, columnReference);
 
   Object.values(fields).forEach((code) => code.asOneline());
@@ -136,6 +138,7 @@ function generateFields(
         serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(p, serde, column)}),
         immutable: false,
         ${p.lazy ? code`lazy: true,` : ""}
+        ${maybeAssertUnchanged(config, dbMetadata, fieldName)}
         ${extras}
         ${maybeDefault(p)}
         ${maybeSanitize(config, p)}
@@ -156,12 +159,13 @@ function generateFields(
         type: "string",
         serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(p, code`new ${PrimitiveSerde}("${dbType}")`, columnArgs(p, dbMetadata))}),
         immutable: false,
+        ${maybeAssertUnchanged(config, dbMetadata, fieldName)}
         ${maybeDefault(p)}
       }`;
   });
 
   dbMetadata.enums.forEach((field) => {
-    const { fieldName, enumDetailType, notNull, isArray, columnType, derived } = field;
+    const { fieldName, enumDetailType, enumType, notNull, isArray, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
     fields[fieldName] = code`
@@ -172,8 +176,10 @@ function generateFields(
         required: ${notNull},
         derived: ${!derived ? false : `"${derived}"`},
         enumDetailType: ${enumDetailType},
+        enumType: ${enumType},
         serde: new ${SimpleFieldSerde}("${fieldName}", ${columnRef(field, code`new ${serdeType}("${columnTypeWithArray}", ${enumDetailType})`, columnArgs(field, dbMetadata))}),
         immutable: false,
+        ${maybeAssertUnchanged(config, dbMetadata, fieldName)}
         ${maybeDefault(field)}
       }
     `;
@@ -400,6 +406,7 @@ function primitiveColumnCodec(config: Config, column: PrimitiveField): Code {
     return isArray ? code`new ${DecimalToNumberSerde}(true)` : code`new ${DecimalToNumberSerde}()`;
   }
   if (columnType === "jsonb") return code`new ${JsonSerde}()`;
+  if (columnType === "vector") return code`new ${VectorSerde}()`;
   if (column.rawFieldType === "bigint") {
     return isArray ? code`new ${BigIntSerde}(true)` : code`new ${BigIntSerde}()`;
   }
@@ -417,4 +424,37 @@ function primitiveColumnCodec(config: Config, column: PrimitiveField): Code {
     serdeType = PrimitiveSerde;
   }
   return isArray ? code`new ${serdeType}( "${columnType}[]", true)` : code`new ${serdeType}( "${columnType}")`;
+}
+
+/** Emits read protection only for configured fields, leaving ordinary reads on the default path. */
+function maybeAssertUnchanged(config: Config, meta: EntityDbMetadata, fieldName: string): Code | "" {
+  return config.entities[meta.name]?.fields?.[fieldName]?.assertUnchanged ? code`assertUnchanged: true,` : "";
+}
+
+/**
+ * Reject configurations whose field reads cannot provide the promised protection.
+ *
+ * A misspelled or inherited field must not silently disable an invariant's read drift check.
+ */
+function validateAssertUnchangedFields(config: Config, meta: EntityDbMetadata): void {
+  for (const [fieldName, field] of Object.entries(config.entities[meta.name]?.fields ?? {})) {
+    if (!field.assertUnchanged) continue;
+
+    const scalar = [...meta.primitives, ...meta.enums, ...meta.pgEnums].find((f) => f.fieldName === fieldName);
+    if (
+      !scalar ||
+      ("derived" in scalar && (scalar.derived === "sync" || scalar.derived === "async")) ||
+      ("lazy" in scalar && scalar.lazy)
+    ) {
+      throw new Error(
+        `assertUnchanged on ${meta.name}.${fieldName} requires a stored scalar field declared on this entity`,
+      );
+    }
+
+    let base = meta;
+    while (base.baseType) base = base.baseType;
+    if (!base.updatedAt) {
+      throw new Error(`assertUnchanged on ${meta.name}.${fieldName} requires an updatedAt version field`);
+    }
+  }
 }

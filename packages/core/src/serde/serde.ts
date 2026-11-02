@@ -18,6 +18,8 @@ const runtimeRequire = createRequire(import.meta.url);
 export interface ScalarCodec {
   dbType: string;
   isArray: boolean;
+  /** The unnest null/set marker as the physical db type; never persisted in the column. */
+  readonly notNullMarker?: unknown;
   /** Compatibility evidence for scalar conversion, absent for unknown codecs. */
   readonly outputType?: TypeInfo;
   /** Encodes a domain value for a filter, i.e. an em.find WHERE parameter. */
@@ -57,6 +59,15 @@ export interface TimestampCodec<T> extends ScalarCodec {
 export interface CustomSerde<DomainType, DbType> {
   toDb(value: DomainType): DbType;
   fromDb(value: DbType): DomainType;
+  /**
+   * Return a domain value for the unnest null/set marker, before conversion to the physical db type.
+   *
+   * Optional to preserve legacy serdes, including scalar serdes that never need markers.
+   * Without this hook, the adapter passes a default physical db value through fromDb, then converts it
+   * back with the normal array writer. Temporal mappers and restricted custom domains can provide an
+   * accepted domain value instead.
+   */
+  getUnnestMarker?(): DomainType;
 }
 
 export class CustomSerdeAdapter implements ScalarCodec {
@@ -68,6 +79,14 @@ export class CustomSerdeAdapter implements ScalarCodec {
     isArray?: boolean,
   ) {
     if (isArray !== undefined) this.isArray = isArray;
+  }
+
+  /** Return the unnest null/set marker as the physical db type. */
+  get notNullMarker(): unknown {
+    const seed = this.mapper.getUnnestMarker
+      ? this.mapper.getUnnestMarker()
+      : this.mapper.fromDb(defaultArrayElementMarker(this.dbType));
+    return (this.mapToDbValue([seed]) as unknown[])[0];
   }
 
   /** Only known adapters share their mapper's identity and elementwise array conversion. */
@@ -147,6 +166,12 @@ export class PrimitiveSerde implements ScalarCodec {
     public dbType: string,
     public isArray = false,
   ) {}
+
+  /** Return the unnest null/set marker as the physical db type. */
+  get notNullMarker(): unknown {
+    const seed = defaultArrayElementMarker(this.dbType);
+    return this.isArray ? (this.mapToDbValue([seed]) as unknown[])[0] : this.mapToDbValue(seed);
+  }
 
   /** Exact-class checks prevent an unknown subclass's overridden converters from sharing this codec. */
   get outputType(): TypeInfo | undefined {
@@ -457,6 +482,15 @@ export class EnumArrayFieldSerde implements ScalarCodec {
     private enumObject: any,
   ) {}
 
+  /**
+   * Return the unnest null/set marker as the physical db type.
+   *
+   * The marker is removed before enum IDs are stored, so it need not identify an enum row.
+   */
+  get notNullMarker(): unknown {
+    return defaultArrayElementMarker(this.dbType);
+  }
+
   /** Physical enum arrays reject null elements, unlike scalar enum arrayAgg; leave them unknown. */
   get outputType(): undefined {
     return undefined;
@@ -571,6 +605,44 @@ export class JsonSerde implements ScalarCodec {
   }
 }
 
+/**
+ * Maps pgvector `vector(N)` columns to `number[]`s.
+ *
+ * pgvector has no pg array OID, so text results are its `[1,2,3]` literal, which is also valid
+ * JSON (pgvector rejects NaN/Infinity elements). Writes send the same literal, which the batch
+ * `unnest(?::vector[])` casts, because node-pg would otherwise encode a JS array as `{1,2,3}`.
+ */
+export class VectorSerde implements ScalarCodec {
+  dbType = "vector";
+  isArray = false;
+
+  get outputType(): TypeInfo | undefined {
+    return this.constructor === VectorSerde ? { dbType: this.dbType, domain: VectorSerde } : undefined;
+  }
+
+  mapToDbValue(value: unknown): unknown {
+    return JSON.stringify(value);
+  }
+
+  mapToRow(value: any): any {
+    return JSON.stringify(value);
+  }
+
+  mapToDb(value: any) {
+    return value === null ? value : JSON.stringify(value);
+  }
+
+  /** Parses the text literal, and passes through arrays already decoded by the binary row path. */
+  mapFromDb(value: unknown): unknown {
+    return typeof value === "string" ? JSON.parse(value) : maybeNullToUndefined(value);
+  }
+
+  /** `to_json(vector)` falls back to the text literal, i.e. the same value as a driver row. */
+  mapFromJsonAgg(value: any): any {
+    return value;
+  }
+}
+
 /** Similar to SimpleSerde, but applies the zod's `parse` function when reading values from the db. */
 export class ZodSerde implements ScalarCodec {
   dbType = "jsonb";
@@ -609,6 +681,19 @@ export class ZodSerde implements ScalarCodec {
 
   mapFromJsonAgg(value: any): any {
     return value === null ? value : value;
+  }
+}
+
+/** Return a default unnest null/set marker as the physical db type, before codec-specific conversion. */
+function defaultArrayElementMarker(dbType: string): unknown {
+  if (dbType.startsWith("varchar") || dbType.startsWith("character") || dbType.startsWith("text")) {
+    return "";
+  } else if (dbType.startsWith("int")) {
+    return 1;
+  } else if (dbType.startsWith("date") || dbType.startsWith("timestamp")) {
+    return new Date("2000-01-01T00:00:00.000Z");
+  } else {
+    throw new Error("Unhandled nullable array column type " + dbType);
   }
 }
 

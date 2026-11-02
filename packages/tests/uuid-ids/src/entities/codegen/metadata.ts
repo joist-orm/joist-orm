@@ -2,7 +2,7 @@ import { Column, type ColumnDescriptors, configureMetadata, DateSerde, type Enti
 import type { Context } from "src/context";
 import { Author } from "../Author";
 import { Book } from "../Book";
-import { authorConfig, bookConfig, BookStatuses, newAuthor, newBook } from "../entities";
+import { authorConfig, bookConfig, BookStatus, BookStatuses, newAuthor, newBook } from "../entities";
 
 setRuntimeConfig({ temporal: false });
 
@@ -72,7 +72,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", bookMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", bookMetaColumns["updatedAt"]), immutable: false },
-    "status": { kind: "enum", fieldName: "status", fieldIdName: undefined, required: true, derived: false, enumDetailType: BookStatuses, serde: new SimpleFieldSerde("status", bookMetaColumns["statusId"]), immutable: false },
+    "status": { kind: "enum", fieldName: "status", fieldIdName: undefined, required: true, derived: false, enumDetailType: BookStatuses, enumType: BookStatus, serde: new SimpleFieldSerde("status", bookMetaColumns["statusId"]), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["authorId"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["authorId"]), immutable: false },
   },
   columns: bookMetaColumns,

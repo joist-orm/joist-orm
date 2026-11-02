@@ -2,11 +2,13 @@ import { buildQuery } from "joist-knex";
 import {
   EntityConstructor,
   EntityManagerHook,
+  FailedFlushError,
   FilterWithAlias,
   Entity as JoistEntity,
   Loaded,
   MaybeAbstractEntityConstructor,
   OptsOf,
+  ValidationErrors,
   getInstanceData,
   sameEntity,
 } from "joist-orm";
@@ -1981,6 +1983,40 @@ describe("EntityManager", () => {
       const br2 = em2.importEntity(br1, "bestReviewAuthors");
       expect(br2.bestReviewAuthors.isLoaded).toBe(true);
       expect((br2 as any).bestReviewAuthors.get).toMatchEntity([{ id: "a:1" }]);
+    });
+  });
+
+  describe("failedFlush", () => {
+    it("rejects a flush after a failed flush", async () => {
+      // Given an EntityManager whose flush failed validation
+      const em = newEntityManager();
+      const a = newAuthor(em, { lastName: "NotAllowedLastName" });
+      await expect(em.flush()).rejects.toThrow(ValidationErrors);
+      // And the invalid author has been fixed
+      a.lastName = "allowed";
+      // When flushing again
+      // Then the EntityManager refuses to flush
+      await expect(em.flush()).rejects.toThrow(FailedFlushError);
+    });
+
+    it("keeps the original flush error as the cause", async () => {
+      // Given an EntityManager whose flush failed validation
+      const em = newEntityManager();
+      newAuthor(em, { lastName: "NotAllowedLastName" });
+      const original = await em.flush().catch((error: unknown) => error);
+      // When flushing again
+      // Then the error points back to the original failure
+      await expect(em.flush()).rejects.toMatchObject({ cause: original });
+    });
+
+    it("does not flush when disposed after a failed flush", async () => {
+      // Given an EntityManager whose flush failed validation
+      const em = newEntityManager();
+      newAuthor(em, { lastName: "NotAllowedLastName" });
+      await expect(em.flush()).rejects.toThrow(ValidationErrors);
+      // When the EntityManager is disposed
+      // Then disposing doesn't throw a FailedFlushError over the original error
+      await expect(em[Symbol.asyncDispose]()).resolves.toBeUndefined();
     });
   });
 });

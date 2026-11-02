@@ -10,11 +10,11 @@
   },
   "scripts": {
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
-    "test": "concurrently --kill-others-on-fail --names stock,preloading,lazy,lazy-preloading \"yarn test-stock\" \"yarn test-preloading\" \"yarn test-lazy\" \"yarn test-lazy-preloading\"",
-    "test-stock": "TEST_VARIANT=stock DATABASE_URL=postgres://joist:local@localhost:5435/joist_stock JOIST_ROW_DATA=0 PLUGINS= jest --runInBand --logHeapUsage",
-    "test-preloading": "TEST_VARIANT=preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_preloading JOIST_ROW_DATA=0 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
-    "test-lazy": "TEST_VARIANT=lazy DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
-    "test-lazy-preloading": "TEST_VARIANT=lazy-preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy_preloading JOIST_ROW_DATA=1 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
+    "test": "concurrently --kill-others-on-fail --names stock,lazy,postgrejs,lazy-preloading \"yarn test-stock\" \"yarn test-lazy\" \"yarn test-postgrejs\" \"yarn test-lazy-preloading\"",
+    "test-stock": "TEST_VARIANT=stock DATABASE_URL=postgres://joist:local@localhost:5435/joist_stock JOIST_DRIVER=pg JOIST_ROW_DATA=0 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-postgrejs": "TEST_VARIANT=postgrejs DATABASE_URL=postgres://joist:local@localhost:5435/joist_postgrejs JOIST_DRIVER=postgrejs JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-lazy": "TEST_VARIANT=lazy DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS= jest --runInBand --logHeapUsage",
+    "test-lazy-preloading": "TEST_VARIANT=lazy-preloading DATABASE_URL=postgres://joist:local@localhost:5435/joist_lazy_preloading JOIST_DRIVER=pg JOIST_ROW_DATA=1 PLUGINS=join-preloading jest --runInBand --logHeapUsage",
     "codegen": "env-cmd tsx ../../codegen && graphql-codegen --config graphql-codegen.mjs",
     "docker:up": "docker compose up -d db",
     "docker:reset": "docker compose exec db ./reset.sh"
@@ -26,18 +26,18 @@
     "mitata": "^1.0.34"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^7.2.0",
-    "@graphql-tools/graphql-file-loader": "^8.1.19",
-    "@graphql-tools/load": "^8.1.16",
-    "@homebound/graphql-typescript-possible-types": "^2.19.0",
-    "@homebound/graphql-typescript-resolver-scaffolding": "^2.49.0",
+    "@graphql-codegen/cli": "^7.4.6",
+    "@graphql-tools/graphql-file-loader": "^9.0.6",
+    "@graphql-tools/load": "^9.0.6",
+    "@homebound/graphql-typescript-possible-types": "^2.20.0",
+    "@homebound/graphql-typescript-resolver-scaffolding": "^2.50.0",
     "@homebound/graphql-typescript-scalar-type-policies": "^2.14.0",
     "@homebound/graphql-typescript-simple-resolvers": "^1.59.0",
-    "@swc/core": "^1.16.1",
+    "@swc/core": "1.16.18",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.2.0",
-    "concurrently": "^10.0.5",
+    "@types/node": "^26.6.5",
+    "concurrently": "^10.0.6",
     "env-cmd": "^11.0.0",
     "graphql": "^17.0.2",
     "jest": "30.4.2",
@@ -50,11 +50,12 @@
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
     "kelonio": "^0.12.0",
+    "postgrejs": "3.14.1",
     "postgres": "^3.4.9",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "7.0.2",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   }
 }

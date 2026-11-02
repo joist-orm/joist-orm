@@ -1,4 +1,4 @@
-FROM postgres:16.0
+FROM pgvector/pgvector:pg16
 
 ENV APP_DBNAME=joist
 ENV APP_USERNAME=joist
@@ -49,6 +49,8 @@ psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --dbname "${POSTGRES_DB}" 
   DROP DATABASE IF EXISTS vitest WITH (FORCE);
   CREATE DATABASE vitest OWNER ${APP_USERNAME};
 EOSQL
+# pgvector isn't a trusted extension, so the superuser installs it for the app user's migrations
+psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --dbname "${APP_DBNAME}" -c "CREATE EXTENSION vector"
 SCRIPT
 EOF
 RUN chmod uo+x /reset.sh

@@ -57,14 +57,16 @@ export function insertAuthor(row: {
 
 export function insertTask(row: {
   id?: number;
-  type: "OLD" | "NEW";
+  type: "OLD" | "NEW" | "THIRD";
   special_new_field?: number | null;
   special_old_field?: number | null;
+  shared_subtype_field?: number | null;
+  author_id?: number;
   duration_in_days?: number;
 }) {
   const { type, ...rest } = row;
   return testDriver.insert("tasks", {
-    type_id: type === "OLD" ? 1 : 2,
+    type_id: { OLD: 1, NEW: 2, THIRD: 3 }[type],
     duration_in_days: 0,
     ...rest,
   });
@@ -84,11 +86,17 @@ export function insertBook(row: {
   random_comment_id?: number | null;
   deleted_at?: Date;
   order?: number;
+  notes?: string;
 }) {
   return testDriver.insert("books", { notes: "notes", ...row });
 }
 
-export function insertBookAdvance(row: { id?: number; book_id: number; publisher_id: number }) {
+/** Inserts a persisted schedule without running entity hooks or commit rules during setup. */
+export function insertAuthorSchedule(row: { id?: number; author_id: number; overview?: string }) {
+  return testDriver.insert("author_schedules", row);
+}
+
+export function insertBookAdvance(row: { id?: number; book_id: number; publisher_id: number; status_id?: number }) {
   return testDriver.insert("book_advances", {
     status_id: 1,
     ...row,
@@ -116,6 +124,7 @@ export function insertUser(row: {
   name: string;
   email?: string;
   password?: string;
+  password_history?: string[] | null;
   author_id?: number;
   favorite_publisher_small_id?: number;
   favorite_publisher_large_id?: number;
@@ -218,6 +227,7 @@ export async function insertSmallPublisher(row: {
   latitude?: string | number;
   huge_number?: string | number;
   size_id?: number;
+  status_id?: number;
   group_id?: number;
   shared_column?: string;
   updated_at?: Date;
@@ -257,6 +267,8 @@ export function insertParentGroup(row: {
   name?: string | null;
   bulk_data?: object | null;
   required_data?: object;
+  lazy_embedding?: string | null;
+  eager_embedding?: string | null;
 }) {
   return testDriver.insert("parent_groups", { required_data: {}, ...row });
 }

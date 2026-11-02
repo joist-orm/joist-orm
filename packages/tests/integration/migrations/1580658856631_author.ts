@@ -402,13 +402,15 @@ export function up(b: MigrationBuilder): void {
     duration_in_days: { type: "int", notNull: true },
     // NewTask columns
     special_new_field: { type: "int", notNull: false },
-    special_new_author_id: foreignKey("authors", { notNull: false }),
+    special_new_author_id: foreignKey("authors", { notNull: false, otherFieldName: "tasks" }),
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
     // A notNull column pushed down to a subtype; TaskNew omits it from its INSERT and gets the default
     special_old_field_with_default: { type: "int", notNull: true, default: 0 },
     // A column pushed down to both subtypes at once, i.e. off the base but on each subtype
     shared_subtype_field: { type: "int", notNull: false },
+    // Required on TaskNew and TaskOld, but absent from TaskThird
+    author_id: foreignKey("authors", { notNull: false, otherFieldName: "authoredTasks" }),
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
     // Self-referential for both subtypes, but specialized to the specific one

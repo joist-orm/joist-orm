@@ -33,8 +33,14 @@ const fieldConfig = z
     hasDefault: z.optional(z.boolean()),
     // Exclude a (large jsonb/text) column from the default SELECT and expose it as a lazy-loaded LazyField
     lazy: z.optional(z.boolean()),
+    /** Mark the entity for read locking whenever the field's value is read. */
+    assertUnchanged: z.optional(z.boolean()),
   })
-  .strict();
+  .strict()
+  .refine((field) => !field.assertUnchanged || (!field.derived && !field.lazy && !field.ignore), {
+    message: "assertUnchanged requires a non-derived, non-lazy, non-ignored field",
+    path: ["assertUnchanged"],
+  });
 
 export type FieldConfig = z.infer<typeof fieldConfig>;
 
@@ -262,7 +268,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
         const field = uniqueFields.find((f) => f.fieldName === name);
         if (!field) {
           logger.warn(`Found uniqueBy for non-existent or non-queryable field ${entityName}.${name}`);
-        } else if (field.kind === "primitive" && (field.derived || field.isArray || field.customSerde)) {
+        } else if (field.kind === "primitive" && (field.derived || field.customSerde)) {
           logger.warn(`Found uniqueBy for unsupported primitive field ${entityName}.${name}`);
         } else if (field.kind === "enum" && (field.derived || field.isArray)) {
           logger.warn(`Found uniqueBy for unsupported enum field ${entityName}.${name}`);

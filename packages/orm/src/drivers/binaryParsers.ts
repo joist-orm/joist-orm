@@ -16,7 +16,7 @@ import { requireTemporal } from "joist-core";
  *   explicitly with {@link setBinaryTypeParser} — text-like types can use
  *   {@link binaryTextParser}, arrays of registered elements can use {@link binaryArrayParser}.
  * - A query selecting a column whose oid has no registered parser **fails** with a descriptive
- *   error (see `WireRowData.setRowDescription`), rather than guessing at a lossy decoding.
+ *   error (see `pgColumnDecoders` in PostgresDriver), rather than guessing at a lossy decoding.
  *
  * Values produced here should match what the classic text path produces for the same column
  * (i.e. `numeric` stays a string, `int8` stays a string, Date-mode timestamps become `Date`s),
@@ -37,8 +37,8 @@ export function getBinaryTypeParser(oid: number): BinaryParse | undefined {
 export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 
 /**
- * Auto-registers binary parsers for the database's text-like dynamic-oid types — native enums
- * and citext, plus their array types — so apps get those for free.
+ * Auto-registers binary parsers for the database's dynamic-oid types — native enums, citext,
+ * text-like domains, and pgvector's `vector` — plus their array types, so apps get those for free.
  *
  * `PostgresDriver` calls this lazily before its first lazy query; apps can also call it
  * directly (i.e. at boot) if they want the registrations eagerly. Explicit
@@ -47,22 +47,24 @@ export type BinaryParse = (chunk: Buffer, start: number, length: number) => any;
 export async function registerDatabaseBinaryParsers(pool: {
   query(sql: string): Promise<{ rows: any[] }>;
 }): Promise<void> {
-  // Also capture the session's TimeZone, which zones temporal-mode timestamptz loads to match
-  // what classic text parsing would have produced (pg renders timestamps in the session zone)
+  // Binary timestamptz carries only an instant, so capture the session's TimeZone for Temporal loads.
   const [{ rows: settings }, { rows }] = await Promise.all([
     pool.query(`select current_setting('TimeZone') as tz`),
     pool.query(
-      `select t.oid, t.typarray
+      `select t.oid, t.typarray, t.typname
        from pg_type t
        where t.typtype = 'e'
           or t.typname = 'citext'
+          or t.typname = 'vector'
           or (t.typtype = 'd' and (select b.typcategory from pg_type b where b.oid = t.typbasetype) = 'S')`,
     ),
   ]);
   setSessionTimeZone(settings[0].tz);
   for (const row of rows) {
     const oid = Number(row.oid);
-    if (getBinaryTypeParser(oid) === undefined) setBinaryTypeParser(oid, binaryTextParser);
+    if (getBinaryTypeParser(oid) === undefined) {
+      setBinaryTypeParser(oid, row.typname === "vector" ? binaryVectorParser : binaryTextParser);
+    }
     const arrayOid = Number(row.typarray);
     if (arrayOid !== 0 && getBinaryTypeParser(arrayOid) === undefined) {
       setBinaryTypeParser(arrayOid, binaryArrayParser);
@@ -174,9 +176,8 @@ export function binaryTimestamptzToDate(chunk: Buffer, start: number): any {
  * `Temporal` values *directly* from the wire µs/days — no intermediate strings, no
  * `temporalMappers.fromDb` parsing (the mappers pass already-constructed instances through).
  *
- * `timestamptz` matches the text path's zoning exactly: classic parsing zones the value by the
- * offset the session's `TimeZone` rendered (normalizing `+00` to `UTC`), so we compute the
- * session zone's offset at each instant (see `setSessionTimeZone`; the configured
+ * `timestamptz` retains the session's time zone, including its DST rules, rather than
+ * reducing it to the fixed offset available in text results (see `setSessionTimeZone`; the configured
  * `temporal.timeZone` only governs `now`-conversions, not loads).
  */
 export function registerTemporalBinaryParsers(): void {
@@ -219,11 +220,7 @@ export function registerTemporalBinaryParsers(): void {
     const pgMicros = chunk.readBigInt64BE(start);
     if (pgMicros === INFINITY_US || pgMicros === NEG_INFINITY_US) failTemporalInfinity("timestamptz");
     const instant = t.Instant.fromEpochNanoseconds((pgMicros + PG_EPOCH_US) * 1000n);
-    if (sessionTimeZone === "UTC") return instant.toZonedDateTimeISO("UTC");
-    // Zone by the session zone's offset at this instant, i.e. what pg's text rendering carries
-    const zoned = instant.toZonedDateTimeISO(sessionTimeZone);
-    const { offset } = zoned;
-    return offset === "+00:00" ? zoned.withTimeZone("UTC") : zoned.withTimeZone(offset);
+    return instant.toZonedDateTimeISO(sessionTimeZone);
   });
 }
 
@@ -357,6 +354,19 @@ function readFloat4(chunk: Buffer, start: number): number {
     if (Math.fround(shortest) === value) return shortest;
   }
   return value;
+}
+
+/**
+ * Decodes a binary pgvector cell (`int16 dim`, `int16 unused`, then `dim` float4s) to a `number[]`.
+ *
+ * Unlike other parsers this skips text parity (`VectorSerde` parses the text literal) to avoid
+ * rendering and re-parsing a potentially large string; `VectorSerde` accepts either shape.
+ */
+function binaryVectorParser(chunk: Buffer, start: number): number[] {
+  const dim = chunk.readInt16BE(start);
+  const values = new Array<number>(dim);
+  for (let i = 0; i < dim; i++) values[i] = readFloat4(chunk, start + 4 + i * 4);
+  return values;
 }
 
 /** Copies the exact cell bytes, i.e. for bytea values. */

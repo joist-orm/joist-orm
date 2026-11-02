@@ -37,6 +37,7 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
     beforeDeleteRan: false,
     afterValidationRan: false,
     afterCommitRan: false,
+    activeStatusTransitions: 0,
   };
 
   // Used for testing a derived property that only exists on a subtype
@@ -92,6 +93,15 @@ config.addRule("authors", (sp) => {
 
 // Example of a rule on a subtype, against a base type field
 config.addRule(cannotBeUpdated("group"));
+
+// Subtype transition restrictions supplement the base Publisher's table and guards.
+config.setTransitions("status", { Draft: ["Active"], Active: [] });
+config.addTransitionRule("status", { to: "Active" }, (sp) => {
+  if (sp.city === "BlockedBySubType") return "Cannot activate a publisher in a restricted city";
+});
+config.addTransitionReaction("recordSmallPublisherActivation", "status", { to: "Active" }, (sp) => {
+  sp.transientFields.activeStatusTransitions++;
+});
 
 // For testing cross-entity hook ordering
 config.runHooksBefore(PublisherGroup);

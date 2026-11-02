@@ -230,7 +230,7 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1561↩",
+       "Creating new Book at EntityManager.factories.test.ts:221↩",
        "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
        "  reviewer = Author#2 from scope↩",
@@ -258,7 +258,7 @@ describe("EntityManager.factories", () => {
     expect(b.randomComment.get).toMatchEntity(c2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1561↩",
+       "Creating new Book at EntityManager.factories.test.ts:250↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
@@ -699,7 +699,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(b1.author.get);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at EntityManager.factories.test.ts:693↩",
          "  parent = Author#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -716,7 +716,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at EntityManager.factories.test.ts:712↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -734,7 +734,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1561↩",
+         "Creating new Comment at EntityManager.factories.test.ts:730↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -877,8 +877,8 @@ describe("EntityManager.factories", () => {
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
-    // And it took only 9 (plus 9 recursive?) queries (vs. 40 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 19 : 46);
+    // And it batches reloads, although recursive and STI collections need separate queries
+    expect(queries.length).toBe(isPreloadingEnabled ? 20 : 47);
   });
 
   it("uniquely assigns name fields", async () => {

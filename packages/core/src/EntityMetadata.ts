@@ -1,12 +1,14 @@
 import { getInstanceData } from "src/BaseEntity.ts";
-import { type ConfigApi, type Reactable, type ReactiveRule } from "src/config.ts";
+import type { ConfigApi, Reactable, ReactiveRule } from "src/config.ts";
 import { getMetadataForType } from "src/configure.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, type TimestampFields } from "src/EntityManager.ts";
 import { type EnumMetadata } from "src/EnumMetadata.ts";
 import type { DeepNew } from "src/loading/loadHints.ts";
+import type { SimpleRule } from "src/rules.ts";
 import type { Column, ColumnDescriptors } from "src/serde/columns.ts";
 import type { FieldSerde, PolymorphicKeySerde } from "src/serde/fieldSerde.ts";
+import type { FieldTransitions } from "src/transitions.ts";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
@@ -69,6 +71,8 @@ export interface EntityMetadata<T extends Entity = any> {
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
+  /** The lazy lookup of transition config by field, including config from base types. */
+  transitions?: ReadonlyMap<string, FieldTransitions>;
   /** The lazy list of non-read-only reactables for this metadata and its base types. */
   reactables?: Reactable[];
   /** The lazy lookup of non-read-only reactables by source field name. */
@@ -81,6 +85,10 @@ export interface EntityMetadata<T extends Entity = any> {
   reactiveRules?: ReactiveRule[];
   /** The lazy list of reactive *commit* rules (post-flush/pre-commit) for this metadata and its subtypes. */
   reactiveCommitRules?: ReactiveRule[];
+  /** The lazy list of non-reactive validation rules, prepared for this concrete type. */
+  simpleRules?: SimpleRule[];
+  /** The lazy list of non-reactive commit rules, prepared for this concrete type. */
+  simpleCommitRules?: SimpleRule[];
   /** Lazily-cached: whether flushing an entity of this type could trigger any `addCommitRule` work. */
   hasCommitRules?: boolean;
   /** The lazily-cached set of own `lazy` primitive field names, i.e. columns excluded from the default SELECT. */
@@ -113,7 +121,7 @@ export interface EntityMetadata<T extends Entity = any> {
   nonDeferredFkOrder?: number;
 }
 
-export type Field =
+export type Field = (
   | PrimaryKeyField
   | PrimitiveField
   | EnumField
@@ -123,7 +131,11 @@ export type Field =
   | ManyToManyField
   | ManyToManyEnumField
   | OneToOneField
-  | PolymorphicField;
+  | PolymorphicField
+) & {
+  /** When true, application reads mark this entity for read locking at flush. */
+  assertUnchanged?: boolean;
+};
 
 // Only the fields that have defined `serde` keys; should be a mapped type of Field
 export type SerdeField = PrimaryKeyField | PrimitiveField | EnumField | ManyToOneField | PolymorphicField;
@@ -160,7 +172,9 @@ export type EnumField = {
   fieldIdName: undefined;
   required: boolean;
   derived: "sync" | "async" | false;
-  enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
+  enumDetailType: EnumMetadata<any, { name: string }>;
+  /** The enum object, i.e. `{ Draft: "DRAFT" }`. */
+  enumType: Record<string, unknown>;
   serde: FieldSerde;
   immutable: boolean;
   default?: "schema" | "config";

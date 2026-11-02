@@ -93,8 +93,8 @@ The exported `ExactColumnsTrackOutcome` has these readonly fields:
 | Field | Meaning |
 | --- | --- |
 | `endpointKey: string` | The stable key passed to `track()`. |
-| `lookupSource` | `cold`, `l1`, `l2_version`, or `l2_seed`. Concurrent callers sharing initialization report the same L2 source. |
-| `profileOrigin` | `local`, `l2_version`, or `l2_seed`; retained across subsequent L1 hits. |
+| `lookupSource` | `cold`, `l1`, or `l2_seed`. Concurrent callers sharing initialization report the same L2 source. |
+| `profileOrigin` | `local` or `l2_seed`; retained across subsequent L1 hits. |
 | `startingMode` | `learning`, `provisional`, or `narrow`, captured before the first attempt. |
 | `optimized: boolean` | Whether any columns were removed in a supported query preparation. |
 | `retried: boolean` | Whether a retry due to a missing-column error started, regardless of whether it succeeded. |
@@ -176,28 +176,26 @@ await client.close();
 
 Joist does not depend on a Redis client. `sendCommand` accepts command arguments and returns the client's decoded result. For ioredis, use `sendCommand: (args) => client.call(args[0], ...args.slice(1))`. The application owns connection setup, reconnection, command timeouts, and offline-queue limits; bound those queues as well as Joist's queue. Cache errors after startup fall back to local learning. Applications that must also start without Valkey should handle connection failure in their own startup policy.
 
-Use an immutable build identifier for `codeVersion`. Include application, environment, and model/database identity in `namespace` when those can differ. Redis keys include an internal format version and hashed identities; version and seed keys share a Redis Cluster slot. The cache contains field identities and learning state, never entity row values.
+Use a build identifier for `codeVersion`, which records the hint's provenance. Include application, environment, and model/database identity in `namespace` when those can differ. Redis keys include an internal format version and hashed identities. The cache contains field identities and publication metadata, never entity row values or learning state.
 
 ### Deployment reuse
 
-Each endpoint has a version-specific entry plus a cross-version **seed snapshot**:
+**L1 owns learning; L2 supplies initial hints.** Each namespace/endpoint has one seed snapshot, shared across deployments. The store uses plain `GET` and `SET ... EX` commands.
 
 | First lookup | Behavior |
 | --- | --- |
-| Same-version settled profile | Narrow immediately. |
-| Same-version learning profile | Restore its field union and backoff; use full-row learning. |
-| Seed only | Narrow immediately in provisional mode. |
+| Compatible seed, from any build | Narrow immediately in provisional mode. |
 | Miss, timeout, or incompatible profile | Learn locally using full rows. |
 
-An exact-version learning entry always wins over the seed. This prevents workers from resurrecting a seed after the running version has discovered a missing field.
+Every process reads L2 only when initializing an endpoint. After that, discoveries, stability counters, backoff, and deoptimization are entirely local. Workers do not merge field sets, propagate invalidations, or refresh their profiles from peers.
 
-An inherited seed earns settled status after three successful, no-growth invocations, increased by its inherited instability backoff. **Those invocations already use narrowed SELECTs.** New fields reset that progress; a missing field invokes the usual widen/retry/backoff behavior. Promotion publishes the versioned profile and replaces the seed. A settled profile remains speculative: neither a matching build identifier nor a few clean requests proves coverage of every branch.
+An inherited seed earns local settled status after three successful, no-growth invocations. **Those invocations already use narrowed SELECTs.** New fields reset that progress; a missing field invokes the usual local widen/retry/backoff behavior. Settlement publishes a replacement hint. A settled profile remains speculative: neither a matching build identifier nor a few clean requests proves coverage of every branch.
 
-Same-version workers merge field sets atomically. Revisions prevent stale workers from marking a wider or invalidated profile settled. Stability counters stay local. Active endpoints refresh their shared union and renew their version entry's TTL in the background, approximately once per minute with jitter. Remote invalidations return a worker to full-row learning. There is a propagation window during which another worker may independently encounter the same missing field.
+Only locally settled profiles are published. Successful requests periodically republish their current settled snapshot to renew its TTL. Publication is asynchronous and best-effort; the last save wins, including during rolling deployments. No publication response changes L1.
 
-Only earned settlement replaces a seed; refreshing a settled version renews the existing seed's TTL without changing its contents. The last settled publication wins, including during rolling deployments. Seeds are replaced rather than unioned across historical versions, although inherited unused fields can remain in the profile. Change the namespace to explicitly reset learning. Unknown cached fields/entities are rejected; added model fields can be discovered normally. A same-version incompatible or corrupt profile disables persistence for that endpoint in the current process rather than republishing incompatible data or delaying other endpoints' cache access.
+Workers can independently rediscover the same missing field, and a narrower hint can replace a broader one. Such hints still use the normal missing-column guard and retry rules: a miss after committed writes fails the request rather than replaying it. Unknown cached fields/entities are rejected and learned locally; a later local settlement can replace the bad hint. Change the namespace to start without inherited hints.
 
-Expiration or eviction can lose observations and revision history. A worker may then inherit an older, narrower seed and encounter another missing column. L2 is a best-effort optimization, not a durable record of every discovered field; the field guard and retry rules still apply after cache loss.
+Expiration or eviction simply removes the starting hint for new processes. Existing L1 profiles continue independently. L2 is not a durable record of every discovered field.
 
 ### Availability and lifecycle
 
@@ -206,19 +204,21 @@ Persistence options default to:
 | Option | Default |
 | --- | --- |
 | `timeoutMs` | 50 ms per cache operation |
-| `refreshIntervalMs` | 60,000 ms, jittered |
+| `publishIntervalMs` | 60,000 ms between request-driven publications; local settlement publishes immediately |
 | `maxPending` | 1,000 queued endpoint writes |
 | Store `ttlSeconds` | 604,800 seconds (seven days) |
 
-Cold reads are deduplicated per endpoint. Writes are asynchronous and coalesced, with deoptimizations prioritized. Errors trigger exponential backoff; timed-out reads cannot later overwrite local learning. Cache-operation deadlines bound waiting, not the execution of an already submitted Redis command. Revision checks also protect against delayed stale publications.
+Cold reads are deduplicated per endpoint. Publications are asynchronous, bounded, and coalesced by endpoint. Queued writes use the latest local snapshot and skip profiles that have returned to learning. Failed writes are discarded; a later settlement or eligible successful request can publish again after outage backoff. There are no periodic refresh or retry timers. Idle endpoints expire naturally.
 
-`flushStore()` drains pending writes best-effort without stopping refreshes. `close()` stops refreshes and drains best-effort; call it after requests finish. Neither method closes the application's Redis connection. During an outage, draining can leave unpersisted observations; local behavior is unaffected.
+Timed-out reads cannot later overwrite local learning. Cache-operation deadlines bound waiting, not the execution of an already submitted Redis command. A delayed save may replace the hint, just like a competing worker's save; it cannot affect an initialized L1 profile.
+
+`flushStore()` drains pending publications once, best-effort. `close()` stops accepting publications and drains; call it after requests finish. Neither method closes the application's Redis connection. During an outage, hints may remain unpublished; local behavior is unaffected.
 
 ### Cache observability
 
-`onCacheEvent` reports loads, merges, refreshes, adoption, provisional promotion, local settlement, deoptimization, and rejected profiles. Events include operation/result, optional latency/error, and version/revision information for structured logs. Its synchronous exceptions are ignored, like `onTrack`.
+`onCacheEvent` reports loads, saves, adoption, provisional promotion, local settlement, deoptimization, and rejected hints. Events include operation/result, optional latency/error, and build provenance for structured logs. Its synchronous exceptions are ignored, like `onTrack`.
 
-Use `lookupSource`, `profileOrigin`, and `startingMode` as low-cardinality request dimensions. Track seed promotion versus provisional deoptimization, retries by profile origin, and post-write missing-column failures. Keep build SHAs, revisions, and arbitrary operation hashes out of metric labels.
+Use `lookupSource`, `profileOrigin`, and `startingMode` as low-cardinality request dimensions. Track seed promotion versus provisional deoptimization, retries by profile origin, and post-write missing-column failures. Keep build SHAs and arbitrary operation hashes out of metric labels.
 
 ## Requirements & caveats
 

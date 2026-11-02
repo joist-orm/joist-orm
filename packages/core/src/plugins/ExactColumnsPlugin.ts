@@ -37,7 +37,7 @@ export interface ExactColumnsPluginOpts {
 /** Whether an endpoint profile is observing full rows or issuing narrowed SELECTs. */
 type ExactColumnsProfileMode = "learning" | "provisional" | "narrow";
 
-type ProfileOrigin = "local" | "l2_version" | "l2_seed";
+type ProfileOrigin = "local" | "l2_seed";
 
 /**
  * One invocation's outcomes; the plugin owns learning and the application owns aggregation.
@@ -48,8 +48,8 @@ type ProfileOrigin = "local" | "l2_version" | "l2_seed";
  */
 export interface ExactColumnsTrackOutcome {
   readonly endpointKey: string;
-  /** Where this invocation obtained its profile: L1 memory, same-version L2, an L2 seed, or cold learning. */
-  readonly lookupSource: "l1" | "l2_version" | "l2_seed" | "cold";
+  /** Where this invocation obtained its profile: L1 memory, an L2 seed, or cold learning. */
+  readonly lookupSource: "l1" | "l2_seed" | "cold";
   readonly profileOrigin: ProfileOrigin;
   readonly startingMode: ExactColumnsProfileMode;
   /** Whether at least one supported query projection had columns removed. */
@@ -120,14 +120,12 @@ export class ExactColumnsPlugin extends Plugin {
   readonly #profiles: Map<string, EndpointProfile> = new Map();
   readonly #initializing = new Map<string, Promise<EndpointProfile>>();
   readonly #store: ExactColumnsStore | undefined;
-  readonly #codeVersion: string | undefined;
 
   constructor(opts: ExactColumnsPluginOpts = {}) {
     super();
     this.#onMissingColumn = opts.onMissingColumn;
     this.#onTrack = opts.onTrack;
     this.#store = opts.store ? new ExactColumnsStore(opts.store) : undefined;
-    this.#codeVersion = opts.store?.codeVersion;
   }
 
   /** Best-effort persistence drain; call after tracked requests finish during graceful shutdown. */
@@ -135,7 +133,7 @@ export class ExactColumnsPlugin extends Plugin {
     await this.#store?.flush();
   }
 
-  /** Drain persistence and stop its background refresh; does not close the application's Redis client. */
+  /** Stop publications and drain persistence; does not close the application's Redis client. */
   async close(): Promise<void> {
     await this.#store?.close();
   }
@@ -143,56 +141,38 @@ export class ExactColumnsPlugin extends Plugin {
   /**
    * Initialize an endpoint with a single cold lookup shared by concurrent callers.
    *
-   * Exact-version learning overrides inherited readiness. Seeds instead narrow provisionally,
-   * earning a version-specific settled profile through successful requests on this build.
+   * Every seed narrows provisionally, including one from the same build. After initialization,
+   * this process owns all learning; later publications from peers never change its profile.
    */
   private async initialize(key: string): Promise<EndpointProfile> {
     const profile = createProfile(key);
     const store = this.#store!;
-    const cached = await store.load(key);
-    const stored = cached?.version ?? cached?.seed;
+    const stored = await store.load(key);
     if (stored) {
-      const validVersion = !cached?.version || stored.codeVersion === this.#codeVersion;
-      if (validVersion && mergeProfile(profile, stored, false)) {
-        profile.origin = cached?.version ? "l2_version" : "l2_seed";
-        profile.mode = stored.state === "learning" ? "learning" : cached?.version ? "narrow" : "provisional";
+      if (adoptProfile(profile, stored)) {
+        profile.origin = "l2_seed";
+        profile.mode = "provisional";
         store.emit({
           endpointKey: key,
           operation: "adopt",
           result: "success",
           sourceCodeVersion: stored.codeVersion,
-          revision: stored.revision,
           mode: profile.mode,
         });
       } else {
         store.emit({ endpointKey: key, operation: "reject", result: "error" });
       }
-    } else if (cached) {
+    } else {
       store.emit({ endpointKey: key, operation: "load", result: "miss" });
     }
-    // A same-build model mismatch indicates corrupt data or a reused build id. Do not republish it.
-    if (cached?.version && profile.origin === "local") {
-      this.#profiles.set(key, profile);
-      return profile;
-    }
-    store.register(
-      key,
-      {
-        snapshot: () => snapshotProfile(profile),
-        isProvisional: () => profile.mode === "provisional",
-        merge: (remote, reset) => mergeProfile(profile, remote, reset),
-      },
-      cached?.version?.revision,
-    );
-    profile.changed = (invalidate, settled, previousMode) => {
-      store.changed(key, invalidate, settled);
-      if (invalidate || settled)
-        store.emit({
-          endpointKey: key,
-          operation: invalidate ? "deoptimize" : previousMode === "provisional" ? "promote" : "settle",
-          result: "success",
-          mode: previousMode,
-        });
+    profile.modeChanged = (previousMode) => {
+      if (profile.mode === "narrow") store.publish(key, () => snapshotProfile(profile), true);
+      store.emit({
+        endpointKey: key,
+        operation: profile.mode === "learning" ? "deoptimize" : previousMode === "provisional" ? "promote" : "settle",
+        result: "success",
+        mode: previousMode,
+      });
     };
     this.#profiles.set(key, profile);
     return profile;
@@ -222,7 +202,6 @@ export class ExactColumnsPlugin extends Plugin {
         this.#profiles.set(key, profile);
       }
     }
-    this.#store?.touch(key);
     // Snapshot the mode for this invocation; a concurrent call may change the profile's next mode.
     // I.e. a call that started learning remains full-row even if another call settles the profile.
     const scope: TrackScope = {
@@ -238,6 +217,7 @@ export class ExactColumnsPlugin extends Plugin {
     try {
       const result = await scopes.run(scope, fn);
       completeInvocation(scope);
+      if (profile.mode === "narrow") this.#store?.publish(key, () => snapshotProfile(profile));
       return result;
     } catch (err) {
       if (!(err instanceof MissingColumnError)) throw err;
@@ -268,6 +248,7 @@ export class ExactColumnsPlugin extends Plugin {
       };
       const result = await scopes.run(retryScope, fn);
       completeInvocation(retryScope);
+      if (profile.mode === "narrow") this.#store?.publish(key, () => snapshotProfile(profile));
       return result;
     } finally {
       try {
@@ -380,7 +361,7 @@ interface EndpointProfile {
   epoch: number;
   /** Epoch of the latest deoptimization, so concurrent misses do not repeatedly increase backoff. */
   deoptimizedEpoch: number;
-  changed?: (invalidate: boolean, settled: boolean, previousMode?: ExactColumnsProfileMode) => void;
+  modeChanged?: (previousMode: ExactColumnsProfileMode) => void;
   /** The mode new invocations snapshot when they start. */
   mode: ExactColumnsProfileMode;
   /** Consecutive successful learning calls that added no fields. */
@@ -482,7 +463,7 @@ function completeInvocation(scope: TrackScope): void {
       // This full-row call supplied the final evidence; the next invocation can narrow.
       profile.mode = "narrow";
       profile.cleanRuns = 0;
-      profile.changed?.(false, true, scope.mode);
+      profile.modeChanged?.(scope.mode);
     }
   }
 }
@@ -499,7 +480,7 @@ function deoptimize(profile: EndpointProfile): void {
   profile.instability++;
   profile.epoch++;
   profile.deoptimizedEpoch = profile.epoch;
-  profile.changed?.(true, false, previousMode);
+  profile.modeChanged?.(previousMode);
 }
 
 /**
@@ -527,7 +508,6 @@ function recordField(profile: EndpointProfile, cstr: MaybeAbstractEntityConstruc
   if (grew) {
     profile.epoch++;
     profile.stableRuns = 0;
-    profile.changed?.(false, false);
   }
   return grew;
 }
@@ -547,8 +527,9 @@ function createProfile(key: string): EndpointProfile {
   };
 }
 
-/** Serialize logical fields, never constructors or derived SQL projections. */
-function snapshotProfile(profile: EndpointProfile): ExactColumnsSnapshot {
+/** Serialize settled logical fields; a queued publication must skip a profile that deoptimized. */
+function snapshotProfile(profile: EndpointProfile): ExactColumnsSnapshot | undefined {
+  if (profile.mode !== "narrow") return undefined;
   const entities: ExactColumnsSnapshot["entities"] = Object.create(null);
   for (const [cstr, entry] of profile.perMeta) {
     const meta = getMetadata(cstr);
@@ -557,16 +538,16 @@ function snapshotProfile(profile: EndpointProfile): ExactColumnsSnapshot {
       fields: Object.fromEntries([...entry.fields].map((field) => [field, true as const])),
     };
   }
-  return { entities, state: profile.mode === "narrow" ? "settled" : "learning", instability: profile.instability };
+  return { entities };
 }
 
 /**
- * Validate the entire cached model before merging; partial imports must not authorize narrowing.
+ * Validate the entire cached model before adoption; partial imports must not authorize narrowing.
  *
- * Remote fields only widen the local union. A remote invalidation also fences in-flight learning
- * observations, so calls that started before that invalidation cannot immediately settle it again.
+ * This only initializes an empty local profile. Stability, backoff, and all subsequent discoveries
+ * belong to this process, regardless of which build supplied the seed.
  */
-function mergeProfile(profile: EndpointProfile, stored: ExactColumnsStoredProfile, reset: boolean): boolean {
+function adoptProfile(profile: EndpointProfile, stored: ExactColumnsStoredProfile): boolean {
   const resolved: [EntityMetadata, string[]][] = [];
   try {
     for (const [type, entry] of Object.entries(stored.entities)) {
@@ -578,26 +559,8 @@ function mergeProfile(profile: EndpointProfile, stored: ExactColumnsStoredProfil
   } catch {
     return false;
   }
-  let grew = false;
   for (const [meta, fields] of resolved) {
-    let entry = profile.perMeta.get(meta.cstr);
-    if (!entry) {
-      entry = { fields: new Set() };
-      profile.perMeta.set(meta.cstr, entry);
-    }
-    for (const field of fields) {
-      if (!entry.fields.has(field)) {
-        entry.fields.add(field);
-        grew = true;
-      }
-    }
-  }
-  profile.instability = Math.max(profile.instability, stored.instability);
-  if (grew || reset) {
-    profile.epoch++;
-    profile.stableRuns = 0;
-    profile.cleanRuns = 0;
-    profile.mode = "learning";
+    profile.perMeta.set(meta.cstr, { fields: new Set(fields) });
   }
   return true;
 }

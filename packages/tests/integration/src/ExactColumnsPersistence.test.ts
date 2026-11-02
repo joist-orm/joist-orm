@@ -32,7 +32,7 @@ describe("ExactColumnsPersistence", () => {
     namespace = randomUUID();
     store = new RedisExactColumnsStore({
       sendCommand: async (args) => {
-        for (const key of args[0] === "MGET" ? args.slice(1) : args.slice(3, 5)) keys.add(key);
+        keys.add(args[1]);
         return client.sendCommand(args);
       },
     });
@@ -56,12 +56,12 @@ describe("ExactColumnsPersistence", () => {
     // When its first author request completes.
     await invoke(next.plugin, readFirstName);
 
-    // Then it narrows immediately from the exact-version cache.
+    // Then even a same-build hint narrows provisionally without a full-row warmup.
     expect(next.outcomes).toMatchObject([
       {
-        lookupSource: "l2_version",
-        profileOrigin: "l2_version",
-        startingMode: "narrow",
+        lookupSource: "l2_seed",
+        profileOrigin: "l2_seed",
+        startingMode: "provisional",
         optimized: true,
         retried: false,
       },
@@ -85,14 +85,14 @@ describe("ExactColumnsPersistence", () => {
       { lookupSource: "l1", profileOrigin: "l2_seed", startingMode: "provisional", optimized: true },
       { lookupSource: "l1", profileOrigin: "l2_seed", startingMode: "provisional", optimized: true },
     ]);
-    // And build B has earned both its own settled profile and the next deployment's seed.
+    // And build B has published the next deployment's hint, with no shared learning state.
     expect(await store.load({ namespace, codeVersion: "B", endpointKey: "author" })).toMatchObject({
-      version: { state: "settled", codeVersion: "B" },
-      seed: { state: "settled", codeVersion: "B" },
+      codeVersion: "B",
+      entities: { Author: { fields: { firstName: true } } },
     });
   });
 
-  it("retries changed code and restores its learning state instead of the older seed", async () => {
+  it("keeps discoveries local until they settle", async () => {
     // Given the previous build only read firstName.
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await learn(worker("A").plugin);
@@ -111,13 +111,13 @@ describe("ExactColumnsPersistence", () => {
     const next = worker("B");
     await invoke(next.plugin, readLastName);
 
-    // Then the exact-version learning entry prevents reusing the stale seed.
+    // Then the second worker independently discovers the missing field from the unchanged hint.
     expect(next.outcomes).toMatchObject([
-      { lookupSource: "l2_version", startingMode: "learning", optimized: false, retried: false },
+      { lookupSource: "l2_seed", startingMode: "provisional", optimized: true, retried: true },
     ]);
   });
 
-  it("does not let a stale worker promote over another worker's discovery", async () => {
+  it("lets each worker settle independently of another worker's discovery", async () => {
     // Given two build B workers inherited A's firstName-only seed.
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await learn(worker("A").plugin);
@@ -133,27 +133,28 @@ describe("ExactColumnsPersistence", () => {
     await invoke(stale.plugin, readFirstName);
     await stale.plugin.flushStore();
 
-    // Then the stored profile retains the wider learning state and the old seed is not replaced.
+    // Then its local settlement publishes its own fields, without a distributed invalidation.
     expect(await store.load({ namespace, codeVersion: "B", endpointKey: "author" })).toMatchObject({
-      version: { state: "learning", entities: { Author: { fields: { firstName: true, lastName: true } } } },
-      seed: { codeVersion: "A" },
+      entities: { Author: { fields: { firstName: true } } },
+      codeVersion: "B",
     });
   });
 
-  it("unions discoveries from workers learning different branches", async () => {
+  it("replaces hints with the last settled publication instead of unioning workers", async () => {
     // Given two fresh workers for the same build and an author with two readable fields.
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     const first = worker("A");
     const last = worker("A");
 
-    // When those workers concurrently discover different author branches.
+    // When those workers discover different author branches before either publishes.
     await Promise.all([invoke(first.plugin, readFirstName), invoke(last.plugin, readLastName)]);
-    await Promise.all([first.plugin.flushStore(), last.plugin.flushStore()]);
+    await learn(first.plugin, readFirstName);
+    await learn(last.plugin, readLastName);
 
-    // Then neither worker overwrites the other's observed field.
-    expect(
-      (await store.load({ namespace, codeVersion: "A", endpointKey: "author" })).version?.entities.Author.fields,
-    ).toEqual({ firstName: true, lastName: true });
+    // Then the last worker's hint replaces the earlier hint, rather than accumulating fleet-wide fields.
+    expect((await store.load({ namespace, codeVersion: "A", endpointKey: "author" }))?.entities.Author.fields).toEqual({
+      lastName: true,
+    });
   });
 
   it("keeps learning locally when the cache read never completes", async () => {
@@ -161,7 +162,7 @@ describe("ExactColumnsPersistence", () => {
     await insertAuthor({ first_name: "a1" });
     const unavailable: ExactColumnsStoreAdapter = {
       load: () => new Promise(() => {}),
-      merge: (update) => store.merge(update),
+      save: (update) => store.save(update),
     };
     const next = worker("A", { store: unavailable, timeoutMs: 5 });
 
@@ -185,7 +186,7 @@ describe("ExactColumnsPersistence", () => {
     await learn(worker("A").plugin);
     const delayed = new Deferred<Awaited<ReturnType<ExactColumnsStoreAdapter["load"]>>>();
     const next = worker("B", {
-      store: { load: () => delayed.promise, merge: (update) => store.merge(update) },
+      store: { load: () => delayed.promise, save: (update) => store.save(update) },
       timeoutMs: 5,
     });
 
@@ -264,38 +265,29 @@ describe("ExactColumnsPersistence", () => {
     `);
   });
 
-  it("refreshes a warm worker after another worker deoptimizes", async () => {
+  it("never imports another worker's later discoveries into a warm L1 profile", async () => {
     // Given a settled build A profile and a worker actively serving narrowed requests.
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await learn(worker("A").plugin);
-    const refreshed = new Deferred<void>();
-    let discoveryPersisted = false;
-    const warm = worker("A", {
-      refreshIntervalMs: 20,
-      onCacheEvent: (event) => {
-        if (discoveryPersisted && event.operation === "refresh" && event.result === "success") refreshed.resolve();
-      },
-    });
-    await invoke(warm.plugin, readFirstName);
-    // And another worker discovers a missing lastName field.
+    const warm = worker("A", { publishIntervalMs: 1 });
+    await learn(warm.plugin);
+    // And another worker discovers and settles a missing lastName field.
     const changed = worker("A");
     await invoke(changed.plugin, readLastName);
+    await learn(changed.plugin, readLastName);
     await changed.plugin.flushStore();
-    discoveryPersisted = true;
-    // Keep the endpoint active even if an earlier timer fired while the discovery was being persisted.
-    await invoke(warm.plugin, readFirstName);
 
-    // When the warm worker refreshes before reading lastName itself.
-    await refreshed.promise;
+    // When the warm worker continues serving requests and then reads lastName itself.
+    await invoke(warm.plugin, readFirstName);
     await warm.plugin.flushStore();
     await invoke(warm.plugin, readLastName);
 
-    // Then it already knows to use full rows instead of repeating the other worker's miss.
+    // Then it discovers the missing field independently; no remote save updated its L1.
     expect(warm.outcomes.at(-1)).toMatchObject({
       lookupSource: "l1",
-      startingMode: "learning",
-      optimized: false,
-      retried: false,
+      startingMode: "narrow",
+      optimized: true,
+      retried: true,
     });
   });
 
@@ -305,9 +297,9 @@ describe("ExactColumnsPersistence", () => {
     await learn(worker("A").plugin);
     const cached = await store.load({ namespace, codeVersion: "A", endpointKey: "author" });
     // And its serialized seed refers to a field no longer present in this model.
-    cached.seed!.entities.Author.fields.retiredField = true;
-    const seedKey = [...keys].find((key) => key.endsWith(":seed"))!;
-    await client.set(seedKey, JSON.stringify(cached.seed));
+    cached!.entities.Author.fields.retiredField = true;
+    const seedKey = [...keys][0];
+    await client.set(seedKey, JSON.stringify(cached));
     const next = worker("B");
 
     // When the new build serves an author request.
@@ -353,80 +345,25 @@ describe("ExactColumnsPersistence", () => {
     ]);
   });
 
-  it("does not resurrect stale readiness after the version entry is evicted", async () => {
-    // Given a worker's actual settled author profile and its observed revision.
-    await insertAuthor({ first_name: "a1" });
-    await learn(worker("A").plugin);
-    const key = { namespace, codeVersion: "A", endpointKey: "author" };
-    const cached = (await store.load(key)).version!;
-    // And Valkey has evicted that version entry while the worker retains its L1 profile.
-    const versionKey = [...keys].find((value) => value.includes(":version:"))!;
-    await client.del(versionKey);
-
-    // When the worker attempts a settled publication against the vanished revision.
-    await store.merge({
-      ...key,
-      snapshot: cached,
-      expectedRevision: cached.revision,
-      invalidate: false,
-      publishSeed: true,
-    });
-
-    // Then the replacement version entry requires new observations before narrowing.
-    expect((await store.load(key)).version?.state).toBe("learning");
-  });
-
-  it("renews an active seed without replacing its contents", async () => {
+  it("renews an active hint through successful requests", async () => {
     // Given a settled author seed that is close to expiring.
     await insertAuthor({ first_name: "a1" });
-    await learn(worker("A").plugin);
-    const key = { namespace, codeVersion: "A", endpointKey: "author" };
-    const profile = (await store.load(key)).version!;
-    const seedKey = [...keys].find((value) => value.endsWith(":seed"))!;
+    const active = worker("A");
+    await learn(active.plugin);
+    const seedKey = [...keys][0];
     await client.expire(seedKey, 5);
 
-    // When an active worker renews its settled profile without publishing a new seed.
-    await store.merge({
-      ...key,
-      snapshot: profile,
-      expectedRevision: profile.revision,
-      invalidate: false,
-      publishSeed: false,
-    });
+    // When another successful request republishes the local settled hint.
+    const clock = jest.spyOn(Date, "now").mockReturnValue(Date.now() + 60_001);
+    try {
+      await invoke(active.plugin, readFirstName);
+      await active.plugin.flushStore();
+    } finally {
+      clock.mockRestore();
+    }
 
     // Then the next deployment can still inherit the seed after the original expiry window.
     expect(await client.ttl(seedKey)).toBeGreaterThan(5);
-  });
-
-  it("isolates a model mismatch during a merge from other endpoint lookups", async () => {
-    // Given two learned endpoints and a warm worker for the author endpoint.
-    await insertAuthor({ first_name: "a1", last_name: "l1" });
-    const seed = worker("A");
-    await learn(seed.plugin);
-    const key = { namespace, codeVersion: "A", endpointKey: "author" };
-    const cached = (await store.load(key)).version!;
-    const authorKey = [...keys].find((value) => value.includes(":version:"))!;
-    for (let i = 0; i < 4; i++) {
-      await invoke(seed.plugin, readFirstName, "other");
-      await seed.plugin.flushStore();
-    }
-    const next = worker("A");
-    await invoke(next.plugin, readFirstName);
-    // And another process corrupts the author's stored table identity.
-    cached.entities.Author.table = "renamed_authors";
-    await client.set(authorKey, JSON.stringify(cached));
-
-    // When a new field forces the warm worker to merge against that incompatible model.
-    await invoke(next.plugin, readLastName);
-    await next.plugin.flushStore();
-    await invoke(next.plugin, readFirstName, "other");
-
-    // Then the unaffected endpoint still loads its settled profile from L2.
-    expect(next.outcomes.at(-1)).toMatchObject({
-      endpointKey: "other",
-      lookupSource: "l2_version",
-      startingMode: "narrow",
-    });
   });
 
   it("isolates corrupt cache JSON from other endpoint lookups", async () => {
@@ -434,7 +371,7 @@ describe("ExactColumnsPersistence", () => {
     await insertAuthor({ first_name: "a1" });
     const seed = worker("A");
     await learn(seed.plugin);
-    const authorKey = [...keys].find((value) => value.includes(":version:"))!;
+    const authorKey = [...keys][0];
     for (let i = 0; i < 4; i++) {
       await invoke(seed.plugin, readFirstName, "other");
       await seed.plugin.flushStore();
@@ -451,22 +388,22 @@ describe("ExactColumnsPersistence", () => {
     // Then bad endpoint data has not started connection backoff for the whole store.
     expect(next.outcomes.at(-1)).toMatchObject({
       endpointKey: "other",
-      lookupSource: "l2_version",
-      startingMode: "narrow",
+      lookupSource: "l2_seed",
+      startingMode: "provisional",
     });
   });
 
   it("contains malformed custom-adapter replies inside the store error boundary", async () => {
-    // Given real author reads and an adapter that returns an invalid merge result.
+    // Given real author reads and an adapter that returns an invalid hint.
     await insertAuthor({ first_name: "a1" });
     const next = worker("A", {
       store: {
-        load: (key) => store.load(key),
-        merge: async () => ({}) as Awaited<ReturnType<ExactColumnsStoreAdapter["merge"]>>,
+        load: async () => ({}) as Awaited<ReturnType<ExactColumnsStoreAdapter["load"]>>,
+        save: (update) => store.save(update),
       },
     });
 
-    // When the first discovery is persisted and the application drains background work.
+    // When the first request attempts to adopt the malformed hint.
     await invoke(next.plugin, readFirstName);
     await next.plugin.flushStore();
 
@@ -476,34 +413,121 @@ describe("ExactColumnsPersistence", () => {
     ]);
   });
 
-  it("retries an invalidation after backoff without waiting for the refresh interval", async () => {
-    // Given a settled author profile and a one-time cache failure on the next write.
-    await insertAuthor({ first_name: "a1", last_name: "l1" });
-    await learn(worker("A").plugin);
-    const saved = new Deferred<void>();
-    let fail = true;
+  it("discards failed publications and keeps serving the local narrowed profile", async () => {
+    // Given a working cache read but a failing publication connection.
+    await insertAuthor({ first_name: "a1" });
     const next = worker("A", {
-      refreshIntervalMs: 60_000,
       store: {
         load: (key) => store.load(key),
-        merge: async (update) => {
-          if (fail) {
-            fail = false;
-            throw new Error("connection interrupted");
-          }
-          const result = await store.merge(update);
-          saved.resolve();
-          return result;
+        save: async () => {
+          throw new Error("connection interrupted");
         },
       },
     });
 
-    // When a new field deoptimizes the profile and the background write initially fails.
-    await invoke(next.plugin, readLastName);
-    await saved.promise;
+    // When local learning settles despite the failed save, and drains are requested again.
+    await learn(next.plugin);
+    await next.plugin.flushStore();
+    await invoke(next.plugin, readFirstName);
 
-    // Then the queued invalidation reaches Valkey after backoff without an explicit drain or new request.
-    expect((await store.load({ namespace, codeVersion: "A", endpointKey: "author" })).version?.state).toBe("learning");
+    // Then local optimization is unaffected and the failure is reported once without queued retries.
+    expect(next.outcomes.at(-1)).toMatchObject({ startingMode: "narrow", optimized: true });
+    expect(next.events.filter((event) => event.operation === "save")).toMatchObject([{ result: "error" }]);
+  });
+
+  it("publishes nothing while a cold endpoint is still learning", async () => {
+    // Given an author endpoint with no saved hint.
+    await insertAuthor({ first_name: "a1" });
+    const next = worker("A");
+
+    // When its first field discovery has not yet earned local settlement.
+    await invoke(next.plugin, readFirstName);
+    await next.plugin.flushStore();
+
+    // Then L2 has no learning state to share with other workers.
+    expect(await store.load({ namespace, codeVersion: "A", endpointKey: "author" })).toBeUndefined();
+  });
+
+  it("contains timed-out saves without delaying shutdown or local learning", async () => {
+    // Given a cache adapter whose publication never finishes.
+    await insertAuthor({ first_name: "a1" });
+    const next = worker("A", {
+      timeoutMs: 5,
+      store: { load: (key) => store.load(key), save: () => new Promise(() => {}) },
+    });
+
+    // When local settlement publishes a hint and the application closes the plugin.
+    await learn(next.plugin);
+    await next.plugin.close();
+
+    // Then shutdown completes after the cache deadline rather than waiting for the adapter forever.
+    expect(next.events.filter((event) => event.operation === "save")).toMatchObject([{ result: "timeout" }]);
+  });
+
+  it("publishes the current hint on a later successful request after an outage", async () => {
+    // Given local settlement whose first publication failed.
+    await insertAuthor({ first_name: "a1" });
+    let unavailable = true;
+    const next = worker("A", {
+      store: {
+        load: (key) => store.load(key),
+        save: async (update) => {
+          if (unavailable) throw new Error("connection interrupted");
+          await store.save(update);
+        },
+      },
+    });
+    await learn(next.plugin);
+    // And the cache recovers after the publication interval and outage backoff.
+    unavailable = false;
+    const clock = jest.spyOn(Date, "now").mockReturnValue(Date.now() + 60_001);
+
+    // When another successful request offers the current local snapshot.
+    try {
+      await invoke(next.plugin, readFirstName);
+      await next.plugin.flushStore();
+    } finally {
+      clock.mockRestore();
+    }
+
+    // Then a hint is saved without replaying a queued state transition.
+    expect((await store.load({ namespace, codeVersion: "A", endpointKey: "author" }))?.entities.Author.fields).toEqual({
+      firstName: true,
+    });
+  });
+
+  it("skips a queued hint if its local endpoint has deoptimized", async () => {
+    // Given an unrelated endpoint whose save is holding the background writer.
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    const blocked = new Deferred<void>();
+    const release = new Deferred<void>();
+    const next = worker("A", {
+      store: {
+        load: (key) => store.load(key),
+        save: async (update) => {
+          if (update.endpointKey === "blocker") {
+            blocked.resolve();
+            await release.promise;
+          }
+          await store.save(update);
+        },
+      },
+    });
+    for (let i = 0; i < 4; i++) await invoke(next.plugin, readFirstName, "blocker");
+    await blocked.promise;
+    // And the author endpoint settles while its publication is queued behind that save.
+    for (let i = 0; i < 4; i++) await invoke(next.plugin, readFirstName);
+
+    // When the author endpoint discovers lastName before the writer reaches it.
+    try {
+      await invoke(next.plugin, readLastName);
+    } finally {
+      release.resolve();
+    }
+    await next.plugin.flushStore();
+
+    // Then a profile that is now learning is not published as a settled hint.
+    expect(await store.load({ namespace, codeVersion: "A", endpointKey: "author" })).toBeUndefined();
   });
 
   /** Creates a worker with a shared deployment identity and isolated L1. */
@@ -535,15 +559,15 @@ function invoke<T>(plugin: ExactColumnsPlugin, fn: (em: EntityManager) => Promis
   });
 }
 
-/** Settle a fresh profile, draining writes so another worker can observe each transition. */
+/** Settle a fresh profile and finish its best-effort hint publication. */
 async function learn(
   plugin: ExactColumnsPlugin,
   fn: (em: EntityManager) => Promise<unknown> = readFirstName,
 ): Promise<void> {
   for (let i = 0; i < 4; i++) {
     await invoke(plugin, fn);
-    await plugin.flushStore();
   }
+  await plugin.flushStore();
 }
 
 /** The unchanged author endpoint used across deployments. */

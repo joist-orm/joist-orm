@@ -343,9 +343,9 @@ export class ExactColumnsPlugin extends Plugin {
    * Marks the invocation as having committed writes so a later missing-column error cannot replay them.
    * I.e. reading a missed field after `em.flush()` fails this call but still widens the next call.
    */
-  afterCommit(): void {
+  afterCommit(hadWrites: boolean): void {
     const scope = scopes.getStore();
-    if (scope) scope.flushed = true;
+    if (scope && hadWrites) scope.flushed = true;
   }
 
   /** Forked EMs keep the same plugin instance, i.e. so their partial entities stay guarded. */

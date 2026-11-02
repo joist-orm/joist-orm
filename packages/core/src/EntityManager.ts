@@ -3178,7 +3178,7 @@ export interface EntityManagerInternalApi {
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
 
   hooks: Record<EntityManagerHook, HookFn<any>[]>;
-  /** ORM writes in the current outer transaction; reset on begin, observed only after commit. */
+  /** ORM writes in the current transaction; reset on begin, observed only after commit. */
   transactionHasWrites?: boolean;
   rm: ReactionsManager;
   indexManager: IndexManager;
@@ -3410,10 +3410,9 @@ export function driverBeforeCommit<TXN>(em: EntityManager<any, any, TXN>, txn: T
 export function driverAfterCommit<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
   const api = getEmInternalApi(em);
   // afterWrite runs before commit rules and hooks, which can still roll the transaction back.
-  if (api.transactionHasWrites) {
-    api.transactionHasWrites = false;
-    api.pluginManager.afterCommit();
-  }
+  const hadWrites = api.transactionHasWrites ?? false;
+  api.transactionHasWrites = false;
+  api.pluginManager.afterCommit(hadWrites);
   return Promise.all(api.hooks.afterCommit.map((fn) => fn(em, txn)));
 }
 

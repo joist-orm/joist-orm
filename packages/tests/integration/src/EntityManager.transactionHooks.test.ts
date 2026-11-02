@@ -224,4 +224,51 @@ describe("EntityManager.transactionHooks", () => {
       expect(queries).toEqual(["BEGIN;", "COMMIT;"]);
     },
   );
+  it("reports committed ORM writes to plugins before application callbacks", async () => {
+    // Given a new author and a plugin observing committed writes.
+    const em = newEntityManager();
+    newAuthor(em);
+    const commits: boolean[] = [];
+    class ObserveCommit extends Plugin {
+      /** Records whether the committed transaction flushed ORM writes. */
+      afterCommit(hadWrites: boolean): void {
+        commits.push(hadWrites);
+      }
+    }
+    em.addPlugin(new ObserveCommit());
+    // And an application callback observing the plugin's notification.
+    let observed: boolean[] = [];
+    em.afterCommit(() => {
+      observed = [...commits];
+    });
+
+    // When the author is committed.
+    await em.flush();
+
+    // Then the application callback sees the plugin's committed-write notification.
+    expect(observed).toEqual([true]);
+  });
+
+  it("reports no ORM writes for an empty commit after a writing transaction", async () => {
+    // Given a plugin observing transactions on an EntityManager with a new author.
+    const em = newEntityManager();
+    newAuthor(em);
+    const commits: boolean[] = [];
+    class ObserveCommit extends Plugin {
+      /** Records write presence separately for each committed transaction. */
+      afterCommit(hadWrites: boolean): void {
+        commits.push(hadWrites);
+      }
+    }
+    em.addPlugin(new ObserveCommit());
+    // And a hook requiring a transaction even when there are no entity changes.
+    em.beforeCommit(() => {}, { forceTransaction: true });
+
+    // When the author is committed and then a write-less transaction commits.
+    await em.flush();
+    await em.flush();
+
+    // Then the second commit notifies the plugin without inheriting the first transaction's writes.
+    expect(commits).toEqual([true, false]);
+  });
 });

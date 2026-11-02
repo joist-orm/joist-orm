@@ -3844,7 +3844,8 @@ export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: 
     // Ideally, we could only go through the serde for data that has actually changed since the last time it was
     // fetched from the db and just use the row value for everything else.  Unfortunately, we lose track of which
     // fields are modified on flush. So we have to assume that anything present in `data` is a change and push it
-    // through the serde.
+    // through the serde. Otherwise, copy the raw value only if rowData has the column: narrowed
+    // SELECTs no longer guarantee that every column was fetched.
     if (field.fieldName in originalData || field.fieldName in data) {
       // If our field is in originalData, then the field has been changed since flush. Our `row` should
       // reflect what would come from the db if we queried it right now, so use originalData when present

@@ -11,10 +11,11 @@ import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
 /**
- * Distinguishes `em.refresh` from ordinary loads so ExactColumnsPlugin leaves its projection intact.
+ * Distinguishes `em.refresh` from ordinary loads so ExactColumnsPlugin does not remove columns from refresh queries.
  *
- * Refresh overwrites cached fields directly through their serdes, bypassing `beforeGetField`.
- * Setters can cache fields that the endpoint has never learned as database reads.
+ * With ExactColumnsPlugin, application setters can cache fields the endpoint has never read,
+ * so those fields may be absent from its learned columns. Refresh then replaces those cached
+ * values directly through their serdes, bypassing `beforeGetField`.
  * I.e. an Author profile uses only `firstName`, but `author.lastName = "temporary"` caches
  * `lastName` before `em.refresh(author)` discards that edit. Narrowing refresh to the profile
  * would omit `last_name`, so its serde could cache `undefined` instead of the database value.

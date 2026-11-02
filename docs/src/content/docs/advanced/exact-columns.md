@@ -7,7 +7,7 @@ sidebar:
 
 Joist normally issues `SELECT a.*` when loading entities, because it can't statically know which getters your code will call later.
 
-The `ExactColumnsPlugin` is an opt-in plugin that learns this at runtime: it observes which fields each endpoint actually reads, and then narrows that endpoint's SELECTs to only the used columns, i.e. skipping wide `jsonb`/`text` columns an endpoint never touches (and just any column that is not actively read by the endpoint).
+The `ExactColumnsPlugin` is an opt-in plugin that learns this at runtime: it observes which fields each endpoint actually reads, and then narrows that endpoint's SELECTs to only the used columns, i.e. skipping large `jsonb`/`text` columns an endpoint never touches (and just any column that is not actively read by the endpoint).
 
 ## Setup
 
@@ -19,8 +19,9 @@ import { ExactColumnsPlugin } from "joist-orm";
 // One plugin app-wide, i.e. in a top-level module
 export const exactColumns = new ExactColumnsPlugin();
 
-// Use a stable key for the operation/query structure.
+// Showing a concrete example around /authors/:id, but ideally instrument all endpoints with middleware.
 app.get("/authors/:id", (req, res) =>
+  // Use a stable key for the operation/query structure.
   exactColumns.track("GET /authors/:id", async () => {
     // Create a fresh EntityManager on each attempt, including the retry.
     const em = new EntityManager(ctx, { driver });
@@ -46,7 +47,11 @@ The plugin uses two modes, learning and narrowed, with self-healing returning it
 
    The top-level `track` catches it, falls back to "learning mode", and retries once with full rows.
 
-The auto-retry only happens if the invocation hasn't flushed yet — a missing-column error *after* a committed `em.flush` propagates (failing that one request) rather than re-executing the committed writes, and the widened profile still fixes the next invocation. A missing-column error *during* a flush aborts that flush's transaction, so nothing commits and the retry stays safe.
+The auto-retry only happens if the invocation hasn't committed writes yet, so retrying will not duplicate those writes. A missing-column error *during* a flush aborts that flush's transaction; if no earlier flush committed writes, the invocation can still retry.
+
+A missing-column error *after* a committed `em.flush` does **not** retry and fails the whole request, rather than re-executing and potentially duplicating writes. The profile still widens to include the missing field for subsequent invocations.
+
+This means that `ExactColumnsPlugin` works best with endpoints that consistently use a single `em.flush`, after their reads. A single flush is generally best practice anyway to maintain atomicity; reads after that flush can still encounter a missing column that cannot be retried.
 
 ```typescript
 const plugin = new ExactColumnsPlugin({
@@ -57,7 +62,7 @@ const plugin = new ExactColumnsPlugin({
 
 :::info[Tip]
 
-Joist uses a JIT-style optimization/deopt algorithm: each invocation that hits a missing-column error increases the settling threshold, up to a limit. Sustained clean narrowed calls gradually reduce it.
+When failures happen, Joist uses a JIT-style optimization/deopt algorithm: each invocation that hits a missing-column error increases the initially low settling threshold. Code with many dynamic branches therefore needs more proof—more successive clean learning runs—to enter narrowed mode again. Sustained clean narrowed calls gradually reduce the threshold.
 
 This lets us initially aggressively optimize/narrow with the assumption most endpoints are stable, but then automatically progressively back off for dynamic endpoints, all without any tedious/brittle manual configuration.
 

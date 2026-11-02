@@ -62,6 +62,8 @@ interface PluginMethods {
   afterValidate?(entities: readonly Entity[]): Promise<void> | void;
 
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
+  /** Called after the outer transaction commits ORM writes, before application afterCommit callbacks. */
+  afterCommit?(): void;
 }
 
 const syncPluginMethods = [
@@ -70,6 +72,7 @@ const syncPluginMethods = [
   "beforeFind",
   "afterFind",
   "afterWrite",
+  "afterCommit",
 ] as const satisfies readonly (keyof PluginMethods)[];
 const asyncPluginMethods = ["beforeValidate", "afterValidate"] as const satisfies readonly (keyof PluginMethods)[];
 const emsSymbol = Symbol("ems");
@@ -192,4 +195,5 @@ export class PluginManager implements Required<PluginMethods> {
   beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
+  afterCommit(): void {}
 }

@@ -244,7 +244,9 @@ export class ExactColumnsPlugin extends Plugin {
       // Record before deciding whether retry is safe, so even a post-flush failure fixes the next call.
       // I.e. a missed `age` column is retained even when the current write cannot be replayed.
       recordField(profile, getMetadata(err.entity).cstr, err.fieldName);
-      deoptimize(profile);
+      // Concurrent requests from the same narrowed epoch can all miss before their retries finish.
+      // Widen for every discovery, but charge that failed speculation only once.
+      if (scope.epoch >= profile.deoptimizedEpoch) deoptimize(profile);
       this.#onMissingColumn?.(err);
       // Once a flush has written, re-running `fn` would re-execute the committed mutations
       // (i.e. double-writing), so fail this invocation loudly instead of silently retrying
@@ -360,7 +362,7 @@ export class ExactColumnsPlugin extends Plugin {
    * Marks the invocation as having committed writes so a later missing-column error cannot replay them.
    * I.e. reading a missed field after `em.flush()` fails this call but still widens the next call.
    */
-  afterWrite(): void {
+  afterCommit(): void {
     const scope = scopes.getStore();
     if (scope) scope.flushed = true;
   }
@@ -376,12 +378,14 @@ interface EndpointProfile {
   origin: ProfileOrigin;
   /** Local field/invalidation epoch prevents in-flight calls settling a profile they did not observe. */
   epoch: number;
+  /** Epoch of the latest deoptimization, so concurrent misses do not repeatedly increase backoff. */
+  deoptimizedEpoch: number;
   changed?: (invalidate: boolean, settled: boolean, previousMode?: ExactColumnsProfileMode) => void;
   /** The mode new invocations snapshot when they start. */
   mode: ExactColumnsProfileMode;
   /** Consecutive successful learning calls that added no fields. */
   stableRuns: number;
-  /** Recent missing-column errors; each level selects a larger settling target. */
+  /** Recent failed narrowed profiles; concurrent misses from one profile count as one level. */
   instability: number;
   /** Successful narrowed calls toward forgetting one instability level. */
   cleanRuns: number;
@@ -401,7 +405,7 @@ interface TrackScope {
   /** The profile mode captured when this invocation started. */
   mode: ExactColumnsProfileMode;
   epoch: number;
-  /** Whether this invocation has flushed writes, i.e. after which a missing-column error must not auto-retry. */
+  /** Whether this invocation committed writes; an inner flush alone does not prevent retrying. */
   flushed: boolean;
   /** Whether this invocation added a field to the profile's learned union. */
   discoveredNewField: boolean;
@@ -418,7 +422,7 @@ interface NarrowedColumns {
 const scopes = new AsyncLocalStorage<TrackScope>();
 
 /**
- * No-growth observations required after successive missing-column errors.
+ * No-growth observations required after successive deoptimizations.
  * I.e. a new key settles after 3 stable calls, while two recent faults raise that target to 8.
  */
 const stableRunsByInstability = [3, 5, 8, 13, 21, 34] as const;
@@ -494,6 +498,7 @@ function deoptimize(profile: EndpointProfile): void {
   profile.cleanRuns = 0;
   profile.instability++;
   profile.epoch++;
+  profile.deoptimizedEpoch = profile.epoch;
   profile.changed?.(true, false, previousMode);
 }
 
@@ -533,6 +538,7 @@ function createProfile(key: string): EndpointProfile {
     key,
     origin: "local",
     epoch: 0,
+    deoptimizedEpoch: 0,
     mode: "learning",
     stableRuns: 0,
     instability: 0,

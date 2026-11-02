@@ -62,7 +62,7 @@ const plugin = new ExactColumnsPlugin({
 
 :::info[Tip]
 
-When failures happen, Joist uses a JIT-style optimization/deopt algorithm: each invocation that hits a missing-column error increases the initially low settling threshold. Code with many dynamic branches therefore needs more proof—more successive clean learning runs—to enter narrowed mode again. Sustained clean narrowed calls gradually reduce the threshold.
+When failures happen, Joist uses a JIT-style optimization/deopt algorithm: each failed narrowed profile increases the initially low settling threshold. Concurrent requests that miss fields from the same narrowed profile count as one deoptimization. Code with many dynamic branches therefore needs more proof—more successive clean learning runs—to enter narrowed mode again. Sustained clean narrowed calls gradually reduce the threshold.
 
 This lets us initially aggressively optimize/narrow with the assumption most endpoints are stable, but then automatically progressively back off for dynamic endpoints, all without any tedious/brittle manual configuration.
 
@@ -195,7 +195,9 @@ An inherited seed earns settled status after three successful, no-growth invocat
 
 Same-version workers merge field sets atomically. Revisions prevent stale workers from marking a wider or invalidated profile settled. Stability counters stay local. Active endpoints refresh their shared union and renew their version entry's TTL in the background, approximately once per minute with jitter. Remote invalidations return a worker to full-row learning. There is a propagation window during which another worker may independently encounter the same missing field.
 
-Only earned settlement publishes a seed; ordinary TTL renewal does not. The last settled publication wins, including during rolling deployments. Seeds are replaced rather than unioned across historical versions, although inherited unused fields can remain in the profile. Change the namespace to explicitly reset learning. Unknown cached fields/entities are rejected; added model fields can be discovered normally. A same-version incompatible profile disables persistence for that endpoint in the current process rather than republishing incompatible data.
+Only earned settlement replaces a seed; refreshing a settled version renews the existing seed's TTL without changing its contents. The last settled publication wins, including during rolling deployments. Seeds are replaced rather than unioned across historical versions, although inherited unused fields can remain in the profile. Change the namespace to explicitly reset learning. Unknown cached fields/entities are rejected; added model fields can be discovered normally. A same-version incompatible or corrupt profile disables persistence for that endpoint in the current process rather than republishing incompatible data or delaying other endpoints' cache access.
+
+Expiration or eviction can lose observations and revision history. A worker may then inherit an older, narrower seed and encounter another missing column. L2 is a best-effort optimization, not a durable record of every discovered field; the field guard and retry rules still apply after cache loss.
 
 ### Availability and lifecycle
 
@@ -222,6 +224,7 @@ Use `lookupSource`, `profileOrigin`, and `startingMode` as low-cardinality reque
 
 - **Entity reads must happen inside the tracked callback.** Return response data rather than entities that will be read after `track()` returns; reads outside the scope do not contribute to the profile and cannot trigger a retry.
 - **Each `track` invocation must create its own `EntityManager`** (the usual per-request pattern). A retry due to a missing-column error re-invokes your whole function, and an `EntityManager` whose flush aborted is not reusable; similarly, one `EntityManager` must not span two `track` scopes.
+- **All work from an attempt must finish before its callback returns or throws.** `Promise.all` rejects as soon as one task fails, leaving sibling tasks running; a sibling could commit writes after `track` has already decided to retry. Drain parallel tasks with `Promise.allSettled` before rethrowing an error, and do not start detached work inside `track`. The Envelop adapter drains its GraphQL execution automatically.
 - **Pre-flush retries re-run your endpoint**: database writes are protected automatically (no retry after a committed flush, per above), but Joist can't see non-database side effects — an email or queue publish performed *before* a missing-column error will re-run on the retry. Keep such effects after your reads (or idempotent), or accept the rare one-time-per-branch repeat. Aggregate `onTrack`'s `retried` and `missingColumnFailure` outcomes to see how often either path fires.
 - **Profiles are in-memory by default**, so each process restart re-learns from scratch unless optional persistence is configured. Stable local endpoints narrow after the initial field-discovery invocation and three no-growth observations; settled L2 profiles narrow immediately.
 - Don't swallow `MissingColumnError` in broad `try/catch`es — re-reads keep throwing (the value is never cached), and `track` needs to see the error to widen the profile.

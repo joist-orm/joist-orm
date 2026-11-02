@@ -272,6 +272,7 @@ export type {
   ExactColumnsCacheEvent,
 } from "./plugins/ExactColumnsStoreAdapter.ts";
 export { RedisExactColumnsStore, type RedisExactColumnsStoreOpts } from "./plugins/RedisExactColumnsStore.ts";
+export { ExactColumnsProfileRejectedError } from "./plugins/ExactColumnsStoreAdapter.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,

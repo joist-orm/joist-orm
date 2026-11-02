@@ -39,6 +39,9 @@ export interface ExactColumnsStoreAdapter {
   }>;
 }
 
+/** A bad profile disables only its endpoint; it does not indicate a cache connection outage. */
+export class ExactColumnsProfileRejectedError extends Error {}
+
 export interface ExactColumnsCacheEvent {
   endpointKey: string;
   operation: "load" | "merge" | "refresh" | "adopt" | "promote" | "settle" | "deoptimize" | "reject";
@@ -63,4 +66,41 @@ export interface ExactColumnsStoreOpts {
   maxPending?: number;
   /** Synchronous, exception-isolated telemetry. */
   onCacheEvent?: (event: ExactColumnsCacheEvent) => void;
+}
+
+/**
+ * Validate adapter data before it can control narrowing or escape from a background task.
+ *
+ * Custom adapters have the same runtime boundary as decoded Redis data. A malformed response is
+ * an endpoint-specific rejection, not evidence that the cache connection is down.
+ */
+export function validateStoredProfile(value: unknown): asserts value is ExactColumnsStoredProfile {
+  const profile = value as ExactColumnsStoredProfile;
+  if (
+    !profile ||
+    typeof profile !== "object" ||
+    !profile.entities ||
+    Array.isArray(profile.entities) ||
+    typeof profile.entities !== "object" ||
+    !["learning", "settled"].includes(profile.state) ||
+    !Number.isSafeInteger(profile.instability) ||
+    profile.instability < 0 ||
+    typeof profile.revision !== "string" ||
+    !profile.revision ||
+    typeof profile.codeVersion !== "string" ||
+    !Number.isFinite(profile.updatedAt)
+  )
+    throw new ExactColumnsProfileRejectedError("Invalid exact-columns profile");
+  for (const entity of Object.values(profile.entities)) {
+    if (
+      !entity ||
+      typeof entity.table !== "string" ||
+      !entity.fields ||
+      typeof entity.fields !== "object" ||
+      Array.isArray(entity.fields) ||
+      Object.values(entity.fields).some((v) => v !== true)
+    ) {
+      throw new ExactColumnsProfileRejectedError("Invalid exact-columns entity profile");
+    }
+  }
 }

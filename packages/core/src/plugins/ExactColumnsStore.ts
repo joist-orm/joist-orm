@@ -1,8 +1,10 @@
-import type {
-  ExactColumnsCacheEvent,
-  ExactColumnsSnapshot,
-  ExactColumnsStoreOpts,
-  ExactColumnsStoredProfile,
+import {
+  type ExactColumnsCacheEvent,
+  ExactColumnsProfileRejectedError,
+  type ExactColumnsSnapshot,
+  type ExactColumnsStoreOpts,
+  type ExactColumnsStoredProfile,
+  validateStoredProfile,
 } from "./ExactColumnsStoreAdapter.ts";
 
 /** Keeps cache I/O out of field reads and query preparation. */
@@ -41,7 +43,10 @@ export class ExactColumnsStore {
   private readonly pending = new Set<string>();
   private readonly opts: ExactColumnsStoreOpts;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private writing: Promise<void> | undefined;
+  private writingKey: string | undefined;
+  private readonly rejected = new Set<string>();
   private retryAt = 0;
   private failures = 0;
   private closed = false;
@@ -59,11 +64,12 @@ export class ExactColumnsStore {
 
   /** Cold reads are bounded; their late results are never applied to a locally learning endpoint. */
   async load(key: string) {
-    return this.run(key, "load", () => this.opts.store.load(this.key(key)));
+    return this.run(key, "load", () => this.loadProfiles(key));
   }
 
   /** Register only after initialization, so background refresh cannot replace a half-loaded profile. */
   register(key: string, endpoint: PersistedEndpoint, revision?: string): void {
+    if (this.rejected.has(key)) return;
     this.entries.set(key, {
       endpoint,
       revision,
@@ -117,6 +123,7 @@ export class ExactColumnsStore {
   async close(): Promise<void> {
     this.closed = true;
     clearTimeout(this.timer);
+    clearTimeout(this.retryTimer);
     await this.flush();
     this.pending.clear();
   }
@@ -140,13 +147,37 @@ export class ExactColumnsStore {
     this.startWrites();
   }
 
-  /** A single writer bounds concurrency and preserves each worker's invalidation/publication order. */
+  /**
+   * Start one writer to preserve each worker's invalidation/publication order.
+   *
+   * Retrying queued writes has its own deadline: waiting for the periodic refresh after a brief
+   * outage would leave other workers using an invalidated profile for another minute.
+   */
   private startWrites(): void {
-    if (this.writing || this.pending.size === 0 || Date.now() < this.retryAt) return;
+    if (this.writing || this.pending.size === 0) return;
+    if (Date.now() < this.retryAt) {
+      if (!this.retryTimer && !this.closed) {
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = undefined;
+          this.startWrites();
+        }, this.retryAt - Date.now());
+        this.retryTimer.unref();
+      }
+      return;
+    }
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
     this.writing = Promise.resolve()
       .then(() => this.writePending())
+      .catch((error) => {
+        // Even an unexpected adapter/serialization failure must not become an unhandled rejection.
+        if (this.writingKey !== undefined) this.reject(this.writingKey, error);
+      })
       .finally(() => {
         this.writing = undefined;
+        this.writingKey = undefined;
+        // An endpoint may have queued a change after the loop ended but before this callback ran.
+        if (!this.closed) this.startWrites();
       });
   }
 
@@ -159,21 +190,21 @@ export class ExactColumnsStore {
   private async writePending(): Promise<void> {
     while (this.pending.size > 0 && Date.now() >= this.retryAt) {
       const key = this.pending.values().next().value!;
+      this.writingKey = key;
       this.pending.delete(key);
       const entry = this.entries.get(key)!;
       // Provisional profiles have not earned a version entry yet, but must still see peer invalidations.
       if (entry.refresh && entry.endpoint.isProvisional()) {
-        const loaded = await this.run(key, "refresh", () => this.opts.store.load(this.key(key)));
+        const loaded = await this.run(key, "refresh", () => this.loadProfiles(key));
         if (!loaded) {
+          if (this.rejected.has(key)) continue;
           this.enqueue(key);
           break;
         }
         if (loaded.version) {
           entry.revision = loaded.version.revision;
           if (!entry.endpoint.merge(loaded.version, loaded.version.state === "learning")) {
-            this.emit({ endpointKey: key, operation: "reject", result: "error" });
-            this.entries.delete(key);
-            this.pending.delete(key);
+            this.reject(key, new ExactColumnsProfileRejectedError("Profile does not match the running model"));
           }
         }
         continue;
@@ -184,16 +215,22 @@ export class ExactColumnsStore {
       entry.invalidate = false;
       entry.publishSeed = false;
       const snapshot = entry.endpoint.snapshot();
-      const result = await this.run(key, entry.refresh ? "refresh" : "merge", () =>
-        this.opts.store.merge({
+      const result = await this.run(key, entry.refresh ? "refresh" : "merge", async () => {
+        const merged = await this.opts.store.merge({
           ...this.key(key),
           snapshot,
           expectedRevision: entry.revision,
           invalidate,
           publishSeed,
-        }),
-      );
+        });
+        if (!merged || typeof merged.conflict !== "boolean") {
+          throw new ExactColumnsProfileRejectedError("Invalid exact-columns merge response");
+        }
+        validateStoredProfile(merged.profile);
+        return merged;
+      });
       if (!result) {
+        if (this.rejected.has(key)) continue;
         entry.invalidate ||= invalidate;
         entry.publishSeed ||= publishSeed;
         this.enqueue(key, entry.invalidate);
@@ -204,10 +241,8 @@ export class ExactColumnsStore {
         (result.conflict && result.profile.state === "learning") ||
         (snapshot.state === "settled" && result.profile.state === "learning");
       if (!entry.endpoint.merge(result.profile, reset)) {
-        this.emit({ endpointKey: key, operation: "reject", result: "error" });
         // Keep the local learner, but do not propagate a same-build model mismatch into new seeds.
-        this.entries.delete(key);
-        this.pending.delete(key);
+        this.reject(key, new ExactColumnsProfileRejectedError("Profile does not match the running model"));
         continue;
       }
       if (result.conflict) this.emit({ endpointKey: key, operation: "merge", result: "conflict" });
@@ -221,7 +256,7 @@ export class ExactColumnsStore {
     const interval = (this.opts.refreshIntervalMs ?? 60_000) * (0.8 + Math.random() * 0.4);
     this.timer = setTimeout(() => {
       this.timer = undefined;
-      // Merge also reads the latest union, and renews only the version key's TTL.
+      // Merge also reads the latest union and renews active profiles without replacing the seed.
       for (const [key, entry] of this.entries) {
         if (!entry.active) continue;
         entry.active = false;
@@ -272,6 +307,10 @@ export class ExactColumnsStore {
       this.emit({ endpointKey: key, operation, result: "success", durationMs: Date.now() - start });
       return result;
     } catch (error) {
+      if (error instanceof ExactColumnsProfileRejectedError) {
+        this.reject(key, error);
+        return undefined;
+      }
       this.retryAt = Date.now() + Math.min(30_000, 1000 * 2 ** Math.min(this.failures++, 5));
       this.emit({
         endpointKey: key,
@@ -284,6 +323,25 @@ export class ExactColumnsStore {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Validate custom-adapter reads inside the same error boundary as connection failures. */
+  private async loadProfiles(key: string) {
+    const profiles = await this.opts.store.load(this.key(key));
+    if (!profiles || typeof profiles !== "object" || Array.isArray(profiles)) {
+      throw new ExactColumnsProfileRejectedError("Invalid exact-columns load response");
+    }
+    if (profiles.version !== undefined) validateStoredProfile(profiles.version);
+    if (profiles.seed !== undefined) validateStoredProfile(profiles.seed);
+    return profiles;
+  }
+
+  /** A corrupt profile stops only its endpoint's store work; other endpoints can still use L2. */
+  private reject(key: string, error: unknown): void {
+    this.emit({ endpointKey: key, operation: "reject", result: "error", error });
+    this.rejected.add(key);
+    this.entries.delete(key);
+    this.pending.delete(key);
   }
 
   /** Construct the application-scoped identity without exposing Redis key details to the plugin. */

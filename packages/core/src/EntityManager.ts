@@ -2171,6 +2171,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
             if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
+              getEmInternalApi(this).transactionHasWrites = true;
               // Accumulate the commit-rule-relevant subset before the RQF loop clobbers/resets these
               collectCommitRuleTodos(entityTodos, joinRowTodos);
             }
@@ -3177,6 +3178,8 @@ export interface EntityManagerInternalApi {
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
 
   hooks: Record<EntityManagerHook, HookFn<any>[]>;
+  /** ORM writes in the current outer transaction; reset on begin, observed only after commit. */
+  transactionHasWrites?: boolean;
   rm: ReactionsManager;
   indexManager: IndexManager;
   preloader: PreloadPlugin | undefined;
@@ -3392,6 +3395,7 @@ export async function invokeRule(
 }
 
 export function driverBeforeBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  getEmInternalApi(em).transactionHasWrites = false;
   return Promise.all(getEmInternalApi(em).hooks.beforeBegin.map((fn) => fn(em, txn)));
 }
 
@@ -3404,7 +3408,13 @@ export function driverBeforeCommit<TXN>(em: EntityManager<any, any, TXN>, txn: T
 }
 
 export function driverAfterCommit<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em).hooks.afterCommit.map((fn) => fn(em, txn)));
+  const api = getEmInternalApi(em);
+  // afterWrite runs before commit rules and hooks, which can still roll the transaction back.
+  if (api.transactionHasWrites) {
+    api.transactionHasWrites = false;
+    api.pluginManager.afterCommit();
+  }
+  return Promise.all(api.hooks.afterCommit.map((fn) => fn(em, txn)));
 }
 
 async function runHookOnTodos(

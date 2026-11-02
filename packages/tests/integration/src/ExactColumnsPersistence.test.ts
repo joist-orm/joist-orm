@@ -376,6 +376,136 @@ describe("ExactColumnsPersistence", () => {
     expect((await store.load(key)).version?.state).toBe("learning");
   });
 
+  it("renews an active seed without replacing its contents", async () => {
+    // Given a settled author seed that is close to expiring.
+    await insertAuthor({ first_name: "a1" });
+    await learn(worker("A").plugin);
+    const key = { namespace, codeVersion: "A", endpointKey: "author" };
+    const profile = (await store.load(key)).version!;
+    const seedKey = [...keys].find((value) => value.endsWith(":seed"))!;
+    await client.expire(seedKey, 5);
+
+    // When an active worker renews its settled profile without publishing a new seed.
+    await store.merge({
+      ...key,
+      snapshot: profile,
+      expectedRevision: profile.revision,
+      invalidate: false,
+      publishSeed: false,
+    });
+
+    // Then the next deployment can still inherit the seed after the original expiry window.
+    expect(await client.ttl(seedKey)).toBeGreaterThan(5);
+  });
+
+  it("isolates a model mismatch during a merge from other endpoint lookups", async () => {
+    // Given two learned endpoints and a warm worker for the author endpoint.
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    const seed = worker("A");
+    await learn(seed.plugin);
+    const key = { namespace, codeVersion: "A", endpointKey: "author" };
+    const cached = (await store.load(key)).version!;
+    const authorKey = [...keys].find((value) => value.includes(":version:"))!;
+    for (let i = 0; i < 4; i++) {
+      await invoke(seed.plugin, readFirstName, "other");
+      await seed.plugin.flushStore();
+    }
+    const next = worker("A");
+    await invoke(next.plugin, readFirstName);
+    // And another process corrupts the author's stored table identity.
+    cached.entities.Author.table = "renamed_authors";
+    await client.set(authorKey, JSON.stringify(cached));
+
+    // When a new field forces the warm worker to merge against that incompatible model.
+    await invoke(next.plugin, readLastName);
+    await next.plugin.flushStore();
+    await invoke(next.plugin, readFirstName, "other");
+
+    // Then the unaffected endpoint still loads its settled profile from L2.
+    expect(next.outcomes.at(-1)).toMatchObject({
+      endpointKey: "other",
+      lookupSource: "l2_version",
+      startingMode: "narrow",
+    });
+  });
+
+  it("isolates corrupt cache JSON from other endpoint lookups", async () => {
+    // Given two settled endpoints sharing the same Valkey store.
+    await insertAuthor({ first_name: "a1" });
+    const seed = worker("A");
+    await learn(seed.plugin);
+    const authorKey = [...keys].find((value) => value.includes(":version:"))!;
+    for (let i = 0; i < 4; i++) {
+      await invoke(seed.plugin, readFirstName, "other");
+      await seed.plugin.flushStore();
+    }
+    // And the author profile contains invalid JSON.
+    await client.set(authorKey, "broken JSON");
+    const next = worker("A");
+
+    // When a cold worker encounters that profile and then serves the other endpoint.
+    await invoke(next.plugin, readFirstName);
+    await next.plugin.flushStore();
+    await invoke(next.plugin, readFirstName, "other");
+
+    // Then bad endpoint data has not started connection backoff for the whole store.
+    expect(next.outcomes.at(-1)).toMatchObject({
+      endpointKey: "other",
+      lookupSource: "l2_version",
+      startingMode: "narrow",
+    });
+  });
+
+  it("contains malformed custom-adapter replies inside the store error boundary", async () => {
+    // Given real author reads and an adapter that returns an invalid merge result.
+    await insertAuthor({ first_name: "a1" });
+    const next = worker("A", {
+      store: {
+        load: (key) => store.load(key),
+        merge: async () => ({}) as Awaited<ReturnType<ExactColumnsStoreAdapter["merge"]>>,
+      },
+    });
+
+    // When the first discovery is persisted and the application drains background work.
+    await invoke(next.plugin, readFirstName);
+    await next.plugin.flushStore();
+
+    // Then the bad reply is reported rather than escaping as an unhandled rejection.
+    expect(next.events.filter((event) => event.operation === "reject")).toMatchObject([
+      { endpointKey: "author", result: "error" },
+    ]);
+  });
+
+  it("retries an invalidation after backoff without waiting for the refresh interval", async () => {
+    // Given a settled author profile and a one-time cache failure on the next write.
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await learn(worker("A").plugin);
+    const saved = new Deferred<void>();
+    let fail = true;
+    const next = worker("A", {
+      refreshIntervalMs: 60_000,
+      store: {
+        load: (key) => store.load(key),
+        merge: async (update) => {
+          if (fail) {
+            fail = false;
+            throw new Error("connection interrupted");
+          }
+          const result = await store.merge(update);
+          saved.resolve();
+          return result;
+        },
+      },
+    });
+
+    // When a new field deoptimizes the profile and the background write initially fails.
+    await invoke(next.plugin, readLastName);
+    await saved.promise;
+
+    // Then the queued invalidation reaches Valkey after backoff without an explicit drain or new request.
+    expect((await store.load({ namespace, codeVersion: "A", endpointKey: "author" })).version?.state).toBe("learning");
+  });
+
   /** Creates a worker with a shared deployment identity and isolated L1. */
   function worker(codeVersion: string, overrides: Partial<ExactColumnsStoreOpts> = {}) {
     const outcomes: ExactColumnsTrackOutcome[] = [];
@@ -397,8 +527,8 @@ describe("ExactColumnsPersistence", () => {
 });
 
 /** Runs a request with a fresh EM on each attempt, including a missing-column retry. */
-function invoke<T>(plugin: ExactColumnsPlugin, fn: (em: EntityManager) => Promise<T>): Promise<T> {
-  return plugin.track("author", () => {
+function invoke<T>(plugin: ExactColumnsPlugin, fn: (em: EntityManager) => Promise<T>, key = "author"): Promise<T> {
+  return plugin.track(key, () => {
     const em = newEntityManager();
     em.addPlugin(plugin);
     return fn(em);

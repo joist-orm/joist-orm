@@ -816,7 +816,123 @@ describe("ExactColumnsPlugin", () => {
       columnsOmitted: 2,
     });
   });
+  it("retries a missing column in beforeCommit after the write rolls back", async () => {
+    // Given a settled rename endpoint that has never read age.
+    await insertAuthor({ first_name: "a1", last_name: "l1", age: 40 });
+    const { plugin, outcomes } = observe();
+    await learnRename(plugin);
+
+    // When a newly added beforeCommit callback reads age after the UPDATE but before COMMIT.
+    await invoke(plugin, "rename-author", async (em) => {
+      const author = await em.load(Author, "a:1");
+      author.firstName = "changed";
+      em.beforeCommit(() => {
+        void author.age;
+      });
+      await em.flush();
+    });
+
+    // Then the rolled-back attempt can retry safely with full rows.
+    expect(outcomes.at(-1)).toMatchObject({ optimized: true, retried: true, missingColumnFailure: false });
+  });
+
+  it("commits a rename only once when a beforeCommit read triggers a retry", async () => {
+    // Given a settled rename endpoint and a persisted name to append to.
+    await insertAuthor({ first_name: "a1", last_name: "l1", age: 40 });
+    const { plugin } = observe();
+    await learnRename(plugin);
+
+    // When a pruned age read rolls back the first attempt's rename.
+    await invoke(plugin, "rename-author", async (em) => {
+      const author = await em.load(Author, "a:1");
+      author.firstName += "!";
+      em.beforeCommit(() => {
+        void author.age;
+      });
+      await em.flush();
+    });
+
+    // Then only the retry's appended character reaches the database.
+    expect(await select("authors")).toMatchObject([{ first_name: "seeded!" }]);
+  });
+
+  it("allows retry after an inner flush when the outer transaction rolls back", async () => {
+    // Given a rename profile that omits age.
+    await insertAuthor({ first_name: "a1", last_name: "l1", age: 40 });
+    const { plugin, outcomes } = observe();
+    await learnRename(plugin);
+
+    // When a missing age read happens after flush but before the outer transaction commits.
+    await invoke(plugin, "rename-author", async (em) =>
+      em.transaction(async () => {
+        const author = await em.load(Author, "a:1");
+        author.firstName = "changed";
+        await em.flush();
+        return author.age;
+      }),
+    );
+
+    // Then an uncommitted inner flush does not block the full-row retry.
+    expect(outcomes.at(-1)).toMatchObject({ retried: true, missingColumnFailure: false });
+  });
+
+  it("allows retry after a forced transaction that committed no writes", async () => {
+    // Given a settled read-only author endpoint that omits age.
+    await insertAuthor({ first_name: "a1", age: 40 });
+    const { plugin, outcomes } = observe();
+    await settle(plugin, "read-author", async (em) => (await em.load(Author, "a:1")).firstName);
+
+    // When an empty transaction completes before the endpoint first reads age.
+    await invoke(plugin, "read-author", async (em) => {
+      const author = await em.load(Author, "a:1");
+      em.beforeCommit(() => {}, { forceTransaction: true });
+      await em.flush();
+      return author.age;
+    });
+
+    // Then there are no committed writes to prevent replaying the request.
+    expect(outcomes.at(-1)).toMatchObject({ retried: true, missingColumnFailure: false });
+  });
+
+  it("charges concurrent missing columns to the same failed speculation once", async () => {
+    // Given a firstName-only profile shared by two narrowed requests.
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    const { plugin, outcomes } = observe();
+    await settle(plugin, "read-author", async (em) => (await em.load(Author, "a:1")).firstName);
+    const loaded = new Deferred<void>();
+    let firstAttempts = 0;
+
+    // When both requests discover lastName before either full-row retry finishes.
+    await Promise.all(
+      [0, 1].map(() =>
+        invoke(plugin, "read-author", async (em) => {
+          const author = await em.load(Author, "a:1");
+          if (firstAttempts < 2) {
+            if (++firstAttempts === 2) loaded.resolve();
+            await loaded.promise;
+          }
+          return author.lastName;
+        }),
+      ),
+    );
+    // And the two retries are followed by three more stable reads, meeting the first backoff threshold.
+    for (let i = 0; i < 3; i++)
+      await invoke(plugin, "read-author", async (em) => (await em.load(Author, "a:1")).lastName);
+    await invoke(plugin, "read-author", async (em) => (await em.load(Author, "a:1")).lastName);
+
+    // Then concurrency has not inflated the settling threshold from five to eight observations.
+    expect(outcomes.at(-1)?.startingMode).toBe("narrow");
+  });
 });
+
+/** Learn fields read by renaming and flushing an author, without reading age. */
+async function learnRename(plugin: ExactColumnsPlugin): Promise<void> {
+  await settle(plugin, "rename-author", async (em) => {
+    const author = await em.load(Author, "a:1");
+    author.firstName = "seeded";
+    await em.flush();
+  });
+}
 
 /** Records public outcomes without exposing the plugin's learned state. */
 function observe(): { plugin: ExactColumnsPlugin; outcomes: ExactColumnsTrackOutcome[] } {

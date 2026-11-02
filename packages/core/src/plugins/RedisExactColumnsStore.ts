@@ -1,10 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import type {
-  ExactColumnsStoreAdapter,
-  ExactColumnsStoreKey,
-  ExactColumnsStoreUpdate,
-  ExactColumnsStoredProfile,
+import {
+  ExactColumnsProfileRejectedError,
+  type ExactColumnsStoreAdapter,
+  type ExactColumnsStoreKey,
+  type ExactColumnsStoreUpdate,
+  type ExactColumnsStoredProfile,
+  validateStoredProfile,
 } from "./ExactColumnsStoreAdapter.ts";
 
 export interface RedisExactColumnsStoreOpts {
@@ -30,7 +32,8 @@ export class RedisExactColumnsStore implements ExactColumnsStoreAdapter {
   async load(key: ExactColumnsStoreKey) {
     const keys = cacheKeys(key);
     const result = await this.sendCommand(["MGET", ...keys]);
-    if (!Array.isArray(result) || result.length !== 2) throw new Error("Invalid exact-columns MGET response");
+    if (!Array.isArray(result) || result.length !== 2)
+      throw new ExactColumnsProfileRejectedError("Invalid exact-columns MGET response");
     return { version: decode(result[0]), seed: decode(result[1]) };
   }
 
@@ -50,9 +53,11 @@ export class RedisExactColumnsStore implements ExactColumnsStoreAdapter {
       randomUUID(),
       String(this.ttlSeconds),
     ]);
-    if (!Array.isArray(result) || result.length !== 2) throw new Error("Invalid exact-columns merge response");
+    if (!Array.isArray(result) || result.length !== 2)
+      throw new ExactColumnsProfileRejectedError("Invalid exact-columns merge response");
+    if (result[0] === "rejected") throw new ExactColumnsProfileRejectedError(String(result[1]));
     const profile = decode(result[0]);
-    if (!profile) throw new Error("Missing exact-columns merge response");
+    if (!profile) throw new ExactColumnsProfileRejectedError("Missing exact-columns merge response");
     return { profile, conflict: Number(result[1]) === 1 };
   }
 }
@@ -62,7 +67,27 @@ export class RedisExactColumnsStore implements ExactColumnsStoreAdapter {
 const mergeScript = `
 local incoming = cjson.decode(ARGV[1])
 local raw = redis.call('GET', KEYS[1])
-local current = raw and cjson.decode(raw) or nil
+local current = nil
+if raw then
+  local valid, decoded = pcall(cjson.decode, raw)
+  if not valid or type(decoded) ~= 'table' or type(decoded.entities) ~= 'table'
+    or type(decoded.revision) ~= 'string' or decoded.revision == ''
+    or decoded.codeVersion ~= ARGV[5] or type(decoded.updatedAt) ~= 'number'
+    or (decoded.state ~= 'learning' and decoded.state ~= 'settled')
+    or type(decoded.instability) ~= 'number' or decoded.instability < 0
+    or decoded.instability > 9007199254740991 or decoded.instability ~= math.floor(decoded.instability) then
+    return {'rejected', 'Invalid exact-columns profile'}
+  end
+  current = decoded
+  for _, entity in pairs(current.entities) do
+    if type(entity) ~= 'table' or type(entity.table) ~= 'string' or type(entity.fields) ~= 'table' then
+      return {'rejected', 'Invalid exact-columns entity profile'}
+    end
+    for _, observed in pairs(entity.fields) do
+      if observed ~= true then return {'rejected', 'Invalid exact-columns field observation'} end
+    end
+  end
+end
 local conflict = (current and current.revision ~= ARGV[2]) or (not current and ARGV[2] ~= '')
 local grew = false
 if current then
@@ -72,7 +97,7 @@ if current then
       current.entities[name] = entity
       grew = true
     else
-      if existing.table ~= entity.table then return redis.error_reply('Exact columns model changed within codeVersion') end
+      if existing.table ~= entity.table then return {'rejected', 'Exact columns model changed within codeVersion'} end
       for field, _ in pairs(entity.fields) do
         if not existing.fields[field] then existing.fields[field] = true; grew = true end
       end
@@ -100,6 +125,9 @@ local encoded = cjson.encode(current)
 redis.call('SET', KEYS[1], encoded, 'EX', ARGV[8])
 if ARGV[4] == '1' and current.state == 'settled' and not conflict then
   redis.call('SET', KEYS[2], encoded, 'EX', ARGV[8])
+elseif current.state == 'settled' then
+  -- Keep an actively used seed alive without allowing older workers to replace its content.
+  redis.call('EXPIRE', KEYS[2], ARGV[8])
 end
 return {encoded, conflict and 1 or 0}
 `;
@@ -117,34 +145,13 @@ function cacheKeys(key: ExactColumnsStoreKey): [string, string] {
 /** Reject corrupt cache data before it can control a SELECT projection. */
 function decode(value: unknown): ExactColumnsStoredProfile | undefined {
   if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string") throw new Error("Invalid exact-columns cache value");
-  const profile = JSON.parse(value) as ExactColumnsStoredProfile;
-  if (
-    !profile ||
-    typeof profile !== "object" ||
-    !profile.entities ||
-    Array.isArray(profile.entities) ||
-    typeof profile.entities !== "object" ||
-    !["learning", "settled"].includes(profile.state) ||
-    !Number.isSafeInteger(profile.instability) ||
-    profile.instability < 0 ||
-    typeof profile.revision !== "string" ||
-    !profile.revision ||
-    typeof profile.codeVersion !== "string" ||
-    !Number.isFinite(profile.updatedAt)
-  )
-    throw new Error("Invalid exact-columns profile");
-  for (const entity of Object.values(profile.entities)) {
-    if (
-      !entity ||
-      typeof entity.table !== "string" ||
-      !entity.fields ||
-      typeof entity.fields !== "object" ||
-      Array.isArray(entity.fields) ||
-      Object.values(entity.fields).some((v) => v !== true)
-    ) {
-      throw new Error("Invalid exact-columns entity profile");
-    }
+  if (typeof value !== "string") throw new ExactColumnsProfileRejectedError("Invalid exact-columns cache value");
+  let profile: unknown;
+  try {
+    profile = JSON.parse(value);
+  } catch {
+    throw new ExactColumnsProfileRejectedError("Invalid exact-columns JSON");
   }
+  validateStoredProfile(profile);
   return profile;
 }

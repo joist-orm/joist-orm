@@ -1,7 +1,7 @@
 import type {
   ExactColumnsCacheEvent,
-  ExactColumnsPersistenceOpts,
   ExactColumnsSnapshot,
+  ExactColumnsStoreOpts,
   ExactColumnsStoredProfile,
 } from "./ExactColumnsStoreAdapter.ts";
 
@@ -39,7 +39,7 @@ interface Entry {
 export class ExactColumnsStore {
   private readonly entries = new Map<string, Entry>();
   private readonly pending = new Set<string>();
-  private readonly opts: ExactColumnsPersistenceOpts;
+  private readonly opts: ExactColumnsStoreOpts;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private writing: Promise<void> | undefined;
   private retryAt = 0;
@@ -47,7 +47,7 @@ export class ExactColumnsStore {
   private closed = false;
   private readonly outstanding = new Set<Promise<unknown>>();
 
-  constructor(opts: ExactColumnsPersistenceOpts) {
+  constructor(opts: ExactColumnsStoreOpts) {
     this.opts = opts;
     if (!opts.namespace || !opts.codeVersion)
       throw new Error("Exact columns persistence requires namespace and codeVersion");

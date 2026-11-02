@@ -16,17 +16,21 @@ import { type EntityMetadata, getMetadata } from "../EntityMetadata.ts";
 import { Plugin } from "../PluginManager.ts";
 import { ExactColumnsStore } from "./ExactColumnsStore.ts";
 import type {
-  ExactColumnsPersistenceOpts,
   ExactColumnsSnapshot,
+  ExactColumnsStoreOpts,
   ExactColumnsStoredProfile,
 } from "./ExactColumnsStoreAdapter.ts";
 
 export interface ExactColumnsPluginOpts {
   /** Omit for entirely in-memory learning, with no cache dependency or background work. */
-  persistence?: ExactColumnsPersistenceOpts;
+  store?: ExactColumnsStoreOpts;
   /** Called when a narrowed endpoint reads an un-fetched column, i.e. for telemetry, before the retry/rethrow. */
   onMissingColumn?: (err: MissingColumnError) => void;
-  /** Synchronously reports once when track finishes, including errors and retries. Callback throws are ignored. */
+  /**
+   * Invoked after each `plugin.track` with statistics for metrics reporting.
+   *
+   * Called synchronously once, including errors and retries. Callback throws are ignored.
+   */
   onTrack?: (outcome: ExactColumnsTrackOutcome) => void;
 }
 
@@ -44,6 +48,7 @@ type ProfileOrigin = "local" | "l2_version" | "l2_seed";
  */
 export interface ExactColumnsTrackOutcome {
   readonly endpointKey: string;
+  /** Where this invocation obtained its profile: L1 memory, same-version L2, an L2 seed, or cold learning. */
   readonly lookupSource: "l1" | "l2_version" | "l2_seed" | "cold";
   readonly profileOrigin: ProfileOrigin;
   readonly startingMode: ExactColumnsProfileMode;
@@ -111,27 +116,28 @@ export class MissingColumnError extends Error {
 export class ExactColumnsPlugin extends Plugin {
   readonly #onMissingColumn: ((err: MissingColumnError) => void) | undefined;
   readonly #onTrack: ExactColumnsPluginOpts["onTrack"];
+  /** Profiles keyed by the stable endpoint key passed to `track`, i.e. `GET /authors/:id`. */
   readonly #profiles: Map<string, EndpointProfile> = new Map();
   readonly #initializing = new Map<string, Promise<EndpointProfile>>();
-  readonly #persistence: ExactColumnsStore | undefined;
+  readonly #store: ExactColumnsStore | undefined;
   readonly #codeVersion: string | undefined;
 
   constructor(opts: ExactColumnsPluginOpts = {}) {
     super();
     this.#onMissingColumn = opts.onMissingColumn;
     this.#onTrack = opts.onTrack;
-    this.#persistence = opts.persistence ? new ExactColumnsStore(opts.persistence) : undefined;
-    this.#codeVersion = opts.persistence?.codeVersion;
+    this.#store = opts.store ? new ExactColumnsStore(opts.store) : undefined;
+    this.#codeVersion = opts.store?.codeVersion;
   }
 
   /** Best-effort persistence drain; call after tracked requests finish during graceful shutdown. */
-  async flushPersistence(): Promise<void> {
-    await this.#persistence?.flush();
+  async flushStore(): Promise<void> {
+    await this.#store?.flush();
   }
 
   /** Drain persistence and stop its background refresh; does not close the application's Redis client. */
   async close(): Promise<void> {
-    await this.#persistence?.close();
+    await this.#store?.close();
   }
 
   /**
@@ -142,15 +148,15 @@ export class ExactColumnsPlugin extends Plugin {
    */
   private async initialize(key: string): Promise<EndpointProfile> {
     const profile = createProfile(key);
-    const persistence = this.#persistence!;
-    const cached = await persistence.load(key);
+    const store = this.#store!;
+    const cached = await store.load(key);
     const stored = cached?.version ?? cached?.seed;
     if (stored) {
       const validVersion = !cached?.version || stored.codeVersion === this.#codeVersion;
       if (validVersion && mergeProfile(profile, stored, false)) {
         profile.origin = cached?.version ? "l2_version" : "l2_seed";
         profile.mode = stored.state === "learning" ? "learning" : cached?.version ? "narrow" : "provisional";
-        persistence.emit({
+        store.emit({
           endpointKey: key,
           operation: "adopt",
           result: "success",
@@ -159,17 +165,17 @@ export class ExactColumnsPlugin extends Plugin {
           mode: profile.mode,
         });
       } else {
-        persistence.emit({ endpointKey: key, operation: "reject", result: "error" });
+        store.emit({ endpointKey: key, operation: "reject", result: "error" });
       }
     } else if (cached) {
-      persistence.emit({ endpointKey: key, operation: "load", result: "miss" });
+      store.emit({ endpointKey: key, operation: "load", result: "miss" });
     }
     // A same-build model mismatch indicates corrupt data or a reused build id. Do not republish it.
     if (cached?.version && profile.origin === "local") {
       this.#profiles.set(key, profile);
       return profile;
     }
-    persistence.register(
+    store.register(
       key,
       {
         snapshot: () => snapshotProfile(profile),
@@ -179,9 +185,9 @@ export class ExactColumnsPlugin extends Plugin {
       cached?.version?.revision,
     );
     profile.changed = (invalidate, settled, previousMode) => {
-      persistence.changed(key, invalidate, settled);
+      store.changed(key, invalidate, settled);
       if (invalidate || settled)
-        persistence.emit({
+        store.emit({
           endpointKey: key,
           operation: invalidate ? "deoptimize" : previousMode === "provisional" ? "promote" : "settle",
           result: "success",
@@ -203,7 +209,7 @@ export class ExactColumnsPlugin extends Plugin {
     let profile = this.#profiles.get(key);
     const l1 = profile !== undefined;
     if (!profile) {
-      if (this.#persistence) {
+      if (this.#store) {
         let initializing = this.#initializing.get(key);
         if (!initializing) {
           initializing = this.initialize(key).finally(() => this.#initializing.delete(key));
@@ -216,7 +222,7 @@ export class ExactColumnsPlugin extends Plugin {
         this.#profiles.set(key, profile);
       }
     }
-    this.#persistence?.touch(key);
+    this.#store?.touch(key);
     // Snapshot the mode for this invocation; a concurrent call may change the profile's next mode.
     // I.e. a call that started learning remains full-row even if another call settles the profile.
     const scope: TrackScope = {

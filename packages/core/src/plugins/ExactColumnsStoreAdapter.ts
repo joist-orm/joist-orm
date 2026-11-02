@@ -51,7 +51,7 @@ export interface ExactColumnsCacheEvent {
   mode?: "learning" | "provisional" | "narrow";
 }
 
-export interface ExactColumnsPersistenceOpts {
+export interface ExactColumnsStoreOpts {
   store: ExactColumnsStoreAdapter;
   namespace: string;
   codeVersion: string;

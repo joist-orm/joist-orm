@@ -4,9 +4,9 @@ import { createClient } from "@redis/client";
 import {
   type EntityManager,
   type ExactColumnsCacheEvent,
-  type ExactColumnsPersistenceOpts,
   ExactColumnsPlugin,
   type ExactColumnsStoreAdapter,
+  type ExactColumnsStoreOpts,
   type ExactColumnsTrackOutcome,
   RedisExactColumnsStore,
 } from "joist-orm";
@@ -77,7 +77,7 @@ describe("ExactColumnsPersistence", () => {
 
     // When three unchanged requests run on build B.
     for (let i = 0; i < 3; i++) await invoke(next.plugin, readFirstName);
-    await next.plugin.flushPersistence();
+    await next.plugin.flushStore();
 
     // Then every request benefits from the inherited narrowed projection.
     expect(next.outcomes).toMatchObject([
@@ -101,7 +101,7 @@ describe("ExactColumnsPersistence", () => {
 
     // When the new field invalidates the inherited projection.
     const result = await invoke(changed.plugin, readLastName);
-    await changed.plugin.flushPersistence();
+    await changed.plugin.flushStore();
 
     // Then the request succeeds through the full-row retry.
     expect(result).toBe("l1");
@@ -127,11 +127,11 @@ describe("ExactColumnsPersistence", () => {
     // And the other worker discovers lastName before the stale worker promotes.
     const changed = worker("B");
     await invoke(changed.plugin, readLastName);
-    await changed.plugin.flushPersistence();
+    await changed.plugin.flushStore();
 
     // When the stale worker tries to publish its third clean observation.
     await invoke(stale.plugin, readFirstName);
-    await stale.plugin.flushPersistence();
+    await stale.plugin.flushStore();
 
     // Then the stored profile retains the wider learning state and the old seed is not replaced.
     expect(await store.load({ namespace, codeVersion: "B", endpointKey: "author" })).toMatchObject({
@@ -148,7 +148,7 @@ describe("ExactColumnsPersistence", () => {
 
     // When those workers concurrently discover different author branches.
     await Promise.all([invoke(first.plugin, readFirstName), invoke(last.plugin, readLastName)]);
-    await Promise.all([first.plugin.flushPersistence(), last.plugin.flushPersistence()]);
+    await Promise.all([first.plugin.flushStore(), last.plugin.flushStore()]);
 
     // Then neither worker overwrites the other's observed field.
     expect(
@@ -280,14 +280,14 @@ describe("ExactColumnsPersistence", () => {
     // And another worker discovers a missing lastName field.
     const changed = worker("A");
     await invoke(changed.plugin, readLastName);
-    await changed.plugin.flushPersistence();
+    await changed.plugin.flushStore();
     discoveryPersisted = true;
     // Keep the endpoint active even if an earlier timer fired while the discovery was being persisted.
     await invoke(warm.plugin, readFirstName);
 
     // When the warm worker refreshes before reading lastName itself.
     await refreshed.promise;
-    await warm.plugin.flushPersistence();
+    await warm.plugin.flushStore();
     await invoke(warm.plugin, readLastName);
 
     // Then it already knows to use full rows instead of repeating the other worker's miss.
@@ -377,11 +377,11 @@ describe("ExactColumnsPersistence", () => {
   });
 
   /** Creates a worker with a shared deployment identity and isolated L1. */
-  function worker(codeVersion: string, overrides: Partial<ExactColumnsPersistenceOpts> = {}) {
+  function worker(codeVersion: string, overrides: Partial<ExactColumnsStoreOpts> = {}) {
     const outcomes: ExactColumnsTrackOutcome[] = [];
     const events: ExactColumnsCacheEvent[] = [];
     const plugin = new ExactColumnsPlugin({
-      persistence: {
+      store: {
         store,
         namespace,
         codeVersion,
@@ -412,7 +412,7 @@ async function learn(
 ): Promise<void> {
   for (let i = 0; i < 4; i++) {
     await invoke(plugin, fn);
-    await plugin.flushPersistence();
+    await plugin.flushStore();
   }
 }
 

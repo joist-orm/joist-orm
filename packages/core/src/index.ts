@@ -268,7 +268,7 @@ export type {
   ExactColumnsStoreUpdate,
   ExactColumnsStoredProfile,
   ExactColumnsSnapshot,
-  ExactColumnsPersistenceOpts,
+  ExactColumnsStoreOpts,
   ExactColumnsCacheEvent,
 } from "./plugins/ExactColumnsStoreAdapter.ts";
 export { RedisExactColumnsStore, type RedisExactColumnsStoreOpts } from "./plugins/RedisExactColumnsStore.ts";

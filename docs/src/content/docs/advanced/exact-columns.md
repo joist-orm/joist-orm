@@ -143,7 +143,7 @@ Monitor `sum:joist.exact_columns.missing_column_failures{*}.as_count()` separate
 
 ## Optional Redis / Valkey persistence
 
-The same plugin supports **L1 only** (the default) or **L1 + L2**. Without `persistence`, it creates no cache timers or queues and requires no Redis client. With persistence, field reads and query preparation still use only L1.
+The same plugin supports **L1 only** (the default) or **L1 + L2**. Without `store`, it creates no cache timers or queues and requires no Redis client. With a store configured, field reads and query preparation still use only L1.
 
 ```typescript
 import { createClient } from "redis";
@@ -154,7 +154,7 @@ client.on("error", (error) => log.warn({ error }, "Valkey connection error"));
 await client.connect();
 
 export const exactColumns = new ExactColumnsPlugin({
-  persistence: {
+  store: {
     store: new RedisExactColumnsStore({
       sendCommand: (args) => client.sendCommand(args),
       // ttlSeconds defaults to seven days.
@@ -210,7 +210,7 @@ Persistence options default to:
 
 Cold reads are deduplicated per endpoint. Writes are asynchronous and coalesced, with deoptimizations prioritized. Errors trigger exponential backoff; timed-out reads cannot later overwrite local learning. Cache-operation deadlines bound waiting, not the execution of an already submitted Redis command. Revision checks also protect against delayed stale publications.
 
-`flushPersistence()` drains pending writes best-effort without stopping refreshes. `close()` stops refreshes and drains best-effort; call it after requests finish. Neither method closes the application's Redis connection. During an outage, draining can leave unpersisted observations; local behavior is unaffected.
+`flushStore()` drains pending writes best-effort without stopping refreshes. `close()` stops refreshes and drains best-effort; call it after requests finish. Neither method closes the application's Redis connection. During an outage, draining can leave unpersisted observations; local behavior is unaffected.
 
 ### Cache observability
 

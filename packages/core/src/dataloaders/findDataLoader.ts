@@ -1,3 +1,5 @@
+import { buildCandidateBatchQuery } from "src/dataloaders/buildCandidateBatchQuery.ts";
+import { collectFindArguments } from "src/dataloaders/collectFindArguments.ts";
 import { fastWhereFilterHash } from "src/dataloaders/fastWhereFilterHash.ts";
 import type { OpColumn } from "src/drivers/EntityWriter.ts";
 import type { Entity } from "src/Entity.ts";
@@ -97,38 +99,53 @@ export function findDataLoader<T extends Entity>(
         const { preloader } = getEmInternalApi(em);
         const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
 
-        const args = collectAndReplaceArgs(query, entries);
-        const argsColumns: OpColumn[] = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
-        const columnValues = createColumnValuesFromPrepared(args, entries);
-        const query2: ParsedFindQuery = {
-          ...query,
-          selects: ["array_agg(_find.tag) as _tags", ...query.selects],
-          tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
-          ctes: [buildUnnestCte("_find", argsColumns, columnValues), ...(query.ctes ?? [])],
-        };
-        if (preloadJoins) {
-          query2.selects.push(
-            ...preloadJoins.flatMap((j) =>
-              // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
-              // a single row, we also need to pick just the first value of each preload column
-              j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
-            ),
-          );
-          query2.tables.push(...preloadJoins.map((j) => j.join));
-        }
+        // Without preload joins, we can use buildCandidateBatchQuery with computeConstantBindings.
+        // With preload joins, the JSON-building expressions need the original query structure.
+        let batchedQuery = !preloadJoins?.length
+          ? buildCandidateBatchQuery(query, entries, computeConstantBindings(entries))
+          : undefined;
+        // If merging returned undefined, the query shape was unsupported. Fall back to the regular
+        // CROSS JOIN / GROUP BY strategy, also used when preload joins prevented merging above.
+        if (batchedQuery === undefined) {
+          const args = collectAndReplaceArgs(query, entries);
+          const argsColumns: OpColumn[] = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
+          const columnValues = createColumnValuesFromPrepared(args, entries);
+          batchedQuery = {
+            ...query,
+            selects: ["array_agg(_find.tag) as _tags", ...query.selects],
+            tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
+            ctes: [buildUnnestCte("_find", argsColumns, columnValues), ...(query.ctes ?? [])],
+          };
+          if (preloadJoins) {
+            batchedQuery.selects.push(
+              ...preloadJoins.flatMap((j) =>
+                // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+                // a single row, we also need to pick just the first value of each preload column
+                j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+              ),
+            );
+            batchedQuery.tables.push(...preloadJoins.map((j) => j.join));
+          }
 
-        // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-        query2.groupBys = buildGroupBys(query2.selects);
+          // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
+          batchedQuery.groupBys = buildGroupBys(batchedQuery.selects);
 
-        // Also because of our `array_agg` group by, add any order bys to the group by
-        const [primary] = getTables(query2);
-        for (const { alias, column } of query2.orderBys) {
-          if (alias !== primary.alias) {
-            query2.groupBys.push({ alias, column });
+          // Also because of our `array_agg` group by, add any order bys to the group by
+          const [primary] = getTables(batchedQuery);
+          for (const { alias, column } of batchedQuery.orderBys) {
+            if (alias !== primary.alias) {
+              batchedQuery.groupBys.push({ alias, column });
+            }
           }
         }
 
-        const rowData = await em["executePreparedFindRowData"](meta, findOperation, query2, findSettings, checkLimit);
+        const rowData = await em["executePreparedFindRowData"](
+          meta,
+          findOperation,
+          batchedQuery,
+          findSettings,
+          checkLimit,
+        );
 
         // Make an empty array for each batched query, per the dataloader contract
         const results = entries.map(() => [] as T[]);
@@ -222,49 +239,21 @@ export interface CteArg {
 export function collectAndReplaceArgs(query: ParsedFindQuery, entries: readonly { bindings: any[] }[]): CteArg[] {
   const args: CteArg[] = [];
   const argsIndex = new ArgCounter();
-  // `bindings` were pushed in this same `visitConditions` order, so we can walk the conditions and
-  // each entry's `bindings` in lockstep, deciding per condition whether to inline or batch its value(s).
-  const constant = computeConstantBindings(entries);
-  let bindingIndex = 0;
+  const findArguments = collectFindArguments(query, computeConstantBindings(entries));
+  const changingConditions = new Set(findArguments.map((arg) => arg.condition));
+  for (const arg of findArguments) {
+    for (let slot = 0; slot < arg.bindingIndexes.length; slot++) {
+      args.push({
+        column: arg.columns[slot],
+        bindingIndex: arg.bindingIndexes[slot],
+      });
+    }
+  }
+
+  // Rewrite only after collecting: candidate batching uses the same collector without this mutation.
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
-      if ("value" in c.cond) {
-        const { kind } = c.cond;
-        // `between` consumes two bindings, everything else (incl. array `in`/`nin`) consumes one.
-        const consumed = kind === "between" ? 2 : 1;
-        const start = bindingIndex;
-        bindingIndex += consumed;
-        // If every batched query shares this condition's value(s), leave it as a normal `col = ?`
-        // condition (rendered from `entries[0]`'s value) instead of threading it through the CTE.
-        let allConstant = true;
-        for (let k = 0; k < consumed; k++) {
-          if (!constant[start + k]) {
-            allConstant = false;
-            break;
-          }
-        }
-        if (allConstant) return;
-        // `arg${args.length}` keeps the CTE column names in step with the `_find.argX` references that
-        // `rewriteToRawCondition` emits, since both only advance for the args we actually batch.
-        if (kind === "between") {
-          args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start });
-          args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start + 1 });
-        } else {
-          // Figure out the _find CTE's `unnest($n::${dbType})` so Postgres knows what we're sending in
-          const dbType =
-            kind === "in" || kind === "nin"
-              ? `${c.dbType}[]` // `in`/`nin` compare against an array column
-              : kind === "jsonPathExists" || kind === "jsonPathPredicate"
-                ? "jsonpath" // jsonPath needs `::jsonpath` (not `::jsonb`, which would be an invalid `jsonb @@ jsonb`)
-                : c.dbType;
-          args.push({ column: { columnName: `arg${args.length}`, dbType }, bindingIndex: start });
-        }
-        return rewriteToRawCondition(c, argsIndex);
-      } else if (c.cond.kind === "is-null" || c.cond.kind === "not-null") {
-        // leave it alone
-      } else {
-        throw new Error("Unsupported");
-      }
+      if (changingConditions.has(c)) return rewriteToRawCondition(c, argsIndex);
     },
   });
   return args;

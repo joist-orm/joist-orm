@@ -3032,6 +3032,7 @@ describe("em.find", () => {
     });
 
     it("can use aliases for m2m", async () => {
+      // Given a book whose author has the requested tag
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
       await insertBook({ author_id: 1, title: "b1" });
@@ -3040,7 +3041,9 @@ describe("em.find", () => {
 
       const em = newEntityManager();
       const t = alias(Tag);
+      // When the alias filter reads only the tag id
       const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] } });
+      // Then the book matches through the m2m table FK without a target lookup
       expect(books.length).toEqual(1);
 
       expect(
@@ -3058,18 +3061,14 @@ describe("em.find", () => {
               kind: "exists",
               negate: false,
               subquery: {
-                tables: [
-                  { alias: "att", table: "authors_to_tags", join: "primary" },
-                  // I.e. preserving the moved child join as outer avoids changing nullable branch semantics.
-                  { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id", distinct: false },
-                ],
+                tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
                 condition: {
                   op: "and",
                   conditions: [
                     { kind: "raw", condition: "a.id = att.author_id" },
                     {
                       op: "or",
-                      conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+                      conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
                     },
                   ],
                 },

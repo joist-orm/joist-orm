@@ -2,8 +2,26 @@ import { type JoinTable, type ParsedFindQuery, parseAlias } from "src/queries/fi
 import { deepFindConditions } from "src/queries/parsedConditions.ts";
 import { assertNever } from "src/utils.ts";
 
-// Remove any joins that are not used in the select or conditions
-export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
+/**
+ * Removes unused joins and their optional conditions from the query in place.
+ *
+ * First replaces eligible many-to-many otherTable-id conditions with join-table FK conditions,
+ * including inside EXISTS and lateral subqueries. I.e. `t.id = 1` becomes `att.tag_id = 1`,
+ * allowing the `tags t` join to be removed when nothing else reads it. This uses the final
+ * table names, join columns, and alias usages after plugins and collection rewriting.
+ *
+ * @param parsed The query to mutate.
+ * @param keepAliases Aliases to retain even when the query has no explicit reference to them.
+ * @param inheritedCtes CTE names visible from enclosing queries. Combined with local CTE names
+ * so FK substitution cannot bypass a CTE that shadows otherTable in a nested query.
+ */
+export function pruneUnusedJoins(
+  parsed: ParsedFindQuery,
+  keepAliases: string[],
+  inheritedCtes: ReadonlySet<string> = new Set(),
+): void {
+  const visibleCtes = new Set([...inheritedCtes, ...(parsed.ctes ?? []).map((cte) => cte.alias)]);
+  pruneIdOnlyJoins(parsed, keepAliases, visibleCtes);
   const dt = new DependencyTracker();
 
   // First setup the alias -> alias dependencies...
@@ -83,6 +101,119 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
   // Remove any `{ and: [...] }`s that are empty; we should probably do this deeply?
   if (parsed.condition && parsed.condition.conditions.length === 0) {
     parsed.condition = undefined;
+  }
+}
+
+/**
+ * Replaces conditions on a many-to-many otherTable's id with its join-table FK when no other columns are used.
+ *
+ * Run after collection rewriting: a standalone `otherTable.id IS NULL` branch becomes NOT EXISTS
+ * on the join table, with no otherTable join left to optimize. Positive branches can still contain
+ * otherTable joins; this pass replaces their id conditions and makes those joins removable.
+ *
+ * If a collection remains a LEFT JOIN, replace its id conditions the same way: for
+ * `authors a LEFT JOIN authors_to_tags att ... LEFT JOIN tags t ON att.tag_id = t.id`,
+ * replace `t.id = 1` with `att.tag_id = 1` and let pruning remove `tags t`.
+ * When an author has no join-table row, both `t.id` and `att.tag_id` are NULL,
+ * so the replacement also preserves conditions that accept missing memberships.
+ */
+function pruneIdOnlyJoins(query: ParsedFindQuery, keepAliases: string[], visibleCtes: ReadonlySet<string>): void {
+  const conditions = deepFindConditions(query.condition, false);
+  // Each subquery needs the full pruning pass: substituting `t.id` with `att.tag_id` alone
+  // leaves the unused `tags t` join in its FROM list. The enclosing query's dependency tracker
+  // cannot remove joins from a subquery, so recurse through pruneUnusedJoins, not just this helper.
+  for (const condition of conditions) {
+    if (condition.kind === "exists") pruneUnusedJoins(condition.subquery, [], visibleCtes);
+  }
+  for (const table of query.tables) {
+    if (table.join === "lateral") pruneUnusedJoins(table.query, [], visibleCtes);
+  }
+  for (const otherTable of query.tables) {
+    // Primary, cross, and lateral tables are not otherTable joins eligible for FK substitution.
+    if (otherTable.join !== "inner" && otherTable.join !== "outer") {
+      continue;
+    }
+
+    // I.e. otherTable is `tags t`; its marker is on the m2m table `authors_to_tags att`.
+    const joinTable = query.tables.find((t) => "idJoin" in t && t.idJoin?.alias === otherTable.alias);
+    const idJoin = joinTable && "idJoin" in joinTable ? joinTable.idJoin : undefined;
+
+    // A visible `WITH tags AS (...)` changes what `JOIN tags` reads, including inside nested EXISTS.
+    // Keep this join to apply the CTE's restrictions; unrelated CTEs do not affect the FK guarantee.
+    if (visibleCtes.has(otherTable.table)) {
+      continue;
+    }
+
+    // The parser did not mark this join as eligible, or a plugin changed otherTable/the ON clause.
+    // Keep the join because reading its id may now filter rows differently from reading the join-table FK.
+    if (
+      !joinTable ||
+      !idJoin ||
+      otherTable.table !== idJoin.table ||
+      otherTable.col1 !== idJoin.col1 ||
+      otherTable.col2 !== idJoin.col2
+    ) {
+      continue;
+    }
+
+    const alias = otherTable.alias;
+    // The caller explicitly needs this alias even if no visible expression reads it.
+    if (keepAliases.includes(alias)) {
+      continue;
+    }
+
+    // A projection reads the otherTable row; rewriting only its conditions would not remove the lookup.
+    if (
+      query.selects.some((s) =>
+        typeof s === "string"
+          ? selectReferencesAlias(s, alias)
+          : s.aliases.includes(alias) || selectReferencesAlias(s.sql, alias),
+      )
+    ) {
+      continue;
+    }
+
+    // Ordering by otherTable still needs the join. Grouped queries are conservatively excluded because
+    // this pass does not establish whether substitution preserves their grouping semantics.
+    if (query.orderBys.some((o) => o.alias === alias) || query.groupBys?.length) {
+      continue;
+    }
+
+    // Another join depends on this alias, or a lateral query may reference it in its own scope.
+    // Keep otherTable rather than leaving a dangling reference; lateral usages are not analyzed here.
+    if (
+      query.tables.some(
+        (t) =>
+          t !== otherTable &&
+          (t.join === "lateral" || ((t.join === "inner" || t.join === "outer") && joinDependencies(t).includes(alias))),
+      )
+    ) {
+      continue;
+    }
+
+    // A condition reads another otherTable column, raw SQL references the alias, or EXISTS correlates
+    // through it. Those usages cannot be satisfied by replacing otherTable-id column conditions alone.
+    if (
+      conditions.some((c) =>
+        c.kind === "column"
+          ? c.alias === alias && c.column !== "id"
+          : c.kind === "raw"
+            ? c.aliases.includes(alias)
+            : c.outerAliases.includes(alias),
+      )
+    ) {
+      continue;
+    }
+
+    // Now redirect all conditions on otherTable.id to joinTable's FK, keeping their operators and bindings.
+    // I.e. `t.id IN (...)` becomes `att.tag_id IN (...)`. Nothing else reads otherTable after the checks
+    // above, so pruneUnusedJoins can remove its now-unused join after this helper returns.
+    for (const condition of conditions) {
+      if (condition.kind === "column" && condition.alias === alias) {
+        condition.alias = joinTable.alias;
+        condition.column = idJoin.fkColumn;
+      }
+    }
   }
 }
 

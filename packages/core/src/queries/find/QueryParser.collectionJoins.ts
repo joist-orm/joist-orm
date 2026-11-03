@@ -214,7 +214,15 @@ function createExistsCondition(
       .filter((t) => (hasOnlyAntiJoin ? t.alias === root.alias : collectionRoot.aliases.has(t.alias)))
       .map((t) => {
         // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
-        if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
+        if (t.alias === root.alias) {
+          // The m2m table still owns its otherTable FK metadata after becoming the EXISTS root.
+          return {
+            join: "primary",
+            alias: t.alias,
+            table: t.table,
+            ...(root.idJoin && { idJoin: root.idJoin }),
+          } satisfies PrimaryTable;
+        }
         // I.e. preserve nullable paths like `LEFT JOIN p ... LEFT JOIN sp ... WHERE p.id = 1 OR sp.id = 1`; forcing
         // children to INNER JOIN would require every optional branch to exist before the OR can match any branch.
         if (t.join === "outer") return { ...t, distinct: false };

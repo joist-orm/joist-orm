@@ -31,6 +31,8 @@ export interface PrimaryTable {
   join: "primary";
   alias: string;
   table: string;
+  /** Set when a many-to-many join table becomes the FROM table inside EXISTS. */
+  idJoin?: JoinTable["idJoin"];
 }
 
 export interface JoinTable {
@@ -40,6 +42,19 @@ export interface JoinTable {
   col1: string;
   col2: string;
   distinct?: boolean;
+  /**
+   * On a many-to-many join table, identifies its otherTable join.
+   *
+   * I.e. `authors_to_tags att` stores the `tags t ON att.tag_id = t.id` join here,
+   * letting pruning replace `t.id` conditions with `att.tag_id` and remove `tags t`.
+   * `fkColumn` is the join-table column name (`tag_id`), taken from the m2m field metadata.
+   *
+   * Only set when soft-delete exclusion and inheritance do not require reading otherTable.
+   *
+   * Pruning compares these saved values with the final join; if a plugin changed the table
+   * or either ON column, it keeps the join instead of substituting the join-table FK.
+   */
+  idJoin?: { alias: string; table: string; col1: string; col2: string; fkColumn: string };
   /**
    * Metadata used by `optimizeCollectionJoins` to rewrite collection joins into EXISTS.
    *
@@ -530,14 +545,15 @@ export function parseFindQuery(
         if (!f && !isAlias(sub)) return;
 
         const ja = getAlias(field.joinTableName);
-        tables.push({
+        const joinTable: JoinTable = {
           join: "outer",
           alias: ja,
           table: field.joinTableName,
           col1: kqDot(tableAlias, "id"),
           col2: kqDot(ja, field.columnNames[0]),
           collection: { parentAlias: tableAlias, rootAlias: ja, kind: "m2m" },
-        });
+        };
+        tables.push(joinTable);
 
         if (isAlias(sub) || f?.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
           const a = getAlias(field.otherMetadata().tableName);
@@ -555,6 +571,20 @@ export function parseFindQuery(
           const table = tables.find((t) => t.alias === a);
           if (table && (table.join === "inner" || table.join === "outer")) {
             table.collection = { parentAlias: ja, rootAlias: ja, kind: "m2m" };
+            // For these alias/object filters, join otherTable so beforeFind plugins see which entities
+            // participate in the query. Later, pruning can remove that join and filter on the join-table FK
+            // if only otherTable.id is used. Mark it eligible only when neither inheritance nor soft-delete
+            // exclusion requires reading otherTable; pruning also checks for plugin changes and other usages.
+            const otherMeta = field.otherMetadata();
+            if (!otherMeta.inheritanceType && !filterSoftDeletes(otherMeta, softDeletes)) {
+              joinTable.idJoin = {
+                alias: table.alias,
+                table: table.table,
+                col1: table.col1,
+                col2: table.col2,
+                fkColumn: field.columnNames[1],
+              };
+            }
           }
         } else if (f) {
           const otherMeta = field.otherMetadata();

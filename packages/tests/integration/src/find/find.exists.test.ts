@@ -62,7 +62,7 @@ describe("em.find / exists", () => {
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("m2m + o2m: junction table inside EXISTS", async () => {
+    it("m2m + o2m: m2m table inside EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertTag({ name: "t1" });
       await insertAuthorToTag({ author_id: 1, tag_id: 1 });
@@ -84,7 +84,7 @@ describe("em.find / exists", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: m2m junction + target go inside one EXISTS
+      // After: m2m table + otherTable go inside one EXISTS
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
@@ -571,6 +571,7 @@ describe("em.find / exists", () => {
     });
 
     it("splits m2m target id IS NULL OR id IN list into NOT EXISTS OR EXISTS", async () => {
+      // Given untagged authors and authors with three distinct memberships
       await insertAuthor({ first_name: "no-tags" });
       await insertAuthor({ first_name: "tag-1" });
       await insertTag({ name: "t1" });
@@ -585,20 +586,22 @@ describe("em.find / exists", () => {
       const em = newEntityManager();
       const [a, t] = aliases(Author, Tag);
       resetQueryCount();
+      // When either no membership or one of the requested target ids is accepted
       const authors = await em.find(
         Author,
         { as: a, tags: t },
         { ...opts, conditions: { or: [t.id.eq(null), t.id.in(["t:1", "t:2"])] } },
       );
 
+      // Then only no-membership and requested memberships match, without looking up target rows
       expect(authors).toMatchEntity([{ firstName: "no-tags" }, { firstName: "tag-1" }, { firstName: "tag-2" }]);
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          // I.e. m2m target `t.id IS NULL` must become no junction rows, not impossible NULL target ids in EXISTS.
+          // I.e. `t.id IS NULL` must become no m2m table rows, not impossible NULL otherTable ids in EXISTS.
           ` WHERE NOT EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id)`,
           ` OR EXISTS (SELECT 1 FROM authors_to_tags AS att`,
-          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.id = ANY($1))`,
+          ` WHERE a.id = att.author_id AND att.tag_id = ANY($1))`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $2`,
         ].join(""),

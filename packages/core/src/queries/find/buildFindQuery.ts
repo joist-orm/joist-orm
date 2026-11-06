@@ -45,11 +45,11 @@ export function buildRawQuery(
         sql += ")";
       }
       if (cte.query.kind === "raw") {
-        sql += ` AS (${cleanSql(cte.query.sql)})`;
+        sql += ` AS ${cte.materialized ? "MATERIALIZED " : ""}(${cleanSql(cte.query.sql)})`;
         bindings.push(...cte.query.bindings);
       } else if (cte.query.kind === "ast") {
         const nested = buildRawQuery(cte.query.query, {});
-        sql += ` AS (${nested.sql})`;
+        sql += ` AS ${cte.materialized ? "MATERIALIZED " : ""}(${nested.sql})`;
         bindings.push(...nested.bindings);
       } else {
         assertNever(cte.query);
@@ -144,7 +144,7 @@ function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string 
 export function buildCteSql(cte: ParsedCteClause): { sql: string; bindings: readonly any[] } {
   const maybeRecursive = cte.recursive ? "RECURSIVE " : "";
   const maybeColumns = cte.columns ? ` (${cte.columns.map((c) => kq(c.columnName)).join(", ")})` : "";
-  const prefix = `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS`;
+  const prefix = `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS${cte.materialized ? " MATERIALIZED" : ""}`;
   if (cte.query.kind === "raw") {
     return {
       sql: `${prefix} (${cleanSql(cte.query.sql)} )`,

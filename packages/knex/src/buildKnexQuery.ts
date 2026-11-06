@@ -94,6 +94,8 @@ export function buildKnexQuery(
       }
       if (cte.recursive) {
         query.withRecursive(...args);
+      } else if (cte.materialized) {
+        query.withMaterialized(...args);
       } else {
         query.with(...args);
       }

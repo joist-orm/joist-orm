@@ -89,7 +89,7 @@ describe("find.m2m-ids", () => {
     expect(result.map((rows) => rows.map((a) => a.firstName))).toEqual([["one"], ["two"]]);
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (SELECT unnest($1::int[]), unnest($2::int[])) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.first_name != $3 AND EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id AND att.tag_id = _find.arg0) GROUP BY a.id ORDER BY a.id ASC LIMIT $4",
+       "WITH _find (tag, arg0) AS MATERIALIZED (SELECT unnest($1::int[]), unnest_arrays($2::int[][])),  _cand AS MATERIALIZED (SELECT a AS _entity, ARRAY(SELECT att.tag_id FROM authors_to_tags AS att WHERE (a.id = att.author_id) AND att.tag_id = ANY($3)) AS _c0, a.id AS _o0 FROM authors AS a WHERE a.deleted_at IS NULL AND a.first_name != $4 AND EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id AND att.tag_id = ANY($5))),  _matched AS MATERIALIZED (SELECT a._entity, a._o0, ARRAY(SELECT _find.tag FROM _find WHERE (a._c0 && _find.arg0)) AS _tags FROM _cand AS a) SELECT (a._entity).*, a._tags FROM _matched AS a WHERE cardinality(a._tags) > 0 ORDER BY a._o0 ASC LIMIT $6",
      ]
     `);
   });

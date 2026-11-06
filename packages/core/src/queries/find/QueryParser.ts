@@ -132,6 +132,8 @@ export interface ParsedCteClause {
   query: { kind: "raw"; sql: string; bindings: readonly any[] } | { kind: "ast"; query: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
+  /** Emit `AS MATERIALIZED` so PostgreSQL evaluates the CTE separately instead of inlining it into its consumers. */
+  materialized?: boolean;
 }
 
 /**

@@ -20,7 +20,7 @@ export class InstanceData {
   rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
-  /** Internal reads can observe plugins without consuming a protected field's first application read. */
+  /** Tracks which fields have triggered plugin callbacks, including internal reads that do not enroll read protection. */
   pluginReadFields = 0;
   pluginReadFieldsExtra: number[] | undefined = undefined;
   /** Number/untagged ID conversions are cached once; assigned entity IDs never change. */

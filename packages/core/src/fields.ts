@@ -1,4 +1,4 @@
-import { BaseEntity, getInstanceData } from "src/BaseEntity.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { getEmInternalApi } from "src/EntityManager.ts";
 import { type Field, getMetadata } from "src/EntityMetadata.ts";
@@ -6,6 +6,9 @@ import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "s
 import type { InstanceData } from "src/InstanceData.ts";
 import { maybeRequireTemporal } from "src/serde/temporal.ts";
 import { fail } from "src/utils.ts";
+
+type ReadWordName = "__readFields" | `__readFields${number}`;
+type EntityReadWords = Entity & Record<ReadWordName, number>;
 
 /**
  * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
@@ -20,7 +23,8 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
   const instanceData = getInstanceData(entity);
   const index = instanceData.metadata.fieldReadIndexes[fieldName];
   if (typeof index !== "number") fail(`Unknown field ${instanceData.metadata.type}.${fieldName}`);
-  if ((BaseEntity.getFieldReadWord(entity, index >>> 5) & (1 << (index & 31))) !== 0) {
+  // Direct getField calls use the same warm-read fast path as generated getters.
+  if ((getFieldReadWord(entity, index >>> 5) & (1 << (index & 31))) !== 0) {
     return instanceData.data[fieldName];
   }
   return readField(entity, instanceData, fieldName, isInternal, index);
@@ -255,6 +259,21 @@ function markPluginReadField(data: InstanceData, index: number, read: boolean): 
 function markApplicationReadField(entity: Entity, index: number, read: boolean): void {
   const bit = 1 << (index & 31);
   const word = index >>> 5;
-  const value = BaseEntity.getFieldReadWord(entity, word);
-  BaseEntity.setFieldReadWord(entity, word, read ? value | bit : value & ~bit);
+  const value = getFieldReadWord(entity, word);
+  setFieldReadWord(entity, word, read ? value | bit : value & ~bit);
+}
+
+/** Reads the same warm-read words used by generated getters. */
+function getFieldReadWord(entity: Entity, word: number): number {
+  return (entity as EntityReadWords)[readWordName(word)];
+}
+
+/** Updates a warm-read word without exposing an entity API. */
+function setFieldReadWord(entity: Entity, word: number, value: number): void {
+  (entity as EntityReadWords)[readWordName(word)] = value;
+}
+
+/** Matches the literal names emitted by codegen; only shared reads construct a word name. */
+function readWordName(word: number): ReadWordName {
+  return word === 0 ? "__readFields" : `__readFields${word}`;
 }

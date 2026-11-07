@@ -1411,7 +1411,7 @@ export function getIdType(config: Config) {
   }
 }
 
-/** Emits a literal-key warm read, falling back to shared first-read behavior for only this field. */
+/** Emits a conditional warm read directly from data, falling back to getField for the first read. */
 function fieldReadExpression(indexes: ReadonlyMap<string, number>, fieldName: string): Code {
   const index = indexes.get(fieldName) ?? fail(`Missing first-read index for ${fieldName}`);
   const bit = 1 << (index & 31);

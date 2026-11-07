@@ -68,7 +68,7 @@ Now any business logic that reads `publisher.status`, `publisher.statusDetails`,
 
 ## Scope and Limitations
 
-Read dependencies remain protected for the lifetime of the EntityManager, including after successful flushes. Each later flush checks their current expected versions; successful writes advance those versions. Dependencies registered while new become checkable after persistence. Entities written in a flush use optimistic locking instead of separate read checks. Entities successfully deleted by this EntityManager no longer need protection.
+Read dependencies remain protected for the lifetime of the EntityManager, including after successful flushes.
 
 This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`.
 

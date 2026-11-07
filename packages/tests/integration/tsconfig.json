@@ -9,6 +9,7 @@
   "include": ["./src", "./migrations"],
   "references": [
     { "path": "../../core" },
+    { "path": "../../graphql-plugins" },
     { "path": "../../graphql-resolver-utils" },
     { "path": "../../knex" },
     { "path": "../../migration-utils" },

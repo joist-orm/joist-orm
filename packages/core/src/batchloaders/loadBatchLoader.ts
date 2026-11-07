@@ -10,6 +10,18 @@ import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/quer
 import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
+/**
+ * Distinguishes `em.refresh` from ordinary loads so ExactColumnsPlugin does not remove columns from refresh queries.
+ *
+ * With ExactColumnsPlugin, application setters can cache fields the endpoint has never read,
+ * so those fields may be absent from its learned columns. Refresh then replaces those cached
+ * values directly through their serdes, bypassing `beforeGetField`.
+ * I.e. an Author profile uses only `firstName`, but `author.lastName = "temporary"` caches
+ * `lastName` before `em.refresh(author)` discards that edit. Narrowing refresh to the profile
+ * would omit `last_name`, so its serde could cache `undefined` instead of the database value.
+ * Later getters would return that cached value without reaching the missing-column check.
+ */
+export const refreshLoadOperation = "refresh-load";
 
 /**
  * Batches em.load-style fetches, writing to identity map (via hydrate) instead of returning values.
@@ -42,7 +54,12 @@ export function loadBatchLoader(
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
+    const rowData = await em["executeFindRowData"](
+      meta,
+      overwriteExisting ? refreshLoadOperation : loadOperation,
+      query,
+      {},
+    );
     em["hydrateAndFinalize"](meta.cstr, rowData, {
       overwriteExisting,
       sidecars: (entities) => {

@@ -1,4 +1,13 @@
 services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - 6385:6379
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 1s
+      timeout: 5s
+      retries: 50
   db:
     build:
       context: ./

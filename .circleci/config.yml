@@ -55,10 +55,10 @@ jobs:
 
       - run: yarn build
       - run:
-          name: Start Postgres database
+          name: Start Postgres and Valkey
           command: |
             docker compose build db
-            docker compose up db --wait
+            docker compose up db valkey --wait
       - run:
           name: Run migrations
           command: yarn migrate

@@ -478,4 +478,50 @@ describe("EntityManager.plugins", () => {
       expect(untrustedGetCalls.length).toBe(0);
     });
   });
+
+  it.withCtx("observes cached ID reads after a plugin is registered", async (ctx) => {
+    // Given an author whose assigned ID has already been read
+    const a = newAuthor(ctx.em);
+    await ctx.em.flush();
+    void a.id;
+    // And a plugin starts observing reads after the author was persisted
+    const fields: string[] = [];
+    ctx.em.addPlugin(
+      new (class extends Plugin {
+        /** Records reads without recursively reading the author's ID. */
+        beforeGetField(entity: Entity, field: string): void {
+          if (entity === a) fields.push(field);
+        }
+      })(),
+    );
+    // When application logic reads each public form of the author's ID
+    void a.id;
+    void a.idMaybe;
+    void a.idTagged;
+    void a.idTaggedMaybe;
+    // Then every read reaches the newly registered plugin
+    expect(fields).toEqual(["id", "id", "id", "id"]);
+  });
+
+  it.withCtx("returns a cached field's new value when its read hook changes it", async (ctx) => {
+    // Given an image whose filename is already in memory
+    const image = newImage(ctx.em, { fileName: "old.jpg" });
+    // And a read hook renames the image before returning its filename
+    let renamed = false;
+    ctx.em.addPlugin(
+      new (class extends Plugin {
+        /** Changes the field once so the setter's own read does not recurse. */
+        beforeGetField(entity: Entity, field: string): void {
+          if (entity === image && field === "fileName" && !renamed) {
+            renamed = true;
+            image.fileName = "new.jpg";
+          }
+        }
+      })(),
+    );
+    // When application logic reads the filename
+    const fileName = image.fileName;
+    // Then it sees the value set by the hook, not the pre-hook cached value
+    expect(fileName).toBe("new.jpg");
+  });
 });

@@ -1,4 +1,4 @@
-import { isNew } from "joist-orm";
+import { getMetadata, isNew, setOpt } from "joist-orm";
 import { newEntityManager } from "src/testEm";
 
 import { newPublisher } from "./entities";
@@ -48,5 +48,15 @@ describe("EntityManager.assignNewIds", () => {
     const p3 = newPublisher(em, { name: "p3" });
     await em.assignNewIds();
     expect(p3.id).toEqual("p:3");
+  });
+
+  it("does not allow opts to replace a preassigned ID", async () => {
+    // Given a new publisher whose ID is already assigned and registered
+    const em = newEntityManager();
+    const publisher = newPublisher(em, { name: "p1" });
+    await em.assignNewIds();
+    // When application opts attempt to replace that identity before insertion
+    // Then the assigned ID is immutable even though the entity is still new
+    expect(() => setOpt(getMetadata(publisher), publisher, "id", "p:999")).toThrow("Cannot change assigned id");
   });
 });

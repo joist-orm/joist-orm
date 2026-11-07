@@ -30,7 +30,6 @@ import {
   type Scope,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -45,7 +44,6 @@ import {
   type Task,
   type TaskId,
   type TaskItem,
-  taskItemMeta,
   type TaskNew,
   type TaskNewId,
   type TaskNewOrder,
@@ -176,7 +174,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idMaybe(): TaskItemId | undefined {
-    return toIdOf(taskItemMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -184,15 +182,15 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

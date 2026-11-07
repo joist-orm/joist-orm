@@ -64,9 +64,6 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 /** Installs lazy lookup getters for metadata-derived caches. */
 function installMetadataGetters(metas: EntityMetadata[]): void {
   for (const meta of metas) {
-    defineLazyGetter(meta, "hasAssertUnchangedFields", function hasAssertUnchangedFields() {
-      return Object.values(meta.allFields).some((field) => field.assertUnchanged);
-    });
     defineLazyGetter(meta, "subTypesByType", function buildSubTypesByType() {
       return new Map(meta.subTypes.map((st) => [st.type, st]));
     });

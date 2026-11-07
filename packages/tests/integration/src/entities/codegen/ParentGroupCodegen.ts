@@ -33,7 +33,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -50,7 +49,6 @@ import {
   EntityManager,
   newParentGroup,
   type ParentGroup,
-  parentGroupMeta,
   type ParentItem,
   type ParentItemId,
 } from "../entities";
@@ -198,7 +196,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idMaybe(): ParentGroupId | undefined {
-    return toIdOf(parentGroupMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -206,11 +204,11 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string | undefined {
-    return getField(this, "name");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string | undefined) {
@@ -218,15 +216,15 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get eagerEmbedding(): number[] | undefined {
-    return getField(this, "eagerEmbedding");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.eagerEmbedding : getField(this, "eagerEmbedding");
   }
 
   set eagerEmbedding(eagerEmbedding: number[] | undefined) {

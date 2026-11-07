@@ -10,6 +10,11 @@ import {
   keyToNumber,
 } from "src/index.ts";
 
+type ReadWordName = "__readFields" | `__readFields${number}`;
+type EntityReadWords = Entity & Record<ReadWordName, number>;
+// getProperties strips its fake entity's fields after inspection, so these must remain configurable.
+const readWordDescriptor: PropertyDescriptor = { value: 0, enumerable: false, writable: true, configurable: true };
+
 /**
  * Returns the internal `__data` tracking field for `entity`.
  *
@@ -28,8 +33,21 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   public static getInstanceData(entity: Entity): InstanceData {
     return (entity as BaseEntity<any>).__data;
   }
+
+  /** Reads an application-read word without exposing protected fields on the Entity interface. */
+  public static getFieldReadWord(entity: Entity, word: number): number {
+    return (entity as EntityReadWords)[readWordName(word)];
+  }
+
+  /** Lets the shared cold path update the same words that generated getters read directly. */
+  public static setFieldReadWord(entity: Entity, word: number, value: number): void {
+    (entity as EntityReadWords)[readWordName(word)] = value;
+  }
+
   // We use a protected field so that subclass getters can easily access `this.__data.relations`.
   protected readonly __data!: InstanceData;
+  /** First-read completion bits; extra words are declared by each generated root type as needed. */
+  declare protected __readFields: number;
 
   /** The single-arg constructor is our psuedo-public API that can only be called by the EntityManager. */
   constructor(em: EntityManager);
@@ -165,4 +183,14 @@ export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, 
   const data = new InstanceData(em, entity, (entity.constructor as any).metadata, isNew);
   // This makes it non-enumerable to avoid Jest/recursive things tripping over it
   Object.defineProperty(entity, "__data", { value: data, enumerable: false, writable: false, configurable: false });
+  // Constructors are bypassed for real entities, so initialize every needed word here,
+  // in the same order for the entire inheritance family. Reusing the descriptor avoids per-entity descriptor objects.
+  for (let word = 0; word < data.metadata.fieldReadWordCount; word++) {
+    Object.defineProperty(entity, readWordName(word), readWordDescriptor);
+  }
+}
+
+/** Matches the literal names emitted by codegen; only cold reads construct a word name. */
+function readWordName(word: number): ReadWordName {
+  return word === 0 ? "__readFields" : `__readFields${word}`;
 }

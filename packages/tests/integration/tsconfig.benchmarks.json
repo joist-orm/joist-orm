@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false
+  },
+  "include": [
+    "./benchmark-field-access.ts",
+    "./benchmark-field-access-baseline.ts",
+    "./benchmark-field-access-prototype.ts",
+    "./src"
+  ]
+}

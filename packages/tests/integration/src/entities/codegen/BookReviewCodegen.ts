@@ -39,7 +39,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -54,7 +53,6 @@ import {
   type BookId,
   type BookOrder,
   type BookReview,
-  bookReviewMeta,
   type Comment,
   type CommentId,
   type Critic,
@@ -228,7 +226,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get idMaybe(): BookReviewId | undefined {
-    return toIdOf(bookReviewMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -236,11 +234,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get rating(): number {
-    return getField(this, "rating");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.rating : getField(this, "rating");
   }
 
   set rating(rating: number) {
@@ -254,11 +252,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   abstract readonly isTestChain: ReactiveField<BookReview, boolean>;
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -49,7 +48,6 @@ import {
   EntityManager,
   newTag,
   type Tag,
-  tagMeta,
 } from "../entities";
 
 export type TagId = Flavor<string, "Tag">;
@@ -154,7 +152,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get idMaybe(): TagId | undefined {
-    return toIdOf(tagMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -162,11 +160,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {

@@ -2240,6 +2240,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           const instanceData = getInstanceData(e);
           if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
           instanceData.resetAfterFlushed();
+          // Our own completed deletions have no remaining row version to protect.
+          if (e.isDeletedEntity) this.#readSet.delete(e);
           // Reset AsyncQueryProperties & LazyFields since DB state may have changed
           const { relations } = instanceData;
           if (relations) {
@@ -2265,11 +2267,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
-      for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
+      for (const e of createdThenDeleted) {
+        getInstanceData(e).fixupCreatedThenDeleted();
+        this.#readSet.delete(e);
+      }
       this.#merging?.clear();
 
       this.#rm.clear();
-      this.#readSet.clear();
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       // A failed flush may have already run reactions, hooks, or SQL, so we don't try to resume from it
@@ -2550,9 +2554,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Protects loaded read dependencies at the next flush, then clears them on success.
+   * Protects read dependencies at every subsequent flush for this EntityManager's lifetime.
    *
-   * New entities are ignored. Written entities use oplocks instead. Types without updatedAt
+   * New entities are enrolled immediately and checked after persistence. Written entities use oplocks instead. Types without updatedAt
    * cannot be protected. A drift requires retrying the whole unit of work in a fresh EM.
    */
   assertUnchanged(entity: EntityW): void;
@@ -2560,8 +2564,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   assertUnchanged(entityOrEntities: EntityW | readonly EntityW[]): void {
     const entities = isEntity(entityOrEntities) ? [entityOrEntities] : entityOrEntities;
     for (const entity of entities) {
+      if (this.#readSet.has(entity)) continue;
       if (entity.em !== this) throw new Error("assertUnchanged requires entities from this EntityManager");
-      if (entity.isNewEntity) continue;
       if (!getBaseMeta(getMetadata(entity)).timestampFields?.updatedAt) {
         throw new Error(`assertUnchanged requires updatedAt on ${entity}`);
       }

@@ -168,11 +168,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get text(): string {
-    return getField(this, "text");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.text : getField(this, "text");
   }
 
   set text(text: string) {
@@ -180,11 +180,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -34,7 +34,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -48,7 +47,6 @@ import {
   type Critic,
   type CriticColumn,
   type CriticColumnId,
-  criticMeta,
   type Entity,
   EntityManager,
   type LargePublisher,
@@ -211,7 +209,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idMaybe(): CriticId | undefined {
-    return toIdOf(criticMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -219,11 +217,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {
@@ -231,11 +229,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

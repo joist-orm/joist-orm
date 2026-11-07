@@ -41,7 +41,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -59,7 +58,6 @@ import {
   type Task,
   type TaskItem,
   type TaskItemId,
-  taskMeta,
   type TaskNew,
   type TaskNewId,
   type TaskOld,
@@ -302,7 +300,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): TaskId | undefined {
-    return toIdOf(taskMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -310,11 +308,11 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get durationInDays(): number {
-    return getField(this, "durationInDays");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.durationInDays : getField(this, "durationInDays");
   }
 
   set durationInDays(durationInDays: number) {
@@ -322,7 +320,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -330,7 +328,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get syncDefault(): string | undefined {
-    return getField(this, "syncDefault");
+    return (this.__readFields & 65536) !== 0 ? this.__data.data.syncDefault : getField(this, "syncDefault");
   }
 
   set syncDefault(syncDefault: string | undefined) {
@@ -338,7 +336,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get asyncDefault_1(): string | undefined {
-    return getField(this, "asyncDefault_1");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.asyncDefault_1 : getField(this, "asyncDefault_1");
   }
 
   set asyncDefault_1(asyncDefault_1: string | undefined) {
@@ -346,7 +344,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get asyncDefault_2(): string | undefined {
-    return getField(this, "asyncDefault_2");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.asyncDefault_2 : getField(this, "asyncDefault_2");
   }
 
   set asyncDefault_2(asyncDefault_2: string | undefined) {
@@ -358,15 +356,15 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   abstract readonly asyncDerived: ReactiveField<Task, string | undefined>;
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 524288) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get type(): TaskType | undefined {
-    return getField(this, "type");
+    return (this.__readFields & 262144) !== 0 ? this.__data.data.type : getField(this, "type");
   }
 
   get typeDetails(): TaskTypeDetails | undefined {
@@ -378,15 +376,15 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get isOld(): boolean {
-    return getField(this, "type") === TaskType.Old;
+    return this.type === TaskType.Old;
   }
 
   get isNew(): boolean {
-    return getField(this, "type") === TaskType.New;
+    return this.type === TaskType.New;
   }
 
   get isThird(): boolean {
-    return getField(this, "type") === TaskType.Third;
+    return this.type === TaskType.Third;
   }
 
   /**

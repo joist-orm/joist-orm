@@ -40,7 +40,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -67,7 +66,6 @@ import {
   type PublisherGroup,
   type PublisherGroupId,
   type PublisherGroupOrder,
-  publisherMeta,
   PublisherSize,
   PublisherSizeDetails,
   PublisherSizes,
@@ -407,7 +405,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get idMaybe(): PublisherId | undefined {
-    return toIdOf(publisherMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -415,11 +413,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 32768) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {
@@ -427,7 +425,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get latitude(): number | undefined {
-    return getField(this, "latitude");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.latitude : getField(this, "latitude");
   }
 
   set latitude(latitude: number | undefined) {
@@ -435,7 +433,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get longitude(): number | undefined {
-    return getField(this, "longitude");
+    return (this.__readFields & 16384) !== 0 ? this.__data.data.longitude : getField(this, "longitude");
   }
 
   set longitude(longitude: number | undefined) {
@@ -443,7 +441,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get hugeNumber(): number | undefined {
-    return getField(this, "hugeNumber");
+    return (this.__readFields & 2048) !== 0 ? this.__data.data.hugeNumber : getField(this, "hugeNumber");
   }
 
   set hugeNumber(hugeNumber: number | undefined) {
@@ -456,7 +454,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   abstract readonly numberOfBookReviews: ReactiveField<Publisher, number>;
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -479,7 +477,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   abstract readonly numberOfBookAdvancesSnapshot: ReactiveField<Publisher, string | undefined>;
 
   get baseSyncDefault(): string {
-    return getField(this, "baseSyncDefault");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.baseSyncDefault : getField(this, "baseSyncDefault");
   }
 
   set baseSyncDefault(baseSyncDefault: string) {
@@ -487,7 +485,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get baseAsyncDefault(): string {
-    return getField(this, "baseAsyncDefault");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.baseAsyncDefault : getField(this, "baseAsyncDefault");
   }
 
   set baseAsyncDefault(baseAsyncDefault: string) {
@@ -495,11 +493,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 67108864) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
   /**
    * Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) .
@@ -508,7 +506,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   abstract readonly favoriteAuthorName: ReactiveField<Publisher, string | undefined>;
 
   get rating(): number | undefined {
-    return getField(this, "rating");
+    return (this.__readFields & 262144) !== 0 ? this.__data.data.rating : getField(this, "rating");
   }
 
   set rating(rating: number | undefined) {
@@ -516,7 +514,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get size(): PublisherSize | undefined {
-    return getField(this, "size");
+    return (this.__readFields & 2097152) !== 0 ? this.__data.data.size : getField(this, "size");
   }
 
   get sizeDetails(): PublisherSizeDetails | undefined {
@@ -528,15 +526,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isSizeSmall(): boolean {
-    return getField(this, "size") === PublisherSize.Small;
+    return this.size === PublisherSize.Small;
   }
 
   get isSizeLarge(): boolean {
-    return getField(this, "size") === PublisherSize.Large;
+    return this.size === PublisherSize.Large;
   }
 
   get status(): PublisherStatus | undefined {
-    return getField(this, "status");
+    return (this.__readFields & 8388608) !== 0 ? this.__data.data.status : getField(this, "status");
   }
 
   get statusDetails(): PublisherStatusDetails | undefined {
@@ -548,15 +546,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isDraft(): boolean {
-    return getField(this, "status") === PublisherStatus.Draft;
+    return this.status === PublisherStatus.Draft;
   }
 
   get isActive(): boolean {
-    return getField(this, "status") === PublisherStatus.Active;
+    return this.status === PublisherStatus.Active;
   }
 
   get type(): PublisherType {
-    return getField(this, "type");
+    return (this.__readFields & 33554432) !== 0 ? this.__data.data.type : getField(this, "type");
   }
 
   get typeDetails(): PublisherTypeDetails {
@@ -568,11 +566,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isTypeSmall(): boolean {
-    return getField(this, "type") === PublisherType.Small;
+    return this.type === PublisherType.Small;
   }
 
   get isTypeBig(): boolean {
-    return getField(this, "type") === PublisherType.Big;
+    return this.type === PublisherType.Big;
   }
 
   /**

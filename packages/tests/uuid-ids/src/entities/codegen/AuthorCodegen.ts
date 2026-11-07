@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -38,7 +37,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
+import { type Author, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -143,7 +142,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idMaybe(): AuthorId | undefined {
-    return toIdOf(authorMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -151,11 +150,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get firstName(): string {
-    return getField(this, "firstName");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.firstName : getField(this, "firstName");
   }
 
   set firstName(firstName: string) {
@@ -163,7 +162,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get lastName(): string | undefined {
-    return getField(this, "lastName");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.lastName : getField(this, "lastName");
   }
 
   set lastName(lastName: string | undefined) {
@@ -171,11 +170,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

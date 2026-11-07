@@ -153,7 +153,7 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get idMaybe(): T4BookId | undefined {
-    return toIdOf(t4BookMeta, this.idTaggedMaybe);
+    return (this.__data.idCache ??= toIdOf(t4BookMeta, this.idTaggedMaybe)) as T4BookId | undefined;
   }
 
   get idTagged(): TaggedId {
@@ -161,11 +161,11 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {

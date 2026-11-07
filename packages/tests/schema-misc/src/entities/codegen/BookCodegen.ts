@@ -32,7 +32,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -45,7 +44,6 @@ import {
   type AuthorId,
   type AuthorOrder,
   type Book,
-  bookMeta,
   type Entity,
   EntityManager,
   newBook,
@@ -155,7 +153,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): BookId | undefined {
-    return toIdOf(bookMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -163,11 +161,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {

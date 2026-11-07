@@ -32,7 +32,6 @@ import {
   setOpts,
   type TaggedId,
   Temporal,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -45,7 +44,6 @@ import {
   type AuthorId,
   type AuthorOrder,
   type Book,
-  bookMeta,
   type Entity,
   EntityManager,
   newBook,
@@ -221,7 +219,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): BookId | undefined {
-    return toIdOf(bookMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -229,11 +227,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -241,7 +239,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get publishedAt(): Temporal.ZonedDateTime {
-    return getField(this, "publishedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.publishedAt : getField(this, "publishedAt");
   }
 
   set publishedAt(publishedAt: Temporal.ZonedDateTime) {
@@ -249,7 +247,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get timestampTzs(): Temporal.ZonedDateTime[] {
-    return getField(this, "timestampTzs");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.timestampTzs : getField(this, "timestampTzs");
   }
 
   set timestampTzs(timestampTzs: Temporal.ZonedDateTime[]) {
@@ -257,7 +255,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get maybeTimestampTzs(): Temporal.ZonedDateTime[] | undefined {
-    return getField(this, "maybeTimestampTzs");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.maybeTimestampTzs : getField(this, "maybeTimestampTzs");
   }
 
   set maybeTimestampTzs(maybeTimestampTzs: Temporal.ZonedDateTime[] | undefined) {
@@ -265,15 +263,15 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Temporal.ZonedDateTime {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Temporal.ZonedDateTime {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get deletedAt(): Temporal.ZonedDateTime | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {

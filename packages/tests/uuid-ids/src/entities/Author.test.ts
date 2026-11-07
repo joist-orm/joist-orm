@@ -33,4 +33,16 @@ describe("Author", () => {
     const q2 = em.find(Author, { lastName: { eq: "l1" } });
     await Promise.all([q1, q2]);
   });
+
+  it("does not replace an assigned tagged UUID during persistence", async () => {
+    // Given a new author whose tagged UUID was assigned before insertion
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    await em.assignNewIds();
+    const assignedId = author.id;
+    // When the author is inserted
+    await em.flush();
+    // Then its public ID is the same identity that was assigned before the flush
+    expect(author.id).toBe(assignedId);
+  });
 });

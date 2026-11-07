@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -44,7 +43,6 @@ import {
   AdvanceStatuses,
   type Book,
   type BookAdvance,
-  bookAdvanceMeta,
   type BookId,
   type BookOrder,
   type Entity,
@@ -199,7 +197,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idMaybe(): BookAdvanceId | undefined {
-    return toIdOf(bookAdvanceMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -207,19 +205,19 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get status(): AdvanceStatus {
-    return getField(this, "status");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.status : getField(this, "status");
   }
 
   get statusDetails(): AdvanceStatusDetails {
@@ -231,15 +229,15 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get isPending(): boolean {
-    return getField(this, "status") === AdvanceStatus.Pending;
+    return this.status === AdvanceStatus.Pending;
   }
 
   get isSigned(): boolean {
-    return getField(this, "status") === AdvanceStatus.Signed;
+    return this.status === AdvanceStatus.Signed;
   }
 
   get isPaid(): boolean {
-    return getField(this, "status") === AdvanceStatus.Paid;
+    return this.status === AdvanceStatus.Paid;
   }
 
   /**

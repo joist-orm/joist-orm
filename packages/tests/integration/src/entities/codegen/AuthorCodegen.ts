@@ -46,7 +46,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -59,7 +58,6 @@ import { assert } from "superstruct";
 import { z } from "zod";
 import {
   type Author,
-  authorMeta,
   type AuthorSchedule,
   type AuthorScheduleId,
   type Book,
@@ -575,6 +573,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
 
+  declare protected __readFields1: number;
+
   declare readonly __type: { 0: "Author" };
 
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
@@ -618,7 +618,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idMaybe(): AuthorId | undefined {
-    return toIdOf(authorMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -626,7 +626,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   /**
@@ -634,7 +634,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
    * @generated Author.md
    */
   get firstName(): string {
-    return getField(this, "firstName");
+    return (this.__readFields & 2048) !== 0 ? this.__data.data.firstName : getField(this, "firstName");
   }
 
   set firstName(firstName: string) {
@@ -642,7 +642,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get lastName(): string | undefined {
-    return getField(this, "lastName");
+    return (this.__readFields & 262144) !== 0 ? this.__data.data.lastName : getField(this, "lastName");
   }
 
   set lastName(lastName: string | undefined) {
@@ -650,7 +650,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get ssn(): string | undefined {
-    return getField(this, "ssn");
+    return (this.__readFields1 & 2) !== 0 ? this.__data.data.ssn : getField(this, "ssn");
   }
 
   set ssn(ssn: string | undefined) {
@@ -676,7 +676,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
    * @generated Author.md
    */
   get isPopular(): boolean | undefined {
-    return getField(this, "isPopular");
+    return (this.__readFields & 131072) !== 0 ? this.__data.data.isPopular : getField(this, "isPopular");
   }
 
   set isPopular(isPopular: boolean | undefined) {
@@ -684,7 +684,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get age(): number | undefined {
-    return getField(this, "age");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.age : getField(this, "age");
   }
 
   set age(age: number | undefined) {
@@ -692,7 +692,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get graduated(): Date | undefined {
-    return getField(this, "graduated");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.graduated : getField(this, "graduated");
   }
 
   set graduated(graduated: Date | undefined) {
@@ -700,7 +700,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get nickNames(): string[] | undefined {
-    return getField(this, "nickNames");
+    return (this.__readFields & 4194304) !== 0 ? this.__data.data.nickNames : getField(this, "nickNames");
   }
 
   set nickNames(nickNames: string[] | undefined) {
@@ -710,7 +710,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly nickNamesUpper: ReactiveField<Author, string[] | undefined>;
 
   get wasEverPopular(): boolean | undefined {
-    return getField(this, "wasEverPopular");
+    return (this.__readFields1 & 16) !== 0 ? this.__data.data.wasEverPopular : getField(this, "wasEverPopular");
   }
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
@@ -718,7 +718,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get isFunny(): boolean {
-    return getField(this, "isFunny");
+    return (this.__readFields & 65536) !== 0 ? this.__data.data.isFunny : getField(this, "isFunny");
   }
 
   set isFunny(isFunny: boolean) {
@@ -736,7 +736,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly menteeNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
-    return getField(this, "address");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.address : getField(this, "address");
   }
 
   set address(value: Address | undefined) {
@@ -747,7 +747,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get businessAddress(): z.output<typeof AddressSchema> | undefined {
-    return getField(this, "businessAddress");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.businessAddress : getField(this, "businessAddress");
   }
 
   set businessAddress(value: z.input<typeof AddressSchema> | undefined) {
@@ -759,7 +759,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get quotes(): Quotes | undefined {
-    return getField(this, "quotes");
+    return (this.__readFields & 536870912) !== 0 ? this.__data.data.quotes : getField(this, "quotes");
   }
 
   set quotes(value: Quotes | undefined) {
@@ -770,7 +770,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get numberOfAtoms(): bigint | undefined {
-    return getField(this, "numberOfAtoms");
+    return (this.__readFields & 16777216) !== 0 ? this.__data.data.numberOfAtoms : getField(this, "numberOfAtoms");
   }
 
   set numberOfAtoms(numberOfAtoms: bigint | undefined) {
@@ -778,7 +778,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -799,7 +799,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly imageFileName: ReactiveField<Author, string | undefined>;
 
   get certificate(): Uint8Array | undefined {
-    return getField(this, "certificate");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.certificate : getField(this, "certificate");
   }
 
   set certificate(certificate: Uint8Array | undefined) {
@@ -807,11 +807,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields1 & 8) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
   /**
    * Example of a derived async enum.
@@ -828,7 +828,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteColors(): Color[] {
-    return getField(this, "favoriteColors") || [];
+    return ((this.__readFields & 512) !== 0 ? this.__data.data.favoriteColors : getField(this, "favoriteColors")) || [];
   }
 
   get favoriteColorsDetails(): ColorDetails[] {
@@ -852,7 +852,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteShape(): FavoriteShape | undefined {
-    return getField(this, "favoriteShape");
+    return (this.__readFields & 1024) !== 0 ? this.__data.data.favoriteShape : getField(this, "favoriteShape");
   }
 
   set favoriteShape(favoriteShape: FavoriteShape | undefined) {

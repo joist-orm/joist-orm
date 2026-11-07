@@ -1,46 +1,29 @@
-import { getInstanceData } from "src/BaseEntity.ts";
+import { BaseEntity, getInstanceData } from "src/BaseEntity.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { getEmInternalApi } from "src/EntityManager.ts";
 import { type Field, getMetadata } from "src/EntityMetadata.ts";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "src/index.ts";
+import type { InstanceData } from "src/InstanceData.ts";
 import { maybeRequireTemporal } from "src/serde/temporal.ts";
 import { fail } from "src/utils.ts";
 
 /**
  * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
+ * Plugins observe only the first read of each field, including internal reads. Install
+ * plugins before reading entities; adding one later does not replay earlier reads.
  * Generated getters and direct application calls are protected by default. Only ORM
  * housekeeping should pass `isInternal`, not domain logic in hooks, rules, or reactions.
  * The field name is a string because generated getters and ORM internals know its type.
  */
 export function getField(entity: Entity, fieldName: string, isInternal = false): any {
-  const { em } = entity;
-  const api = getEmInternalApi(em);
-  api.pluginManager.beforeGetField(entity, fieldName);
-  // We may not have converted the database column value into domain values yet
   const instanceData = getInstanceData(entity);
-  // Most entity types have no protected reads; avoid a field-metadata lookup for every cached value.
-  if (
-    !isInternal &&
-    instanceData.metadata.hasAssertUnchangedFields &&
-    instanceData.metadata.allFields[fieldName]?.assertUnchanged
-  ) {
-    em.assertUnchanged(entity);
+  const index = instanceData.metadata.fieldReadIndexes[fieldName];
+  if (typeof index !== "number") fail(`Unknown field ${instanceData.metadata.type}.${fieldName}`);
+  if ((BaseEntity.getFieldReadWord(entity, index >>> 5) & (1 << (index & 31))) !== 0) {
+    return instanceData.data[fieldName];
   }
-
-  const { data } = instanceData;
-  // Graph traversals repeatedly read IDs. Keep this lookup constant-key, after hooks and read locking.
-  if (fieldName === "id" && data.id !== undefined) return data.id;
-  if (fieldName in data) {
-    return data[fieldName];
-  } else {
-    if (!entity.isNewEntity) {
-      const field = instanceData.metadata.allFields[fieldName];
-      const serde = field?.serde ?? fail(`Missing serde for ${fieldName}`);
-      data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
-    }
-    return data[fieldName];
-  }
+  return readField(entity, instanceData, fieldName, isInternal, index);
 }
 
 /** Returns whether `fieldName` is a field/column on `entity` that can be changed. */
@@ -203,4 +186,75 @@ export function equal(a: any, b: any): boolean {
     if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);
   }
   return false;
+}
+
+/**
+ * Performs first-read callbacks, protection, and lazy conversion before publishing the warm-read bit.
+ *
+ * The plugin bit is set before invoking hooks so a hook may read or change its own field.
+ * A throwing hook clears both bits for this field, allowing a later access to retry it.
+ */
+function readField(
+  entity: Entity,
+  instanceData: InstanceData,
+  fieldName: string,
+  isInternal: boolean,
+  index: number,
+): any {
+  const { em, metadata } = instanceData;
+  if (!hasReadField(instanceData.pluginReadFields, instanceData.pluginReadFieldsExtra, index)) {
+    markPluginReadField(instanceData, index, true);
+    try {
+      getEmInternalApi(em).pluginManager.beforeGetField(entity, fieldName);
+    } catch (error) {
+      markPluginReadField(instanceData, index, false);
+      markApplicationReadField(entity, index, false);
+      // A reentrant ID getter may have cached a conversion before the outer hook failed.
+      if (fieldName === "id") instanceData.idCache = undefined;
+      throw error;
+    }
+  }
+
+  const field = metadata.allFields[fieldName];
+  if (!isInternal && field?.assertUnchanged) em.assertUnchanged(entity);
+  // Hooks may replace a cached value, so inspect current storage only after they finish.
+  const { data } = instanceData;
+  if (!(fieldName in data) && !instanceData.isNewEntity) {
+    // We may not have converted the database column value into domain values yet.
+    const serde = field?.serde ?? fail(`Missing serde for ${fieldName}`);
+    data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
+  }
+  // IDs are always assigned into data.id, so even their unassigned reads can stay warm.
+  // Other unset new fields stay cold: inserts may supply defaults later, without a read
+  // turning into an explicit `undefined` for defaults/isFieldSet.
+  if ((fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
+    markApplicationReadField(entity, index, true);
+  }
+  return data[fieldName];
+}
+
+/** Tests a field bit without allocating the extra words for small entity types. */
+function hasReadField(first: number, extra: readonly number[] | undefined, index: number): boolean {
+  const word = index < 32 ? first : (extra?.[(index >>> 5) - 1] ?? 0);
+  return (word & (1 << (index & 31))) !== 0;
+}
+
+/** Changes one cold-path plugin bit, preserving other reads completed inside the callback. */
+function markPluginReadField(data: InstanceData, index: number, read: boolean): void {
+  const bit = 1 << (index & 31);
+  if (index < 32) {
+    data.pluginReadFields = read ? data.pluginReadFields | bit : data.pluginReadFields & ~bit;
+  } else {
+    const extra = (data.pluginReadFieldsExtra ??= []);
+    const word = (index >>> 5) - 1;
+    extra[word] = read ? (extra[word] ?? 0) | bit : (extra[word] ?? 0) & ~bit;
+  }
+}
+
+/** Changes the entity's warm-read bit without disturbing other fields in that word. */
+function markApplicationReadField(entity: Entity, index: number, read: boolean): void {
+  const bit = 1 << (index & 31);
+  const word = index >>> 5;
+  const value = BaseEntity.getFieldReadWord(entity, word);
+  BaseEntity.setFieldReadWord(entity, word, read ? value | bit : value & ~bit);
 }

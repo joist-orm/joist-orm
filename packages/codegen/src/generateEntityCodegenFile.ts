@@ -14,6 +14,7 @@ import {
   type PolymorphicField,
   type PrimitiveField,
   type PrimitiveTypescriptType,
+  getFieldReadIndexes,
 } from "./EntityDbMetadata.ts";
 import { type ScopeMember } from "./findEntityScopes.ts";
 import { getStiEntities } from "./inheritance.ts";
@@ -130,10 +131,18 @@ export function generateEntityCodegenFile(
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
 
-  const primitives = createPrimitives(meta, entity, fieldDocs); // Add the primitives
-  primitives.push(...createRegularEnums(meta, entity, fieldDocs)); // Add ManyToOne enums
-  primitives.push(...createArrayEnums(meta, fieldDocs)); // Add integer[] enums
-  primitives.push(...createPgEnums(meta, fieldDocs)); // Add native enums
+  const readIndexes = getFieldReadIndexes(meta);
+  // Families with more than 32 tracked fields need extra __readFieldsN words on their root type.
+  const extraReadWords = meta.baseClassName
+    ? []
+    : Array.from(
+        { length: Math.ceil(readIndexes.size / 32) - 1 },
+        (_, word) => code`declare protected __readFields${word + 1}: number;`,
+      );
+  const primitives = createPrimitives(meta, entity, fieldDocs, readIndexes); // Add the primitives
+  primitives.push(...createRegularEnums(meta, entity, fieldDocs, readIndexes)); // Add ManyToOne enums
+  primitives.push(...createArrayEnums(meta, fieldDocs, readIndexes)); // Add integer[] enums
+  primitives.push(...createPgEnums(meta, fieldDocs, readIndexes)); // Add native enums
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
@@ -144,10 +153,13 @@ export function generateEntityCodegenFile(
   const factoryMethod = imp(`new${entity.name}@./entities.ts`);
 
   // If we're not tagged-strings, detag on the way out of id
+  // Assigned IDs are immutable; an undefined conversion stays retryable until assignment.
   const idMaybeCode =
-    config.idType === "tagged-string"
+    !config.idType || config.idType === "tagged-string"
       ? code`return this.idTaggedMaybe;`
-      : code`return ${toIdOf}(${metadata}, this.idTaggedMaybe);`;
+      : code`
+        return (this.__data.idCache ??= ${toIdOf}(${metadata}, this.idTaggedMaybe)) as ${entity.idName} | undefined;
+      `;
   const idType = getIdType(config);
 
   const maybeSoftDeleteMethods = meta.deletedAt
@@ -314,6 +326,8 @@ export function generateEntityCodegenFile(
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
+      ${extraReadWords}
+
       declare readonly __type: {
         ${baseEntity ? `0: "${baseEntity.name}",` : ""}
         ${baseEntity ? 1 : 0}: "${entityName}", 
@@ -348,7 +362,7 @@ export function generateEntityCodegenFile(
       }
 
       get idTaggedMaybe(): ${TaggedId} | undefined {
-        return ${getField}(this, "id");
+        return ${fieldReadExpression(readIndexes, "id")};
       }
 
       ${primitives}    
@@ -868,7 +882,12 @@ function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums];
 }
 
-function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
+function createPrimitives(
+  meta: EntityDbMetadata,
+  entity: Entity,
+  fieldDocs: Record<string, string>,
+  readIndexes: ReadonlyMap<string, number>,
+) {
   const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -888,13 +907,13 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Rec
     } else if (p.zodSchema) {
       getter = code`
         get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
+          return ${fieldReadExpression(readIndexes, fieldName)};
         }
      `;
     } else {
       getter = code`
         get ${fieldName}(): ${fieldType}${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
+          return ${fieldReadExpression(readIndexes, fieldName)};
         }
      `;
     }
@@ -951,7 +970,12 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity, fieldDocs: Rec
   return primitives;
 }
 
-function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: Record<string, string>) {
+function createRegularEnums(
+  meta: EntityDbMetadata,
+  entity: Entity,
+  fieldDocs: Record<string, string>,
+  readIndexes: ReadonlyMap<string, number>,
+) {
   return meta.enums
     .filter((e) => !e.isArray)
     .flatMap((e) => {
@@ -971,7 +995,7 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
       } else {
         getter = code`
           get ${fieldName}(): ${enumType}${maybeOptional} {
-            return ${getField}(this, "${fieldName}");
+            return ${fieldReadExpression(readIndexes, fieldName)};
           }
 
           get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
@@ -999,7 +1023,7 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
       const accessors = enumRows.map(
         (row) => code`
           get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-            return ${getField}(this, "${fieldName}") === ${enumType}.${pascalCase(row.code)};
+            return ${derived ? code`${getField}(this, "${fieldName}")` : code`this.${fieldName}`} === ${enumType}.${pascalCase(row.code)};
           }
         `,
       );
@@ -1007,14 +1031,18 @@ function createRegularEnums(meta: EntityDbMetadata, entity: Entity, fieldDocs: R
     });
 }
 
-function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
+function createArrayEnums(
+  meta: EntityDbMetadata,
+  fieldDocs: Record<string, string>,
+  readIndexes: ReadonlyMap<string, number>,
+) {
   return meta.enums
     .filter((e) => e.isArray)
     .flatMap((e) => {
       const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
       const getter = code`
         get ${fieldName}(): ${enumType}[] {
-          return ${getField}(this, "${fieldName}") || [];
+          return (${fieldReadExpression(readIndexes, fieldName)}) || [];
         }
 
         get ${fieldName}Details(): ${enumDetailsType}[] {
@@ -1043,14 +1071,18 @@ function createArrayEnums(meta: EntityDbMetadata, fieldDocs: Record<string, stri
     });
 }
 
-function createPgEnums(meta: EntityDbMetadata, fieldDocs: Record<string, string>) {
+function createPgEnums(
+  meta: EntityDbMetadata,
+  fieldDocs: Record<string, string>,
+  readIndexes: ReadonlyMap<string, number>,
+) {
   return meta.pgEnums.flatMap((e) => {
     const { fieldName, enumType, enumValues, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
 
     const getter = code`
         get ${fieldName}(): ${enumType}${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
+          return ${fieldReadExpression(readIndexes, fieldName)};
         }
      `;
     const setter = code`
@@ -1377,4 +1409,12 @@ export function getIdType(config: Config) {
     default:
       return assertNever(config.idType);
   }
+}
+
+/** Emits a literal-key warm read, falling back to shared first-read behavior for only this field. */
+function fieldReadExpression(indexes: ReadonlyMap<string, number>, fieldName: string): Code {
+  const index = indexes.get(fieldName) ?? fail(`Missing first-read index for ${fieldName}`);
+  const bit = 1 << (index & 31);
+  const word = index < 32 ? "__readFields" : `__readFields${index >>> 5}`;
+  return code`(this.${word} & ${bit}) !== 0 ? this.__data.data.${fieldName} : ${getField}(this, "${fieldName}")`;
 }

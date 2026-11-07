@@ -34,7 +34,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -59,7 +58,6 @@ import {
   type TaskItem,
   type TaskItemId,
   type TaskNew,
-  taskNewMeta,
   type TaskOpts,
   type TaskOrder,
 } from "../entities";
@@ -205,7 +203,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get idMaybe(): TaskNewId | undefined {
-    return toIdOf(taskNewMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -213,11 +211,11 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get specialNewField(): number | undefined {
-    return getField(this, "specialNewField");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.specialNewField : getField(this, "specialNewField");
   }
 
   set specialNewField(specialNewField: number | undefined) {
@@ -225,7 +223,9 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get sharedSubtypeField(): number | undefined {
-    return getField(this, "sharedSubtypeField");
+    return (this.__readFields & 2048) !== 0
+      ? this.__data.data.sharedSubtypeField
+      : getField(this, "sharedSubtypeField");
   }
 
   set sharedSubtypeField(sharedSubtypeField: number | undefined) {

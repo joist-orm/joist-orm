@@ -32,7 +32,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -50,7 +49,6 @@ import {
   type ParentGroupId,
   type ParentGroupOrder,
   type ParentItem,
-  parentItemMeta,
 } from "../entities";
 
 export type ParentItemId = Flavor<string, "ParentItem">;
@@ -173,7 +171,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get idMaybe(): ParentItemId | undefined {
-    return toIdOf(parentItemMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -181,11 +179,11 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string | undefined {
-    return getField(this, "name");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string | undefined) {
@@ -193,11 +191,11 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

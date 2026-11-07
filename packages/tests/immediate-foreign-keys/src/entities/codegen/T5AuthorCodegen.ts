@@ -133,7 +133,7 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get idMaybe(): T5AuthorId | undefined {
-    return toIdOf(t5AuthorMeta, this.idTaggedMaybe);
+    return (this.__data.idCache ??= toIdOf(t5AuthorMeta, this.idTaggedMaybe)) as T5AuthorId | undefined;
   }
 
   get idTagged(): TaggedId {
@@ -141,11 +141,11 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get firstName(): string {
-    return getField(this, "firstName");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.firstName : getField(this, "firstName");
   }
 
   set firstName(firstName: string) {

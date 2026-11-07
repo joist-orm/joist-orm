@@ -40,7 +40,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -55,7 +54,6 @@ import {
   type Book,
   type BookAdvance,
   type BookAdvanceId,
-  bookMeta,
   type BookReview,
   type BookReviewId,
   type Comment,
@@ -309,7 +307,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): BookId | undefined {
-    return toIdOf(bookMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -317,11 +315,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -329,7 +327,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get order(): number {
-    return getField(this, "order");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.order : getField(this, "order");
   }
 
   set order(order: number) {
@@ -337,7 +335,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get notes(): string {
-    return getField(this, "notes");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.notes : getField(this, "notes");
   }
 
   set notes(notes: string) {
@@ -345,7 +343,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get acknowledgements(): string | undefined {
-    return getField(this, "acknowledgements");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.acknowledgements : getField(this, "acknowledgements");
   }
 
   set acknowledgements(acknowledgements: string | undefined) {
@@ -353,7 +351,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get authorsNickNames(): string | undefined {
-    return getField(this, "authorsNickNames");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.authorsNickNames : getField(this, "authorsNickNames");
   }
 
   set authorsNickNames(authorsNickNames: string | undefined) {
@@ -366,7 +364,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   abstract readonly search: ReactiveField<Book, string | undefined>;
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -374,11 +372,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

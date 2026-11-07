@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -48,7 +47,6 @@ import {
   type Entity,
   EntityManager,
   type Image,
-  imageMeta,
   ImageType,
   ImageTypeDetails,
   ImageTypes,
@@ -216,7 +214,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get idMaybe(): ImageId | undefined {
-    return toIdOf(imageMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -224,11 +222,11 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get fileName(): string {
-    return getField(this, "fileName");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.fileName : getField(this, "fileName");
   }
 
   set fileName(fileName: string) {
@@ -236,15 +234,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get type(): ImageType {
-    return getField(this, "type");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.type : getField(this, "type");
   }
 
   get typeDetails(): ImageTypeDetails {
@@ -256,15 +254,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get isBookImage(): boolean {
-    return getField(this, "type") === ImageType.BookImage;
+    return this.type === ImageType.BookImage;
   }
 
   get isAuthorImage(): boolean {
-    return getField(this, "type") === ImageType.AuthorImage;
+    return this.type === ImageType.AuthorImage;
   }
 
   get isPublisherImage(): boolean {
-    return getField(this, "type") === ImageType.PublisherImage;
+    return this.type === ImageType.PublisherImage;
   }
 
   /**

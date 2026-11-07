@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -43,7 +42,6 @@ import {
   type AuthorId,
   type AuthorOrder,
   type Book,
-  bookMeta,
   BookStatus,
   BookStatusDetails,
   BookStatuses,
@@ -167,7 +165,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): BookId | undefined {
-    return toIdOf(bookMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -175,11 +173,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -187,15 +185,15 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get status(): BookStatus {
-    return getField(this, "status");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.status : getField(this, "status");
   }
 
   get statusDetails(): BookStatusDetails {
@@ -207,11 +205,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get isDraft(): boolean {
-    return getField(this, "status") === BookStatus.Draft;
+    return this.status === BookStatus.Draft;
   }
 
   get isPublished(): boolean {
-    return getField(this, "status") === BookStatus.Published;
+    return this.status === BookStatus.Published;
   }
 
   /**

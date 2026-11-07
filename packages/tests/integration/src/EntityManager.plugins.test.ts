@@ -1,6 +1,14 @@
-import { type Entity, ImmutableEntitiesPlugin, Plugin, getMetadata, isInTrustedContext } from "joist-orm";
+import { type Entity, ImmutableEntitiesPlugin, Plugin, getField, getMetadata, isInTrustedContext } from "joist-orm";
 import { Author, Book, BookReview, Image, Publisher, Tag, User, newAuthor, newBook, newImage } from "src/entities";
-import { insertAuthor, insertBook, insertPublisher, insertTag, select } from "src/entities/inserts";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertImage,
+  insertPublisher,
+  insertTag,
+  select,
+} from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
@@ -104,46 +112,47 @@ describe("EntityManager.plugins", () => {
     }
 
     it.withCtx("is called before an entity's field is retrieved", async (ctx) => {
+      // Given an image whose filename has never been read, even by a setter
       const { em } = ctx;
       const plugin = new BeforeGetFieldPlugin();
-      const image = newImage(em);
+      const image = em.createPartial(Image, {});
+      // And its first read will be observed by a plugin
       em.addPlugin(plugin);
-      expect(plugin.calls).toHaveLength(0);
-      const _ = image.fileName;
+      // When application logic reads the filename
+      void image.fileName;
+      // Then the plugin observes that field
       expect(plugin.calls).toEqual([[image, "fileName"]]);
     });
 
-    it.withCtx("is called each time a field is accessed", async (ctx) => {
+    it.withCtx("is called only the first time a field is accessed", async (ctx) => {
+      // Given an image with an unread filename and a read plugin
       const { em } = ctx;
       const plugin = new BeforeGetFieldPlugin();
-      const image = newImage(em);
+      const image = em.createPartial(Image, {});
+      // And a plugin will observe its first filename read
       em.addPlugin(plugin);
-      const _ = image.fileName;
-      const _2 = image.fileName;
-      expect(plugin.calls).toEqual([
-        [image, "fileName"],
-        [image, "fileName"],
-      ]);
+      // When application logic reads that undefined filename twice
+      void image.fileName;
+      void image.fileName;
+      // Then the plugin observes one read, even though no value was cached
+      expect(plugin.calls).toEqual([[image, "fileName"]]);
     });
 
     it.withCtx("is called when accessing a m2o relation", async (ctx) => {
+      // Given a persisted author
       await insertAuthor({ first_name: "a1" });
+      // And a persisted book belongs to that author
       await insertBook({ title: "b1", author_id: 1 });
       const { em } = ctx;
       const plugin = new BeforeGetFieldPlugin();
-      // Add the plugin before, b/c if join-preloading is enabled, we'll `getField` the value during
-      // populate, and then m2o.get will be cached and not hit `getField`.
-      // ...maybe ManyToOneReferenceImpl.doGet should also call beforeGetField on every invocation?
+      // And a plugin is installed before any reads of the book's author
       em.addPlugin(plugin);
       const b1 = await em.load(Book, "b:1", "author");
-      const _ = b1.author.get;
-      if (isPreloadingEnabled) {
-        expect(plugin.calls[plugin.calls.length - 1]).toMatchEntity([b1, "author"]);
-      } else {
-        // If we're not preloaded, then the `m2o.load` checks if the value changed while in-flight,
-        // which accesses `author.id`, so look at the 2nd to last call to find `book.author`.
-        expect(plugin.calls[plugin.calls.length - 2]).toMatchEntity([b1, "author"]);
-      }
+      // When application logic reads the loaded author repeatedly
+      void b1.author.get;
+      void b1.author.get;
+      // Then the author field is observed once, independent of preloading's other reads
+      expect(plugin.calls.filter((call) => call[0] === b1 && call[1] === "author")).toEqual([[b1, "author"]]);
     });
   });
 
@@ -371,20 +380,19 @@ describe("EntityManager.plugins", () => {
     }
 
     it.withCtx("passes trusted=false for external field access", async (ctx) => {
+      // Given a persisted image whose first filename read will be external
+      await insertImage({ type_id: 2, file_name: "original.jpg" });
       const { em } = ctx;
       const plugin = new InternalTrackingPlugin();
-      const image = newImage(em);
-      // Add plugin after create to only track our explicit external calls
+      const image = await em.load(Image, "1");
+      // And the plugin is installed before that field is read
       em.addPlugin(plugin);
-      // Given we make both an external read & write
-      const _ = image.fileName;
+      // When application logic reads and then changes the filename
+      void image.fileName;
       image.fileName = "external_test";
-      // Then we had two getField calls (once for equality check in setField, once for explicit read)
+      // Then the first read is untrusted and the setter's equality comparison does not repeat it
       const getFileNameCalls = plugin.getFieldCalls.filter((c) => c.field === "fileName");
-      expect(getFileNameCalls).toMatchObject([{ trusted: false }, { trusted: false }]);
-      // And one setField call
-      const setFileNameCalls = plugin.setFieldCalls.filter((c) => c.field === "fileName");
-      expect(setFileNameCalls).toMatchObject([{ value: "external_test", trusted: false }]);
+      expect(getFileNameCalls).toMatchObject([{ trusted: false }]);
     });
 
     it.withCtx("passes trusted=false for create opts and trusted=true for sync defaults", async (ctx) => {
@@ -462,24 +470,24 @@ describe("EntityManager.plugins", () => {
     });
 
     it.withCtx("passes trusted=true for getField from reactive field recalculation", async (ctx) => {
+      // Given a persisted review whose rating has never been read by this EM
+      await insertAuthor({ first_name: "a1" });
+      // And the author's existing book has a public review
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 5 });
       const { em } = ctx;
       const plugin = new InternalTrackingPlugin();
-      // Given Author.numberOfPublicReviews accesses the BookReview.rating value
-      const a1 = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
-      newBook(em, { author: a1 });
-      // And we don't add the plugin until before flush
       em.addPlugin(plugin);
+      const a1 = await em.load(Author, "a:1");
+      // When a new book triggers Author.numberOfPublicReviews recalculation
+      newBook(em, { author: a1 });
       await em.flush();
-      // Then we have ~4-5 trusted get calls
-      const trustedGetCalls = plugin.getFieldCalls.filter((c) => c.field === "rating" && c.trusted);
-      expect(trustedGetCalls.length).toBeGreaterThan(0);
-      // And no untrusted get calls
-      const untrustedGetCalls = plugin.getFieldCalls.filter((c) => c.field === "rating" && !c.trusted);
-      expect(untrustedGetCalls.length).toBe(0);
+      // Then its first rating read is observed once in the trusted domain context
+      expect(plugin.getFieldCalls.filter((c) => c.field === "rating")).toMatchObject([{ trusted: true }]);
     });
   });
 
-  it.withCtx("observes cached ID reads after a plugin is registered", async (ctx) => {
+  it.withCtx("does not replay cached ID reads for a later plugin", async (ctx) => {
     // Given an author whose assigned ID has already been read
     const a = newAuthor(ctx.em);
     await ctx.em.flush();
@@ -499,21 +507,20 @@ describe("EntityManager.plugins", () => {
     void a.idMaybe;
     void a.idTagged;
     void a.idTaggedMaybe;
-    // Then every read reaches the newly registered plugin
-    expect(fields).toEqual(["id", "id", "id", "id"]);
+    // Then the later plugin does not observe an ID that was already read
+    expect(fields).toEqual([]);
   });
 
-  it.withCtx("returns a cached field's new value when its read hook changes it", async (ctx) => {
-    // Given an image whose filename is already in memory
-    const image = newImage(ctx.em, { fileName: "old.jpg" });
+  it.withCtx("returns a field's new value when its first-read hook changes it", async (ctx) => {
+    // Given an image persisted with an old filename
+    await insertImage({ type_id: 2, file_name: "old.jpg" });
+    const image = await ctx.em.load(Image, "1");
     // And a read hook renames the image before returning its filename
-    let renamed = false;
     ctx.em.addPlugin(
       new (class extends Plugin {
-        /** Changes the field once so the setter's own read does not recurse. */
+        /** Changes the field through its normal tracked setter. */
         beforeGetField(entity: Entity, field: string): void {
-          if (entity === image && field === "fileName" && !renamed) {
-            renamed = true;
+          if (entity === image && field === "fileName") {
             image.fileName = "new.jpg";
           }
         }
@@ -524,4 +531,133 @@ describe("EntityManager.plugins", () => {
     // Then it sees the value set by the hook, not the pre-hook cached value
     expect(fileName).toBe("new.jpg");
   });
+
+  it.withCtx("shares the first ID read across all public ID forms and getField", async (ctx) => {
+    // Given an author whose ID is observed from the start of its lifetime in this EM
+    await insertAuthor({ first_name: "a1" });
+    // And a plugin is installed before the author is loaded
+    const plugin = new FieldReadsPlugin();
+    ctx.em.addPlugin(plugin);
+    const author = await ctx.em.load(Author, "a:1");
+    // When application logic mixes every ID getter with direct field reads
+    void author.id;
+    void author.idMaybe;
+    void author.idTagged;
+    void author.idTaggedMaybe;
+    getField(author, "id");
+    // Then all forms share one observation of the stored ID
+    expect(plugin.calls.filter((call) => call[0] === author && call[1] === "id")).toEqual([[author, "id"]]);
+  });
+
+  it.withCtx("does not repeat a field callback after writes, flushes, or refreshes", async (ctx) => {
+    // Given an author's first name was read with a plugin installed
+    await insertAuthor({ first_name: "a1" });
+    // And a plugin observes the first name before any mutations
+    const plugin = new FieldReadsPlugin();
+    ctx.em.addPlugin(plugin);
+    const author = await ctx.em.load(Author, "a:1");
+    void author.firstName;
+    // When the author is changed, persisted, and refreshed
+    author.firstName = "new name";
+    await ctx.em.flush();
+    await ctx.em.refresh(author);
+    void author.firstName;
+    getField(author, "firstName");
+    // Then the original callback is not repeated at any of those boundaries
+    expect(plugin.calls.filter((call) => call[0] === author && call[1] === "firstName")).toEqual([
+      [author, "firstName"],
+    ]);
+  });
+
+  it.withCtx("retries a throwing read hook even after that hook read its own field", async (ctx) => {
+    // Given an author with a hook that inspects its own field before failing once
+    await insertAuthor({ first_name: "a1" });
+    const author = await ctx.em.load(Author, "a:1");
+    let attempts = 0;
+    ctx.em.addPlugin(
+      new (class extends Plugin {
+        /** Reenters the getter without recursively dispatching the same plugin. */
+        beforeGetField(entity: Entity, field: string): void {
+          if (entity === author && field === "firstName") {
+            attempts++;
+            void author.firstName;
+            if (attempts === 1) throw new Error("retry this read");
+          }
+        }
+      })(),
+    );
+    // When application logic retries after the first hook throws
+    try {
+      void author.firstName;
+    } catch {}
+    void author.firstName;
+    void author.firstName;
+    // Then the successful retry completes the first read and later reads stay warm
+    expect(attempts).toBe(2);
+  });
+
+  it.withCtx("observes fields in different bitmap words independently", async (ctx) => {
+    // Given a persisted author with both an age and an SSN
+    await insertAuthor({ first_name: "a1", age: 42, ssn: "123-45-6789" });
+    // And a plugin is installed before either field is read
+    const plugin = new FieldReadsPlugin();
+    ctx.em.addPlugin(plugin);
+    const author = await ctx.em.load(Author, "a:1");
+    // When application logic mixes generated and direct reads of both fields
+    void author.age;
+    void author.ssn;
+    getField(author, "age");
+    getField(author, "ssn");
+    void author.ssn;
+    // Then neither field's observation consumes or repeats the other's callback
+    expect(plugin.calls.filter((call) => call[0] === author && (call[1] === "age" || call[1] === "ssn"))).toEqual([
+      [author, "age"],
+      [author, "ssn"],
+    ]);
+  });
+
+  it.withCtx("loads a field beyond the first bitmap word after a lower-word read", async (ctx) => {
+    // Given a persisted author whose age and SSN have not been read
+    await insertAuthor({ first_name: "a1", age: 42, ssn: "123-45-6789" });
+    const author = await ctx.em.load(Author, "a:1");
+    // When application logic reads the age before the SSN
+    void author.age;
+    const ssn = author.ssn;
+    // Then the earlier age read does not hide the persisted SSN
+    expect(ssn).toBe("123-45-6789");
+  });
+
+  it.withCtx("observes a protected field once across internal and application reads", async (ctx) => {
+    // Given an author whose protected shape has not been read
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    // And a plugin is installed before housekeeping reads it
+    const plugin = new FieldReadsPlugin();
+    ctx.em.addPlugin(plugin);
+    const author = await ctx.em.load(Author, "a:1");
+    // When housekeeping reads it before application logic
+    getField(author, "favoriteShape", true);
+    void author.favoriteShape;
+    void author.favoriteShape;
+    // Then enrolling application read protection does not repeat the plugin callback
+    expect(plugin.calls.filter((call) => call[0] === author && call[1] === "favoriteShape")).toEqual([
+      [author, "favoriteShape"],
+    ]);
+  });
+
+  it.withCtx("rejects reads of unknown entity fields", async (ctx) => {
+    // Given an author with generated field metadata
+    const author = newAuthor(ctx.em);
+    // When application logic asks for a field that does not exist
+    // Then it fails instead of silently bypassing first-read tracking
+    expect(() => getField(author, "notAField")).toThrow("Unknown field Author.notAField");
+  });
 });
+
+/** Records reads without accessing any entity getters from the callback. */
+class FieldReadsPlugin extends Plugin {
+  calls: [Entity, string][] = [];
+
+  beforeGetField(entity: Entity, field: string): void {
+    this.calls.push([entity, field]);
+  }
+}

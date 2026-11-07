@@ -28,7 +28,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -49,7 +48,6 @@ import {
   type PublisherGroupOrder,
   type SmallPublisher,
   type SmallPublisherGroup,
-  smallPublisherGroupMeta,
   type SmallPublisherId,
 } from "../entities";
 
@@ -142,7 +140,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   }
 
   get idMaybe(): SmallPublisherGroupId | undefined {
-    return toIdOf(smallPublisherGroupMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -150,11 +148,11 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get smallName(): string | undefined {
-    return getField(this, "smallName");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.smallName : getField(this, "smallName");
   }
 
   set smallName(smallName: string | undefined) {

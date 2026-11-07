@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -51,7 +50,6 @@ import {
   type Publisher,
   type PublisherId,
   type Tag,
-  tagMeta,
   type Task,
   type TaskId,
 } from "../entities";
@@ -177,7 +175,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get idMaybe(): TagId | undefined {
-    return toIdOf(tagMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -185,11 +183,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {
@@ -197,11 +195,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

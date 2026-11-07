@@ -8,6 +8,7 @@ import {
   type EntityDbMetadata,
   type OneToManyField,
   type PrimitiveField,
+  getFieldReadIndexes,
 } from "./EntityDbMetadata.ts";
 import {
   BigIntSerde,
@@ -40,6 +41,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
 
   validateAssertUnchangedFields(config, meta);
   const fields = generateFields(config, dbMeta, meta, columnReference);
+  const fieldReadIndexes = getFieldReadIndexes(meta);
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -77,6 +79,8 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       fields: ${fields},
       columns: ${meta.primaryKey.columnOwner.metaName}Columns,
       allFields: {},
+      fieldReadIndexes: ${Object.fromEntries(fieldReadIndexes)},
+      fieldReadWordCount: ${Math.ceil(fieldReadIndexes.size / 32)},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
       config: ${entity.configConst},

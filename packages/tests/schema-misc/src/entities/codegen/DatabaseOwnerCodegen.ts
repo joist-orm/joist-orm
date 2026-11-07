@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -38,15 +37,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  type DatabaseOwner,
-  databaseOwnerMeta,
-  type Entity,
-  EntityManager,
-  newDatabaseOwner,
-  type Tag,
-  type TagId,
-} from "../entities";
+import { type DatabaseOwner, type Entity, EntityManager, newDatabaseOwner, type Tag, type TagId } from "../entities";
 
 export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;
 
@@ -140,7 +131,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   get idMaybe(): DatabaseOwnerId | undefined {
-    return toIdOf(databaseOwnerMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -148,11 +139,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {

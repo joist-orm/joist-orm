@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -43,7 +42,6 @@ import {
   type AuthorId,
   type AuthorOrder,
   type AuthorSchedule,
-  authorScheduleMeta,
   type Entity,
   EntityManager,
   newAuthorSchedule,
@@ -163,7 +161,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get idMaybe(): AuthorScheduleId | undefined {
-    return toIdOf(authorScheduleMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -171,11 +169,11 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get overview(): string | undefined {
-    return getField(this, "overview");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.overview : getField(this, "overview");
   }
 
   set overview(overview: string | undefined) {
@@ -183,11 +181,11 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

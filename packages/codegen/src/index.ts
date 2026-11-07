@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import process from "node:process";
 
+import type Database from "better-sqlite3";
 import { type ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import { saveFiles } from "ts-poet";
@@ -25,6 +26,7 @@ import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata.ts";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger.ts";
 import { loadPgMetadata } from "./pgMetadata.ts";
 import { scanEntityFiles } from "./scanEntityFiles.ts";
+import { loadSqliteSchema } from "./sqlite/loadSqliteSchema.ts";
 import {
   isEntityTable,
   isEnumTable,
@@ -63,10 +65,12 @@ export async function joistCodegen() {
     console.log(`  - the databaseUrl key in joist-config.json`);
     return;
   }
-  const pgConfig = newPgConnectionConfig();
+  // A `sqlite:<path>` url reads the schema from that SQLite file, instead of connecting to PostgreSQL
+  const sqlite = await maybeOpenSqlite();
+  const pgConfig = sqlite ? undefined : newPgConnectionConfig();
 
-  const client = new Client(pgConfig);
-  await client.connect();
+  const client = sqlite ?? new Client(pgConfig);
+  if (client instanceof Client) await client.connect();
 
   const dbMetadata = await loadSchemaMetadata(config, client);
   const { entities, enums, totalTables } = dbMetadata;
@@ -91,10 +95,10 @@ export async function joistCodegen() {
   // If we're not using deferred FKs, determine our DAG insert order
   await maybeSetForeignKeyOrdering(config, dbMetadata.entities);
 
-  // Generate the flush function for tests
-  await maybeGenerateFlushFunctions(config, client, pgConfig, dbMetadata);
+  // Generate the flush function for tests, which SQLite can't have, because it has no stored functions
+  if (client instanceof Client) await maybeGenerateFlushFunctions(config, client, pgConfig!, dbMetadata);
 
-  await client.end();
+  await (client instanceof Client ? client.end() : client.close());
 
   // Apply any codemods to the user's codebase, if we have them
   await maybeRunTransforms(config);
@@ -146,12 +150,15 @@ async function maybeGenerateFlushFunctions(config: Config, client: Client, pgCon
   }
 }
 
-async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMetadata> {
+async function loadSchemaMetadata(config: Config, client: Client | Database.Database): Promise<DbMetadata> {
+  const isPg = client instanceof Client;
   // Load all user schemas so cross-schema foreign keys can be resolved. Codegen filters
   // non-public tables below; trigger functions in other schemas do not affect entities.
-  const db = await loadPgMetadata(client);
-  const enums = await loadEnumMetadata(db, client, config);
-  const pgEnums = await loadPgEnumMetadata(db, client, config);
+  const db = isPg ? await loadPgMetadata(client) : loadSqliteSchema(client);
+  // better-sqlite3 is synchronous, so wrap it in the async `query` shape that enum loading expects
+  const queryClient = isPg ? client : { query: async (sql: string) => ({ rows: client.prepare(sql).all() }) };
+  const enums = await loadEnumMetadata(db, queryClient, config);
+  const pgEnums = await loadPgEnumMetadata(db, queryClient, config);
   // The order also controls generated exports; sorting physical table names puts book_reviews
   // before books and changes initialization order for entity modules with circular imports.
   const entities = db.tables
@@ -171,6 +178,20 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((t) => t.name);
   const entitiesByName = Object.fromEntries(entities.map((e) => [e.name, e]));
   return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables, otherTables };
+}
+
+/** Opens the file of a `sqlite:<path>` DATABASE_URL, or returns undefined for PostgreSQL. */
+async function maybeOpenSqlite(): Promise<Database.Database | undefined> {
+  const url = process.env.DATABASE_URL;
+  if (!url?.startsWith("sqlite:")) return undefined;
+  const path = url.slice("sqlite:".length);
+  // Fail on a missing file, instead of creating an empty database and generating no entities
+  if (!existsSync(path)) {
+    throw new Error(`SQLite database ${path} from DATABASE_URL does not exist, run your migrations first`);
+  }
+  // better-sqlite3 is an optional peer dependency, so only load it for SQLite projects
+  const { default: SqliteDatabase } = await import("better-sqlite3");
+  return new SqliteDatabase(path, { readonly: true });
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

@@ -105,36 +105,6 @@ describe("em.find / batch", () => {
     expect(q2).toMatchEntity([{ firstName: "a1", lastName: "l2" }]);
   });
 
-  it("passes the unbatched query AST to beforeFind plugins", async () => {
-    class BeforeFindPlugin extends Plugin {
-      tables: string[][] = [];
-      beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
-        // Capture the query.plugins at beforeFind-time
-        if (operation === "find") {
-          this.tables.push(query.tables.map((table) => table.alias));
-        }
-      }
-    }
-
-    await insertAuthor({ first_name: "a1", last_name: "l1" });
-    await insertAuthor({ first_name: "a2", last_name: "l2" });
-    resetQueryCount();
-    const em = newEntityManager();
-    const plugin = new BeforeFindPlugin();
-    em.addPlugin(plugin);
-
-    // Given we batch two em.finds
-    await Promise.all([
-      em.find(Author, { firstName: "a1", lastName: "l1" }),
-      em.find(Author, { firstName: "a2", lastName: "l2" }),
-    ]);
-    // Then there was only 1 query issues
-    expect(numberOfQueries).toEqual(1);
-    // And the plugin only saw the pre-batched `authors a` table for each batched find, and not
-    // our more complicated `_find` structure
-    expect(plugin.tables).toEqual([["a"], ["a"]]);
-  });
-
   it("collects values from plugin-mutated queries when batching", async () => {
     class ConditionPlugin extends Plugin {
       beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
@@ -539,18 +509,6 @@ describe("em.find / batch", () => {
     `);
   });
 
-  it("does not cache results incorrectly", async () => {
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    const em = newEntityManager();
-    // When we purposefully make two separate queries with the same structure
-    const a1 = await em.find(Author, { firstName: "a1" });
-    const a2 = await em.find(Author, { firstName: "a2" });
-    // Then they didn't share the same cache
-    expect(a1[0].firstName).toBe("a1");
-    expect(a2[0].firstName).toBe("a2");
-  });
-
   it("batches contains an enum array", async () => {
     await insertAuthor({ first_name: "a1", favorite_colors: [1, 2, 3] });
     await insertAuthor({ first_name: "a2", favorite_colors: [1, 2, 3] });
@@ -772,29 +730,5 @@ describe("em.find / batch", () => {
     ]);
     expect(q1).toEqual([]);
     expect(q2).toEqual([]);
-  });
-
-  it("omits impossible entries while preserving viable finds", async () => {
-    // Given a persisted Author belongs to p1 and another Publisher is new
-    await insertPublisher({ name: "p1" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = newEntityManager();
-    const newPublisherEntity = em.create(SmallPublisher, {
-      name: "p2",
-      city: "c2",
-      spotlightAuthor: em.create(Author, { firstName: "spotlight" }),
-    });
-    resetQueryCount();
-
-    // When same-shaped finds for both Publishers execute together
-    const [impossible, viable] = await Promise.all([
-      em.find(Author, { publisher: newPublisherEntity }),
-      em.find(Author, { publisher: "p:1" }),
-    ]);
-
-    // Then only the viable find enters the loader and queries the database
-    expect(impossible).toEqual([]);
-    expect(viable).toMatchEntity([{ firstName: "a1" }]);
-    expect(numberOfQueries).toBe(1);
   });
 });

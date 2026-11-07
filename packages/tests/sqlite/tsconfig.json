@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.test.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo",
+    "paths": {
+      "src/*": ["./src/*"]
+    }
+  },
+  "include": ["./src", "./migrate.ts"],
+  "references": [
+    { "path": "../../codegen" },
+    { "path": "../../core" },
+    { "path": "../../drivers/sqlite" },
+    { "path": "../../orm" },
+    { "path": "../../test-utils" }
+  ]
+}

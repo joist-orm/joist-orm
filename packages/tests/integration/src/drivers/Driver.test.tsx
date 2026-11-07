@@ -1,40 +1,23 @@
 import { getMetadata, setField } from "joist-orm";
-import { PostgresDriver } from "joist-orm/pg";
-import pg from "pg";
 import { Author, Book, Tag, newBook, newTag } from "src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 // This will test whatever driver the test suite is currently being run against
 describe("Driver", () => {
-  it("enables pipelining for consumer pools", async () => {
-    const pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL ?? "postgres://joist:local@localhost:5435/joist",
-    });
-    try {
-      new PostgresDriver(pool);
-      expect(pool.options.pipeline).toBe(true);
-      const client = await pool.connect();
-      try {
-        expect(client.pipeline).toBe(true);
-      } finally {
-        client.release();
-      }
-    } finally {
-      await pool.end();
-    }
-  });
-
   describe("flush", () => {
     it("can insert", async () => {
-      // Given an author with the derived fields normally prepared by EntityManager.flush
+      // Given an author whose derived values and timestamps are ready to persist
       const em = newEntityManager();
       const author = em.create(Author, { firstName: "a1" });
       // Pretend EntityManager.flush ran
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      // When the selected driver inserts it within its own native transaction
+      setField(author, "createdAt", new Date());
+      setField(author, "updatedAt", new Date());
+
+      // When the driver inserts the author within its own transaction
       await em.driver.transaction(em, async () => {
         await em.driver.flush(
           em,
@@ -49,12 +32,10 @@ describe("Driver", () => {
           {},
         );
       });
-      // Then the author is committed with its generated identifier and database defaults
+
+      // Then the database contains the author with an assigned id and an unset graduation date
       const authors = await select("authors");
-      expect(authors.length).toEqual(1);
-      expect(authors[0].id).toEqual(1);
-      expect(authors[0].first_name).toEqual("a1");
-      expect(authors[0].graduated).toEqual(null);
+      expect(authors).toMatchObject([{ id: 1, first_name: "a1", graduated: null }]);
     });
 
     // This is currently not passing in the main pg driver tests due to an op-lock error

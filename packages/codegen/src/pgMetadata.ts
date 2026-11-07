@@ -372,7 +372,7 @@ export async function loadPgMetadata(client: Client): Promise<Db> {
 }
 
 /** Matches the type names codegen expects from PostgreSQL's builtin aliases. */
-function sqlType(name: string): { name: string; shortName?: string } {
+export function sqlType(name: string): { name: string; shortName?: string } {
   switch (name) {
     case "int2":
       return { name: "smallint" };

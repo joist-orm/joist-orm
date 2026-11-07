@@ -1,0 +1,11 @@
+{
+  "codegenPlugins": [],
+  "codemodVersion": 3,
+  "contextType": "Context@src/context",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entitiesDirectory": "./src/entities",
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at", "createdAt"], "required": false },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
+  }
+}

@@ -1,6 +1,6 @@
 import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 import { Author, Book, Publisher, newAuthor, newBook, newCritic, newPublisher, newUser } from "../entities";
 import { jan1 } from "../testDates";
@@ -716,15 +716,16 @@ describe("OneToManyCollection", () => {
     expect(b1).toBeInstanceOf(Book);
     expect(bNone).toBeUndefined();
     expect(b4).toBeInstanceOf(Book);
-    // And we used only a single query
-    expect(numberOfQueries).toEqual(1);
+    // And PostgreSQL batches the three finds while SQLite executes each find separately
+    expect(numberOfQueries).toEqual(isSqlite ? 3 : 1);
     // And we did not load the other books
     expect(em.entities.length).toEqual(4);
-    // And if we redo the find
+    // When we redo the find with query recording reset
+    resetQueryCount();
     const b1_2 = await a1.books.find("b:1");
     // Then it was cached
     expect(b1_2).toEqual(b1);
-    expect(numberOfQueries).toEqual(1);
+    expect(numberOfQueries).toEqual(0);
   });
 
   it("can find just added entities on new entities", async () => {
@@ -868,7 +869,8 @@ describe("OneToManyCollection", () => {
     await expect(a1.books.load()).rejects.toThrow("Query returned more than 3 entityLimit rows");
   });
 
-  it("fails when o2m find hits the entityLimit", async () => {
+  it("applies the o2m find entityLimit per SQL query", async () => {
+    // Given an Author has four Books that fill one PostgreSQL batched query
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
@@ -880,13 +882,20 @@ describe("OneToManyCollection", () => {
     const a1 = await em.load(Author, "a:1");
     // Set limit so the batched find query (4 concurrent finds = 4 rows) hits it
     em.entityLimit = 4;
+
+    // When all four collection finds execute concurrently
     const result = Promise.all([
       a1.books.find("b:1"),
       a1.books.find("b:2"),
       a1.books.find("b:3"),
       a1.books.find("b:4"),
     ]);
-    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    // Then PostgreSQL hits the combined-query limit, while each SQLite query stays below it
+    if (isSqlite) {
+      expect(await result).toMatchEntity([{ id: "b:1" }, { id: "b:2" }, { id: "b:3" }, { id: "b:4" }]);
+    } else {
+      await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    }
   });
 
   it("caches get access", async () => {

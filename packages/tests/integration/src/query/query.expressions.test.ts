@@ -3,7 +3,7 @@ import { type CaseElse, type CaseWhen, type Query, type ScalarQuery, expr, query
 import { Author, Book, User } from "src/entities";
 import { insertAuthor, insertBook, insertUser, update } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("em.query / expressions", () => {
   describe("select", () => {
@@ -28,7 +28,8 @@ describe("em.query / expressions", () => {
       // Then each object key names a result column, including when its value uses the same keyword
       expect(rows).toEqual([{ coalesce: "Alice", case: "Alice" }]);
       expectTypeOf(rows).toEqualTypeOf<{ coalesce: string; case: string }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(a.last_name, a.first_name) AS coalesce, (CASE WHEN (a.age >= $1) THEN a.first_name ELSE $2::varchar END) AS "case" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY coalesce ASC, "case" ASC",
        ]
@@ -76,7 +77,8 @@ describe("em.query / expressions", () => {
       // Then each row is the chosen name, not an object with a case property
       expect(rows).toEqual(["Alice", "Unknown"]);
       expectTypeOf(rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (a.age >= $1) THEN a.first_name ELSE $2::varchar END) AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -103,7 +105,8 @@ describe("em.query / expressions", () => {
       // Then each row is the first available name
       expect(rows).toEqual(["Alice", "Brown"]);
       expectTypeOf(rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(a.last_name, a.first_name) AS value FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -174,7 +177,8 @@ describe("em.query / expressions", () => {
       // Then PostgreSQL resolves the string types and Joist decodes a non-null string
       expect(rows).toEqual(["notes"]);
       expectTypeOf(rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(b.notes, b.title) AS value FROM books AS b WHERE b.deleted_at IS NULL",
        ]
@@ -197,7 +201,8 @@ describe("em.query / expressions", () => {
       // Then PostgreSQL resolves the string types in the reverse order and Joist decodes a non-null string
       expect(rows).toEqual(["Varchar title"]);
       expectTypeOf(rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(b.title, b.notes) AS value FROM books AS b WHERE b.deleted_at IS NULL",
        ]
@@ -223,7 +228,8 @@ describe("em.query / expressions", () => {
       // Then PostgreSQL resolves one string result type and Joist preserves its non-null string type and decoding
       expect(rows).toEqual(["notes"]);
       expectTypeOf(rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (b.title = $1) THEN b.notes ELSE b.title END) AS value FROM books AS b WHERE b.deleted_at IS NULL",
        ]
@@ -256,7 +262,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { coalesce: string; case: string; nullIf: string | undefined; greatest: number; least: number }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS coalesce, COALESCE(a.last_name, a.first_name) AS "case", NULLIF(a.last_name, $1::varchar) AS "nullIf", GREATEST(a.age, $2::int4) AS greatest, LEAST(a.age, $3::int4) AS least FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY coalesce ASC, "case" ASC",
        ]
@@ -306,7 +313,8 @@ describe("em.query / expressions", () => {
       ]);
       expectTypeOf(firstBook).toEqualTypeOf<ScalarQuery<Book["id"] | undefined>>();
       expectTypeOf(rows).toEqualTypeOf<{ id: Book["id"]; name: string }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE((SELECT NULLIF(b.id, $1::int4) AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL LIMIT $2), $3::int4) AS id, COALESCE((SELECT COALESCE(a.last_name, a.first_name) AS value FROM books AS b1 WHERE b1.author_id = a.id AND b1.deleted_at IS NULL LIMIT $4), $5::varchar) AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -328,7 +336,8 @@ describe("em.query / expressions", () => {
       // Then the derived columns retain their name and Author id types
       expect(rows).toEqual([{ id: "a:1", name: "Alice" }]);
       expectTypeOf(rows).toEqualTypeOf<{ id: Author["id"]; name: string }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "WITH cte AS (SELECT a.id AS id, COALESCE(a.last_name, a.first_name) AS name FROM authors AS a WHERE a.deleted_at IS NULL) SELECT cte.id AS id, cte.name AS name FROM cte WHERE cte.name = $1",
        ]
@@ -356,7 +365,8 @@ describe("em.query / expressions", () => {
       // Then the combined rows retain the nullable name type from NULLIF
       expect(rows).toEqual([{ name: "Alice" }, { name: "Apple" }]);
       expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "(SELECT COALESCE(a.last_name, a.first_name) AS name FROM authors AS a WHERE a.deleted_at IS NULL) UNION ALL (SELECT NULLIF(b.title, $1::varchar) AS name FROM books AS b WHERE b.deleted_at IS NULL) ORDER BY name ASC",
        ]
@@ -379,7 +389,8 @@ describe("em.query / expressions", () => {
       expect(result.rows).toEqual(["Alice"]);
       expect(result.rowCount).toEqual(1);
       expectTypeOf(result.rows).toEqualTypeOf<string[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(a.last_name, a.first_name) AS value FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -419,7 +430,8 @@ describe("em.query / expressions", () => {
         { lastName: "Clark", name: "Clark" },
       ]);
       expectTypeOf(rows).toEqualTypeOf<{ lastName: string | undefined; name: string }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT NULLIF(a.last_name, $1::varchar) AS "lastName", COALESCE(NULLIF(a.last_name, $2::varchar), a.first_name) AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -450,7 +462,8 @@ describe("em.query / expressions", () => {
       // Then equal values decode as undefined, but a null comparison operand leaves the Author name intact
       expect(rows).toEqual([{ name: undefined }, { name: "Bob" }]);
       expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT NULLIF(a.first_name, b.title) AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -504,7 +517,8 @@ describe("em.query / expressions", () => {
           nullableLeast: number | undefined;
         }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT GREATEST(a.age, $1::int4, $2::int4) AS greatest, LEAST(a.age, $3::int4, $4::int4) AS least, LEAST(GREATEST(a.age, $5::int4), $6::int4) AS bounded, GREATEST(a.age, $7::int4) AS "nullableGreatest", LEAST($8::int4, a.age) AS "nullableLeast" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -553,7 +567,8 @@ describe("em.query / expressions", () => {
           missingFirst: string | undefined;
         }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT GREATEST(b.title, a.first_name) AS greatest, LEAST(a.first_name, b.title) AS least, GREATEST(b.title) AS "missingGreatest", LEAST(b.title, $1::varchar) AS "missingLeast", NULLIF(b.title, a.first_name) AS "missingFirst" FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL",
        ]
@@ -590,7 +605,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { name: string; greatest: number; least: number; middleBound: number; dynamic: number | undefined }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(NULLIF(a.last_name, $1::varchar), NULLIF(a.first_name, $2::varchar), $3::varchar) AS name, GREATEST(a.age, $4::int4) AS greatest, LEAST($5::int4, a.age) AS least, GREATEST($6::int4, a.age) AS "middleBound", GREATEST(a.age) AS dynamic FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -639,7 +655,8 @@ describe("em.query / expressions", () => {
           least: Book["id"];
         }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT sq.equal AS equal, sq.different AS different, sq."nullFirst" AS "nullFirst", sq.greatest AS greatest, sq.least AS least FROM (SELECT NULLIF(b.id, $1::int4) AS equal, NULLIF(b.id, $2::int4) AS different, NULLIF($3::int4, b.id) AS "nullFirst", GREATEST(b.id, $4::int4) AS greatest, LEAST($5::int4, b.id) AS least FROM books AS b WHERE GREATEST(b.id, $6::int4) = $7 AND b.deleted_at IS NULL) AS sq",
        ]
@@ -670,7 +687,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { value: number; different: number | undefined; nullComparison: number | undefined; allNull: undefined }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
             [
               "SELECT GREATEST(NULLIF($1::float8, $2::float8), LEAST($3::float8, $4::float8), $5::float8) AS value, NULLIF($6::float8, $7::float8) AS different, NULLIF($8::float8, $9::float8) AS "nullComparison", LEAST($10::text, $11::text) AS "allNull" FROM authors AS a WHERE a.deleted_at IS NULL",
             ]
@@ -781,7 +799,8 @@ describe("em.query / expressions", () => {
       // Then a true condition with a null name still lets COALESCE try the next candidate
       expect(rows).toEqual([{ name: "Alice" }, { name: "Brown" }]);
       expectTypeOf(rows).toEqualTypeOf<{ name: string | undefined }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE((CASE WHEN (a.id IS NOT NULL) THEN a.last_name END), (CASE WHEN (a.id IS NOT NULL) THEN a.first_name END)) AS name FROM authors AS a WHERE COALESCE((CASE WHEN (a.id IS NOT NULL) THEN a.last_name END), (CASE WHEN (a.id IS NOT NULL) THEN a.first_name END)) != $1 AND a.deleted_at IS NULL ORDER BY name ASC",
        ]
@@ -816,7 +835,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { nullable: string | undefined; fallback: string; onlyDynamic: string | undefined }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(a.last_name) AS nullable, COALESCE(a.last_name, $1::varchar) AS fallback, COALESCE($2::text) AS "onlyDynamic" FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -871,7 +891,8 @@ describe("em.query / expressions", () => {
           missingId: Book["id"] | undefined;
         }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(b.title) AS title, COALESCE(b.title, a.first_name) AS name, COALESCE(b.title, $1::varchar) AS literal, (CASE WHEN (a.id IS NOT NULL) THEN b.title ELSE $2::varchar END) AS conditional, COALESCE((CASE WHEN (a.id IS NOT NULL) THEN b.title END), a.first_name) AS nested, COALESCE(b.id, $3::int4) AS "bookId", (CASE WHEN (b.id IS NOT NULL) THEN b.id END) AS "missingId" FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL",
        ]
@@ -908,7 +929,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { fixed: string; dynamic: string | undefined; nullable: string | undefined; nested: string }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (a.age >= $1) THEN a.first_name ELSE $2::varchar END) AS fixed, (CASE WHEN (a.age >= $3) THEN a.first_name ELSE $4::varchar END) AS dynamic, (CASE WHEN (a.age >= $5) THEN a.first_name ELSE $6::varchar END) AS nullable, (CASE WHEN (a.age >= $7) THEN a.first_name ELSE COALESCE(a.last_name, a.first_name) END) AS nested FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -1000,7 +1022,8 @@ describe("em.query / expressions", () => {
       expectTypeOf(rows).toEqualTypeOf<
         { category: string; adultName: string | undefined; stopsAtNull: string | undefined }[]
       >();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (a.age >= $1) THEN $2::text WHEN (a.age >= $3) THEN $4::text ELSE $5::text END) AS category, (CASE WHEN (a.age >= $6) THEN a.first_name END) AS "adultName", (CASE WHEN (a.age >= $7) THEN $8::varchar WHEN (a.age >= $9) THEN a.first_name ELSE $10::varchar END) AS "stopsAtNull" FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -1030,7 +1053,8 @@ describe("em.query / expressions", () => {
 
       // Then the Book's presence decides which Author names are returned
       expect(rows).toEqual([{ name: "Alice" }, { name: undefined }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (b.id IS NOT NULL) THEN a.first_name END) AS name FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -1061,7 +1085,8 @@ describe("em.query / expressions", () => {
 
       // Then the CASE fallback remains and the unused Book join does not duplicate Alice
       expect(rows).toEqual([{ name: "Alice", missing: undefined }]);
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT a.first_name AS name, $1::varchar AS missing FROM authors AS a WHERE a.deleted_at IS NULL",
        ]
@@ -1092,7 +1117,8 @@ describe("em.query / expressions", () => {
       // Then the CASE condition checks Books separately for each Author
       expect(rows).toEqual([{ name: "Alice" }, { name: "No books" }]);
       expectTypeOf(rows).toEqualTypeOf<{ name: string }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT (CASE WHEN (EXISTS (SELECT b.id AS value FROM books AS b WHERE b.author_id = a.id AND b.deleted_at IS NULL)) THEN a.first_name ELSE $1::varchar END) AS name FROM authors AS a WHERE a.deleted_at IS NULL ORDER BY a.id ASC",
        ]
@@ -1120,7 +1146,8 @@ describe("em.query / expressions", () => {
       // Then the fallback reaches SQL as an integer and returns as a tagged Book id
       expect(rows).toEqual([{ id: "b:9" }]);
       expectTypeOf(rows).toEqualTypeOf<{ id: Book["id"] | undefined }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT sq.id AS id FROM (SELECT COALESCE(b.id, (CASE WHEN (a.id IS NOT NULL) THEN $1::int4 END)) AS id FROM authors AS a LEFT OUTER JOIN books AS b ON b.author_id = a.id AND b.deleted_at IS NULL WHERE COALESCE(b.id, (CASE WHEN (a.id IS NOT NULL) THEN $2::int4 END)) = $3 AND a.deleted_at IS NULL) AS sq",
        ]
@@ -1159,7 +1186,8 @@ describe("em.query / expressions", () => {
       // Then each fallback element uses the Book id codec
       expect(authors).toEqual([{ ids: ["b:9"] }]);
       expectTypeOf(authors).toEqualTypeOf<{ ids: Book["id"][] }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
        [
          "SELECT COALESCE(u.password, $1::varchar) AS password FROM users AS u",
          "SELECT COALESCE((SELECT array_agg(b.id) AS value FROM books AS b WHERE b.deleted_at IS NULL), $1::int4[]) AS ids FROM authors AS a WHERE a.deleted_at IS NULL",
@@ -1201,7 +1229,8 @@ describe("em.query / expressions", () => {
       // Then each placeholder receives the intended value and standalone literals keep their types
       expect(rows).toEqual([{ label: "Adult", number: 42, flag: true }]);
       expectTypeOf(rows).toEqualTypeOf<{ label: string; number: number; flag: boolean }[]>();
-      expect(queries).toMatchInlineSnapshot(`
+      if (!isSqlite)
+        expect(queries).toMatchInlineSnapshot(`
             [
               "SELECT COALESCE((CASE WHEN (a.age < $1) THEN $2::text WHEN (a.age >= $3 AND a.first_name = $4) THEN COALESCE($5::text, $6::text) END), $7::text) AS label, COALESCE($8::float8, $9::float8) AS number, (CASE WHEN (a.age >= $10) THEN $11::bool ELSE $12::bool END) AS flag FROM authors AS a WHERE a.deleted_at IS NULL",
             ]

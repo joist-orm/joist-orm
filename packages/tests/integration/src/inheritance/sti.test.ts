@@ -14,7 +14,7 @@ import {
   newTaskThird,
 } from "src/entities";
 import { insertAuthor, insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("SingleTableInheritance", () => {
   it("can create a TaskOld", async () => {
@@ -94,7 +94,8 @@ describe("SingleTableInheritance", () => {
       specialOldField: 1,
       durationInDays: 0,
     });
-    expect(queries).toMatchInlineSnapshot(`
+    if (!isSqlite)
+      expect(queries).toMatchInlineSnapshot(`
      [
        "SELECT t.* FROM tasks AS t WHERE t.type_id = $1 AND t.deleted_at IS NULL ORDER BY t.id ASC LIMIT $2",
      ]
@@ -620,8 +621,15 @@ describe("SingleTableInheritance", () => {
     third.durationInDays = 30;
     resetQueryCount();
     await em.flush();
-    // Then the data CTE and SET clause each name author_id and shared_subtype_field once
-    expect(queries.filter((q) => q.startsWith("WITH"))).toMatchInlineSnapshot(`
+    // Then each subtype persists only its own fields
+    expect(await select("tasks")).toMatchObject([
+      { id: 1, author_id: 2, shared_subtype_field: 1 },
+      { id: 2, author_id: 2, shared_subtype_field: 2 },
+      { id: 3, author_id: null, shared_subtype_field: null, duration_in_days: 30 },
+    ]);
+    // PostgreSQL's data CTE and SET clause each name author_id and shared_subtype_field once.
+    if (!isSqlite)
+      expect(queries.filter((q) => q.startsWith("WITH"))).toMatchInlineSnapshot(`
      [
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as duration_in_days, unnest($3::text[]) as sync_derived, unnest($4::text[]) as async_derived, unnest($5::timestamp with time zone[]) as updated_at, unnest($6::int[]) as shared_subtype_field, unnest($7::int[]) as author_id, unnest($8::timestamptz[]) as __original_updated_at) UPDATE tasks SET duration_in_days = data.duration_in_days, sync_derived = data.sync_derived, async_derived = data.async_derived, updated_at = data.updated_at, shared_subtype_field = data.shared_subtype_field, author_id = data.author_id FROM data WHERE tasks.id = data.id AND date_trunc('milliseconds', tasks.updated_at) = data.__original_updated_at RETURNING tasks.id",
      ]

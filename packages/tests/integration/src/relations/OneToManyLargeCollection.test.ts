@@ -1,7 +1,7 @@
 import { LoadHint } from "joist-orm";
 import { Critic, Publisher, PublisherGroup, newCritic, newPublisherGroup, newTag } from "src/entities";
 import { insertCritic, insertPublisher, insertPublisherGroup, select } from "src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
+import { isSqlite, newEntityManager, numberOfQueries, resetQueryCount } from "src/testEm";
 
 describe("OneToManyLargeCollection", () => {
   it("can percolate large to entity", async () => {
@@ -121,15 +121,16 @@ describe("OneToManyLargeCollection", () => {
     expect(c1).toBeInstanceOf(Critic);
     expect(c2).toBeUndefined();
     expect(c3).toBeInstanceOf(Critic);
-    // And we used only a single query
-    expect(numberOfQueries).toEqual(1);
+    // And PostgreSQL batches the three finds while SQLite executes each find separately
+    expect(numberOfQueries).toEqual(isSqlite ? 3 : 1);
     // And we did not load the other publishers
     expect(em.entities.length).toEqual(4);
-    // And if we redo the find
+    // When we redo the find with query recording reset
+    resetQueryCount();
     const pg1_2 = await pg1.critics.find("c:1");
     // Then it was cached
     expect(pg1_2).toEqual(c1);
-    expect(numberOfQueries).toEqual(1);
+    expect(numberOfQueries).toEqual(0);
   });
 
   it("can find just added entities on new entities", async () => {

@@ -1,16 +1,20 @@
 import { insertPublisher, select } from "src/entities/inserts";
-import { newEntityManager, testDriver } from "src/testEm";
+import { isSqlite, newEntityManager } from "src/testEm";
 
 import { Publisher, SmallPublisher } from "./entities";
 
 describe("EntityManager.decimals", () => {
   it("supports decimals", async () => {
-    const em = newEntityManager();
     // Given we make an entity with some decimals
+    const em = newEntityManager();
     em.create(SmallPublisher, { name: "p1", latitude: 38.46281, longitude: -122.72805, city: "c1" });
+
+    // When the publisher is persisted
     await em.flush();
     const rows = await select("publishers");
-    if (testDriver.isInMemory) {
+
+    // Then SQLite returns numbers and PostgreSQL returns its fixed-precision decimal strings
+    if (isSqlite) {
       expect(rows[0].latitude).toEqual(38.46281);
       expect(rows[0].longitude).toEqual(-122.72805);
     } else {
@@ -18,9 +22,11 @@ describe("EntityManager.decimals", () => {
       expect(rows[0].latitude).toEqual("38.462810");
       expect(rows[0].longitude).toEqual("-122.728050");
     }
-    // And we'll read them as numbers
+    // When the publisher is loaded in a new EntityManager
     const em2 = newEntityManager();
     const p1 = await em2.load(Publisher, "p:1");
+
+    // Then the domain values are numbers for either driver
     expect(p1.latitude).toEqual(38.46281);
     expect(p1.longitude).toEqual(-122.72805);
   });

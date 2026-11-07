@@ -18,7 +18,6 @@ afterAll(async () => {
 });
 
 export function maybeBeginAndCommit(): number {
-  // the in-memory driver doesn't issue BEGIN or COMMIT queries, so
-  // the query count will be lower by two than the real pg driver
-  return testDriver.isInMemory ? 0 : 2;
+  // Both real database drivers issue BEGIN and COMMIT around a flush.
+  return 2;
 }

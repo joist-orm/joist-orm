@@ -195,7 +195,8 @@ export function equal(a: any, b: any): boolean {
 /**
  * Performs first-read callbacks, protection, and lazy conversion before publishing the warm-read bit.
  *
- * The plugin bit is set before invoking hooks so a hook may read or change its own field.
+ * The plugin bit is set before invoking hooks so a hook may read or change its own field,
+ * reentering this function without invoking the hook again.
  * A throwing hook clears both bits for this field, allowing a later access to retry it.
  */
 function readField(

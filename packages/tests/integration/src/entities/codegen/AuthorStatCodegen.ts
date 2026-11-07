@@ -25,7 +25,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -33,7 +32,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type AuthorStat, authorStatMeta, type Entity, EntityManager, newAuthorStat } from "../entities";
+import { type AuthorStat, type Entity, EntityManager, newAuthorStat } from "../entities";
 
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
@@ -236,7 +235,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get idMaybe(): AuthorStatId | undefined {
-    return toIdOf(authorStatMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -244,11 +243,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 512) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get smallint(): number {
-    return getField(this, "smallint");
+    return (this.__readFields & 131072) !== 0 ? this.__data.data.smallint : getField(this, "smallint");
   }
 
   set smallint(smallint: number) {
@@ -256,7 +255,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get integer(): number {
-    return getField(this, "integer");
+    return (this.__readFields & 1024) !== 0 ? this.__data.data.integer : getField(this, "integer");
   }
 
   set integer(integer: number) {
@@ -264,7 +263,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get nullableInteger(): number | undefined {
-    return getField(this, "nullableInteger");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.nullableInteger : getField(this, "nullableInteger");
   }
 
   set nullableInteger(nullableInteger: number | undefined) {
@@ -272,7 +271,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get bigint(): bigint {
-    return getField(this, "bigint");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.bigint : getField(this, "bigint");
   }
 
   set bigint(bigint: bigint) {
@@ -280,7 +279,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get decimal(): number {
-    return getField(this, "decimal");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.decimal : getField(this, "decimal");
   }
 
   set decimal(decimal: number) {
@@ -288,7 +287,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get real(): number {
-    return getField(this, "real");
+    return (this.__readFields & 32768) !== 0 ? this.__data.data.real : getField(this, "real");
   }
 
   set real(real: number) {
@@ -296,7 +295,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get smallserial(): number {
-    return getField(this, "smallserial");
+    return (this.__readFields & 262144) !== 0 ? this.__data.data.smallserial : getField(this, "smallserial");
   }
 
   set smallserial(smallserial: number) {
@@ -304,7 +303,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get serial(): number {
-    return getField(this, "serial");
+    return (this.__readFields & 65536) !== 0 ? this.__data.data.serial : getField(this, "serial");
   }
 
   set serial(serial: number) {
@@ -312,7 +311,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get bigserial(): bigint {
-    return getField(this, "bigserial");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.bigserial : getField(this, "bigserial");
   }
 
   set bigserial(bigserial: bigint) {
@@ -320,7 +319,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get doublePrecision(): number {
-    return getField(this, "doublePrecision");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.doublePrecision : getField(this, "doublePrecision");
   }
 
   set doublePrecision(doublePrecision: number) {
@@ -328,7 +327,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get nullableText(): string | undefined {
-    return getField(this, "nullableText");
+    return (this.__readFields & 16384) !== 0 ? this.__data.data.nullableText : getField(this, "nullableText");
   }
 
   set nullableText(nullableText: string | undefined) {
@@ -336,7 +335,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get json(): Object | undefined {
-    return getField(this, "json");
+    return (this.__readFields & 2048) !== 0 ? this.__data.data.json : getField(this, "json");
   }
 
   set json(json: Object | undefined) {
@@ -344,15 +343,15 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 524288) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get decimalSamples(): number[] | undefined {
-    return getField(this, "decimalSamples");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.decimalSamples : getField(this, "decimalSamples");
   }
 
   set decimalSamples(decimalSamples: number[] | undefined) {
@@ -360,7 +359,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get bigintSamples(): bigint[] | undefined {
-    return getField(this, "bigintSamples");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.bigintSamples : getField(this, "bigintSamples");
   }
 
   set bigintSamples(bigintSamples: bigint[] | undefined) {
@@ -368,7 +367,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get name(): string | undefined {
-    return getField(this, "name");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string | undefined) {
@@ -376,7 +375,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get days(): number[] | undefined {
-    return getField(this, "days");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.days : getField(this, "days");
   }
 
   set days(days: number[] | undefined) {
@@ -384,7 +383,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {

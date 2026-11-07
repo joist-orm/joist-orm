@@ -35,7 +35,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -52,7 +51,6 @@ import {
   newPublisherGroup,
   type Publisher,
   type PublisherGroup,
-  publisherGroupMeta,
   type PublisherId,
   type SmallPublisher,
   type SmallPublisherGroup,
@@ -204,7 +202,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get idMaybe(): PublisherGroupId | undefined {
-    return toIdOf(publisherGroupMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -212,11 +210,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string | undefined {
-    return getField(this, "name");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string | undefined) {
@@ -228,11 +226,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   abstract readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string>;
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -32,7 +32,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -54,7 +53,6 @@ import {
   type Entity,
   type Image,
   type LargePublisher,
-  largePublisherMeta,
   newLargePublisher,
   Publisher,
   type PublisherFactoryExtras,
@@ -195,7 +193,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get idMaybe(): LargePublisherId | undefined {
-    return toIdOf(largePublisherMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -203,11 +201,11 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get sharedColumn(): string | undefined {
-    return getField(this, "sharedColumn");
+    return (this.__readFields & 1048576) !== 0 ? this.__data.data.sharedColumn : getField(this, "sharedColumn");
   }
 
   set sharedColumn(sharedColumn: string | undefined) {
@@ -215,7 +213,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get country(): string | undefined {
-    return getField(this, "country");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.country : getField(this, "country");
   }
 
   set country(country: string | undefined) {
@@ -223,7 +221,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get rating(): number {
-    return getField(this, "rating");
+    return (this.__readFields & 262144) !== 0 ? this.__data.data.rating : getField(this, "rating");
   }
 
   set rating(rating: number) {

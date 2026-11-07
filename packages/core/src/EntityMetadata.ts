@@ -115,8 +115,10 @@ export interface EntityMetadata<T extends Entity = any> {
   subTypesByType?: ReadonlyMap<string, EntityMetadata>;
   /** The lazy lookup of STI subtypes by discriminator value, i.e. `Task.metadata.subTypesByStiValue.get(1)`. */
   subTypesByStiValue?: ReadonlyMap<unknown, EntityMetadata>;
-  /** Whether any field, including inherited fields, requires read locking on application access. */
-  readonly hasAssertUnchangedFields?: boolean;
+  /** Codegen-assigned family-wide field ordinals, shared by metadata and generated first-read guards. */
+  readonly fieldReadIndexes: Readonly<Record<string, number>>;
+  /** Codegen-assigned number of first-read words to initialize on each entity in this inheritance family. */
+  readonly fieldReadWordCount: number;
   /** The lazy STI discriminator column name, i.e. `Task.metadata.stiDiscriminatorColumnName`. */
   stiDiscriminatorColumnName?: string;
   /** If the schema is lacking deferred FKs, this is our insertion order. */

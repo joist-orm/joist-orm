@@ -25,8 +25,8 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
   const meta = getMetadata(cstr);
   if (meta.ctiAbstract) fail(`Cannot create an instance of abstract entity ${meta.type}`);
   // This side-steps the `Author` constructor that initializes fields instance-level fields, which instead
-  // we've shoved up to be getters on the prototype, and the only instance field we expect to have is `__data`,
-  // which is set by the `baseEntityCstr` call.
+  // we've shoved up to be getters on the prototype. Only the internal `__data` and first-read words
+  // are initialized on each instance by the `baseEntityCstr` call.
   const entity = Object.create(cstr.prototype) as T;
   baseEntityCstr(em, entity as any, isNew);
   return entity;

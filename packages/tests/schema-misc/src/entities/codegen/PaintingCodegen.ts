@@ -30,7 +30,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -46,7 +45,6 @@ import {
   EntityManager,
   newPainting,
   type Painting,
-  paintingMeta,
 } from "../entities";
 
 export type PaintingId = Flavor<string, "Painting">;
@@ -157,7 +155,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idMaybe(): PaintingId | undefined {
-    return toIdOf(paintingMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -165,11 +163,11 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -177,11 +175,11 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

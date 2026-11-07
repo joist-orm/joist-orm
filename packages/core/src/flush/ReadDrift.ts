@@ -35,7 +35,7 @@ export async function checkReadDrift(
 ): Promise<void> {
   const tables = new Map<string, Entity[]>();
   for (const entity of readSet) {
-    if (entity.isNewEntity || written.has(entity) || checked.has(entity)) continue;
+    if (entity.isNewEntity || entity.isDeletedEntity || written.has(entity) || checked.has(entity)) continue;
     const meta = getBaseMeta(getMetadata(entity));
     const group = tables.get(meta.tableName) ?? [];
     group.push(entity);

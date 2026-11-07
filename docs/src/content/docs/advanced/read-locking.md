@@ -68,6 +68,8 @@ Now any business logic that reads `publisher.status`, `publisher.statusDetails`,
 
 ## Scope and Limitations
 
+Read dependencies remain protected for the lifetime of the EntityManager, including after successful flushes.
+
 This remains **row-level** protection: a version-bumping change to any field on the row can invalidate a read of `status`.
 
 For example, if we read `publisher.status` as `draft` and another transaction changes only `publisher.name`, our flush still fails because the publisher's row version changed—even though its status is still `draft`.

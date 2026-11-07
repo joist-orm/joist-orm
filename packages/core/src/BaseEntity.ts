@@ -10,6 +10,10 @@ import {
   keyToNumber,
 } from "src/index.ts";
 
+// getProperties deletes its throwaway entity's own fields so callback access to `this` hits a guard proxy.
+// That includes these non-enumerable words, so they must be configurable (deletable).
+const readWordDescriptor: PropertyDescriptor = { value: 0, enumerable: false, writable: true, configurable: true };
+
 /**
  * Returns the internal `__data` tracking field for `entity`.
  *
@@ -28,8 +32,11 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   public static getInstanceData(entity: Entity): InstanceData {
     return (entity as BaseEntity<any>).__data;
   }
+
   // We use a protected field so that subclass getters can easily access `this.__data.relations`.
   protected readonly __data!: InstanceData;
+  /** First-read completion bits; extra words are declared by each generated root type as needed. */
+  declare protected __readFields: number;
 
   /** The single-arg constructor is our psuedo-public API that can only be called by the EntityManager. */
   constructor(em: EntityManager);
@@ -165,4 +172,9 @@ export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, 
   const data = new InstanceData(em, entity, (entity.constructor as any).metadata, isNew);
   // This makes it non-enumerable to avoid Jest/recursive things tripping over it
   Object.defineProperty(entity, "__data", { value: data, enumerable: false, writable: false, configurable: false });
+  // Constructors are bypassed for real entities, so initialize every needed word here,
+  // in the same order for the entire inheritance family. Reusing the descriptor avoids per-entity descriptor objects.
+  for (let word = 0; word < data.metadata.fieldReadWordCount; word++) {
+    Object.defineProperty(entity, word === 0 ? "__readFields" : `__readFields${word}`, readWordDescriptor);
+  }
 }

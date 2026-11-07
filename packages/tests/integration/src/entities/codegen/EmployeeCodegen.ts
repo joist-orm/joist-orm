@@ -38,7 +38,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -46,7 +45,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type Employee, employeeMeta, type Entity, EntityManager, newEmployee } from "../entities";
+import { type Employee, type Entity, EntityManager, newEmployee } from "../entities";
 
 export type EmployeeId = Flavor<string, "Employee">;
 
@@ -182,7 +181,7 @@ export abstract class EmployeeCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idMaybe(): EmployeeId | undefined {
-    return toIdOf(employeeMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -190,11 +189,11 @@ export abstract class EmployeeCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {
@@ -202,11 +201,11 @@ export abstract class EmployeeCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -38,7 +38,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -55,7 +54,6 @@ import {
   BookReview,
   ChildGroup,
   type Comment,
-  commentMeta,
   type Entity,
   EntityManager,
   newComment,
@@ -280,7 +278,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get idMaybe(): CommentId | undefined {
-    return toIdOf(commentMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -288,7 +286,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   abstract readonly parentTaggedId: ReactiveField<Comment, string | undefined>;
@@ -296,7 +294,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   abstract readonly parentTags: ReactiveField<Comment, string>;
 
   get text(): string | undefined {
-    return getField(this, "text");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.text : getField(this, "text");
   }
 
   set text(text: string | undefined) {
@@ -304,11 +302,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -164,7 +164,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   get idMaybe(): BookId | undefined {
-    return toIdOf(bookMeta, this.idTaggedMaybe);
+    return (this.__data.idCache ??= toIdOf(bookMeta, this.idTaggedMaybe)) as BookId | undefined;
   }
 
   get idTagged(): TaggedId {
@@ -172,11 +172,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -184,7 +184,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   get deletedAt(): Date | undefined {
-    return getField(this, "deletedAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.deletedAt : getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -192,11 +192,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

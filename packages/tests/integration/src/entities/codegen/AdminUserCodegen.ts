@@ -25,7 +25,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -35,7 +34,6 @@ import {
 import type { Context } from "src/context";
 import {
   type AdminUser,
-  adminUserMeta,
   type Author,
   type Comment,
   type Entity,
@@ -133,7 +131,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   get idMaybe(): AdminUserId | undefined {
-    return toIdOf(adminUserMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -141,11 +139,11 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get role(): string {
-    return getField(this, "role");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.role : getField(this, "role");
   }
 
   set role(role: string) {

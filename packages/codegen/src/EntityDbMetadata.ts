@@ -1278,3 +1278,30 @@ function userFieldTypeType(s: string): Import {
 function serdeType(s: string): Import {
   return Import.from(s);
 }
+
+/**
+ * Assigns family-wide scalar-field ordinals for metadata and generated first-read guards.
+ *
+ * Inherited getters must use the same bits on every subtype, including fields that
+ * specialize an inherited field. Value storage remains the existing data bag.
+ */
+export function getFieldReadIndexes(meta: EntityDbMetadata): ReadonlyMap<string, number> {
+  let root = meta;
+  while (root.baseType) root = root.baseType;
+  const pending = [root];
+  const names = new Set(["id"]);
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    for (const field of [
+      ...current.primitives,
+      ...current.enums,
+      ...current.pgEnums,
+      ...current.manyToOnes,
+      ...current.polymorphics,
+    ]) {
+      names.add(field.fieldName);
+    }
+    pending.push(...current.subTypes);
+  }
+  return new Map([...names].sort().map((name, index) => [name, index]));
+}

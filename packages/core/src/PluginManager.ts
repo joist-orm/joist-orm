@@ -7,7 +7,10 @@ import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
   /**
-   * Called before a field value is retrieved from an entity via getField.
+   * Called on the first read of each entity field, including ORM-internal reads.
+   *
+   * Install plugins before reading entities. Cached reads, including reads after a flush
+   * or refresh, do not invoke this callback again. A throwing callback can be retried.
    *
    * @param entity The entity instance being accessed
    * @param field The field name being retrieved

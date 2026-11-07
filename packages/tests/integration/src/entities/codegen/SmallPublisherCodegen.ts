@@ -34,7 +34,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -64,7 +63,6 @@ import {
   type SmallPublisherGroup,
   type SmallPublisherGroupId,
   type SmallPublisherGroupOrder,
-  smallPublisherMeta,
   type Tag,
   type TaskOld,
   type User,
@@ -217,7 +215,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get idMaybe(): SmallPublisherId | undefined {
-    return toIdOf(smallPublisherMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -225,11 +223,11 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get city(): string {
-    return getField(this, "city");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.city : getField(this, "city");
   }
 
   set city(city: string) {
@@ -237,7 +235,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get sharedColumn(): string | undefined {
-    return getField(this, "sharedColumn");
+    return (this.__readFields & 1048576) !== 0 ? this.__data.data.sharedColumn : getField(this, "sharedColumn");
   }
 
   set sharedColumn(sharedColumn: string | undefined) {

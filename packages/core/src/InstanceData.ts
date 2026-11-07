@@ -20,6 +20,11 @@ export class InstanceData {
   rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
+  /** Tracks which fields have triggered plugin callbacks, including internal reads that do not enroll read protection. */
+  pluginReadFields = 0;
+  pluginReadFieldsExtra: number[] | undefined = undefined;
+  /** Number/untagged ID conversions are cached once; assigned entity IDs never change. */
+  idCache: string | number | undefined = undefined;
   /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */
   #originalData: Record<any, any> | undefined = undefined;
   /** Reference values that were set during this unit of work, allocated on first m2o/poly change. */

@@ -41,7 +41,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -64,7 +63,6 @@ import {
   newUser,
   SmallPublisher,
   type User,
-  userMeta,
 } from "../entities";
 
 export type UserId = Flavor<string, "User">;
@@ -316,7 +314,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idMaybe(): UserId | undefined {
-    return toIdOf(userMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -324,11 +322,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get name(): string {
-    return getField(this, "name");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.name : getField(this, "name");
   }
 
   set name(name: string) {
@@ -336,7 +334,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get email(): string {
-    return getField(this, "email");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.email : getField(this, "email");
   }
 
   set email(email: string) {
@@ -344,7 +342,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get ipAddress(): IpAddress | undefined {
-    return getField(this, "ipAddress");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.ipAddress : getField(this, "ipAddress");
   }
 
   set ipAddress(ipAddress: IpAddress | undefined) {
@@ -352,7 +350,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get password(): PasswordValue | undefined {
-    return getField(this, "password");
+    return (this.__readFields & 1024) !== 0 ? this.__data.data.password : getField(this, "password");
   }
 
   set password(password: PasswordValue | undefined) {
@@ -360,7 +358,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get bio(): string {
-    return getField(this, "bio");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.bio : getField(this, "bio");
   }
 
   set bio(bio: string) {
@@ -368,7 +366,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get originalEmail(): string {
-    return getField(this, "originalEmail");
+    return (this.__readFields & 512) !== 0 ? this.__data.data.originalEmail : getField(this, "originalEmail");
   }
 
   set originalEmail(originalEmail: string) {
@@ -376,7 +374,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get trialPeriod(): string | undefined {
-    return getField(this, "trialPeriod");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.trialPeriod : getField(this, "trialPeriod");
   }
 
   set trialPeriod(trialPeriod: string | undefined) {
@@ -384,15 +382,15 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return getField(this, "createdAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16384) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   get passwordHistory(): PasswordValue[] | undefined {
-    return getField(this, "passwordHistory");
+    return (this.__readFields & 2048) !== 0 ? this.__data.data.passwordHistory : getField(this, "passwordHistory");
   }
 
   set passwordHistory(passwordHistory: PasswordValue[] | undefined) {

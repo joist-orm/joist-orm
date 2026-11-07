@@ -31,7 +31,6 @@ import {
   type Scope,
   setOpts,
   type TaggedId,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -53,7 +52,6 @@ import {
   type TaskOpts,
   type TaskOrder,
   type TaskThird,
-  taskThirdMeta,
 } from "../entities";
 
 export type TaskThirdId = Flavor<string, "Task">;
@@ -149,7 +147,7 @@ export abstract class TaskThirdCodegen extends Task implements Entity {
   }
 
   get idMaybe(): TaskThirdId | undefined {
-    return toIdOf(taskThirdMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -157,7 +155,7 @@ export abstract class TaskThirdCodegen extends Task implements Entity {
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   /**

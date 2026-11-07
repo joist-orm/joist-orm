@@ -5,6 +5,7 @@ import type { Todo } from "src/flush/Todo.ts";
 import { keyToTaggedId } from "src/keys.ts";
 
 export interface IdAssigner {
+  /** Assigns IDs only to inserts that have none; a previously assigned identity must never change. */
   assignNewIds(todos: Record<string, Todo>): Promise<void>;
 }
 
@@ -59,6 +60,7 @@ export class RandomUuidAssigner implements IdAssigner {
   async assignNewIds(todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
+        if (insert.idTaggedMaybe !== undefined) continue;
         getInstanceData(insert).data["id"] = keyToTaggedId(todo.metadata, crypto.randomUUID());
       }
     });
@@ -90,6 +92,7 @@ export class TestUuidAssigner implements IdAssigner {
         const tag = todo.metadata.tagName.substring(0, 4).padStart(4, "0");
         this.nextId[tag] ??= 0;
         for (const insert of todo.inserts) {
+          if (insert.idTaggedMaybe !== undefined) continue;
           const id = String(this.nextId[tag]++);
           const uuid = `00000000-0000-0000-${tag}-${id.padStart(12, "0")}`;
           getInstanceData(insert).data["id"] = keyToTaggedId(todo.metadata, uuid);

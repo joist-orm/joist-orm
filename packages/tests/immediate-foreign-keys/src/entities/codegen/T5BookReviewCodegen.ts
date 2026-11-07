@@ -144,7 +144,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   }
 
   get idMaybe(): T5BookReviewId | undefined {
-    return toIdOf(t5BookReviewMeta, this.idTaggedMaybe);
+    return (this.__data.idCache ??= toIdOf(t5BookReviewMeta, this.idTaggedMaybe)) as T5BookReviewId | undefined;
   }
 
   get idTagged(): TaggedId {
@@ -152,11 +152,11 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return getField(this, "title");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {

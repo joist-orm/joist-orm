@@ -153,7 +153,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get idMaybe(): T3AuthorId | undefined {
-    return toIdOf(t3AuthorMeta, this.idTaggedMaybe);
+    return (this.__data.idCache ??= toIdOf(t3AuthorMeta, this.idTaggedMaybe)) as T3AuthorId | undefined;
   }
 
   get idTagged(): TaggedId {
@@ -161,11 +161,11 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get firstName(): string {
-    return getField(this, "firstName");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.firstName : getField(this, "firstName");
   }
 
   set firstName(firstName: string) {

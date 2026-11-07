@@ -32,4 +32,17 @@ describe("Author", () => {
     const q2 = em.find(Author, { lastName: { eq: "l1" } });
     await Promise.all([q1, q2]);
   });
+
+  it("does not cache an unassigned ID across persistence", async () => {
+    // Given a new author whose optional ID has already been read
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    void author.idMaybe;
+    void author.idMaybe;
+    // When persistence assigns its numeric ID
+    await em.flush();
+    void author.id;
+    // Then repeated ID reads use the newly assigned numeric value
+    expect(author.idMaybe).toBe(1);
+  });
 });

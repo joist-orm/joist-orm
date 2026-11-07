@@ -31,7 +31,6 @@ import {
   setOpts,
   type TaggedId,
   Temporal,
-  toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
@@ -39,7 +38,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
+import { type Author, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -263,7 +262,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idMaybe(): AuthorId | undefined {
-    return toIdOf(authorMeta, this.idTaggedMaybe);
+    return this.idTaggedMaybe;
   }
 
   get idTagged(): TaggedId {
@@ -271,11 +270,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return getField(this, "id");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get firstName(): string {
-    return getField(this, "firstName");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.firstName : getField(this, "firstName");
   }
 
   set firstName(firstName: string) {
@@ -283,7 +282,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get lastName(): string | undefined {
-    return getField(this, "lastName");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.lastName : getField(this, "lastName");
   }
 
   set lastName(lastName: string | undefined) {
@@ -291,7 +290,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get birthday(): Temporal.PlainDate {
-    return getField(this, "birthday");
+    return (this.__readFields & 1) !== 0 ? this.__data.data.birthday : getField(this, "birthday");
   }
 
   set birthday(birthday: Temporal.PlainDate) {
@@ -299,7 +298,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get childrenBirthdays(): Temporal.PlainDate[] {
-    return getField(this, "childrenBirthdays");
+    return (this.__readFields & 2) !== 0 ? this.__data.data.childrenBirthdays : getField(this, "childrenBirthdays");
   }
 
   set childrenBirthdays(childrenBirthdays: Temporal.PlainDate[]) {
@@ -307,7 +306,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get maybeBirthdays(): Temporal.PlainDate[] | undefined {
-    return getField(this, "maybeBirthdays");
+    return (this.__readFields & 64) !== 0 ? this.__data.data.maybeBirthdays : getField(this, "maybeBirthdays");
   }
 
   set maybeBirthdays(maybeBirthdays: Temporal.PlainDate[] | undefined) {
@@ -315,7 +314,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get timestamp(): Temporal.PlainDateTime {
-    return getField(this, "timestamp");
+    return (this.__readFields & 4096) !== 0 ? this.__data.data.timestamp : getField(this, "timestamp");
   }
 
   set timestamp(timestamp: Temporal.PlainDateTime) {
@@ -323,7 +322,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get timestamps(): Temporal.PlainDateTime[] {
-    return getField(this, "timestamps");
+    return (this.__readFields & 8192) !== 0 ? this.__data.data.timestamps : getField(this, "timestamps");
   }
 
   set timestamps(timestamps: Temporal.PlainDateTime[]) {
@@ -331,7 +330,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get maybeTimestamps(): Temporal.PlainDateTime[] | undefined {
-    return getField(this, "maybeTimestamps");
+    return (this.__readFields & 256) !== 0 ? this.__data.data.maybeTimestamps : getField(this, "maybeTimestamps");
   }
 
   set maybeTimestamps(maybeTimestamps: Temporal.PlainDateTime[] | undefined) {
@@ -339,7 +338,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get time(): Temporal.PlainTime | undefined {
-    return getField(this, "time");
+    return (this.__readFields & 512) !== 0 ? this.__data.data.time : getField(this, "time");
   }
 
   set time(time: Temporal.PlainTime | undefined) {
@@ -347,7 +346,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get times(): Temporal.PlainTime[] {
-    return getField(this, "times");
+    return (this.__readFields & 2048) !== 0 ? this.__data.data.times : getField(this, "times");
   }
 
   set times(times: Temporal.PlainTime[]) {
@@ -355,7 +354,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get maybeTimes(): Temporal.PlainTime[] | undefined {
-    return getField(this, "maybeTimes");
+    return (this.__readFields & 128) !== 0 ? this.__data.data.maybeTimes : getField(this, "maybeTimes");
   }
 
   set maybeTimes(maybeTimes: Temporal.PlainTime[] | undefined) {
@@ -363,7 +362,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get timeToMicros(): Temporal.PlainTime | undefined {
-    return getField(this, "timeToMicros");
+    return (this.__readFields & 1024) !== 0 ? this.__data.data.timeToMicros : getField(this, "timeToMicros");
   }
 
   set timeToMicros(timeToMicros: Temporal.PlainTime | undefined) {
@@ -371,11 +370,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get createdAt(): Temporal.ZonedDateTime {
-    return getField(this, "createdAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Temporal.ZonedDateTime {
-    return getField(this, "updatedAt");
+    return (this.__readFields & 16384) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

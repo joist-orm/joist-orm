@@ -1,5 +1,5 @@
 import { ReadDriftError, getField, isFieldSet, runInTrustedContext } from "joist-orm";
-import { Author, AuthorSchedule, Book, PublisherStatus, SmallPublisher, newAuthor } from "src/entities";
+import { Author, AuthorSchedule, Book, FavoriteShape, PublisherStatus, SmallPublisher, newAuthor } from "src/entities";
 import { insertAuthor, insertAuthorSchedule, insertBook, insertSmallPublisher } from "src/entities/inserts";
 import { knex, newEntityManager, pool, queries, resetQueryCount } from "src/testEm";
 
@@ -149,7 +149,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("does not repeat read locks without another request", async () => {
+  it("keeps read protection after a successful flush without another request", async () => {
     // Given an asserted author whose first flush succeeds
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -159,10 +159,9 @@ describe("ReadDrift", () => {
     // And the author subsequently changes
     await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01" });
     // When we flush without asserting again
-    resetQueryCount();
-    await em.flush();
-    // Then the previous assertion is not repeated
-    expect(queries).toEqual([]);
+    const flushed = em.flush();
+    // Then the original dependency still detects the changed row
+    await expect(flushed).rejects.toThrow(ReadDriftError);
   });
 
   it("does not read lock unsaved entities", async () => {
@@ -445,7 +444,7 @@ describe("ReadDrift", () => {
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
-  it("reading a cached field after flushing marks it as read locked again", async () => {
+  it("reading a cached field after flushing retains its read protection", async () => {
     // Given a protected getter read and a successful flush
     await insertAuthor({ first_name: "a1" });
     // And the author has a persisted draft schedule
@@ -458,7 +457,7 @@ describe("ReadDrift", () => {
     await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
     // When application logic reads the cached getter again
     void parent.overview;
-    // Then the new assertion detects drift from the unchanged loaded version
+    // Then the retained assertion detects drift from the unchanged loaded version
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
   });
 
@@ -567,6 +566,92 @@ describe("ReadDrift", () => {
     await knex("author_schedules").where("id", parent.idUntagged).update({ updated_at: "2050-01-01" });
     // Then that domain read has not been treated as housekeeping
     await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects a field whose first read was an internal setter comparison", async () => {
+    // Given an author's protected shape has only been read by an unchanged setter
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    author.favoriteShape = FavoriteShape.Circle;
+    // When application logic reads that already-cached shape
+    void author.favoriteShape;
+    // And another connection invalidates the decision
+    await knex("authors").where("id", 1).update({ updated_at: "2050-01-01" });
+    // Then the internal read did not consume application read protection
+    await expect(em.flush()).rejects.toThrow(ReadDriftError);
+  });
+
+  it("retains implicit read protection without rereading a field after flush", async () => {
+    // Given an author's protected shape was read and successfully checked
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    void author.favoriteShape;
+    await em.flush();
+    // And another connection changes the author after that flush
+    await knex("authors").where("id", 1).update({ updated_at: "2050-01-01" });
+    // When the EM flushes again without another field read
+    const flushed = em.flush();
+    // Then the original read remains protected
+    await expect(flushed).rejects.toThrow(ReadDriftError);
+  });
+
+  it("protects a new entity after persistence without another field read", async () => {
+    // Given a new author's protected shape is read before its first insert
+    const em = newEntityManager();
+    const author = newAuthor(em, { favoriteShape: FavoriteShape.Circle });
+    void author.favoriteShape;
+    await em.flush();
+    // And another connection changes the newly persisted row
+    await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01" });
+    // When the EM flushes without rereading that field
+    const flushed = em.flush();
+    // Then the original new-entity read was enrolled for later protection
+    await expect(flushed).rejects.toThrow(ReadDriftError);
+  });
+
+  it("retains explicit assertions made before an entity was saved", async () => {
+    // Given a new author is explicitly protected before persistence
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    em.assertUnchanged(author);
+    await em.flush();
+    // And another connection invalidates its inserted version
+    await knex("authors").where("id", author.idUntagged).update({ updated_at: "2050-01-01" });
+    // When the EM flushes again without asserting the author again
+    const flushed = em.flush();
+    // Then the original assertion detects drift
+    await expect(flushed).rejects.toThrow(ReadDriftError);
+  });
+
+  it("uses a protected entity's own successful write as its next expected version", async () => {
+    // Given an author is protected and then changed by this EM
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    void author.favoriteShape;
+    author.firstName = "new name";
+    await em.flush();
+    // When the retained dependency is checked without another write
+    const flushed = em.flush();
+    // Then its newly saved version passes read protection
+    await expect(flushed).resolves.toEqual([]);
+  });
+
+  it("does not check entities deleted by this EM on later flushes", async () => {
+    // Given an author was protected before being deleted by this EM
+    await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    void author.favoriteShape;
+    em.delete(author);
+    await em.flush();
+    // When the EM flushes after its own deletion has completed
+    resetQueryCount();
+    await em.flush();
+    // Then the deleted dependency requires neither a read check nor an empty transaction
+    expect(queries).toEqual([]);
   });
 });
 

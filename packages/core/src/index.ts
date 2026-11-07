@@ -414,7 +414,7 @@ export function setOpt<T extends Entity>(
     // If setting an explicit id, go through setField, otherwise use
     // `entity[key]` to set the value directly to that we go through setters.
     if (key === "id" && entity.isNewEntity) {
-      // Preassigned IDs are already part of the identity map, even before insertion.
+      // Reject ID changes even before insertion: they would invalidate identity-map entries and cached ID conversions.
       if (current !== undefined && current !== value) fail(`Cannot change assigned id of ${meta.type}`);
       setField(entity, key, value);
     } else {

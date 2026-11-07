@@ -258,7 +258,7 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "postgrejs": "3.14.1",
     "tsconfig-paths": "^4.2.0",

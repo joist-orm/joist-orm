@@ -19,14 +19,23 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
   api.pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
   const instanceData = getInstanceData(entity);
-  const field = instanceData.metadata.allFields[fieldName];
-  if (!isInternal && field?.assertUnchanged) em.assertUnchanged(entity);
+  // Most entity types have no protected reads; avoid a field-metadata lookup for every cached value.
+  if (
+    !isInternal &&
+    instanceData.metadata.hasAssertUnchangedFields &&
+    instanceData.metadata.allFields[fieldName]?.assertUnchanged
+  ) {
+    em.assertUnchanged(entity);
+  }
 
   const { data } = instanceData;
+  // Graph traversals repeatedly read IDs. Keep this lookup constant-key, after hooks and read locking.
+  if (fieldName === "id" && data.id !== undefined) return data.id;
   if (fieldName in data) {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
+      const field = instanceData.metadata.allFields[fieldName];
       const serde = field?.serde ?? fail(`Missing serde for ${fieldName}`);
       data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
     }

@@ -20,7 +20,13 @@ export class InstanceData {
   rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
-  /** Tracks which fields have triggered plugin callbacks, including internal reads that do not enroll read protection. */
+  /**
+   * Tracks which fields have been passed to plugins, so we can skip plugins on subsequent field accesses.
+   *
+   * Note that we also set the bit temporarily during plugin evaluation to keep plugins internally
+   * re-accessing the field from recursing into themselves. We only keep a field marked as "plugin read"
+   * after all plugins return "always" (or void), i.e. plugins can vote "allow" to be invoked again.
+   */
   pluginReadFields = 0;
   pluginReadFieldsExtra: number[] | undefined = undefined;
   /** Number/untagged ID conversions are cached once; assigned entity IDs never change. */

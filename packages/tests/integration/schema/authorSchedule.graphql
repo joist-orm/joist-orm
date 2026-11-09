@@ -1,14 +1,16 @@
+extend type Query {
+  authorSchedule(id: ID!): AuthorSchedule!
+  authorSchedules(filter: AuthorScheduleFilter, limit: Int, offset: Int): AuthorSchedulesPage!
+}
+
 type AuthorSchedule {
   id: ID!
   overview: String
   createdAt: DateTime!
   updatedAt: DateTime!
   author: Author!
-}
-
-extend type Query {
-  authorSchedule(id: ID!): AuthorSchedule!
-  authorSchedules(filter: AuthorScheduleFilter, limit: Int, offset: Int): AuthorSchedulesPage!
+  parent: AuthorSchedule
+  children: [AuthorSchedule!]!
 }
 
 type AuthorSchedulesPage {
@@ -22,4 +24,9 @@ input AuthorScheduleFilter {
   createdAt: [DateTime!]
   updatedAt: [DateTime!]
   authorId: [ID!]
+  parentId: [ID!]
+}
+
+input SaveAuthorScheduleInput {
+  parentId: ID
 }

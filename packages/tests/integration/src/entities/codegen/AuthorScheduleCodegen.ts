@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   type Changes,
+  type Collection,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -11,7 +12,10 @@ import {
   type Flavor,
   getField,
   type GraphQLFilterOf,
+  hasMany,
   hasOne,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   type IdOf,
   isLoaded,
   type JsonPayload,
@@ -26,6 +30,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReadOnlyCollection,
   type Scope,
   setField,
   setOpts,
@@ -55,6 +60,8 @@ export interface AuthorScheduleFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  parent: { kind: "m2o"; type: AuthorSchedule; nullable: undefined; derived: false };
+  children: { kind: "o2m"; type: AuthorSchedule };
 }
 
 export interface AuthorScheduleColumns {
@@ -77,15 +84,27 @@ export interface AuthorScheduleColumns {
     insert: "required";
     update: true;
   };
+  parentId: {
+    type: IdOf<AuthorSchedule>;
+    entity: AuthorSchedule;
+    fieldName: "parent";
+    nullable: true;
+    insert: "optional";
+    update: true;
+  };
 }
 
 export interface AuthorScheduleOpts {
   overview?: string | null;
   author: Author | AuthorId;
+  parent?: AuthorSchedule | AuthorScheduleId | null;
+  children?: AuthorSchedule[];
 }
 
 export interface AuthorScheduleIdsOpts {
   authorId?: AuthorId | null;
+  parentId?: AuthorScheduleId | null;
+  childIds?: AuthorScheduleId[] | null;
 }
 
 export interface AuthorScheduleFilter {
@@ -94,6 +113,8 @@ export interface AuthorScheduleFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  parent?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null>;
+  children?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
 }
 
 export interface AuthorScheduleGraphQLFilter {
@@ -103,6 +124,9 @@ export interface AuthorScheduleGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   authorId?: ValueGraphQLFilter<AuthorId>;
+  parent?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null>;
+  parentId?: ValueGraphQLFilter<AuthorScheduleId>;
+  children?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
 }
 
 export interface AuthorScheduleOrder {
@@ -111,6 +135,7 @@ export interface AuthorScheduleOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
+  parent?: AuthorScheduleOrder;
 }
 
 export interface AuthorScheduleFactoryExtras {
@@ -154,7 +179,17 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
 
   declare readonly __type: { 0: "AuthorSchedule" };
 
+  readonly children: Collection<AuthorSchedule, AuthorSchedule> = hasMany();
   readonly author: ManyToOneReference<AuthorSchedule, Author, never> = hasOne();
+  readonly parent: ManyToOneReference<AuthorSchedule, AuthorSchedule, undefined> = hasOne();
+  readonly parentsRecursive: ReadOnlyCollection<AuthorSchedule, AuthorSchedule> = hasRecursiveParents(
+    "parent",
+    "childrenRecursive",
+  );
+  readonly childrenRecursive: ReadOnlyCollection<AuthorSchedule, AuthorSchedule> = hasRecursiveChildren(
+    "children",
+    "parentsRecursive",
+  );
 
   get id(): AuthorScheduleId {
     return this.idMaybe || failNoIdYet("AuthorSchedule");
@@ -185,7 +220,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get updatedAt(): Date {
-    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
 
   /**

@@ -92,7 +92,7 @@ export function insertBook(row: {
 }
 
 /** Inserts a persisted schedule without running entity hooks or commit rules during setup. */
-export function insertAuthorSchedule(row: { id?: number; author_id: number; overview?: string }) {
+export function insertAuthorSchedule(row: { id?: number; author_id: number; parent_id?: number; overview?: string }) {
   return testDriver.insert("author_schedules", row);
 }
 

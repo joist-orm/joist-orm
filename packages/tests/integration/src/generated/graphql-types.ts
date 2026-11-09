@@ -200,9 +200,11 @@ export interface AuthorResolvers {
 
 export interface AuthorScheduleResolvers {
   author: Resolver<AuthorSchedule, {}, Author>;
+  children: Resolver<AuthorSchedule, {}, readonly AuthorSchedule[]>;
   createdAt: Resolver<AuthorSchedule, {}, Date>;
   id: Resolver<AuthorSchedule, {}, string>;
   overview: Resolver<AuthorSchedule, {}, string | null | undefined>;
+  parent: Resolver<AuthorSchedule, {}, AuthorSchedule | null | undefined>;
   updatedAt: Resolver<AuthorSchedule, {}, Date>;
 }
 
@@ -1550,6 +1552,7 @@ export interface AuthorScheduleFilter {
   createdAt?: Date[] | null | undefined;
   id?: string[] | null | undefined;
   overview?: string[] | null | undefined;
+  parentId?: string[] | null | undefined;
   updatedAt?: Date[] | null | undefined;
 }
 
@@ -1785,6 +1788,10 @@ export interface SaveAuthorInput {
   ssn?: string | null | undefined;
   updatedAt?: Date | null | undefined;
   wasEverPopular?: boolean | null | undefined;
+}
+
+export interface SaveAuthorScheduleInput {
+  parentId?: string | null | undefined;
 }
 
 export interface SaveAuthorStatInput {

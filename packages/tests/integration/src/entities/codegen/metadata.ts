@@ -191,6 +191,7 @@ const authorScheduleMetaColumns = {
   "createdAt": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "authorId": new Column("author_id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
+  "parentId": new Column("parent_id", true, false, false, false, true, () => authorScheduleMeta, new KeySerde("authorSchedule", "int")),
 } satisfies ColumnDescriptors;
 const authorStatMetaColumns = {
   "id": new Column("id", false, true, false, false, true, () => authorStatMeta, new KeySerde("as", "int")),
@@ -591,10 +592,12 @@ export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", authorScheduleMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", authorScheduleMetaColumns["updatedAt"]), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: authorScheduleMetaColumns["authorId"].idMetadata!, otherFieldName: "schedules", serde: new SimpleFieldSerde("author", authorScheduleMetaColumns["authorId"]), immutable: false },
+    "parent": { kind: "m2o", fieldName: "parent", fieldIdName: "parentId", derived: false, required: false, otherMetadata: authorScheduleMetaColumns["parentId"].idMetadata!, otherFieldName: "children", serde: new SimpleFieldSerde("parent", authorScheduleMetaColumns["parentId"]), immutable: false },
+    "children": { kind: "o2m", fieldName: "children", fieldIdName: "childIds", required: false, otherMetadata: () => authorScheduleMeta, otherFieldName: "parent", otherColumnName: "parent_id", serde: undefined, immutable: false },
   },
   columns: authorScheduleMetaColumns,
   allFields: {},
-  fieldReadIndexes: { "author": 0, "createdAt": 1, "id": 2, "overview": 3, "updatedAt": 4 },
+  fieldReadIndexes: { "author": 0, "createdAt": 1, "id": 2, "overview": 3, "parent": 4, "updatedAt": 5 },
   fieldReadWordCount: 1,
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },

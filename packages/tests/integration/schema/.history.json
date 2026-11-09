@@ -124,8 +124,8 @@
     "updatedAt",
     "wasEverPopular"
   ],
-  "AuthorSchedule": ["author", "createdAt", "id", "overview", "updatedAt"],
-  "AuthorScheduleFilter": ["authorId", "createdAt", "id", "overview", "updatedAt"],
+  "AuthorSchedule": ["author", "children", "createdAt", "id", "overview", "parent", "updatedAt"],
+  "AuthorScheduleFilter": ["authorId", "createdAt", "id", "overview", "parentId", "updatedAt"],
   "AuthorSchedulesPage": ["entities", "pageInfo"],
   "AuthorStat": [
     "bigint",
@@ -606,7 +606,7 @@
     "wasEverPopular"
   ],
   "SaveAuthorResult": ["author"],
-  "SaveAuthorScheduleInput": ["authorId", "id", "overview"],
+  "SaveAuthorScheduleInput": ["authorId", "id", "overview", "parentId"],
   "SaveAuthorScheduleResult": ["authorSchedule"],
   "SaveAuthorStatInput": [
     "bigint",

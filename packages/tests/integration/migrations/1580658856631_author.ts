@@ -386,6 +386,7 @@ export function up(b: MigrationBuilder): void {
   // for testing abbreviations that are SQL keywords, i.s. `author_schedules` ==> `as`
   createEntityTable(b, "author_schedules", {
     author_id: foreignKey("authors", { notNull: true }),
+    parent_id: foreignKey("author_schedules", { notNull: false, otherFieldName: "children" }),
     overview: "text",
   });
 

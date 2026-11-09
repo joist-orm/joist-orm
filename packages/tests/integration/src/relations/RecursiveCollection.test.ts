@@ -1,8 +1,16 @@
 import { RecursiveCycleError, withLoaded } from "joist-orm";
-import { insertAuthor, insertBook, insertUser, insertUserToParent, select, update } from "src/entities/inserts";
+import {
+  insertAuthor,
+  insertAuthorSchedule,
+  insertBook,
+  insertUser,
+  insertUserToParent,
+  select,
+  update,
+} from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
-import { Author, Book, User, newAuthor, newBook, newUser } from "../entities";
+import { Author, AuthorSchedule, Book, User, newAuthor, newBook, newUser } from "../entities";
 
 describe("RecursiveCollection", () => {
   describe("parents", () => {
@@ -725,5 +733,31 @@ describe("RecursiveCollection", () => {
       expect(u2.parentsRecursive.get).toMatchEntity([{ name: "u1" }]);
       expect(u2.childrenRecursive.get).toMatchEntity([{ name: "u3" }]);
     });
+  });
+
+  it("loads recursive parents when the table alias is a SQL keyword", async () => {
+    // Given a schedule hierarchy whose author_schedules table is abbreviated as the SQL keyword as
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthorSchedule({ author_id: 1 });
+    await insertAuthorSchedule({ author_id: 1, parent_id: 1 });
+    await insertAuthorSchedule({ author_id: 1, parent_id: 2 });
+    const em = newEntityManager();
+    // When the leaf schedule's ancestors are loaded
+    const schedule = await em.load(AuthorSchedule, "authorSchedule:3", "parentsRecursive");
+    // Then both ancestors are returned in parent-first order
+    expect(schedule.parentsRecursive.get).toMatchEntity(["authorSchedule:2", "authorSchedule:1"]);
+  });
+
+  it("loads recursive children when the table alias is a SQL keyword", async () => {
+    // Given a schedule hierarchy whose author_schedules table is abbreviated as the SQL keyword as
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthorSchedule({ author_id: 1 });
+    await insertAuthorSchedule({ author_id: 1, parent_id: 1 });
+    await insertAuthorSchedule({ author_id: 1, parent_id: 2 });
+    const em = newEntityManager();
+    // When the root schedule's descendants are loaded
+    const schedule = await em.load(AuthorSchedule, "authorSchedule:1", "childrenRecursive");
+    // Then both descendants are returned in child-first order
+    expect(schedule.childrenRecursive.get).toMatchEntity(["authorSchedule:2", "authorSchedule:3"]);
   });
 });

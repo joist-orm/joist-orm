@@ -40,7 +40,13 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
         // We still select directly from our table, and join into the CTE so that we
         // can use `addTablePerClassJoinsAndClassTag` to get inheritance added for free.
         { alias, join: "primary", table: meta.tableName },
-        { alias: `${alias}_cte`, join: "inner", table: `${alias}_cte`, col1: `${alias}.id`, col2: `${alias}_cte.id` },
+        {
+          alias: `${alias}_cte`,
+          join: "inner",
+          table: `${alias}_cte`,
+          col1: `${kq(alias)}.id`,
+          col2: `${alias}_cte.id`,
+        },
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
       ctes: [

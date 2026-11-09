@@ -877,8 +877,8 @@ describe("EntityManager.factories", () => {
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
-    // And it batches reloads, although recursive and STI collections need separate queries
-    expect(queries.length).toBe(isPreloadingEnabled ? 20 : 47);
+    // And reactive inverses reuse preloaded rows, although recursive and STI collections need separate queries
+    expect(queries.length).toBe(isPreloadingEnabled ? 19 : 47);
   });
 
   it("uniquely assigns name fields", async () => {

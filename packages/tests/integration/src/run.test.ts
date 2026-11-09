@@ -6,6 +6,7 @@ import {
   Book,
   BookAdvance,
   Comment,
+  Employee,
   LargePublisher,
   ParentGroup,
   User,
@@ -13,13 +14,15 @@ import {
   newBook,
   newBookAdvance,
   newComment,
+  newEmployee,
   newLargePublisher,
   newSmallPublisher,
   newUser,
 } from "src/entities";
-import { insertParentGroup } from "src/entities/inserts";
+import { insertEmployee, insertEmployeeToManagersClosure, insertParentGroup } from "src/entities/inserts";
 
 import { jan1, jan2 } from "./testDates";
+import { queries, resetQueryCount } from "./testEm";
 
 describe("run", () => {
   it.withCtx("mirrors a Book-to-Author parent switch and clearing both inverse collections", async (ctx) => {
@@ -328,5 +331,145 @@ describe("run", () => {
     });
     // Then the test EM reuses the same filtered and sorted array
     expect(author.books.get === books).toBe(true);
+  });
+
+  it.withCtx("mirrors reactive membership into an unloaded fixture inverse", async (ctx) => {
+    // Given a manager whose inverse closure has not been loaded
+    const manager = newEmployee(ctx.em);
+    // When run creates an employee reporting to that manager
+    const employee = await run(ctx, async (ctx) => {
+      const employee = ctx.em.create(Employee, { name: "Created", manager: await ctx.em.load(Employee, manager.id) });
+      await ctx.em.flush();
+      return employee;
+    });
+    // Then the manager's inverse closure includes the mirrored employee
+    expect(manager.managerOfClosure.get).toMatchEntity([manager, employee.id]);
+  });
+
+  it.withCtx("updates a cached reactive inverse when run creates an employee", async (ctx) => {
+    // Given a manager with its inverse closure loaded and cached
+    const manager = newEmployee(ctx.em);
+    await ctx.em.flush();
+    await manager.managerOfClosure.load();
+    void manager.managerOfClosure.get;
+    // When run creates an employee reporting to that manager
+    const employee = await run(ctx, async (ctx) => {
+      const employee = ctx.em.create(Employee, { name: "Created", manager: await ctx.em.load(Employee, manager.id) });
+      await ctx.em.flush();
+      return employee;
+    });
+    // Then the cached inverse includes the mirrored employee
+    expect(manager.managerOfClosure.get).toMatchEntity([manager, employee.id]);
+  });
+
+  it.withCtx("preloads the controlling reactive collection on a mirrored employee", async (ctx) => {
+    // Given a manager with its inverse closure loaded
+    const manager = newEmployee(ctx.em);
+    await ctx.em.flush();
+    await manager.managerOfClosure.load();
+    // When run creates an employee reporting to that manager
+    const employee = await run(ctx, async (ctx) => {
+      const employee = ctx.em.create(Employee, { name: "Created", manager: await ctx.em.load(Employee, manager.id) });
+      await ctx.em.flush();
+      return employee;
+    });
+    // Then the mirrored employee's stored closure is synchronously available
+    expect(employee.managersClosure.get).toMatchEntity([employee, manager]);
+  });
+
+  it.withCtx("removes mirrored reactive membership when an employee changes managers", async (ctx) => {
+    // Given an employee reporting to the original manager
+    const original = newEmployee(ctx.em);
+    const employee = newEmployee(ctx.em, { manager: original });
+    // And a replacement manager with both inverse closures cached
+    const replacement = newEmployee(ctx.em);
+    await ctx.em.flush();
+    await original.managerOfClosure.load();
+    await replacement.managerOfClosure.load();
+    // When run moves the employee to the replacement manager
+    await run(ctx, async (ctx) => {
+      const e = await ctx.em.load(Employee, employee.id);
+      e.manager.id = replacement.id;
+      await ctx.em.flush();
+    });
+    // Then the original manager's inverse closure no longer includes the employee
+    expect(original.managerOfClosure.get).toMatchEntity([original]);
+  });
+
+  it.withCtx("does not repeat reactive join-row writes when the fixture manager is flushed", async (ctx) => {
+    // Given a manager with its inverse closure loaded
+    const manager = newEmployee(ctx.em);
+    await ctx.em.flush();
+    await manager.managerOfClosure.load();
+    // When run creates an employee and the mirrored collection is read
+    const employee = await run(ctx, async (ctx) => {
+      const employee = ctx.em.create(Employee, { name: "Created", manager: await ctx.em.load(Employee, manager.id) });
+      await ctx.em.flush();
+      return employee;
+    });
+    void employee.managersClosure.get;
+    // When the fixture manager is flushed after the mirrored closure is read
+    resetQueryCount();
+    await ctx.em.flush();
+    // Then no SQL is needed to repeat the mirrored writes
+    expect(queries).toEqual([]);
+  });
+
+  it.withCtx("mirrors manager changes without preloading either inverse closure", async (ctx) => {
+    // Given an employee reporting to the original manager
+    const original = newEmployee(ctx.em);
+    const employee = newEmployee(ctx.em, { manager: original });
+    // And a replacement manager whose inverse closure has not been loaded
+    const replacement = newEmployee(ctx.em);
+    // When run moves the employee to the replacement manager
+    await run(ctx, async (ctx) => {
+      const e = await ctx.em.load(Employee, employee.id);
+      e.manager.id = replacement.id;
+      await ctx.em.flush();
+    });
+    // Then the replacement manager's inverse closure includes the employee
+    expect(replacement.managerOfClosure.get).toMatchEntity([replacement, employee]);
+  });
+
+  it.withCtx("preserves unknown persisted members when mirroring an unloaded inverse", async (ctx) => {
+    // Given a persisted manager and report whose closure rows were not created by factories
+    await insertEmployee({ name: "Manager" });
+    await insertEmployee({ name: "Existing", manager_id: 1 });
+    await insertEmployeeToManagersClosure({ employee_id: 1, manager_id: 1 });
+    await insertEmployeeToManagersClosure({ employee_id: 2, manager_id: 2 });
+    await insertEmployeeToManagersClosure({ employee_id: 2, manager_id: 1 });
+    const manager = await ctx.em.load(Employee, "e:1");
+    // When run creates another report without loading the fixture's inverse closure
+    const employee = await run(ctx, async (ctx) => {
+      const employee = ctx.em.create(Employee, { name: "Created", manager: await ctx.em.load(Employee, manager.id) });
+      await ctx.em.flush();
+      return employee;
+    });
+    // Then loading the inverse still finds both the existing and mirrored reports
+    expect(await manager.managerOfClosure.load()).toMatchEntity([manager, "e:2", employee]);
+  });
+
+  it.withCtx("mirrors repeated removals and additions of reactive membership", async (ctx) => {
+    // Given an employee reporting to a manager with its inverse closure loaded
+    const manager = newEmployee(ctx.em);
+    const employee = newEmployee(ctx.em, { manager });
+    await ctx.em.flush();
+    await manager.managerOfClosure.load();
+    // When run removes the employee from that manager
+    await run(ctx, async (ctx) => {
+      const e = await ctx.em.load(Employee, employee.id);
+      e.manager.set(undefined);
+      await ctx.em.flush();
+    });
+    // Then the inverse includes only the manager
+    expect(manager.managerOfClosure.get).toMatchEntity([manager]);
+    // When a subsequent run restores the same manager
+    await run(ctx, async (ctx) => {
+      const e = await ctx.em.load(Employee, employee.id);
+      e.manager.id = manager.id;
+      await ctx.em.flush();
+    });
+    // Then the inverse includes the employee again without a stale removal
+    expect(manager.managerOfClosure.get).toMatchEntity([manager, employee]);
   });
 });

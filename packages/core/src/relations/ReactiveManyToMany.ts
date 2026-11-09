@@ -180,6 +180,13 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     return this.#doGet({ withDeleted: false });
   }
 
+  /** Returns the stored membership without deriving or queuing join-row changes. */
+  current(): readonly U[] {
+    return (
+      this.#loaded ?? (getEmInternalApi(this.entity.em).joinRows(this).getOthers(this.columnName, this.entity) as U[])
+    );
+  }
+
   set(): void {
     fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveManyToMany directly.`);
   }
@@ -248,11 +255,24 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   }
 
   get isPreloaded(): boolean {
+    // isPreloaded lets populate skip load(), but stored rows alone cannot satisfy a pending derivation.
+    // Keep that shortcut disabled. RunPlugin calls preload() explicitly with already-derived membership.
     return false;
   }
 
+  /** Installs materialized membership without deriving, e.g. when RunPlugin mirrors a flush. */
   preload(): void {
-    // No-op for now - could implement if needed
+    if (this.entity.isNewEntity) return;
+    const api = getEmInternalApi(this.entity.em);
+    const preloaded = api.getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
+    if (preloaded) {
+      this.#loaded = preloaded;
+      this.#loadedMode = "ref";
+      this.#isJoinTableLoaded = true;
+      this.#isLoaded = true;
+      this.#isCached = false;
+      api.isLoadedCache.add(this);
+    }
   }
 
   import(

@@ -124,4 +124,20 @@ describe("Employee", () => {
       { employee_id: 1, manager_id: 3 },
     ]);
   });
+
+  it("loads the inverse manager closure after the controlling side has loaded self rows", async () => {
+    // Given a manager and report whose controlling closures include themselves
+    await insertEmployee({ name: "Manager" });
+    await insertEmployee({ name: "Report", manager_id: 1 });
+    await insertEmployeeToManagersClosure({ employee_id: 1, manager_id: 1 });
+    await insertEmployeeToManagersClosure({ employee_id: 2, manager_id: 2 });
+    await insertEmployeeToManagersClosure({ employee_id: 2, manager_id: 1 });
+    const em = newEntityManager();
+    // And the controlling closures have already loaded the join rows
+    const [manager, employee] = await em.loadAll(Employee, ["e:1", "e:2"], "managersClosure");
+    // When the manager's inverse closure is loaded from the same join-row index
+    const reports = await manager.managerOfClosure.load();
+    // Then the self row does not hide the report in the opposite column
+    expect(reports).toMatchEntity([manager, employee]);
+  });
 });

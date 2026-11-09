@@ -22,6 +22,7 @@ import {
   type Todo,
   assertNever,
   createRowFromEntityData,
+  fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
@@ -188,14 +189,12 @@ export class RunPlugin extends Plugin {
     Object.entries(joinRowTodos).forEach(([joinTable, todo]) => {
       // Enum m2ms (EnumCollections) aren't entity-to-entity, so there's nothing to mirror between ems.
       if (todo.m2m.otherEnum) return;
-      const preloads = new Set<ManyToManyCollection<Entity, Entity>>();
-      processJoinRows(em, joinTable, todo.newRows, preloads, (oldEntity, entities) => entities.push(oldEntity));
-      processJoinRows(em, joinTable, todo.deletedRows, preloads, (oldEntity, entities) =>
-        entities.splice(entities.indexOf(oldEntity), 1),
-      );
+      const toPreload = new Set<ManyToMany>();
+      processJoinRows(em, joinTable, todo.newRows, toPreload, true);
+      processJoinRows(em, joinTable, todo.deletedRows, toPreload, false);
       // Since multiple join rows could reference the same m2m, our processJoinRows doesn't actually call preload() so
       // we need to do it now
-      preloads.values().forEach((r) => {
+      toPreload.values().forEach((r) => {
         const id = r.entity.idTagged;
         const entities = api.getPreloadedRelation(id, r.fieldName) as Entity[];
         // unique our entities in case somehow an entity was inserted by multiple join rows
@@ -257,7 +256,7 @@ export class RunPlugin extends Plugin {
       todo.inserts.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
         getCollections(oldEntity)
-          .filter((r) => !r.isPreloaded)
+          .filter((r) => !r.isLoaded && !r.isPreloaded)
           .forEach((r) => {
             getEmInternalApi(em).setPreloadedRelation(oldEntity.idTagged, r.fieldName, []);
             r.preload();
@@ -272,6 +271,11 @@ type ConcreteReference =
   | ManyToOneReferenceImpl<Entity, Entity, any>
   | ReactiveReferenceImpl<Entity, Entity, any, any>
   | PolymorphicReferenceImpl<Entity, Entity, any>;
+
+type ManyToMany =
+  | ManyToManyCollection<Entity, Entity>
+  | ReactiveManyToManyImpl<any, any, any>
+  | ReactiveManyToManyOtherSideImpl<any, any>;
 
 /** Preloads a mirrored lazy value without treating the database write as a test-entity mutation. */
 function preloadLazyField(entity: Entity, fieldName: string): void {
@@ -338,34 +342,40 @@ function maybePreloadOtherSide(
   if (otherSide instanceof OneToManyCollection) otherSide.resetIsLoaded();
 }
 
+/**
+ * Mirrors persisted join rows without deriving membership or queuing fixture reactions.
+ *
+ * Used only by RunPlugin to apply changes that the isolated EntityManager has already flushed.
+ * Factory-created collections have complete membership in their index; other unloaded collections stay unloaded.
+ */
 function processJoinRows(
   em: EntityManager,
   joinTable: string,
   rows: JoinRow[],
-  preloads: Set<ManyToManyCollection<Entity, Entity>>,
-  callback: (oldEntity: Entity, entities: Entity[]) => void,
-) {
+  toPreload: Set<ManyToMany>,
+  add: boolean,
+): void {
   const api = getEmInternalApi(em);
-  rows.forEach((row) => {
+  for (const row of rows) {
     // A join row's `columns` is always an object with two key/value pairs, one for each side of the m2m.
     // This only runs for entity-to-entity m2ms (enum m2ms are skipped by the caller), so both are entities.
     const [[col1, e1], [col2, e2]] = Object.entries(row.columns) as [[string, Entity], [string, Entity]];
-    (
-      [
-        // Each join row needs to append/remove from both sides of the m2m. So we need to do the same operation once for
-        // each side.
-        [col1, e1, e2],
-        [col2, e2, e1],
-      ] as const
-    ).forEach(([column, newEntity, newOther]) => {
+    for (const [column, newEntity, newOther] of [
+      // Each join row needs to append/remove from both sides of the m2m. So we need to do the same operation once for
+      // each side.
+      [col1, e1, e2],
+      [col2, e2, e1],
+    ] as const) {
       const { idTagged: id } = newEntity;
       const oldEntity = em.findExistingInstance(id)!;
-      if (oldEntity.isDeletedEntity) return;
+      if (oldEntity.isDeletedEntity) continue;
       const newM2m = getManyToManys(newEntity).find((r) => r.joinTableName === joinTable && r.columnName === column)!;
       const { fieldName } = newM2m;
-      const oldM2m = (oldEntity as any)[fieldName] as ManyToManyCollection<Entity, Entity>;
-      let entities: Entity[];
-      if (preloads.has(oldM2m)) {
+      const oldM2m = (oldEntity as any)[fieldName] as ManyToMany;
+      const oldOther = em.findExistingInstance(newOther.idTagged)!;
+      const joinRows = api.joinRows(oldM2m);
+      let entities: Entity[] | undefined;
+      if (toPreload.has(oldM2m)) {
         // If a previous join row has already preloaded this relation, then we can just append/remove from the
         // existing preloaded data.
         entities = api.getPreloadedRelation(id, fieldName) as Entity[];
@@ -374,21 +384,39 @@ function processJoinRows(
         // make sure we match that behavior here.  So we get all the extant rows first and then append each new row
         // in order from there.  Removals are fine since they'll modify the array in place and the correct order will
         // be preserved.
-        entities = oldM2m.get;
-      } else if (newEntity.isNewEntity) {
-        // If this is a new entity, then all the join rows referencing it must also be inserts. So we can just use an
-        // empty array initially and inserts will be appended to it.
-        entities = [];
-      } else {
-        fail(`Expected ${fieldName} to be loaded`);
+        // A reactive collection's getter can derive again; mirroring must use its stored value instead.
+        entities = [...(oldM2m instanceof ReactiveManyToManyImpl ? oldM2m.current() : oldM2m.getWithDeleted)];
+      } else if (newEntity.isNewEntity || getInstanceData(oldEntity).isOrWasNew) {
+        // Newly-created mirrored entities have no membership from before this run. Factory-created entities
+        // can also have an unloaded reactive inverse; their index contains all membership since creation.
+        entities = joinRows.getOthers(column, oldEntity) as Entity[];
       }
-      callback(em.findExistingInstance(newOther.idTagged)!, entities);
+
+      // Forked collections can have a stored snapshot without join rows in this EM. Seed that snapshot
+      // before applying the mirrored delta so later derivations see the complete persisted membership.
+      if (entities && !toPreload.has(oldM2m)) {
+        for (const entity of entities) joinRows.addPreloadedRow(oldM2m, undefined, oldEntity, entity);
+      }
+      // Replace any completed deletion tombstone when a later run re-adds the same membership.
+      joinRows.removePreloadedRow(oldM2m, oldEntity, oldOther);
+      if (add) joinRows.addPreloadedRow(oldM2m, row.id, oldEntity, oldOther);
+      api.isLoadedCache.resetIsLoaded(oldEntity, fieldName);
+
+      // A persisted, unloaded collection may have other members we do not know about. Keep it unloaded;
+      // its next load will read the full membership from the database instead of publishing a partial list.
+      if (!entities) continue;
+      if (add) {
+        if (!entities.includes(oldOther)) entities.push(oldOther);
+      } else {
+        const index = entities.indexOf(oldOther);
+        if (index !== -1) entities.splice(index, 1);
+      }
       api.setPreloadedRelation(id, fieldName, entities);
       // We only need to preload the m2m once, but multiple join rows could reference it, so we keep track of which m2ms
       // need to be preloaded as we work, then actually call preload() at the end once we're done.
-      preloads.add(oldM2m);
-    });
-  });
+      toPreload.add(oldM2m);
+    }
+  }
 }
 
 /** Returns the lazy columns on an entity, including inherited fields. */
@@ -410,13 +438,7 @@ function getReferences(entity: Entity): IteratorObject<ConcreteReference> {
     );
 }
 
-function getManyToManys(
-  entity: Entity,
-): IteratorObject<
-  | ManyToManyCollection<Entity, Entity>
-  | ReactiveManyToManyImpl<any, any, any>
-  | ReactiveManyToManyOtherSideImpl<any, any>
-> {
+function getManyToManys(entity: Entity): IteratorObject<ManyToMany> {
   return getRelations(entity)
     .values()
     .filter(

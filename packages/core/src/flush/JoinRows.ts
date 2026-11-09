@@ -215,7 +215,8 @@ export class JoinRows {
     const others = this.index.getOthers(columnName, entity);
     if (others.length === 0) return [];
     const [c1, c2] = Object.keys(others[0].columns);
-    const c = others[0].columns[c1] === entity ? c2 : c1;
+    // Self-referencing rows can contain the same entity in both columns, so identity cannot tell the sides apart.
+    const c = c1 === columnName ? c2 : c1;
     return others.filter((o) => !o.deleted).map((row) => row.columns[c]);
   }
 

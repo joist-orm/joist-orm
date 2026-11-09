@@ -142,11 +142,20 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   get isPreloaded(): boolean {
-    return false;
+    // Only the controlling side derives membership; this inverse just reads its materialized rows.
+    // Unlike ReactiveManyToMany, there is no derivation for populate's preload shortcut to skip.
+    return !!this.#getPreloaded();
   }
 
   preload(): void {
-    // No-op for reactive m2m other side
+    const preloaded = this.#getPreloaded();
+    if (preloaded) {
+      this.#loaded = preloaded;
+      this.#isLoaded = true;
+      this.#cached = undefined;
+      this.#isCached = false;
+      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    }
   }
 
   import(
@@ -199,6 +208,12 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
       return entities;
     }
     return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+  }
+
+  /** Finds stored membership published by a preloader or RunPlugin. */
+  #getPreloaded(): U[] | undefined {
+    if (this.entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

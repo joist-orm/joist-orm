@@ -419,6 +419,96 @@ describe("ReactiveManyToMany", () => {
       expect(books2).toMatchEntity([{ title: "b1" }, { title: "b2" }]);
     });
   });
+
+  it("removes persisted membership when recalculating an unloaded collection", async () => {
+    // Given a persisted best review whose author is not loaded
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+    const em = newEntityManager();
+    const review = await em.load(BookReview, "br:1");
+    // When the review no longer qualifies as a best review
+    review.rating = 4;
+    await em.flush();
+    // Then the persisted best-review membership is empty
+    expect(await select("authors_to_best_reviews")).toEqual([]);
+  });
+
+  it("loads persisted membership even when the derivation hint is already loaded", async () => {
+    // Given a persisted best review with its author's derivation inputs loaded
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1", { books: "reviews" });
+    // When the review no longer qualifies as a best review
+    author.books.get[0].reviews.get[0].rating = 4;
+    await em.flush();
+    // Then the persisted best-review membership is empty
+    expect(await select("authors_to_best_reviews")).toEqual([]);
+  });
+
+  it("removes stale persisted membership when force reloading", async () => {
+    // Given a materialized best review that no longer meets the rating threshold
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 4 });
+    await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    // When best reviews are explicitly recalculated and persisted
+    await author.bestReviews.load({ forceReload: true });
+    await em.flush();
+    // Then the persisted best-review membership is empty
+    expect(await select("authors_to_best_reviews")).toEqual([]);
+  });
+
+  it("does not derive membership while deleting an unloaded author", async () => {
+    // Given a persisted author whose best reviews have not been loaded
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    // When the author is deleted and its relations are detached
+    em.delete(author);
+    await em.flush();
+    // Then delete cleanup does not evaluate the derivation on the detached author
+    expect(author.transientFields.bestReviewsCalcInvoked).toBe(0);
+  });
+
+  it("removes pending membership when deleting a new author", async () => {
+    // Given a new author whose best reviews have already been derived
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
+    author.bestReviews.get;
+    // When the author is deleted before its membership is persisted
+    em.delete(author);
+    await em.flush();
+    // Then no pending best-review rows are persisted
+    expect(await select("authors_to_best_reviews")).toEqual([]);
+  });
+
+  it("loads a fork's persisted membership before recalculating imported members", async () => {
+    // Given an author with a materialized best review loaded in the original manager
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+    const em = newEntityManager();
+    await em.load(Author, "a:1", "bestReviews");
+    // And a fork has inherited the loaded members but not the original manager's join rows
+    const fork = em.fork();
+    const review = await fork.load(BookReview, "br:1");
+    // When the review no longer qualifies as a best review in the fork
+    review.rating = 4;
+    await fork.flush();
+    // Then the persisted best-review membership is empty
+    expect(await select("authors_to_best_reviews")).toEqual([]);
+  });
 });
 
 function entitiesSorted(em: EntityManager): Entity[] {

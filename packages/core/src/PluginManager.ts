@@ -7,7 +7,12 @@ import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
   /**
-   * Called on the first read of each entity field, including ORM-internal reads.
+   * Called before the first read of each entity field, and again if any plugin returns `"allow"`.
+   * Includes ORM-internal reads.
+   *
+   * Return `"allow"` to allow only this access and check again on the next read. Return
+   * `"always"` or nothing to allow all subsequent accesses, regardless of trusted context.
+   * Throw to deny access. Any plugin returning `"allow"` prevents caching for all plugins.
    *
    * Install plugins before reading entities. Cached reads, including reads after a flush
    * or refresh, do not invoke this callback again. A throwing callback can be retried.
@@ -15,7 +20,7 @@ interface PluginMethods {
    * @param entity The entity instance being accessed
    * @param field The field name being retrieved
    */
-  beforeGetField?(entity: Entity, field: string): void;
+  beforeGetField?(entity: Entity, field: string): "allow" | "always" | void;
   /**
    * Called before a field value is set on an entity via setField.
    *
@@ -138,11 +143,26 @@ export class PluginManager implements Required<PluginMethods> {
         // once we have at least one plugin using that method. This is to make it so any unused plugin methods are
         // effectively no-ops when called from within the em.
         if (!Object.hasOwn(this, method)) {
-          this[method] = function (this: PluginManager, ...args: any[]) {
-            for (const plugin of this.#pluginsByCallback[method]!) {
-              (plugin[method] as (...args: any[]) => unknown)(...args);
-            }
-          };
+          if (method === "beforeGetField") {
+            // Other hooks return nothing; beforeGetField must combine the plugins' caching votes.
+            this.beforeGetField = function (this: PluginManager, entity: Entity, field: string): "allow" | "always" {
+              // Start cacheable: both "always" and void permit caching.
+              let result: "allow" | "always" = "always";
+
+              // A cache veto must not skip later plugins: they may still deny this access.
+              for (const plugin of this.#pluginsByCallback.beforeGetField!) {
+                // Once a plugin votes "allow", later "always" or void votes cannot restore caching.
+                if (plugin.beforeGetField!(entity, field) === "allow") result = "allow";
+              }
+              return result;
+            };
+          } else {
+            this[method] = function (this: PluginManager, ...args: any[]) {
+              for (const plugin of this.#pluginsByCallback[method]!) {
+                (plugin[method] as (...args: any[]) => unknown)(...args);
+              }
+            };
+          }
         }
       }
     }
@@ -176,7 +196,7 @@ export class PluginManager implements Required<PluginMethods> {
   // Defined as no-op functions initially instead of using optional chaining for performance reasons, see:
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
-  beforeGetField(entity: Entity, field: string): void {}
+  beforeGetField(entity: Entity, field: string): "allow" | "always" | void {}
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,

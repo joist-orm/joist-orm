@@ -13,8 +13,9 @@ type EntityReadWords = Entity & Record<ReadWordName, number>;
 /**
  * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
- * Plugins observe only the first read of each field, including internal reads. Install
- * plugins before reading entities; adding one later does not replay earlier reads.
+ * Plugins observe the first read, including internal reads, and subsequent reads if any plugin returns `"allow"`.
+ *
+ * Install plugins before reading entities; adding one later does not replay cached reads.
  * Generated getters and direct application calls are protected by default. Only ORM
  * housekeeping should pass `isInternal`, not domain logic in hooks, rules, or reactions.
  * The field name is a string because generated getters and ORM internals know its type.
@@ -193,11 +194,11 @@ export function equal(a: any, b: any): boolean {
 }
 
 /**
- * Performs first-read callbacks, protection, and lazy conversion before publishing the warm-read bit.
+ * Performs read callbacks, protection, and lazy conversion before publishing the warm-read bit.
  *
  * The plugin bit is set before invoking hooks so a hook may read or change its own field,
  * reentering this function without invoking the hook again.
- * A throwing hook clears both bits for this field, allowing a later access to retry it.
+ * A hook returning `"allow"` or throwing clears both bits, so later accesses check again.
  */
 function readField(
   entity: Entity,
@@ -207,10 +208,16 @@ function readField(
   index: number,
 ): any {
   const { em, metadata } = instanceData;
+  let canCache = true;
   if (!hasReadField(instanceData.pluginReadFields, instanceData.pluginReadFieldsExtra, index)) {
     markPluginReadField(instanceData, index, true);
     try {
-      getEmInternalApi(em).pluginManager.beforeGetField(entity, fieldName);
+      canCache = getEmInternalApi(em).pluginManager.beforeGetField(entity, fieldName) !== "allow";
+      if (!canCache) {
+        markPluginReadField(instanceData, index, false);
+        // A reentrant getter may have published a warm bit before the hook vetoed caching.
+        markApplicationReadField(entity, index, false);
+      }
     } catch (error) {
       markPluginReadField(instanceData, index, false);
       markApplicationReadField(entity, index, false);
@@ -232,7 +239,7 @@ function readField(
   // IDs are always assigned into data.id, so even their unassigned reads can stay warm.
   // Other unset new fields stay cold: inserts may supply defaults later, without a read
   // turning into an explicit `undefined` for defaults/isFieldSet.
-  if ((fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
+  if (canCache && (fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
     markApplicationReadField(entity, index, true);
   }
   return data[fieldName];

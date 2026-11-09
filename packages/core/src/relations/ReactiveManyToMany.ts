@@ -54,6 +54,8 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   // Could be either the ref-loaded stored array, or full-loaded calculated array
   #loaded: U[] | undefined;
+  // Recalculation needs the old membership even when the derivation hint is already loaded.
+  #isJoinTableLoaded: boolean;
   // In ref-mode, we use our materialized FK value (which might be undefined)
   // If full-mode, we calculate the FK value from the subgraph
   #loadedMode: "ref" | "full" | undefined = undefined;
@@ -71,6 +73,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   ) {
     super(entity);
     this.#field = field;
+    this.#isJoinTableLoaded = getInstanceData(entity).isOrWasNew;
     (getInstanceData(entity).relations ??= {})[this.fieldName] = this;
   }
 
@@ -84,7 +87,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
       if (maybeDirty) {
         this.#isCached = false;
-        return (this.#loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
+        return (this.#loadPromise ??= Promise.all([
+          em.populate(this.entity, { hint: loadHint, ...opts }),
+          !this.#isJoinTableLoaded || opts?.forceReload ? this.#loadFromJoinTable() : undefined,
+        ]).then(() => {
           this.#loadPromise = undefined;
           this.#loadedMode = "full";
           this.#isLoaded = true;
@@ -112,9 +118,11 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     // If a WIP mutation has marked our field as potentially dirty, we need to be "full" loaded
     const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
     if (maybeDirty) {
-      // If we're dirty, only being "full" loaded is good enough to recalc
+      // ReactiveReferences can mark themselves isLoaded when merely their
+      // loadHint is loaded, but for ReactiveManyToMany we need to also have
+      // our old join rows loaded, to tell who needs to be removed
       this.#loadedMode = "full";
-      this.#isLoaded = isLoaded(this.entity, this.loadHint);
+      this.#isLoaded = this.#isJoinTableLoaded && isLoaded(this.entity, this.loadHint);
       this.#isCached = false;
     } else {
       // If we've had `.load` called before, assume we're still loaded
@@ -193,8 +201,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
-    const existing = await this.load({ withDeleted: true });
+    // Required relations may already be detached, so remove stored/pending rows without deriving.
+    if (!this.#isJoinTableLoaded) await this.#loadFromJoinTable();
     const jr = getEmInternalApi(this.entity.em).joinRows(this);
+    const existing = jr.getOthers(this.columnName, this.entity) as U[];
     for (const entity of existing) jr.addRemove(this, this.entity, entity);
     this.#loaded = [];
     this.#isLoaded = false;
@@ -251,8 +261,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     mapEntities: (e: U[] | undefined) => U[] | undefined,
   ): void {
     this.#loaded = mapEntities(other.#loaded);
-    this.#loadedMode = other.#loadedMode;
-    this.#isLoaded = other.#isLoaded ?? false;
+    // A fork copies members, not JoinRows; treat the snapshot as ref-mode until its own rows are loaded.
+    this.#isJoinTableLoaded = this.entity.isNewEntity;
+    this.#loadedMode = other.#loadedMode ? "ref" : undefined;
+    this.#isLoaded = undefined;
     // Don't set `#isCached b/c we're not registering ourselves with `isLoadedCache` yet; let
     // the first caller to `#doGet` do that if needed.
   }
@@ -265,11 +277,15 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     return isCascadeDelete(this, this.#field.fieldName);
   }
 
+  /** Loads the previous membership so recalculation and deletion can remove its join rows. */
   async #loadFromJoinTable(): Promise<U[]> {
     const { em } = this.entity;
-    const key = `${this.columnName}=${this.entity.id}`;
-    // Use the existing m2m loader by creating a compatible collection-like object
-    await manyToManyBatchLoader(em, this).load(key);
+    if (!this.entity.isNewEntity) {
+      const key = `${this.columnName}=${this.entity.id}`;
+      // Use the existing m2m loader by creating a compatible collection-like object
+      await manyToManyBatchLoader(em, this).load(key);
+    }
+    this.#isJoinTableLoaded = true;
     return getEmInternalApi(em).joinRows(this).getOthers(this.columnName, this.entity) as U[];
   }
 

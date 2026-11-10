@@ -53,6 +53,12 @@ Note how:
 * Only fields that are explicitly requested are included in the output
 * The output is correctly typed, for type-checking against your API response types
 
+Calling `entity.toJSON()` without a hint returns only `{ id }`. This avoids accidentally exposing sensitive fields when an entity is logged or passed to `JSON.stringify`. Pass an explicit hint to include other fields.
+
+Date fields, such as `createdAt`, remain `Date` objects in the payload. `JSON.stringify(payload)` converts them to ISO strings.
+
+Requested IDs are `null` for entities that have not been assigned an ID yet, including IDs in references and collections. Serialization does not flush new entities.
+
 ### Outputting Lists
 
 If you have an array of entities to output, you can use the static `toJSON` function:

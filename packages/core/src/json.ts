@@ -157,18 +157,24 @@ type JsonPayloadKey<T, H, TK extends keyof T, HK extends keyof NormalizeHint<H>>
         ? JsonPayloadProperty<U, NormalizeHint<H>[HK]>
         : T[TK] extends ReactiveGetter<any, infer V>
           ? V
-          : T[TK];
+          : TK extends "id"
+            ? T[TK] | null
+            : T[TK];
 
-// If the hint is empty, we just output the id as a string.
-type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
+// If the hint is true or empty, output the id, or null if no id has been assigned.
+type JsonPayloadReference<U, H> = H extends true
+  ? string | null
+  : IsEmpty<H> extends true
+    ? string | null
+    : JsonPayload<U, H>;
 
 type JsonPayloadCollection<U extends Entity, H> =
   // If this is `books: true`, use the id
   H extends true
-    ? IdOf<U>[]
+    ? (IdOf<U> | null)[]
     : // If this is `{}`, use the id
       IsEmpty<H> extends true
-      ? IdOf<U>[]
+      ? (IdOf<U> | null)[]
       : // Otherwise it's a nested hint
         JsonPayload<U, H>[];
 
@@ -206,8 +212,9 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
       }
       payload[payloadKey] = await nestedHint(entity);
     } else {
-      const value = entity[entityKey];
-      if (isPrimitive(value)) {
+      // Match the safe no-hint default: a new entity has no id until it is flushed.
+      const value = entityKey === "id" ? (entity.idMaybe ?? null) : entity[entityKey];
+      if (isPrimitive(value) || value instanceof Date) {
         payload[payloadKey] = value;
       } else if (
         value instanceof AbstractRelationImpl ||
@@ -232,7 +239,7 @@ function copyToPayloadValue(payload: any, key: any, value: any, nextHint: any): 
       payload[key] = {};
       return copyToPayload(payload[key], value, nextHint);
     } else {
-      payload[key] = value.id;
+      payload[key] = value.idMaybe ?? null;
     }
   } else if (Array.isArray(value)) {
     const list = [] as any[];
@@ -251,7 +258,7 @@ function copyToPayloadValue(payload: any, key: any, value: any, nextHint: any): 
       );
     } else {
       // This is assuming an array of entities...
-      for (const item of value) list.push(item.id);
+      for (const item of value) list.push(item.idMaybe ?? null);
     }
   } else {
     payload[key] = value;

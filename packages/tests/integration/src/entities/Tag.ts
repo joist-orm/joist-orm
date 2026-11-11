@@ -13,3 +13,8 @@ config.beforeFlush("books", (tag) => {
     tag.name = `Books Changed`;
   }
 });
+
+// Exercises speculative hook-created work without adding schema or bypassing the normal hook pipeline.
+config.beforeCreate((tag) => {
+  if (tag.name === "create sibling") tag.em.create(Tag, { name: "generated sibling" });
+});

@@ -79,6 +79,6 @@ Mutations do not run entity hooks, validation rules, configuration defaults, rea
 
 They also do not flush pending entities.
 
-Already-loaded entities and collections are not refreshed after a mutation. A later `em.flush()` can overwrite the SQL changes with pending entity edits; database triggers may also change `updated_at` and cause optimistic locking to fail for loaded entities with an older timestamp.
+Already-loaded entities and collections are not refreshed after a mutation. A later `em.flush()` can overwrite the SQL changes with pending entity edits. SQL writers must explicitly advance `updated_at` to participate in Joist's optimistic locking; new tables no longer receive an automatic UPDATE timestamp trigger. Existing installations can remove the legacy triggers in a migration with `dropUpdatedAtTriggers(b)` from `joist-migration-utils`. INSERT timestamp defaults are unchanged.
 
 :::

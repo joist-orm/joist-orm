@@ -11,3 +11,8 @@ export function isInTrustedContext(): boolean {
 export function runInTrustedContext<T>(fn: () => T): T {
   return trustedContext.run(true, fn);
 }
+
+/** Runs caller-facing serialization without inheriting the flush pipeline's trusted access. */
+export function runInUntrustedContext<T>(fn: () => T): T {
+  return trustedContext.run(false, fn);
+}

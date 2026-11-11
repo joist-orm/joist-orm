@@ -1,7 +1,7 @@
 import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
-import { getField } from "src/fields.ts";
+import { getRelationField } from "src/fields.ts";
 import {
   type OneToManyCollection,
   type OneToManyField,
@@ -55,7 +55,7 @@ export function oneToManyBatchLoader<T extends Entity, U extends Entity>(
     const entities = em["hydrateAndFinalize"](meta.cstr, rowData);
 
     const entitiesById = groupBy(entities, (entity) => {
-      const ownerId = maybeResolveReferenceToId(getField(entity, collection.otherFieldName));
+      const ownerId = maybeResolveReferenceToId(getRelationField(entity, collection.otherFieldName));
       return ownerId ?? "dummyNoLongerOwned";
     });
 

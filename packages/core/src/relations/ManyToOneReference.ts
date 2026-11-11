@@ -1,7 +1,8 @@
+import { loadReference } from "src/batchloaders/loadReference.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
 import { type EntityMetadata, type ManyToOneField, getMetadata } from "src/EntityMetadata.ts";
-import { getField, setField } from "src/fields.ts";
+import { getField, getRelationField, setField } from "src/fields.ts";
 import {
   BaseEntity,
   NoIdError,
@@ -29,7 +30,11 @@ import { maybeAdd, maybeRemove } from "src/utils.ts";
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
     const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
-    return new ManyToOneReferenceImpl<T, U, N>(entity, m2o);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("beforeGetReference")
+        ? PluginManyToOneReference
+        : ManyToOneReferenceImpl;
+    return new Relation<T, U, N>(entity, m2o);
   });
 }
 
@@ -89,6 +94,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    const value = await this.loadCanonical(opts);
+    getField(this.entity, this.fieldName);
+    return value;
+  }
+
+  /** Hydrates the target without letting user visibility change canonical state. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     this.#state = this.#state.maybeInstantLoad();
     if (!this.#state.isLoaded || opts.forceReload) {
@@ -96,7 +108,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       if (isEntity(current) || current === undefined) {
         this.#state = new M2OLoadedState<U, N>(this, current as U | N | undefined);
       } else {
-        await (this.#loadPromise ??= this.entity.em.load(this.otherMeta.cstr, current).then((entity) => {
+        await (this.#loadPromise ??= loadReference(this.entity.em, this.otherMeta, current).then((entity) => {
           this.#loadPromise = undefined;
           // In extremely rare cases, someone might have called `set` while this promise was in-flight,
           // so make sure our current value is still the same as the fetched entity.
@@ -114,6 +126,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get isSet(): boolean {
+    getField(this.entity, this.fieldName);
     return this.current() !== undefined;
   }
 
@@ -141,18 +154,23 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.#state = source.#state.import(this, findEntity);
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  /** @internal Returns canonical state without invoking public relation hooks. */
+  getCanonical(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, "pending");
     this.#state = this.#state.maybeInstantLoad();
     return this.filterDeleted(this.#state.doGet() as U | N, opts);
   }
 
   get getWithDeleted(): U | N {
-    return this.doGet({ withDeleted: true });
+    const value = this.getCanonical({ withDeleted: true });
+    getField(this.entity, this.fieldName);
+    return value;
   }
 
   get get(): U | N {
-    return this.doGet({ withDeleted: false });
+    const value = this.getCanonical({ withDeleted: false });
+    getField(this.entity, this.fieldName);
+    return value;
   }
 
   /** Returns the id of the current value. */
@@ -165,7 +183,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     ensureNotDeleted(this.entity, "pending");
     const newId = toTaggedId(this.otherMeta, id);
 
-    const previousId = this.idTaggedMaybe;
+    const previousId = maybeResolveReferenceToId(this.current());
     const previous = this.maybeFindEntity();
     const changed = setField(this.entity, this.fieldName, id);
     if (!changed) {
@@ -200,6 +218,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   get idTaggedMaybe(): TaggedId | undefined {
     // Skip the deleted check so that `isPreloaded` doesn't blow up during em.refreshes/populates
     // ensureNotDeleted(this.entity, "pending");
+    getField(this.entity, this.fieldName);
     return maybeResolveReferenceToId(this.current());
   }
 
@@ -225,7 +244,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       return;
     }
 
-    const previousId = this.idTaggedMaybe;
+    const previousId = maybeResolveReferenceToId(this.current());
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
@@ -267,7 +286,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
-    const current = await this.load({ withDeleted: true });
+    const current = await this.loadCanonical({ withDeleted: true });
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);
       if (o2m instanceof OneToManyCollection) {
@@ -350,11 +369,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | TaggedId | N {
-    const current = getField(this.entity, this.fieldName);
+    const current = getRelationField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }
-    return current;
+    return current as TaggedId | N;
   }
 
   get otherMeta(): EntityMetadata<U> {
@@ -404,7 +423,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     // Check current() first b/c a new entity won't have an id yet
     const current = this.current();
     if (isEntity(current)) return current as U;
-    const { idTaggedMaybe } = this;
+    const idTaggedMaybe = maybeResolveReferenceToId(this.current());
     return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U) : undefined;
   }
 
@@ -445,6 +464,43 @@ export function failIfNewEntity(entity: Entity, fieldName: string, current: stri
   }
   // Since this is a `.idIfSet`, having no `current` is fine, return undefined.
   return undefined;
+}
+
+/** Adds public reference policy without changing canonical loading or FK read tracking. */
+class PluginManyToOneReference<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+> extends ManyToOneReferenceImpl<T, U, N> {
+  override get get(): U | N {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await super.load(opts));
+  }
+
+  override get isSet(): boolean {
+    const value = super.isSet;
+    this.check(this.current());
+    return value;
+  }
+
+  override get idTaggedMaybe(): TaggedId | undefined {
+    const value = super.idTaggedMaybe;
+    this.check(this.current());
+    return value;
+  }
+
+  /** Checks the target rather than a derived id, so new entities are checked as well. */
+  private check<V extends Entity | string | undefined>(value: V): V {
+    getEmInternalApi(this.entity.em).pluginManager.beforeGetReference(this.entity, this.fieldName, value);
+    return value;
+  }
 }
 
 interface M2OState<U extends Entity, N extends never | undefined> {

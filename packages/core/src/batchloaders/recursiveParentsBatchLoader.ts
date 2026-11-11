@@ -2,13 +2,14 @@ import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { getMetadataForType } from "src/configure.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityManager } from "src/EntityManager.ts";
+import { getRelationField } from "src/fields.ts";
 import {
   type ManyToOneField,
   type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   deTagIds,
-  getField,
   kq,
+  maybeResolveReferenceToId,
 } from "src/index.ts";
 import { type RecursiveParentsCollectionImpl } from "src/relations/RecursiveCollection.ts";
 import { abbreviation } from "src/utils.ts";
@@ -28,9 +29,11 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getBatchLoader(recursiveParentsOperation, batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;
-    // ...can `getField` return a new entity? In theory, we shouldn't see new entities because
+    // ...can `getRelationField` return a new entity? In theory, we shouldn't see new entities because
     // RecursiveParentsCollectionImpl.load/isLoaded will see the `ManyToOneReferenceImpl` as loaded.
-    const immediateParentIds = children.map((c) => getField(c, m2o.fieldName)).filter((id: any) => id !== undefined);
+    const immediateParentIds = children
+      .map((c) => maybeResolveReferenceToId(getRelationField(c, m2o.fieldName)))
+      .filter((id) => id !== undefined);
     const { columnName } = m2o.serde.columns[0];
 
     const alias = abbreviation(meta.tableName);

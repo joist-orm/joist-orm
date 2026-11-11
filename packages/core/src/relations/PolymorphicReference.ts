@@ -1,8 +1,9 @@
+import { loadReference } from "src/batchloaders/loadReference.ts";
 import { maybeGetConstructorFromReference } from "src/configure.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
-import { type IdOf, type TaggedId, sameEntity } from "src/EntityManager.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
 import { type PolymorphicFieldComponent, getMetadata } from "src/EntityMetadata.ts";
-import { getField, setField } from "src/fields.ts";
+import { getField, getRelationField, setField } from "src/fields.ts";
 import {
   type OneToOneReference,
   type PolymorphicField,
@@ -27,7 +28,11 @@ export function hasOnePolymorphic<
   N extends never | undefined,
 >(): PolymorphicReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
-    return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName as keyof T & string);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("beforeGetReference")
+        ? PluginPolymorphicReference
+        : PolymorphicReferenceImpl;
+    return new Relation<T, U, N>(entity, fieldName as keyof T & string);
   });
 }
 
@@ -105,6 +110,13 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    const value = await this.loadCanonical(opts);
+    getField(this.entity, this.fieldName);
+    return value;
+  }
+
+  /** Hydrates the target without letting user visibility change canonical state. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     const current = this.current();
     // Resolve the id to an entity
@@ -112,7 +124,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
       this.loaded =
         isEntity(current) || current === undefined
           ? (current as U | undefined)
-          : ((await this.entity.em.load(getConstructorFromTaggedId(current), current)) as U);
+          : ((await loadReference(this.entity.em, getMetadata(getConstructorFromTaggedId(current)), current)) as U);
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);
@@ -123,6 +135,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get isSet(): boolean {
+    getField(this.entity, this.fieldName);
     return this.current() !== undefined;
   }
 
@@ -136,7 +149,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    const { idTaggedMaybe } = this;
+    const idTaggedMaybe = maybeResolveReferenceToId(this.current());
     return this.loaded ?? (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U) : undefined);
   }
 
@@ -159,7 +172,8 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     this._isLoaded = true;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  /** @internal Returns canonical state without invoking public relation hooks. */
+  getCanonical(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
@@ -176,11 +190,15 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get getWithDeleted(): U | N {
-    return this.doGet({ withDeleted: true });
+    const value = this.getCanonical({ withDeleted: true });
+    getField(this.entity, this.fieldName);
+    return value;
   }
 
   get get(): U | N {
-    return this.doGet({ withDeleted: false });
+    const value = this.getCanonical({ withDeleted: false });
+    getField(this.entity, this.fieldName);
+    return value;
   }
 
   get id(): IdOf<U> {
@@ -189,6 +207,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   get idMaybe(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity, "pending");
+    getField(this.entity, this.fieldName);
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
@@ -202,6 +221,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   get idTaggedMaybe(): string | undefined {
     ensureNotDeleted(this.entity, "pending");
+    getField(this.entity, this.fieldName);
     return maybeResolveReferenceToId(this.current());
   }
 
@@ -227,7 +247,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
-    const current = await this.load({ withDeleted: true });
+    const current = await this.loadCanonical({ withDeleted: true });
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);
       if (o2m instanceof OneToManyCollection) {
@@ -313,11 +333,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | TaggedId | N {
-    const current = getField(this.entity, this.fieldName);
+    const current = getRelationField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }
-    return current;
+    return current as string | N;
   }
 
   public toString(): string {
@@ -339,10 +359,54 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.idTaggedMaybe !== undefined ? (this.entity.em.getEntity(this.idTagged) as U) : undefined;
+    const id = maybeResolveReferenceToId(this.current());
+    return id !== undefined ? (this.entity.em.getEntity(id) as U) : undefined;
   }
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Checks polymorphic targets at public read boundaries, including id-only reads. */
+class PluginPolymorphicReference<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+> extends PolymorphicReferenceImpl<T, U, N> {
+  override get get(): U | N {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await super.load(opts));
+  }
+
+  override get isSet(): boolean {
+    const value = super.isSet;
+    this.check(this.current());
+    return value;
+  }
+
+  override get idMaybe(): IdOf<U> | undefined {
+    const value = super.idMaybe;
+    this.check(this.current());
+    return value;
+  }
+
+  override get idTaggedMaybe(): string | undefined {
+    const value = super.idTaggedMaybe;
+    this.check(this.current());
+    return value;
+  }
+
+  /** Checks entities as well as unloaded tagged ids. */
+  private check<V extends Entity | string | undefined>(value: V): V {
+    getEmInternalApi(this.entity.em).pluginManager.beforeGetReference(this.entity, this.fieldName, value);
+    return value;
+  }
 }

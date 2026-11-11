@@ -20,7 +20,7 @@ export function hasOneDerived<
   const H extends LoadHint<T>,
 >(loadHint: H, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
   return lazyField((entity: T) => {
-    return new CustomReference<T, U, N>(entity, {
+    return CustomReference.create<T, U, N>(entity, {
       load: (entity, opts) => entity.em.populate(entity, { hint: loadHint, ...opts }),
       get: () => get(entity as Loaded<T, H>),
       isLoaded: () => isLoaded(entity, loadHint as LoadHint<T>),

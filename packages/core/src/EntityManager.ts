@@ -2,7 +2,7 @@ import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
 import { getInstanceData } from "src/BaseEntity.ts";
 import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
-import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
+import { loadBatchLoader, type loadOperation, type referenceLoadOperation } from "src/batchloaders/loadBatchLoader.ts";
 import { type manyToManyLoadOperation } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { type oneToManyLoadOperation } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { type oneToOneLoadOperation } from "src/batchloaders/oneToOneBatchLoader.ts";
@@ -286,6 +286,7 @@ export type FindOperation =
   | typeof findIdsOperation
   | typeof lensOperation
   | typeof loadOperation
+  | typeof referenceLoadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
   | typeof enumCollectionLoadOperation
@@ -404,7 +405,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const em = this;
 
     this.__api = {
-      preloader: this.#preloader,
+      get preloader() {
+        // JSON-aggregate hydration cannot supply per-target afterFind metadata. Relation-access
+        // plugins that need those rows must use the ordinary batch loaders instead.
+        const needsTargetRows =
+          pluginManager.hasHook("afterFind") &&
+          (pluginManager.hasHook("filterCollection") || pluginManager.hasHook("beforeGetReference"));
+        return needsTargetRows ? undefined : em.#preloader;
+      },
       pendingPercolate: this.#pendingPercolate,
       mutatedCollections: new Set(),
       pendingLoads: new Set(),
@@ -1785,10 +1793,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     const meta = getMetadata(list[0]);
 
-    if (this.#preloader) {
+    // Populate uses canonical accessors; public relation reads apply their own visibility checks.
+    const preloader = this.__api.preloader;
+    if (preloader) {
       // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
       // intra dependencies), then a 2nd small-batch non-preload populate.
-      const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
+      const [preload, non] = preloader.partitionHint(meta, hintOpt);
       if (preload) {
         const loader = populateBatchLoader(this, meta, preload, "preload", opts);
         await loader.loadAll(list.map((entity) => ({ entity, hint: preload }))).catch(function populate(err: any) {
@@ -1807,7 +1817,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         throw appendStack(err, new Error());
       });
     }
-
     return fn ? fn(entityOrList as any) : (entityOrList as any);
   }
 

@@ -31,6 +31,22 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
   return readField(entity, instanceData, fieldName, isInternal, index);
 }
 
+/** Reads canonical relation storage without authorizing or caching permission for a public read. */
+export function getRelationField(entity: Entity, fieldName: string): Entity | string | undefined {
+  return getFieldCanonical(entity, fieldName) as Entity | string | undefined;
+}
+
+/** Reads stored values for ORM bookkeeping without granting permission to a later public field read. */
+export function getFieldCanonical(entity: Entity, fieldName: string): unknown {
+  const instanceData = getInstanceData(entity);
+  const { data } = instanceData;
+  if (!(fieldName in data) && !instanceData.isNewEntity) {
+    const serde = instanceData.metadata.allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
+    data[fieldName] = serde.fromRow(instanceData.rowData, instanceData.rowIndex);
+  }
+  return data[fieldName];
+}
+
 /** Returns whether `fieldName` is a field/column on `entity` that can be changed. */
 export function isChangeableField(entity: Entity, fieldName: string): boolean {
   return !!getMetadata(entity).allFields[fieldName]?.serde;

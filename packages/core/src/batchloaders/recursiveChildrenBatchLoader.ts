@@ -2,6 +2,7 @@ import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { getMetadataForType } from "src/configure.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { getRelationField } from "src/fields.ts";
 import {
   type ManyToOneField,
   type OneToManyField,
@@ -9,7 +10,6 @@ import {
   type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
   deTagIds,
-  getField,
   isLoadedCollection,
   isLoadedOneToOneReference,
   kq,
@@ -84,7 +84,7 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
 
     // For all the entities we found, group them by their parent (or the root node, which has no parent)
     const entitiesById = groupBy(entities, (entity) => {
-      const parentId = maybeResolveReferenceToId(getField(entity, m2o.fieldName));
+      const parentId = maybeResolveReferenceToId(getRelationField(entity, m2o.fieldName));
       return parentId ?? "root";
     });
 

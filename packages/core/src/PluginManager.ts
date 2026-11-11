@@ -8,7 +8,7 @@ import { type RowData } from "src/RowData.ts";
 interface PluginMethods {
   /**
    * Called before the first read of each entity field, and again if any plugin returns `"allow"`.
-   * Includes ORM-internal reads.
+   * Includes internal getField reads, but not canonical relation bookkeeping.
    *
    * Return `"allow"` to allow only this access and check again on the next read. Return
    * `"always"` or nothing to allow all subsequent accesses, regardless of trusted context.
@@ -21,6 +21,7 @@ interface PluginMethods {
    * @param field The field name being retrieved
    */
   beforeGetField?(entity: Entity, field: string): "allow" | "always" | void;
+
   /**
    * Called before a field value is set on an entity via setField.
    *
@@ -29,6 +30,7 @@ interface PluginMethods {
    * @param newValue The new value being assigned to the field
    */
   beforeSetField?(entity: Entity, field: string, newValue: any): void;
+
   /**
    * Called before a find operation is executed.
    *
@@ -50,6 +52,7 @@ interface PluginMethods {
       keepAliases?: string[];
     },
   ): void;
+
   /**
    * Called after a find operation has been executed to observe the raw database rows.
    *
@@ -70,9 +73,35 @@ interface PluginMethods {
   afterValidate?(entities: readonly Entity[]): Promise<void> | void;
 
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
+
+  /**
+   * Filters a public collection read, including trusted reads and cache hits, without changing canonical contents.
+   *
+   * Relation factories select plugin-aware subclasses when a lazy relation is constructed. Register relation
+   * hooks before accessing relations; existing ordinary instances are not upgraded by late registration.
+   */
+  filterCollection?(entity: Entity, field: string, values: readonly Entity[]): readonly Entity[];
+
+  /** Checks a public reference read, including trusted reads. Unloaded references supply tagged ids. Throw to deny. */
+  beforeGetReference?(entity: Entity, field: string, value: Entity | string | undefined): void;
+
+  /** Checks an explicit join-table mutation; inverse percolation does not invoke this hook. */
+  beforeChangeCollection?(entity: Entity, field: string, value: Entity): void;
+
+  /** Adjusts collection replacement. Current membership is lazy so bypassing plugins need not load it. */
+  beforeSetCollection?(
+    entity: Entity,
+    field: string,
+    values: readonly Entity[],
+    current: () => readonly Entity[],
+  ): readonly Entity[];
 }
 
 const syncPluginMethods = [
+  "filterCollection",
+  "beforeGetReference",
+  "beforeChangeCollection",
+  "beforeSetCollection",
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
@@ -143,7 +172,21 @@ export class PluginManager implements Required<PluginMethods> {
         // once we have at least one plugin using that method. This is to make it so any unused plugin methods are
         // effectively no-ops when called from within the em.
         if (!Object.hasOwn(this, method)) {
-          if (method === "beforeGetField") {
+          if (method === "filterCollection") {
+            this.filterCollection = function (entity, field, values) {
+              for (const plugin of this.#pluginsByCallback.filterCollection!) {
+                values = plugin.filterCollection!(entity, field, values);
+              }
+              return values;
+            };
+          } else if (method === "beforeSetCollection") {
+            this.beforeSetCollection = function (entity, field, values, current) {
+              for (const plugin of this.#pluginsByCallback.beforeSetCollection!) {
+                values = plugin.beforeSetCollection!(entity, field, values, current);
+              }
+              return values;
+            };
+          } else if (method === "beforeGetField") {
             // Other hooks return nothing; beforeGetField must combine the plugins' caching votes.
             this.beforeGetField = function (this: PluginManager, entity: Entity, field: string): "allow" | "always" {
               // Start cacheable: both "always" and void permit caching.
@@ -197,6 +240,19 @@ export class PluginManager implements Required<PluginMethods> {
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
   beforeGetField(entity: Entity, field: string): "allow" | "always" | void {}
+  filterCollection(entity: Entity, field: string, values: readonly Entity[]): readonly Entity[] {
+    return values;
+  }
+  beforeGetReference(entity: Entity, field: string, value: Entity | string | undefined): void {}
+  beforeChangeCollection(entity: Entity, field: string, value: Entity): void {}
+  beforeSetCollection(
+    entity: Entity,
+    field: string,
+    values: readonly Entity[],
+    current: () => readonly Entity[],
+  ): readonly Entity[] {
+    return values;
+  }
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,

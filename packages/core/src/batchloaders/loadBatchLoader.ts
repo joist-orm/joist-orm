@@ -10,6 +10,7 @@ import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/quer
 import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
+export const referenceLoadOperation = "reference-load";
 
 /**
  * Batches em.load-style fetches, writing to identity map (via hydrate) instead of returning values.
@@ -22,8 +23,13 @@ export function loadBatchLoader(
   em: EntityManager,
   meta: EntityMetadata,
   overwriteExisting: boolean = false,
+  operation: typeof loadOperation | typeof referenceLoadOperation = loadOperation,
 ): BatchLoader<{ taggedId: string; hint: LoadHint<any> | undefined }> {
-  return em.getBatchLoader(loadOperation, `${meta.type}-${overwriteExisting}`, async (loads) => {
+  // Without query hooks, em.load and reference.load for the same entity type can share one SQL batch.
+  // Query hooks need separate batches because they may apply different policies to these operations.
+  const plugins = getEmInternalApi(em).pluginManager;
+  const batchOperation = plugins.hasHook("beforeFind") || plugins.hasHook("afterFind") ? operation : loadOperation;
+  return em.getBatchLoader(batchOperation, `${meta.type}-${overwriteExisting}`, async (loads) => {
     const keys = loads.map((l) => keyToNumber(meta, l.taggedId));
     const alias = abbreviation(meta.tableName);
     const query = {
@@ -42,7 +48,7 @@ export function loadBatchLoader(
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
+    const rowData = await em["executeFindRowData"](meta, operation, query, {});
     em["hydrateAndFinalize"](meta.cstr, rowData, {
       overwriteExisting,
       sidecars: (entities) => {

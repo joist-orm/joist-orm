@@ -1,7 +1,8 @@
 import type DataLoader from "dataloader";
 import type { Entity } from "src/Entity.ts";
 import type { EntityManager } from "src/EntityManager.ts";
-import { keyToNumber } from "src/keys.ts";
+import { getRelationField } from "src/fields.ts";
+import { keyToNumber, maybeResolveReferenceToId, toTaggedId } from "src/keys.ts";
 import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/queries/find/QueryParser.ts";
 import type { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
 import type { OneToManyLargeCollection } from "src/relations/OneToManyLargeCollection.ts";
@@ -74,7 +75,8 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
       const [, parentId] = parentKey.split("=");
       const other = em.getEntity(otherId) as U;
       // We have may fetched `other` for a different parent in our batch
-      const isMine = (other as any)?.[collection.otherFieldName].id === parentId;
+      const ownerId = other && maybeResolveReferenceToId(getRelationField(other, collection.otherFieldName));
+      const isMine = ownerId === toTaggedId(collection.meta, parentId);
       return isMine ? other : undefined;
     });
   });

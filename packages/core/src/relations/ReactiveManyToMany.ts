@@ -21,8 +21,10 @@ import {
   convertToLoadHint,
 } from "src/reactivity/reactiveHints.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 /**
  * A reactive, derived many-to-many collection.
@@ -41,7 +43,11 @@ export function hasReactiveManyToMany<T extends Entity, U extends Entity, const 
 ): ReactiveManyToMany<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveManyToManyImpl<T, U, H>(entity, m2m, hint, fn);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
+        ? PluginReactiveManyToMany
+        : ReactiveManyToManyImpl;
+    return new Relation<T, U, H>(entity, m2m, hint, fn);
   });
 }
 
@@ -77,7 +83,12 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     (getInstanceData(entity).relations ??= {})[this.fieldName] = this;
   }
 
-  async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {
+  load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Evaluates materialized membership against complete dependencies. */
+  async loadCanonical(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, "pending");
     const { loadHint } = this;
 
@@ -95,7 +106,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
           this.#loadedMode = "full";
           this.#isLoaded = true;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-          return this.#doGet(opts);
+          return this.getCanonical(opts);
         }));
       } else {
         // Load from join table (existing materialized state)
@@ -109,7 +120,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
         }));
       }
     }
-    return this.#doGet(opts);
+    return this.getCanonical(opts);
   }
 
   get isLoaded(): boolean {
@@ -173,11 +184,16 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   }
 
   get getWithDeleted(): U[] {
-    return this.#doGet({ withDeleted: true });
+    return this.getCanonical({ withDeleted: true });
   }
 
   get get(): U[] {
-    return this.#doGet({ withDeleted: false });
+    return this.getCanonical();
+  }
+
+  /** @internal Reactive business logic and its materialized writes use complete dependencies. */
+  getCanonical(opts?: { withDeleted?: boolean }): U[] {
+    return runInTrustedContext(() => this.#doGet(opts));
   }
 
   /** Returns the stored membership without deriving or queuing join-row changes. */
@@ -331,11 +347,35 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   #filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     return opts?.withDeleted === true
       ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+      : entities.filter((e) => !e.isDeletedEntity && !isCanonicalSoftDeleted(e));
   }
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Projects derived membership after business logic has evaluated its complete dependencies. */
+class PluginReactiveManyToMany<
+  T extends Entity,
+  U extends Entity,
+  H extends ReactiveHint<T>,
+> extends ReactiveManyToManyImpl<T, U, H> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Leaves materialized membership intact for reactions. */
+  private filter(values: readonly U[]): U[] {
+    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+  }
 }
 
 /** Type guard utility for determining if an entity field is a ReactiveManyToMany. */

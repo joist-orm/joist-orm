@@ -1,10 +1,11 @@
 import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
-import { loadBatchLoader } from "src/batchloaders/loadBatchLoader.ts";
+import { loadBatchLoader, referenceLoadOperation } from "src/batchloaders/loadBatchLoader.ts";
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { oneToOneBatchLoader } from "src/batchloaders/oneToOneBatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityMetadata } from "src/EntityMetadata.ts";
+import { getRelationField } from "src/fields.ts";
 import {
   AliasAssigner,
   type EntityManager,
@@ -14,6 +15,7 @@ import {
   indexBy,
   keyToNumber,
   kqDot,
+  maybeResolveReferenceToId,
 } from "src/index.ts";
 import { type HintNode, buildHintTree } from "src/loading/HintTree.ts";
 import type { LoadHint } from "src/loading/loadHints.ts";
@@ -147,9 +149,14 @@ export function populateBatchLoader(
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "m2o" && !field.derived) {
-              const taggedId = relation.idTaggedMaybe;
+              const taggedId = maybeResolveReferenceToId(getRelationField(entity, key));
               if (taggedId) {
-                batchPromise = (loader ??= loadBatchLoader(em, field.otherMetadata())).load({
+                batchPromise = (loader ??= loadBatchLoader(
+                  em,
+                  field.otherMetadata(),
+                  false,
+                  referenceLoadOperation,
+                )).load({
                   taggedId,
                   hint: undefined,
                 });
@@ -158,7 +165,9 @@ export function populateBatchLoader(
               }
             }
           }
-          fallbackPromises.push(relation.load(opts) as Promise<any>);
+          fallbackPromises.push(
+            (relation.loadCanonical ? relation.loadCanonical(opts) : relation.load(opts)) as Promise<any>,
+          );
         }
         if (batchPromise) batchPromises.add(batchPromise);
       }
@@ -213,5 +222,6 @@ export function populateBatchLoader(
 
 /** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
 function getEvenDeleted(relation: any): any {
+  if (relation.getCanonical) return relation.getCanonical({ withDeleted: true });
   return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
 }

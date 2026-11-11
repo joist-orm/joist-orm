@@ -5,13 +5,14 @@ import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 /** An alias for creating `CustomReference`s. */
 export function hasCustomReference<T extends Entity, U extends Entity, N extends never | undefined>(
   opts: CustomReferenceOpts<T, U, N>,
 ): CustomReference<T, U, N> {
   return lazyField((entity: T) => {
-    return new CustomReference<T, U, N>(entity, opts);
+    return CustomReference.create<T, U, N>(entity, opts);
   });
 }
 
@@ -45,6 +46,18 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   extends AbstractRelationImpl<T, U>
   implements Reference<T, U, N>
 {
+  /** Selects public interception once for custom, derived, and through references. */
+  static create<T extends Entity, U extends Entity, N extends never | undefined>(
+    entity: T,
+    opts: CustomReferenceOpts<T, U, N>,
+  ): CustomReference<T, U, N> {
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("beforeGetReference")
+        ? PluginCustomReference
+        : CustomReference;
+    return new Relation<T, U, N>(entity, opts);
+  }
+
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<unknown> | undefined;
@@ -60,17 +73,17 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get get(): U | N {
-    return this.doGet({ withDeleted: false });
+    return this.getCanonical();
   }
 
   get getWithDeleted(): U | N {
-    return this.doGet({ withDeleted: true });
+    return this.getCanonical({ withDeleted: true });
   }
 
   get isLoaded(): boolean {
     if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    this.#isLoaded = this.opts.isLoaded(this.entity);
+    this.#isLoaded = runInTrustedContext(() => this.opts.isLoaded(this.entity));
     return this.#isLoaded;
   }
 
@@ -86,11 +99,17 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return this.#loadHint;
   }
 
-  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Evaluates business logic against complete dependencies. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity, opts);
+        // This is application business logic, not an ORM hydration bypass.
+        this.loadPromise = runInTrustedContext(() => this.opts.load(this.entity, opts));
         await this.loadPromise;
         this.loadPromise = undefined;
         this.#isLoaded = true;
@@ -98,7 +117,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
         await this.loadPromise;
       }
     }
-    return this.doGet(opts);
+    return this.getCanonical(opts);
   }
 
   get isPreloaded(): boolean {
@@ -132,7 +151,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   get isSet(): boolean {
     this.ensureNewOrLoaded();
     const { get } = this.opts;
-    return get(this.entity) !== undefined;
+    return runInTrustedContext(() => get(this.entity)) !== undefined;
   }
 
   set(value: U): void {
@@ -171,10 +190,12 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return `CustomReference(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  /** @internal Evaluates the business getter against complete dependencies. */
+  getCanonical(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, "pending");
     this.ensureNewOrLoaded();
-    return this.filterDeleted(this.opts.get(this.entity), opts);
+    const value = runInTrustedContext(() => this.opts.get(this.entity));
+    return this.filterDeleted(value, opts);
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
@@ -192,4 +213,33 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Checks custom results without changing required-reference nullability. */
+class PluginCustomReference<T extends Entity, U extends Entity, N extends never | undefined> extends CustomReference<
+  T,
+  U,
+  N
+> {
+  override get get(): U | N {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await super.load(opts));
+  }
+
+  override get isSet(): boolean {
+    return this.check(this.getCanonical({ withDeleted: true })) !== undefined;
+  }
+
+  /** Keeps the plugin call in the caller's context, outside the business callback. */
+  private check(value: U | N): U | N {
+    getEmInternalApi(this.entity.em).pluginManager.beforeGetReference(this.entity, this.fieldName, value);
+    return value;
+  }
 }

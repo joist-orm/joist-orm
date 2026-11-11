@@ -22,6 +22,7 @@ import {
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { type ReadOnlyCollection } from "src/relations/ReadOnlyCollection.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCycleError.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
@@ -38,7 +39,11 @@ export function hasRecursiveParents<T extends Entity, U extends Entity>(
   otherFieldName: keyof T & string, // i.e. `author.menteesRecursive`
 ): ReadOnlyCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    return new RecursiveParentsCollectionImpl(entity, fieldName as keyof T & string, m2oName, otherFieldName);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
+        ? PluginRecursiveParentsCollection
+        : RecursiveParentsCollectionImpl;
+    return new Relation<T, U>(entity, fieldName as keyof T & string, m2oName, otherFieldName);
   });
 }
 
@@ -52,7 +57,11 @@ export function hasRecursiveChildren<T extends Entity, U extends Entity>(
   otherFieldName: keyof T & string, // i.e. `author.mentorsRecursive`
 ): ReadOnlyCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    return new RecursiveChildrenCollectionImpl(entity, fieldName as keyof T & string, o2mName, otherFieldName);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
+        ? PluginRecursiveChildrenCollection
+        : RecursiveChildrenCollectionImpl;
+    return new Relation<T, U>(entity, fieldName as keyof T & string, o2mName, otherFieldName);
   });
 }
 
@@ -67,7 +76,11 @@ export function hasRecursiveM2m<T extends Entity, U extends Entity>(
   otherFieldName: keyof T & string, // i.e. `user.childrenRecursive` or `user.parentsRecursive`
 ): ReadOnlyCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    return new RecursiveM2mCollectionImpl(entity, fieldName as keyof T & string, m2mName, otherFieldName);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
+        ? PluginRecursiveM2mCollection
+        : RecursiveM2mCollectionImpl;
+    return new Relation<T, U>(entity, fieldName as keyof T & string, m2mName, otherFieldName);
   });
 }
 
@@ -83,11 +96,16 @@ abstract class AbstractRecursiveCollectionImpl<T extends Entity, U extends Entit
   abstract fieldName: string;
 
   get get(): U[] {
-    return this.filterDeleted(this.doGet(), { withDeleted: false });
+    return this.getCanonical();
   }
 
   get getWithDeleted(): U[] {
-    return this.filterDeleted(this.doGet(), { withDeleted: true });
+    return this.getCanonical({ withDeleted: true });
+  }
+
+  /** @internal Traverses complete relations without invoking public access hooks. */
+  getCanonical(opts?: { withDeleted?: boolean }): U[] {
+    return this.filterDeleted(this.doGet(), opts);
   }
 
   setFromOpts(): void {
@@ -122,7 +140,7 @@ abstract class AbstractRecursiveCollectionImpl<T extends Entity, U extends Entit
   protected filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     return opts?.withDeleted === true
       ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+      : entities.filter((e) => !e.isDeletedEntity && !isCanonicalSoftDeleted(e));
   }
 
   [RelationT]: T = null!;
@@ -147,7 +165,12 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Loads the complete recursive path before projecting its visible members. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (opts.forceReload) {
@@ -265,7 +288,12 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Loads the complete recursive path before projecting its visible members. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (opts.forceReload) {
@@ -286,7 +314,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
         // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
         // We don't have to `while` loop this, because if they children themselves have any WIP
         // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
-        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].loadCanonical(opts)));
       }
       this.#loaded = true;
     }
@@ -386,7 +414,12 @@ export class RecursiveM2mCollectionImpl<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Loads the complete recursive path before projecting its visible members. */
+  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (opts.forceReload) {
@@ -405,7 +438,7 @@ export class RecursiveM2mCollectionImpl<T extends Entity, U extends Entity>
       const unloaded = this.findUnloadedCollections();
       if (unloaded.length > 0) {
         // Go through the entity's own `fooRecursive` collection so that it's marked as loaded.
-        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].loadCanonical(opts)));
       }
       this.#loaded = true;
     }
@@ -500,16 +533,79 @@ export class RecursiveM2mCollectionImpl<T extends Entity, U extends Entity>
   }
 }
 
+/** Filters only the result; traversal must still pass through hidden parents. */
+class PluginRecursiveParentsCollection<T extends Entity, U extends Entity> extends RecursiveParentsCollectionImpl<
+  T,
+  U
+> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Projects the complete path at the public boundary. */
+  private filter(values: readonly U[]): U[] {
+    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+  }
+}
+
+/** Filters only the result; traversal must still pass through hidden children. */
+class PluginRecursiveChildrenCollection<T extends Entity, U extends Entity> extends RecursiveChildrenCollectionImpl<
+  T,
+  U
+> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Projects the complete path at the public boundary. */
+  private filter(values: readonly U[]): U[] {
+    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+  }
+}
+
+/** Filters only the result; traversal must still pass through hidden join members. */
+class PluginRecursiveM2mCollection<T extends Entity, U extends Entity> extends RecursiveM2mCollectionImpl<T, U> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Projects the complete path at the public boundary. */
+  private filter(values: readonly U[]): U[] {
+    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+  }
+}
+
 function getLoadedReference(relation: any): any {
-  return isLoadedReference(relation) ? relation.get : fail(`${relation} was not loaded`);
+  if (!isLoadedReference(relation)) fail(`${relation} was not loaded`);
+  return (relation as any).getCanonical();
 }
 
 function getLoadedCollection(relation: any): any {
-  return isLoadedCollection(relation)
-    ? relation.get
-    : isLoadedOneToOneReference(relation)
-      ? relation.get
-        ? [relation.get]
-        : []
-      : fail(`${relation} was not loaded`);
+  if (!isLoadedCollection(relation) && !isLoadedOneToOneReference(relation)) fail(`${relation} was not loaded`);
+  const value = (relation as any).getCanonical();
+  return Array.isArray(value) ? value : value ? [value] : [];
 }

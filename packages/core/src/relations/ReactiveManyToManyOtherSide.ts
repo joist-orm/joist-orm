@@ -14,6 +14,7 @@ import {
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
+import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
 
 /**
@@ -31,7 +32,11 @@ export function hasReactiveManyToManyOtherSide<T extends Entity, U extends Entit
 > {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveManyToManyOtherSideImpl<T, U>(entity, m2m);
+    const Relation =
+      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
+        ? PluginReactiveManyToManyOtherSide
+        : ReactiveManyToManyOtherSideImpl;
+    return new Relation<T, U>(entity, m2m);
   });
 }
 
@@ -54,7 +59,12 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
-  async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+  load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    return this.loadCanonical(opts);
+  }
+
+  /** Hydrates materialized membership independently of caller visibility. */
+  async loadCanonical(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.#isLoaded || opts?.forceReload) {
       this.#isCached = false;
@@ -83,6 +93,11 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
 
   get getWithDeleted(): U[] {
     return this.#doGet({ withDeleted: true });
+  }
+
+  /** @internal Returns complete materialized membership without invoking public access hooks. */
+  getCanonical(opts?: { withDeleted?: boolean }): U[] {
+    return this.#doGet(opts);
   }
 
   set(): void {
@@ -207,7 +222,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     if (opts?.withDeleted === true) {
       return entities;
     }
-    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    return entities.filter((e) => !e.isDeletedEntity && !isCanonicalSoftDeleted(e));
   }
 
   /** Finds stored membership published by a preloader or RunPlugin. */
@@ -218,6 +233,29 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Projects the inverse of a derived collection without changing its canonical contents. */
+class PluginReactiveManyToManyOtherSide<T extends Entity, U extends Entity> extends ReactiveManyToManyOtherSideImpl<
+  T,
+  U
+> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Keeps inverse bookkeeping independent of caller visibility. */
+  private filter(values: readonly U[]): U[] {
+    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+  }
 }
 
 export function isReactiveManyToManyOtherSide(

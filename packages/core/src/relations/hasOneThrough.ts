@@ -26,7 +26,7 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
   const loadHint = lensPathToLoadHint<T>(paths);
   return lazyField((entity: T) => {
     const meta = getMetadata(entity);
-    return new CustomReference<T, U, N>(entity, {
+    return CustomReference.create<T, U, N>(entity, {
       load: (entity, opts) => loadLensPath(entity, paths, opts),
       get: () => getLensPath(meta, entity, paths),
       isLoaded: () => isLensLoadedPath(entity, paths),

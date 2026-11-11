@@ -448,10 +448,19 @@ export class ReactionsManager {
     this.endTransitionCreations();
     if (this.pendingTransitions.length === 0) return;
     const batch = this.pendingTransitions.splice(0);
-    for (const wave of groupIntoEntityWaves(batch)) {
+    const waves = groupIntoEntityWaves(batch);
+    for (let i = 0; i < waves.length; i++) {
+      const wave = waves[i];
       const guardResults = await Promise.allSettled(wave.map((pending) => this.evaluateTransitionGuards(pending)));
-      const errors = failIfAnyRejected(guardResults).flat();
-      if (errors.length > 0) throw new ValidationErrors(errors);
+      try {
+        const errors = failIfAnyRejected(guardResults).flat();
+        if (errors.length > 0) throw new ValidationErrors(errors);
+      } catch (error) {
+        // No callbacks in this wave have run. Preserve it and later waves for a corrected validation attempt.
+        // Earlier waves have already applied their callbacks and must not run again.
+        this.pendingTransitions.unshift(...waves.slice(i).flat());
+        throw error;
+      }
       const callbackResults = await Promise.allSettled(wave.map((pending) => this.runTransitionCallbacks(pending)));
       failIfAnyRejected(callbackResults);
     }

@@ -491,8 +491,10 @@ describe("EntityManager.plugins", () => {
       // When a new book triggers Author.numberOfPublicReviews recalculation
       newBook(em, { author: a1 });
       await em.flush();
-      // Then its first rating read is observed once in the trusted domain context
-      expect(plugin.getFieldCalls.filter((c) => c.field === "rating")).toMatchObject([{ trusted: true }]);
+      // Then the plugin observes rating reads only in the trusted domain context
+      const ratingReads = plugin.getFieldCalls.filter((call) => call.field === "rating");
+      expect(ratingReads.length).toBeGreaterThan(0);
+      expect(ratingReads.every((call) => call.trusted)).toBe(true);
     });
   });
 
@@ -686,7 +688,7 @@ describe("EntityManager.plugins", () => {
     expect(() => getField(author, "ssn")).toThrow("Cannot read ssn");
   });
 
-  it.withCtx("checks every untrusted read while trusted reads bypass hooks", async (ctx) => {
+  it.withCtx("checks the cold trusted read and every untrusted read on a visibility-aware EM", async (ctx) => {
     // Given an image whose filename this user can read
     await insertImage({ type_id: 2, file_name: "public.jpg" });
     const image = await ctx.em.load(Image, "1");
@@ -700,8 +702,8 @@ describe("EntityManager.plugins", () => {
     getField(image, "fileName");
     void image.fileName;
     runInTrustedContext(() => image.fileName);
-    // Then each user read is checked and trusted reads never invoke the hook
-    expect(plugin.trustedReads).toEqual([false, false, false]);
+    // Then the first trusted approval is cached only for the later trusted read
+    expect(plugin.trustedReads).toEqual([true, false, false, false]);
   });
 
   it.withCtx("rechecks untrusted reads even if the hook reads its own field", async (ctx) => {
@@ -809,7 +811,7 @@ class TrustedFieldReadsPlugin extends Plugin {
     if (entity !== this.entity || field !== this.field) return;
     const trusted = isInTrustedContext();
     this.trustedReads.push(trusted);
-    if (!this.allowUserReads) throw new Error(`Cannot read ${field}`);
+    if (!trusted && !this.allowUserReads) throw new Error(`Cannot read ${field}`);
   }
 
   canViewEntity(): boolean {

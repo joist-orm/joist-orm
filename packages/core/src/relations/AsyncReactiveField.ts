@@ -1,14 +1,17 @@
 import { type Entity } from "src/Entity.ts";
 import { getEmInternalApi } from "src/EntityManager.ts";
 import { getMetadata } from "src/EntityMetadata.ts";
-import { getField, isFieldSet, setField } from "src/fields.ts";
+import { checkBeforeGetField, getField, isFieldSet, setField } from "src/fields.ts";
 import { type ReactiveField, deepNormalizeHint, isLoaded } from "src/index.ts";
 import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
 import { PropertyT } from "src/relations/PropertySymbols.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 import { mergeNormalizedHints } from "src/utils.ts";
+
+import { hasReactiveReadHook } from "./relationVisibility.ts";
 
 /**
  * An `AsyncReactiveField` is a value that is derived from a SQL query, similar to
@@ -30,7 +33,8 @@ export function hasAsyncReactiveField<
   let evaluation: EvaluationSlot | undefined;
   return lazyField((entity: T, fieldName) => {
     evaluation ??= new EvaluationSlot(`${getMetadata(entity).type}.${fieldName}`);
-    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, loadHint, reactiveHint, fn, evaluation);
+    const Relation = hasReactiveReadHook(entity) ? PluginAsyncReactiveField : AsyncReactiveFieldImpl;
+    return new Relation(entity, fieldName as keyof T & string, loadHint, reactiveHint, fn, evaluation);
   });
 }
 
@@ -149,6 +153,22 @@ export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   }
 
   [PropertyT] = undefined as any as T;
+}
+
+class PluginAsyncReactiveField<
+  T extends Entity,
+  H1 extends ReactiveHint<T>,
+  H2 extends ReactiveHint<T>,
+  V,
+> extends AsyncReactiveFieldImpl<T, H1, H2, V> {
+  override async load(opts?: { forceReload?: boolean }): Promise<V> {
+    checkBeforeGetField(this.entity, this.fieldName);
+    return runInTrustedContext(() => super.load(opts));
+  }
+
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
+  }
 }
 
 /** Type guard utility for determining if an entity field is an AsyncReactiveField. */

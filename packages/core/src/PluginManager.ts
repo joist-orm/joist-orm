@@ -17,8 +17,10 @@ interface PluginMethods {
   beforeExecute?(query: ParsedExecuteQuery): void;
 
   /**
-   * Called before a cold field read. Throw to deny access.
-   * On visibility-aware EMs, called for every untrusted read and skipped for trusted reads.
+   * Checks read access to this field on this entity. Throw to deny access.
+   * On visibility-aware EMs, every untrusted read is checked. Trusted reads can reuse an earlier
+   * successful check for the same field on the same entity, but untrusted reads cannot.
+   * Use `isInTrustedContext()` if the field policy distinguishes ORM reads from caller reads.
    *
    * Ordinary EMs skip this hook once the field's getter is warm. Unset fields and internal reads
    * awaiting application read protection remain cold. A throwing callback can be retried.

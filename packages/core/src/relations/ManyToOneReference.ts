@@ -123,6 +123,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   get isLoaded(): boolean {
     // Even if `.load()` has not been called, `.get` will detect
+    //
+    // This reads the FK through `current()`, so `beforeGetField` runs for it, on purpose: Joist never skips
+    // read hooks only because a read is its own bookkeeping. I.e. a `ReactiveField` that checks its load hint
+    // must run that check in trusted context, and not read the stored FK to sidestep the hooks.
     this.#state = this.#state.maybeInstantLoad();
     return this.#state.isLoaded;
   }

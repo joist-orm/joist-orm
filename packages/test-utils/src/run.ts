@@ -1,4 +1,4 @@
-import { EntityManager, isEntity } from "joist-core";
+import { EntityManager, getEmInternalApi, isEntity } from "joist-core";
 import { fail } from "joist-utils";
 
 import { type Context } from "./context.ts";
@@ -86,7 +86,7 @@ export function newContext<C extends Context>(ctx: C): C {
  * RunPlugin has been installed prior to this call, so any entities we encounter should be present in both ems. */
 function mapResultToOriginalEm<R>(em: EntityManager, result: R): R {
   if (isEntity(result)) {
-    return (em.findExistingInstance(result.idTagged) ?? fail(`Could not find entity ${result.idTagged}`)) as R;
+    return (getEmInternalApi(em).getEntity(result.idTagged) ?? fail(`Could not find entity ${result.idTagged}`)) as R;
   } else if (Array.isArray(result)) {
     return result.map((r) => mapResultToOriginalEm(em, r)) as any;
   } else if (result instanceof Map) {

@@ -20,15 +20,10 @@ export class InstanceData {
   rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
-  /**
-   * Tracks which fields have been passed to plugins, so we can skip plugins on subsequent field accesses.
-   *
-   * Note that we also set the bit temporarily during plugin evaluation to keep plugins internally
-   * re-accessing the field from recursing into themselves. We only keep a field marked as "plugin read"
-   * after all plugins return "always" (or void), i.e. plugins can vote "allow" to be invoked again.
-   */
-  pluginReadFields = 0;
-  pluginReadFieldsExtra: number[] | undefined = undefined;
+  /** Present only on visibility-aware entities; untrusted reads never reuse these approvals. */
+  trustedReadFields: number[] | undefined = undefined;
+  /** Reentrancy is transient, independent of whether a read may be cached. */
+  activeReadFields: Set<string> | undefined = undefined;
   /** Number/untagged ID conversions are cached once; assigned entity IDs never change. */
   idCache: string | number | undefined = undefined;
   /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */
@@ -193,12 +188,13 @@ export class InstanceData {
     if (this.#deleted === undefined) {
       // Let any OneToManyCollection/ReactiveField/ReactiveReference.get caches know that they should recalc
       // (i.e. their filterDeleted logic) by asserting the `deleteBook.author` field is changing.
+      const api = getEmInternalApi(this.em);
       for (const field of Object.values(this.metadata.allFields)) {
         // We only do reference/collection fields and skip the primitives, b/c we assume something like
         // `{ books: "title" }` doesn't need `resetIsLoaded(..., "title")` b/c the same hint will also
         // be watching "did books change", and so get reset that way.
         if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m" || field.kind === "m2mEnum") {
-          getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(this.entity, field.fieldName);
+          api.isLoadedCache.resetIsLoaded(this.entity, field.fieldName);
         } else if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
           // Any reactable watching these fields will also be watching reference/collection
         } else if (field.kind === "o2m" || field.kind === "o2o") {

@@ -50,7 +50,7 @@ async function loadBatch(em: EntityManager, collection: ManyToManyLike, keys: st
 
   const api = getEmInternalApi(em);
   for (const id of keys) {
-    const entity = em.getEntity(id);
+    const entity = api.getEntity(id);
     if (!entity) continue;
     const codes = (joinRows.getOthers(columnName, entity) as number[])
       .sort((a, b) => a - b)

@@ -258,7 +258,7 @@ export function isLoadedForPopulate<T extends Entity, H extends LoadHint<T>>(
       const [key, nestedHint] = entry;
       const relation = getRelationFromMaybePolyKey(entity, key);
       if (!relation || typeof relation.load !== "function" || !relation.isLoaded) return false;
-      const result = relation.getCanonical ? relation.getCanonical() : relation.get;
+      const result = relation.get;
       if (Array.isArray(result)) {
         for (const entity of result) {
           if (!isLoadedForPopulate(entity, nestedHint as LoadHint<typeof entity>)) return false;

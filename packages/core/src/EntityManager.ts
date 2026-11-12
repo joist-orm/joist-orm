@@ -1,8 +1,8 @@
 import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
-import { getInstanceData } from "src/BaseEntity.ts";
+import { getInstanceData, useTrustedReadCache } from "src/BaseEntity.ts";
 import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
-import { loadBatchLoader, type loadOperation, type referenceLoadOperation } from "src/batchloaders/loadBatchLoader.ts";
+import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
 import { type manyToManyLoadOperation } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { type oneToManyLoadOperation } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { type oneToOneLoadOperation } from "src/batchloaders/oneToOneBatchLoader.ts";
@@ -141,7 +141,7 @@ import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyF
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
 import type { SimpleRule } from "src/rules.ts";
-import { runInTrustedContext } from "src/trusted.ts";
+import { isInTrustedContext, runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf, type TypeMap } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
 import {
@@ -286,7 +286,6 @@ export type FindOperation =
   | typeof findIdsOperation
   | typeof lensOperation
   | typeof loadOperation
-  | typeof referenceLoadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
   | typeof enumCollectionLoadOperation
@@ -329,7 +328,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Incrementally track dirty entities so we don't have to scan `#entityArray` during flush
   readonly #maybePendingFlushEntities: Set<Entity> = new Set();
   // Indexes the currently loaded entities by their tagged ids and `toTaggedString` ids (i.e. `a#`). This fixes
-  // real-world performance issues where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
+  // real-world performance issues where identity lookups scanning `#entities` were an `O(n^2)`.
   readonly #entitiesById: Map<string, Entity> = new Map();
   readonly #entitiesByTag: Map<string, Entity[]> = new Map();
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
@@ -351,6 +350,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   #pendingDeletes: Entity[] = [];
   #hasAnyDeletes = false;
+  #hasVisibilityHook = false;
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
@@ -388,7 +388,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.driver = opts.driver ?? opts.em!.driver;
     this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
 
-    const pluginManager = new PluginManager(this);
+    const pluginManager = new PluginManager(this, () => {
+      this.#hasVisibilityHook = true;
+      for (const entity of this.#entitiesArray) useTrustedReadCache(entity);
+    });
 
     if (opts.em) {
       this.#hooks = {
@@ -405,12 +408,39 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const em = this;
 
     this.__api = {
+      load<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, id: string): Promise<T> {
+        return em.#load(type, id);
+      },
+
+      loadAll<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, ids: readonly string[]): Promise<T[]> {
+        return em.#loadAll(type, ids);
+      },
+
+      getEntity<T extends EntityW>(id: string): T | undefined {
+        return em.#getEntity<T>(id);
+      },
+
+      hydrate<T extends EntityW>(
+        type: MaybeAbstractEntityConstructor<T>,
+        rows: readonly unknown[],
+        options?: { overwriteExisting?: boolean },
+      ): T[] {
+        return em.#hydrateCanonical(type, rows, options);
+      },
+
+      get entities() {
+        return em.#entitiesArray;
+      },
+
+      getEntities<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>): readonly T[] {
+        const meta = getMetadata(type);
+        const entities = em.#entitiesByTag.get(meta.tagName) ?? [];
+        return (meta.baseType ? entities.filter((entity) => entity instanceof type) : entities) as unknown as T[];
+      },
       get preloader() {
         // JSON-aggregate hydration cannot supply per-target afterFind metadata. Relation-access
         // plugins that need those rows must use the ordinary batch loaders instead.
-        const needsTargetRows =
-          pluginManager.hasHook("afterFind") &&
-          (pluginManager.hasHook("filterCollection") || pluginManager.hasHook("beforeGetReference"));
+        const needsTargetRows = em.#hasVisibilityHook && pluginManager.hasHook("afterFind");
         return needsTargetRows ? undefined : em.#preloader;
       },
       pendingPercolate: this.#pendingPercolate,
@@ -497,7 +527,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
-    return [...this.#entitiesArray];
+    return this.#filterVisible([...this.#entitiesArray]);
   }
 
   /** Returns a list of all pending creates, updates, deletes, and m2m changes that would be flushed. */
@@ -505,6 +535,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const changes: PendingChange[] = [];
     for (const entity of this.#entitiesArray) {
       const op = getInstanceData(entity).pendingOperation;
+      if (!this.#canViewEntity(entity)) continue;
       switch (op) {
         case "insert":
           changes.push({ kind: "create", entity });
@@ -523,10 +554,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (todo && !todo.m2m.otherEnum) {
         for (const row of todo.newRows) {
           const entities = Object.values(row.columns) as [Entity, Entity];
+          if (!entities.every((entity) => this.#canViewEntity(entity))) continue;
           changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
         }
         for (const row of todo.deletedRows) {
           const entities = Object.values(row.columns) as [Entity, Entity];
+          if (!entities.every((entity) => this.#canViewEntity(entity))) continue;
           changes.push({ kind: "m2m", op: "remove", joinTableName: todo.m2m.joinTableName, entities });
         }
       }
@@ -539,7 +572,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const meta = getMetadata(type);
     const entities = this.#entitiesByTag.get(meta.tagName) ?? [];
     // If we're a subtype, `entities` might have base/other subtypes
-    return (meta.baseType ? entities.filter((e) => e instanceof type) : entities) as T[];
+    return this.#filterVisible(meta.baseType ? entities.filter((e) => e instanceof type) : entities) as T[];
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
@@ -548,7 +581,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   getEntity(id: TaggedId): Entity | undefined {
     // Skip this both for performance + we allow toTaggedString-style `a#1` ids
     // assertIdIsTagged(id);
-    return this.#entitiesById.get(id);
+    const entity = this.#entitiesById.get(id);
+    return entity && this.#canViewEntity(entity) ? entity : undefined;
   }
 
   /**
@@ -587,7 +621,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (populate) {
       await this.populate(result, populate);
     }
-    return result;
+    return this.#filterVisible(result);
   }
 
   /**
@@ -644,11 +678,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         fail("em.query populate requires an entity selection");
       }
       const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
-      const result = plan.decodeRows(em, rows);
+      const result = plan.decodeRows(em.__api, rows);
       if (options?.populate) {
         await em.populate(result, options.populate);
       }
-      return result;
+      return plan.output.kind === "entity" ? em.#filterVisible(result) : result;
     })().catch(function query(err) {
       throw appendStack(err, new Error());
     });
@@ -681,7 +715,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const plan = parseStatement(statement);
       if (!plan) return { rowCount: 0, rows: [] };
       const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
-      return decodeStatementResult(em, plan, result);
+      const decoded = decodeStatementResult(em.__api, plan, result);
+      if (plan.output.kind === "entity") decoded.rows = em.#filterVisible(decoded.rows as Entity[]);
+      return decoded;
     })().catch(function execute(err) {
       throw appendStack(err, new Error());
     });
@@ -939,8 +975,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (!row) {
       return undefined;
     } else {
-      const [entity] = this.hydrate(type, [row]);
-      if (this.#hasAnyDeletes && entity.isDeletedEntity) {
+      const [entity] = this.#hydrateCanonical(type, [row]);
+      if ((this.#hasAnyDeletes && entity.isDeletedEntity) || !this.#canViewEntity(entity)) {
         return undefined;
       }
       if (populate) {
@@ -978,7 +1014,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
       for (const entity of tagged) {
         // Still do an `instanceof` to handle subtypes
-        if (entity instanceof type) {
+        if (entity instanceof type && this.#canViewEntity(entity)) {
           if (entity.isNewEntity) {
             count++;
           } else if (entity.isDeletedEntity) {
@@ -1115,6 +1151,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (populate) {
       await this.populate(entity, populate);
     }
+    if (!this.#canViewEntity(entity)) throw new NotFoundError(`${entity.idTagged} was not found`);
     return entity;
   }
 
@@ -1294,7 +1331,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                 if (f.kind === "m2o" && f.derived) return undefined;
                 const existingIdOrEntity = getField(entity, f.fieldName);
                 const target = (
-                  isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity)
+                  isEntity(existingIdOrEntity) ? existingIdOrEntity : this.#getEntity(existingIdOrEntity)
                 ) as Entity | undefined;
                 // Defer relations within the cloned subgraph because setting a clone field before remapping can update
                 // its other side, and that update is not fixed up later. Even for o2m collections that are fixed up,
@@ -1342,7 +1379,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = getField(clone, fieldName);
           // Use O(1) lookup via #entitiesById Map instead of O(N) .find() scan
-          const existing = isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity);
+          const existing = isEntity(existingIdOrEntity) ? existingIdOrEntity : this.#getEntity(existingIdOrEntity);
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {
@@ -1492,6 +1529,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     id?: IdType,
     hint?: any,
   ): Promise<T> {
+    const entity = await this.#load(typeOrId, id, hint);
+    if (!this.#canViewEntity(entity)) throw new NotFoundError(`${entity.idTagged} was not found`);
+    return entity;
+  }
+
+  /** Resolves identity and hydration without filtering internal relation targets. */
+  async #load<T extends EntityW>(
+    typeOrId: MaybeAbstractEntityConstructor<T> | string,
+    id?: IdType,
+    hint?: any,
+  ): Promise<T> {
     // Handle the `typeOrId` overload
     let type: MaybeAbstractEntityConstructor<T>;
     if (typeof typeOrId === "string") {
@@ -1504,14 +1552,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     const meta = getMetadata(type);
     const taggedId = toTaggedId(meta, id);
-    let entity = this.findExistingInstance<T>(taggedId);
+    let entity = this.#getEntity<T>(taggedId);
     if (!entity) {
       await loadBatchLoader(this, meta)
         .load({ taggedId, hint })
         .catch(function load(err) {
           throw appendStack(err, new Error());
         });
-      entity = this.findExistingInstance<T>(taggedId);
+      entity = this.#getEntity<T>(taggedId);
     }
     if (!entity) {
       throw new NotFoundError(`${taggedId} was not found`);
@@ -1540,6 +1588,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     _ids: readonly string[],
     hint?: any,
   ): Promise<T[]> {
+    const entities = await this.#loadAll(type, _ids, hint);
+    if (this.#hasVisibilityHook) {
+      const hidden = entities.filter((entity) => !this.#canViewEntity(entity));
+      if (hidden.length > 0)
+        throw new NotFoundError(`${hidden.map((entity) => entity.idTagged).join(",")} were not found`);
+    }
+    return entities;
+  }
+
+  /** Loads complete identity-map state for public loads and internal relation hydration. */
+  async #loadAll<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    _ids: readonly string[],
+    hint?: LoadHint<T>,
+  ): Promise<T[]> {
     const meta = getMetadata(type);
 
     // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot;
@@ -1550,7 +1613,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     for (let i = 0; i < _ids.length; i++) {
       const id = tagId(meta, _ids[i]);
-      const entity = this.findExistingInstance<T>(id);
+      const entity = this.#getEntity<T>(id);
       if (entity) {
         entities[i] = entity;
       } else {
@@ -1567,7 +1630,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         });
       let idsNotFound: string[] | undefined;
       for (let j = 0; j < positionsToLoad!.length; j++) {
-        const entity = this.findExistingInstance<T>(idsToLoad[j]);
+        const entity = this.#getEntity<T>(idsToLoad[j]);
         entities[positionsToLoad![j]] = entity;
         if (entity === undefined) (idsNotFound ??= []).push(idsToLoad[j]);
       }
@@ -1614,7 +1677,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Ensure the ids are tagged, and find any not-yet-loaded
     for (let i = 0; i < _ids.length; i++) {
       const id = tagId(meta, _ids[i]);
-      const entity = this.findExistingInstance<T>(id);
+      const entity = this.#getEntity<T>(id);
       if (entity) {
         maybeEntities[i] = entity;
       } else {
@@ -1632,7 +1695,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         });
       // Fill in whichever missed ids actually exist, then compact out the not-founds
       for (let j = 0; j < positionsToLoad!.length; j++) {
-        maybeEntities[positionsToLoad![j]] = this.findExistingInstance<T>(idsToLoad[j]);
+        maybeEntities[positionsToLoad![j]] = this.#getEntity<T>(idsToLoad[j]);
       }
       entities = [];
       for (const entity of maybeEntities) {
@@ -1641,6 +1704,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     } else {
       entities = maybeEntities as T[];
     }
+    entities = this.#filterVisible(entities);
     if (hint) {
       await this.populate(entities, hint);
     }
@@ -1766,6 +1830,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
+    if (this.#hasVisibilityHook) {
+      await runInTrustedContext(() => this.#populate(entityOrList, hintOrOpts));
+    } else {
+      await this.#populate(entityOrList, hintOrOpts);
+    }
+    return fn ? fn(entityOrList as Loaded<T, H>) : (entityOrList as Loaded<T, H> | Array<Loaded<T, H>>);
+  }
+
+  /** Populates dependencies without carrying trusted context into the caller's callback. */
+  async #populate<T extends EntityW, H extends LoadHint<T>>(
+    entityOrList: T | T[],
+    hintOrOpts: { hint: H; forceReload?: boolean } | H,
+  ): Promise<void> {
     const { hint: hintOpt, ...opts } =
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
@@ -1781,19 +1858,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return e !== undefined && !getInstanceData(e).isDeletedAndFlushed;
     });
     if (list.length === 0) {
-      return !fn ? (entityOrList as any) : fn(entityOrList as any);
+      return;
     }
 
     // Avoid building a HintTree/batchloader for persisted entities when everything is already loaded; in the phase 9
     // benchmark this moved already-loaded populates from ~1.10ms to ~0.89ms, and nested already-loaded populates from
     // ~2.39ms to ~1.94ms.
     if (!opts.forceReload && list.every((entity) => !entity.isNewEntity && isLoadedForPopulate(entity, hintOpt as H))) {
-      return fn ? fn(entityOrList as any) : (entityOrList as any);
+      return;
     }
 
     const meta = getMetadata(list[0]);
 
-    // Populate uses canonical accessors; public relation reads apply their own visibility checks.
     const preloader = this.__api.preloader;
     if (preloader) {
       // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
@@ -1817,7 +1893,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         throw appendStack(err, new Error());
       });
     }
-    return fn ? fn(entityOrList as any) : (entityOrList as any);
   }
 
   // For debugging EntityManager.populate.test.ts's "can be huge"
@@ -1866,6 +1941,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   delete(entities: Entity[]): void;
   delete(entityOrArray: Entity | Entity[]): void {
+    if (this.#hasVisibilityHook && !isInTrustedContext()) {
+      return runInTrustedContext(() => this.delete(toArray(entityOrArray)));
+    }
     for (const entity of toArray(entityOrArray)) {
       // Early return if already deleted.
       const alreadyMarked = getInstanceData(entity).markDeleted();
@@ -1882,7 +1960,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   async assignNewIds() {
-    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
+    let pendingEntities = this.#entitiesArray.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
@@ -1929,7 +2007,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
-    return runInTrustedContext(() => this.#flush(flushOptions));
+    const entities = await runInTrustedContext(() => this.#flush(flushOptions));
+    return this.#filterVisible(entities);
   }
 
   async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
@@ -2442,9 +2521,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return this.entities.length;
   }
 
-  // Handles our Unit of Work-style look up / deduplication of entity instances.
-  // Currently only public for the driver impls
-  public findExistingInstance<T extends EntityW>(id: string): T | undefined {
+  /** Canonical identity lookup for Unit of Work deduplication, independent of public visibility. */
+  #getEntity<T extends EntityW>(id: string): T | undefined {
     return this.#entitiesById.get(id) as T | undefined;
   }
 
@@ -2458,6 +2536,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * the WIP entity state.
    */
   public hydrate<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rows: readonly any[],
+    options?: { overwriteExisting?: boolean },
+  ): T[] {
+    return this.#filterVisible(this.#hydrateCanonical(type, rows, options));
+  }
+
+  /** @internal Hydrates complete state for ORM loaders without applying public visibility. */
+  #hydrateCanonical<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     rows: readonly any[],
     options?: { overwriteExisting?: boolean },
@@ -2512,7 +2599,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const taggedId =
         id === undefined || id === null ? fail("No id column was available") : keyToTaggedId(maybeBaseMeta, id)!;
       // See if this is already in our UoW
-      let entity = this.findExistingInstance(taggedId) as T;
+      let entity = this.#getEntity(taggedId) as T;
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
         const meta = findConcreteMeta(maybeBaseMeta, rowData, i);
@@ -2831,16 +2918,29 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.flush();
   }
 
+  /** Keeps public visibility checks out of canonical identity-map bookkeeping. */
+  #canViewEntity(entity: EntityW): boolean {
+    return !this.#hasVisibilityHook || isInTrustedContext() || this.__api.pluginManager.canViewEntity(entity);
+  }
+
+  /** Avoids allocating a filtered array when no visibility policy is installed. */
+  #filterVisible<T extends EntityW>(entities: T[]): T[] {
+    if (!this.#hasVisibilityHook || isInTrustedContext()) return entities;
+    const plugins = this.__api.pluginManager;
+    return entities.filter((entity) => plugins.canViewEntity(entity));
+  }
+
   /** Returns entities matching the filter using indexed search when available. */
   filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: Partial<OptsOf<T>>): T[] {
     const meta = getMetadata(cstr);
-    const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
+    const entities = this.#filterVisible((this.#entitiesByTag.get(meta.tagName) as T[]) ?? []);
     // Don't bother filtering if there's no where clause (particularly b/c IndexManager.findMatching
     // really expects there to be at least 1 condition)
     if (!hasAnyKey(where)) {
       return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
-    if (this.#indexManager.shouldIndexType(entities.length)) {
+    // IndexManager tracks canonical membership by array position; a filtered view must not seed or reuse it.
+    if (!this.#hasVisibilityHook && this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities, where);
       // Build the final array in one pass, still filtering `instanceof cstr` to handle subtyping
       const result: T[] = [];
@@ -2917,7 +3017,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       }
       if (rows.length !== i) rows = rows.slice(0, i);
-      newEm.hydrate(baseCstr, rows);
+      newEm.#hydrateCanonical(baseCstr, rows);
     }
 
     function mapEntity(oldEntity: Entity): Entity {
@@ -2937,7 +3037,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // If we are allowing pending changes, then we need to copy any changes across to newEm
     if (allowPendingChanges) {
-      for (const oldEntity of oldEm.entities) {
+      for (const oldEntity of oldEm.#entitiesArray) {
         const oldInstanceData = (oldEntity as any).__data as InstanceData;
         if (!(oldInstanceData.isNewEntity || oldInstanceData.isDirtyEntity)) continue;
         const { originalData: oldOriginalData, data: oldData } = oldInstanceData;
@@ -2957,7 +3057,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
 
     // import every loaded concrete (ie, not custom) relation into the new em
-    for (const oldEntity of oldEm.entities) {
+    for (const oldEntity of oldEm.#entitiesArray) {
       const newEntity = mapEntity(oldEntity);
       if (oldEntity.isDeletedEntity) {
         // If the old entity was deleted, that should be persisted in the new em
@@ -3049,7 +3149,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (!result) {
       const meta = getMetadata(source);
       const row = createRowFromEntityData(source);
-      result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
+      result = this.#hydrateCanonical(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
     for (const [fieldName, subHint] of Object.entries(normalizedHint)) {
@@ -3155,7 +3255,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Keep our indexes up to date...
     const maybeId = id ?? entity.idTaggedMaybe;
     if (maybeId) {
-      if (!skipDuplicateCheck && this.findExistingInstance(maybeId) !== undefined) {
+      if (!skipDuplicateCheck && this.#getEntity(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
       this.#entitiesById.set(maybeId, entity);
@@ -3184,6 +3284,27 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
+  /** Loads a relation target without filtering visibility or changing execution context. */
+  load<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, id: string): Promise<T>;
+
+  /** Loads complete relation targets without filtering visibility or changing execution context. */
+  loadAll<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
+
+  /** Looks up canonical identity-map membership without filtering public visibility. */
+  getEntity<T extends Entity = Entity>(id: string): T | undefined;
+
+  /** Hydrates complete state for ORM loaders without applying public visibility. */
+  hydrate<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rows: readonly unknown[],
+    options?: { overwriteExisting?: boolean },
+  ): T[];
+
+  /** Complete identity-map membership for ORM bookkeeping, independent of public visibility. */
+  readonly entities: readonly Entity[];
+
+  /** Type-indexed canonical membership, including entities hidden from public reads. */
+  getEntities<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): readonly T[];
   joinRows: (m2m: ManyToManyLike) => JoinRows;
 
   /** Map of taggedId -> fieldName -> pending children, i.e. when `a1.books` later loads, add/remove b1. */
@@ -3221,6 +3342,11 @@ export interface EntityManagerInternalApi {
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
   return (em as any)["__api"];
+}
+
+/** Returns whether an entity's EM has a visibility hook when constructing its relations. */
+export function hasVisibilityHook(entity: Entity): boolean {
+  return !!entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("canViewEntity");
 }
 
 let defaultEntityLimit = 50_000;

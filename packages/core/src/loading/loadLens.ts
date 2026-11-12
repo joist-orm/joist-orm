@@ -1,6 +1,6 @@
 import { lensDataLoader } from "src/dataloaders/lensDataLoader.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
-import { appendStack } from "src/EntityManager.ts";
+import { appendStack, getEmInternalApi } from "src/EntityManager.ts";
 import {
   type EntityMetadata,
   type Field,
@@ -14,6 +14,7 @@ import {
 import type { LoadHint } from "src/loading/loadHints.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { isProperty } from "src/relations/index.ts";
+import { isInTrustedContext } from "src/trusted.ts";
 
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
@@ -131,7 +132,13 @@ async function loadLensPathAsync<T extends Entity, V>(
       throw new Error("Cannot use loadLens opts.sql with non-SQL paths");
     }
     // If there is only 1 path, don't both with the fancy join
-    if (paths.length > 1) {
+    const em = (isReadOnlyArray(start) ? start[0] : start).em;
+    const plugins = getEmInternalApi(em).pluginManager;
+    // SQL joins skip intermediate relation getters, including their field and target permissions,
+    // so we always walk the graph if either of these hooks are being used.
+    const needsRelationChecks =
+      !isInTrustedContext() && (plugins.hasHook("beforeGetField") || plugins.hasHook("canViewEntity"));
+    if (paths.length > 1 && !needsRelationChecks) {
       // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
       if (isReadOnlyArray(start)) {
         const em = start[0].em;

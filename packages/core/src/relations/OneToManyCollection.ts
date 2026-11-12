@@ -1,5 +1,7 @@
 import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { getStoredField, isSoftDeleted } from "src/fields.ts";
 import {
   type Collection,
   type Entity,
@@ -18,10 +20,11 @@ import {
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
-import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { type ManyToOneReferenceImpl } from "src/relations/ManyToOneReference.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 import { compareValues } from "src/utils.ts";
 
 /** An alias for creating `OneToManyCollection`s. */
@@ -29,11 +32,7 @@ export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> 
   return lazyField((entity: T, fieldName) => {
     const field = getMetadata(entity).allFields[fieldName] as OneToManyField;
     // Metadata discovery also constructs relations, using an entity without an EM.
-    const plugins = entity.em && getEmInternalApi(entity.em).pluginManager;
-    const Relation =
-      plugins?.hasHook("filterCollection") || plugins?.hasHook("beforeSetCollection")
-        ? PluginOneToManyCollection
-        : OneToManyCollection;
+    const Relation = hasVisibilityHook(entity) ? PluginOneToManyCollection : OneToManyCollection;
     return new Relation<T, U>(entity, field);
   });
 }
@@ -70,12 +69,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    return this.loadCanonical(opts);
-  }
-
-  /** Hydrates complete state regardless of who first loads this collection. */
-  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.#state.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
       const maybePreloaded = this.getPreloaded();
@@ -94,15 +88,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       this.#getSorted = undefined;
       this.#allSorted = undefined;
     }
-    return this.getCanonical(opts);
+    return opts?.withDeleted ? this.getWithDeleted : this.get;
   }
 
-  find(id: IdOf<U>): Promise<U | undefined> {
-    return this.findCanonical(id);
-  }
-
-  /** Resolves a single member without loading the whole collection. */
-  private async findCanonical(id: IdOf<U>): Promise<U | undefined> {
+  async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
     const inMemory = this.#state.find(id);
     if (inMemory) return inMemory;
@@ -116,7 +105,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.getOtherRelation(other).current());
+    return sameEntity(this.entity, getStoredField<Entity | string | undefined>(other, this.otherFieldName));
   }
 
   get isLoaded(): boolean {
@@ -150,23 +139,19 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   // todo: this only be a readonly U[]
   get get(): U[] {
-    return this.getCanonical();
+    ensureNotDeleted(this.entity, "pending");
+    if (this.#getSorted !== undefined) return this.#getSorted;
+    this.#getSorted = Object.freeze(this.filterDeleted(this.#state.doGet(), { withDeleted: false })) as U[];
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    return this.#getSorted;
   }
 
   get getWithDeleted(): U[] {
-    return this.getCanonical({ withDeleted: true });
-  }
-
-  /** @internal Returns canonical state without invoking public relation hooks. */
-  getCanonical(opts: { withDeleted?: boolean } = {}): U[] {
     ensureNotDeleted(this.entity, "pending");
-    const cached = opts.withDeleted ? this.#allSorted : this.#getSorted;
-    if (cached !== undefined) return cached;
-    const values = Object.freeze(this.filterDeleted(this.#state.doGet(), opts)) as U[];
-    if (opts.withDeleted) this.#allSorted = values;
-    else this.#getSorted = values;
+    if (this.#allSorted !== undefined) return this.#allSorted;
+    this.#allSorted = Object.freeze(this.filterDeleted(this.#state.doGet(), { withDeleted: true })) as U[];
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    return values;
+    return this.#allSorted;
   }
 
   set(values: readonly U[]): void {
@@ -242,7 +227,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
-    const current = await this.loadCanonical({ withDeleted: true });
+    const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);
       if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.entity.idMaybe) {
@@ -295,10 +280,21 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const list =
       opts?.withDeleted === true
         ? [...entities]
-        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isCanonicalSoftDeleted(e)));
+        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isSoftDeleted(e)));
     if (this.#field.orderBy) {
       const { field, direction } = this.#field.orderBy;
-      list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
+      const sortField = this.otherMeta.allFields[field];
+      if (
+        (sortField?.kind === "primitive" && !sortField.derived && !sortField.lazy) ||
+        (sortField?.kind === "enum" && !sortField.derived)
+      ) {
+        list.sort((a, b) => compareValues(getStoredField(a, field), getStoredField(b, field), direction));
+      } else if (hasVisibilityHook(this.entity)) {
+        // Reactive and reference sort keys use business getters, not just their stored column values.
+        runInTrustedContext(() => list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction)));
+      } else {
+        list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
+      }
     }
     return list;
   }
@@ -379,17 +375,12 @@ class PluginOneToManyCollection<T extends Entity, U extends Entity> extends OneT
   }
 
   override set(values: readonly U[]): void {
-    const plugins = getEmInternalApi(this.entity.em).pluginManager;
-    super.set(
-      plugins.beforeSetCollection(this.entity, this.fieldName, values, () =>
-        this.getCanonical({ withDeleted: true }),
-      ) as readonly U[],
-    );
+    super.set(replaceVisible(this.entity, this.fieldName, values, () => super.getWithDeleted) as readonly U[]);
   }
 
   /** Projects public results without changing the collection's complete state. */
   private filter(values: readonly U[]): U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }
 
@@ -661,7 +652,7 @@ class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState
     // If we're an existing entity, we can scan for any in-memory entities that were previously
     // pointing to us, but now should not
     if (!o2m.entity.isNewEntity) {
-      for (const other of o2m.entity.em.getEntities(o2m.otherMeta.cstr) as Iterable<U>) {
+      for (const other of getEmInternalApi(o2m.entity.em).getEntities(o2m.otherMeta.cstr) as readonly U[]) {
         if (this.#pendingValues.has(other)) continue;
         if (sameEntity((other as any)[o2m.otherFieldName].current(), o2m.entity)) {
           o2m.percolateRemove(other);

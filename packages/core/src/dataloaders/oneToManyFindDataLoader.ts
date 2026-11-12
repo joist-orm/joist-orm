@@ -1,7 +1,7 @@
 import type DataLoader from "dataloader";
 import type { Entity } from "src/Entity.ts";
-import type { EntityManager } from "src/EntityManager.ts";
-import { getRelationField } from "src/fields.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
+import { getStoredField } from "src/fields.ts";
 import { keyToNumber, maybeResolveReferenceToId, toTaggedId } from "src/keys.ts";
 import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/queries/find/QueryParser.ts";
 import type { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
@@ -66,16 +66,17 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
     const rows = await em["executeFind"](collection.otherMeta, oneToManyFindOperation, query, {});
-    em.hydrate(collection.otherMeta.cstr, rows);
+    const api = getEmInternalApi(em);
+    api.hydrate(collection.otherMeta.cstr, rows);
 
     // Decode `id=b:1,author_id=a:1`
     return keys.map((k) => {
       const [otherKey, parentKey] = k.split(",");
       const [, otherId] = otherKey.split("=");
       const [, parentId] = parentKey.split("=");
-      const other = em.getEntity(otherId) as U;
+      const other = api.getEntity<U>(otherId);
       // We have may fetched `other` for a different parent in our batch
-      const ownerId = other && maybeResolveReferenceToId(getRelationField(other, collection.otherFieldName));
+      const ownerId = other && maybeResolveReferenceToId(getStoredField(other, collection.otherFieldName));
       const isMine = ownerId === toTaggedId(collection.meta, parentId);
       return isMine ? other : undefined;
     });

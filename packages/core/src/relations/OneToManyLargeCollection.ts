@@ -1,21 +1,20 @@
 import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, appendStack, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
+import { type IdOf, appendStack, hasVisibilityHook, sameEntity } from "src/EntityManager.ts";
 import { type EntityMetadata, type LargeOneToManyField, getMetadataForField } from "src/EntityMetadata.ts";
+import { getStoredField } from "src/fields.ts";
 import { type ManyToOneReferenceImpl, ensureNotDeleted, getMetadata } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type LargeCollection } from "src/relations/LargeCollection.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible } from "src/relations/relationVisibility.ts";
 import { remove } from "src/utils.ts";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(): LargeCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
     const lo2m = getMetadata(entity).allFields[fieldName] as LargeOneToManyField;
-    const Relation =
-      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
-        ? PluginOneToManyLargeCollection
-        : OneToManyLargeCollection;
+    const Relation = hasVisibilityHook(entity) ? PluginOneToManyLargeCollection : OneToManyLargeCollection;
     return new Relation<T, U>(entity, lo2m);
   });
 }
@@ -33,12 +32,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
     this.#field = field;
   }
 
-  find(id: IdOf<U>): Promise<U | undefined> {
-    return this.findCanonical(id);
-  }
-
-  /** Resolves membership before applying the caller's visibility. */
-  private async findCanonical(id: IdOf<U>): Promise<U | undefined> {
+  async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
     // locallyAdded is never authoritative b/c we never become fully loaded (unlike OneToManyCollection),
     // so we can probe our local collection, but if we don't find anything, we still have to query
@@ -63,7 +57,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.#getOtherRelation(other).current());
+    return sameEntity(this.entity, getStoredField<Entity | string | undefined>(other, this.otherFieldName));
   }
 
   add(other: U): void {
@@ -137,6 +131,6 @@ class PluginOneToManyLargeCollection<T extends Entity, U extends Entity> extends
 
   /** Projects lookup results without changing physical membership. */
   private filter(values: readonly U[]): U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }

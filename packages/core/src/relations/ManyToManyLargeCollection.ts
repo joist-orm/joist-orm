@@ -1,12 +1,12 @@
-import { loadReference } from "src/batchloaders/loadReference.ts";
 import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, appendStack, getEmInternalApi } from "src/EntityManager.ts";
+import { type IdOf, appendStack, getEmInternalApi, hasVisibilityHook } from "src/EntityManager.ts";
 import { type EntityMetadata, getMetadataForField } from "src/EntityMetadata.ts";
 import { type ManyToManyCollection, ensureNotDeleted, getMetadata, toTaggedId } from "src/index.ts";
 import { lazyField, resolveOtherMeta } from "src/newEntity.ts";
 import { type LargeCollection } from "src/relations/LargeCollection.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleMutation, filterVisible } from "src/relations/relationVisibility.ts";
 import { remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyLargeCollection`s. */
@@ -20,11 +20,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
-    const plugins = entity.em && getEmInternalApi(entity.em).pluginManager;
-    const Relation =
-      plugins?.hasHook("filterCollection") || plugins?.hasHook("beforeChangeCollection")
-        ? PluginManyToManyLargeCollection
-        : ManyToManyLargeCollection;
+    const Relation = hasVisibilityHook(entity) ? PluginManyToManyLargeCollection : ManyToManyLargeCollection;
     return new Relation<T, U>(
       joinTableName,
       entity,
@@ -60,12 +56,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     public hasJoinTableId: boolean = true,
   ) {}
 
-  find(id: IdOf<U>): Promise<U | undefined> {
-    return this.findCanonical(id);
-  }
-
-  /** Resolves membership before applying the caller's visibility. */
-  private async findCanonical(id: IdOf<U>): Promise<U | undefined> {
+  async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
 
     // locallyAdded is never authorative b/c we never become fully loaded (unlike OneToManyCollection),
@@ -92,15 +83,10 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
         throw appendStack(err, new Error());
       });
     const taggedId = toTaggedId(this.otherMeta, id);
-    return includes ? (loadReference(this.entity.em, this.otherMeta, taggedId) as Promise<U>) : undefined;
+    return includes ? getEmInternalApi(this.entity.em).load(this.otherMeta.cstr, taggedId) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
-    return this.includesCanonical(other);
-  }
-
-  /** Checks physical membership independently of visibility. */
-  private async includesCanonical(other: U): Promise<boolean> {
     const localAdd = this.locallyAdded.includes(other);
     if (localAdd) {
       return true;
@@ -170,19 +156,17 @@ class PluginManyToManyLargeCollection<T extends Entity, U extends Entity> extend
   }
 
   override add(other: U, percolated = false): void {
-    if (!percolated)
-      getEmInternalApi(this.entity.em).pluginManager.beforeChangeCollection(this.entity, this.fieldName, other);
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
     super.add(other, percolated);
   }
 
   override remove(other: U, percolated = false): void {
-    if (!percolated)
-      getEmInternalApi(this.entity.em).pluginManager.beforeChangeCollection(this.entity, this.fieldName, other);
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
     super.remove(other, percolated);
   }
 
   /** Projects lookup results without changing physical membership. */
   private filter(values: readonly U[]): U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }

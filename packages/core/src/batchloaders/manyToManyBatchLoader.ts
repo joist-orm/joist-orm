@@ -65,7 +65,7 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
 
   const api = getEmInternalApi(em);
   for (const [column, id] of tuples) {
-    const entity = em.getEntity(id);
+    const entity = api.getEntity(id);
     if (!entity) continue;
     const others = joinRows.getOthers(column, entity) as U[];
     // Determine the field name from the column

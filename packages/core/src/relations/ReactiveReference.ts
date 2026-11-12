@@ -1,7 +1,6 @@
-import { loadReference } from "src/batchloaders/loadReference.ts";
 import { type Entity } from "src/Entity.ts";
-import { type IdOf } from "src/EntityManager.ts";
-import { getField, getRelationField, setField } from "src/fields.ts";
+import { type IdOf, hasVisibilityHook } from "src/EntityManager.ts";
+import { getField, setField } from "src/fields.ts";
 import {
   type EntityMetadata,
   type ManyToOneField,
@@ -32,6 +31,7 @@ import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
 import { type Reference } from "src/relations/Reference.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
@@ -81,10 +81,7 @@ export function hasReactiveReference<
 >(hint: H, fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N): ReactiveReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
     const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
-    const Relation =
-      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("beforeGetReference")
-        ? PluginReactiveReference
-        : ReactiveReferenceImpl;
+    const Relation = hasVisibilityHook(entity) ? PluginReactiveReference : ReactiveReferenceImpl;
     return new Relation<T, U, H, N>(entity, m2o, hint, fn);
   });
 }
@@ -151,13 +148,6 @@ export class ReactiveReferenceImpl<
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
-    const value = await this.loadCanonical(opts);
-    getField(this.entity, this.fieldName);
-    return value;
-  }
-
-  /** Evaluates the materialized reference against complete dependencies. */
-  async loadCanonical(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     const { loadHint } = this;
     if (!this.isLoaded || opts?.forceReload) {
@@ -175,7 +165,7 @@ export class ReactiveReferenceImpl<
             getEmInternalApi(this.entity.em).isLoadedCache.add(this);
             // Go through `this.get` so that `setField` is called to set our latest value
             this.#isCached = false;
-            return this.getCanonical(opts);
+            return this.doGet(opts);
           })
           .finally(() => {
             this.#loadPromise = undefined;
@@ -190,7 +180,8 @@ export class ReactiveReferenceImpl<
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           return current as U | N;
         } else {
-          return (this.#loadPromise ??= loadReference(em, this.#otherMeta, current)
+          return (this.#loadPromise ??= em
+            .load(this.#otherMeta.cstr, current)
             .then((loaded) => {
               this.#state = new RRRefState<U, N>(this, loaded);
               this.#isLoaded = true;
@@ -207,7 +198,7 @@ export class ReactiveReferenceImpl<
     // IsLoadedCache/resetIsLoaded infra is good enough to "see all invalidating mutations",
     // so we don't need this explicit reset.
     // this.#isCached = false;
-    return this.getCanonical(opts);
+    return this.doGet(opts);
   }
 
   get isLoaded(): boolean {
@@ -273,20 +264,11 @@ export class ReactiveReferenceImpl<
   }
 
   get getWithDeleted(): U | N {
-    const value = this.getCanonical({ withDeleted: true });
-    getField(this.entity, this.fieldName);
-    return value;
+    return this.doGet({ withDeleted: true });
   }
 
   get get(): U | N {
-    const value = this.getCanonical();
-    getField(this.entity, this.fieldName);
-    return value;
-  }
-
-  /** @internal Reactive business logic and its materialized writes use complete dependencies. */
-  getCanonical(opts?: { withDeleted?: boolean }): U | N {
-    return runInTrustedContext(() => this.doGet(opts));
+    return this.doGet({ withDeleted: false });
   }
 
   set(_: U | N): void {
@@ -294,7 +276,6 @@ export class ReactiveReferenceImpl<
   }
 
   get isSet(): boolean {
-    getField(this.entity, this.fieldName);
     return this.current() !== undefined;
   }
 
@@ -334,7 +315,6 @@ export class ReactiveReferenceImpl<
   /** Returns the tagged id of the current value. */
   get idTaggedMaybe(): TaggedId | N {
     ensureNotDeleted(this.entity, "pending");
-    getField(this.entity, this.fieldName);
     return maybeResolveReferenceToId(this.current()) as TaggedId | N;
   }
 
@@ -396,11 +376,11 @@ export class ReactiveReferenceImpl<
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | string | N {
-    const current = getRelationField(this.entity, this.fieldName);
+    const current = getField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }
-    return current as string | N;
+    return current;
   }
 
   get fieldName(): string {
@@ -453,8 +433,10 @@ export class ReactiveReferenceImpl<
         return loaded;
       }
     }
-    const idTaggedMaybe = maybeResolveReferenceToId(this.current());
-    return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N);
+    const { idTaggedMaybe } = this;
+    return idTaggedMaybe !== undefined
+      ? (getEmInternalApi(this.entity.em).getEntity<U>(idTaggedMaybe) as U | N)
+      : (undefined as N);
   }
 
   [RelationT]: T = null!;
@@ -475,33 +457,20 @@ class PluginReactiveReference<
   N extends never | undefined,
 > extends ReactiveReferenceImpl<T, U, H, N> {
   override get get(): U | N {
-    return this.check(super.get);
+    return this.check(runInTrustedContext(() => super.get));
   }
 
   override get getWithDeleted(): U | N {
-    return this.check(super.getWithDeleted);
+    return this.check(runInTrustedContext(() => super.getWithDeleted));
   }
 
   override async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
-    return this.check(await super.load(opts));
+    return this.check(await runInTrustedContext(() => super.load(opts)));
   }
 
-  override get isSet(): boolean {
-    const value = super.isSet;
-    this.check(this.current());
-    return value;
-  }
-
-  override get idTaggedMaybe(): TaggedId | N {
-    const value = super.idTaggedMaybe;
-    this.check(this.current());
-    return value;
-  }
-
-  /** Checks entities as well as unloaded tagged ids. */
-  private check<V extends Entity | string | undefined>(value: V): V {
-    getEmInternalApi(this.entity.em).pluginManager.beforeGetReference(this.entity, this.fieldName, value);
-    return value;
+  /** Checks visibility when returning the target entity. */
+  private check<V extends Entity | undefined>(value: V): V {
+    return checkVisibleReference(this.entity, this.fieldName, value);
   }
 }
 

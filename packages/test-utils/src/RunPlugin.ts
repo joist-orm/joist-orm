@@ -61,14 +61,15 @@ export class RunPlugin extends Plugin {
 
   #syncEntityData(entityTodos: Record<string, Todo>) {
     const { em } = this;
-    const { isLoadedCache } = getEmInternalApi(em);
+    const api = getEmInternalApi(em);
+    const { isLoadedCache } = api;
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
         const row = createRowFromEntityData(newEntity, { preferOriginalData: false });
         em.hydrate(newEntity.constructor as MaybeAbstractEntityConstructor<Entity>, [row]);
       });
       todo.updates.forEach((newEntity) => {
-        const oldEntity = em.findExistingInstance(newEntity.idTagged);
+        const oldEntity = api.getEntity(newEntity.idTagged);
         // This fail shouldn't really be possible, since any entity should either have been created:
         // * via factory or em.create in the original em
         // * by the new em inside the `run` call, in which case it'd be an insert instead of an update
@@ -106,7 +107,7 @@ export class RunPlugin extends Plugin {
           });
       });
       todo.deletes.forEach((newEntity) => {
-        const existing = em.findExistingInstance(newEntity.idTagged);
+        const existing = api.getEntity(newEntity.idTagged);
         // Again it shouldn't really be possible for a deletion to happen without the entity being present in the
         // original em, but just in case we'll skip if we don't find it
         if (!existing) fail(`Expected to find existing entity for $ {e.idTagged}`);
@@ -121,22 +122,23 @@ export class RunPlugin extends Plugin {
   // lazy fields keep their loaded state instead of fetching data that the production code did not write.
   #syncReferencesAndLazyFields(entityTodos: Record<string, Todo>) {
     const { em } = this;
+    const api = getEmInternalApi(em);
     Object.values(entityTodos).forEach((todo) => {
       todo.inserts.forEach((newEntity) => {
-        const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        const oldEntity = api.getEntity(newEntity.idTagged)!;
         // New entities always have the lazy field's initial value, so always preload them
         for (const field of getLazyFields(newEntity)) {
           preloadLazyField(oldEntity, field.fieldName);
         }
 
         getReferences(newEntity).forEach((r) => {
-          const other = r.isSet ? em.findExistingInstance(r.idTaggedMaybe) : undefined;
+          const other = r.isSet ? api.getEntity(r.idTaggedMaybe) : undefined;
           preloadReference(em, r.fieldName, oldEntity, other);
           if (other) maybePreloadOtherSide(em, r.fieldName, oldEntity, other);
         });
       });
       todo.updates.forEach((newEntity) => {
-        const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        const oldEntity = api.getEntity(newEntity.idTagged)!;
         // Only preload lazy fields that were actively changed, b/c they're already available/loaded in the entity we're copying from
         for (const field of getLazyFields(newEntity)) {
           if ((newEntity as any).changes[field.fieldName].hasChanged) {
@@ -147,17 +149,17 @@ export class RunPlugin extends Plugin {
         getReferences(newEntity)
           .filter((r) => (newEntity as any).changes[r.fieldName].hasChanged)
           .forEach((r) => {
-            const other = r.isSet ? em.findExistingInstance(r.idTaggedMaybe) : undefined;
+            const other = r.isSet ? api.getEntity(r.idTaggedMaybe) : undefined;
             preloadReference(em, r.fieldName, oldEntity, other);
             if (other) maybePreloadOtherSide(em, r.fieldName, oldEntity, other);
             const originalId = (newEntity as any).changes[r.fieldName].originalValue;
-            const originalOther = originalId ? em.findExistingInstance(originalId) : undefined;
+            const originalOther = originalId ? api.getEntity(originalId) : undefined;
             if (originalOther) maybePreloadOtherSide(em, r.fieldName, oldEntity, originalOther, true);
           });
         // If the entity was soft-deleted, then we need to clear out the caches for any o2m collections that contain it
         if ("deletedAt" in newEntity && (newEntity as any).changes.deletedAt.hasChanged) {
           getReferences(oldEntity).forEach((r) => {
-            const other = r.isSet ? em.findExistingInstance(r.idTaggedMaybe) : undefined;
+            const other = r.isSet ? api.getEntity(r.idTaggedMaybe) : undefined;
             if (other) {
               const otherSide = getOtherSide(r.fieldName, oldEntity, other);
               if (otherSide instanceof OneToManyCollection) otherSide.resetIsLoaded();
@@ -166,7 +168,7 @@ export class RunPlugin extends Plugin {
         }
       });
       todo.deletes.forEach((newEntity) => {
-        const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        const oldEntity = api.getEntity(newEntity.idTagged)!;
         getReferences(newEntity).forEach((r) => {
           // Since both old and new entities are marked as deleted, we can't just go looking through their relations
           // for the other side's id since this will error.  Likewise, we only care about the collection that this
@@ -174,7 +176,7 @@ export class RunPlugin extends Plugin {
           // old entity's data and then preload its other side relation.
           const entityOrId = getInstanceData(oldEntity).data[r.fieldName];
           const originalOther = entityOrId
-            ? em.findExistingInstance(isEntity(entityOrId) ? entityOrId.idTagged : entityOrId)
+            ? api.getEntity(isEntity(entityOrId) ? entityOrId.idTagged : entityOrId)
             : undefined;
           if (originalOther) maybePreloadOtherSide(em, r.fieldName, oldEntity, originalOther, true);
         });
@@ -217,7 +219,7 @@ export class RunPlugin extends Plugin {
         rows.forEach((row) => {
           const newEntity = row.columns[columnName] as Entity;
           const enumId = row.columns[otherColumnName] as number;
-          const oldEntity = em.findExistingInstance(newEntity.idTagged);
+          const oldEntity = api.getEntity(newEntity.idTagged);
           if (!oldEntity || oldEntity.isDeletedEntity) return;
           const oldCollection = (oldEntity as any)[fieldName] as EnumCollectionImpl<Entity, any>;
           // Only mirror collections the original em has loaded (or new entities, whose rows are all
@@ -252,13 +254,14 @@ export class RunPlugin extends Plugin {
   // them to an empty array.
   #preloadUnloadedRelations(entityTodos: Record<string, Todo>) {
     const { em } = this;
+    const api = getEmInternalApi(em);
     Object.entries(entityTodos).forEach(([, todo]) => {
       todo.inserts.forEach((newEntity) => {
-        const oldEntity = em.findExistingInstance(newEntity.idTagged)!;
+        const oldEntity = api.getEntity(newEntity.idTagged)!;
         getCollections(oldEntity)
           .filter((r) => !r.isLoaded && !r.isPreloaded)
           .forEach((r) => {
-            getEmInternalApi(em).setPreloadedRelation(oldEntity.idTagged, r.fieldName, []);
+            api.setPreloadedRelation(oldEntity.idTagged, r.fieldName, []);
             r.preload();
           });
       });
@@ -367,12 +370,12 @@ function processJoinRows(
       [col2, e2, e1],
     ] as const) {
       const { idTagged: id } = newEntity;
-      const oldEntity = em.findExistingInstance(id)!;
+      const oldEntity = api.getEntity(id)!;
       if (oldEntity.isDeletedEntity) continue;
       const newM2m = getManyToManys(newEntity).find((r) => r.joinTableName === joinTable && r.columnName === column)!;
       const { fieldName } = newM2m;
       const oldM2m = (oldEntity as any)[fieldName] as ManyToMany;
-      const oldOther = em.findExistingInstance(newOther.idTagged)!;
+      const oldOther = api.getEntity(newOther.idTagged)!;
       const joinRows = api.joinRows(oldM2m);
       let entities: Entity[] | undefined;
       if (toPreload.has(oldM2m)) {

@@ -2,7 +2,7 @@ import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
 import { type OneToOneField, getMetadata } from "src/EntityMetadata.ts";
-import { getRelationField } from "src/fields.ts";
+import { getStoredField } from "src/fields.ts";
 import {
   type ParsedFindQuery,
   addTablePerClassJoinsAndClassTag,
@@ -54,7 +54,7 @@ export function oneToOneBatchLoader<T extends Entity, U extends Entity>(
     const entities = em["hydrateAndFinalize"](otherMeta.cstr, rowData);
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
-      const ownerId = maybeResolveReferenceToId(getRelationField(entity, otherFieldName));
+      const ownerId = maybeResolveReferenceToId(getStoredField(entity, otherFieldName));
       return ownerId ?? "dummyNoLongerOwned";
     });
 

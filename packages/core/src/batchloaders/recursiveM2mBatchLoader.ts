@@ -90,7 +90,7 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
     // Set preloaded relations and call preload() for each entity's m2m collection
     const api = getEmInternalApi(em);
     for (const id of uniqueIds) {
-      const entity = em.getEntity(id);
+      const entity = api.getEntity(id);
       if (!entity) continue;
       const others = joinRows.getOthers(thisColumn, entity);
       api.setPreloadedRelation(entity.idTagged!, m2mField.fieldName, others);
@@ -99,7 +99,7 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
 
     // Mark any entity whose m2m is still not loaded as having an empty collection (leaf nodes)
     for (const id of uniqueIds) {
-      const entity = em.getEntity(id);
+      const entity = api.getEntity(id);
       if (!entity) continue;
       if (!isLoadedCollection((entity as any)[m2mField.fieldName])) {
         api.setPreloadedRelation(entity.idTagged!, m2mField.fieldName, []);

@@ -10,11 +10,10 @@ import { type ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "src/quer
 import { abbreviation } from "src/utils.ts";
 
 export const loadOperation = "load";
-export const referenceLoadOperation = "reference-load";
 
 /**
  * Batches em.load-style fetches, writing to identity map (via hydrate) instead of returning values.
- * After the batch resolves, callers retrieve their entity from `em.findExistingInstance`.
+ * After the batch resolves, callers retrieve their entity from the internal identity map.
  *
  * Accepts tuples of `{ taggedId, hint }` so the preloader can inject join-based
  * preloading into the same SELECT that fetches the entities.
@@ -23,13 +22,8 @@ export function loadBatchLoader(
   em: EntityManager,
   meta: EntityMetadata,
   overwriteExisting: boolean = false,
-  operation: typeof loadOperation | typeof referenceLoadOperation = loadOperation,
 ): BatchLoader<{ taggedId: string; hint: LoadHint<any> | undefined }> {
-  // Without query hooks, em.load and reference.load for the same entity type can share one SQL batch.
-  // Query hooks need separate batches because they may apply different policies to these operations.
-  const plugins = getEmInternalApi(em).pluginManager;
-  const batchOperation = plugins.hasHook("beforeFind") || plugins.hasHook("afterFind") ? operation : loadOperation;
-  return em.getBatchLoader(batchOperation, `${meta.type}-${overwriteExisting}`, async (loads) => {
+  return em.getBatchLoader(loadOperation, `${meta.type}-${overwriteExisting}`, async (loads) => {
     const keys = loads.map((l) => keyToNumber(meta, l.taggedId));
     const alias = abbreviation(meta.tableName);
     const query = {
@@ -44,11 +38,12 @@ export function loadBatchLoader(
     } satisfies ParsedFindQuery;
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     // Inject preloading joins into the query if enabled
-    const { preloader } = getEmInternalApi(em);
+    const api = getEmInternalApi(em);
+    const { preloader } = api;
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
-    const rowData = await em["executeFindRowData"](meta, operation, query, {});
+    const rowData = await em["executeFindRowData"](meta, loadOperation, query, {});
     em["hydrateAndFinalize"](meta.cstr, rowData, {
       overwriteExisting,
       sidecars: (entities) => {
@@ -59,7 +54,7 @@ export function loadBatchLoader(
           for (let i = 0; i < rowData.rowCount; i++) foundIds.add(tagId(meta, rowData.get(i, "id")));
           for (const load of loads) {
             if (!foundIds.has(load.taggedId)) {
-              const existingEntity = em.findExistingInstance(load.taggedId);
+              const existingEntity = api.getEntity(load.taggedId);
               if (existingEntity) {
                 getInstanceData(existingEntity).markDeletedBecauseNotFound();
               }

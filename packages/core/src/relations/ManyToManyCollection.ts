@@ -1,6 +1,7 @@
-import { loadReference } from "src/batchloaders/loadReference.ts";
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { isSoftDeleted } from "src/fields.ts";
 import {
   type Collection,
   type Entity,
@@ -17,22 +18,16 @@ import {
 } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
-import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleMutation, filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
 import { maybeAdd, maybeRemove, remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    const plugins = entity.em && getEmInternalApi(entity.em).pluginManager;
-    const Relation =
-      plugins?.hasHook("filterCollection") ||
-      plugins?.hasHook("beforeSetCollection") ||
-      plugins?.hasHook("beforeChangeCollection")
-        ? PluginManyToManyCollection
-        : ManyToManyCollection;
+    const Relation = hasVisibilityHook(entity) ? PluginManyToManyCollection : ManyToManyCollection;
     return new Relation<T, U>(entity, m2m);
   });
 }
@@ -85,15 +80,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (opts?.withDeleted === true) return [...entities];
     // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
     const includeSoftDeleted = this.#field.softDeletes === "include";
-    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isCanonicalSoftDeleted(e)));
+    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isSoftDeleted(e)));
   }
 
-  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
-    return this.loadCanonical(opts);
-  }
-
-  /** Hydrates complete state regardless of who first loads this collection. */
-  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.#state.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
       const key = `${this.columnName}=${this.entity.id}`;
@@ -114,12 +104,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return this.filterDeleted(this.#state.doGet(), opts) as ReadonlyArray<U>;
   }
 
-  find(id: IdOf<U>): Promise<U | undefined> {
-    return this.findCanonical(id);
-  }
-
-  /** Resolves a single member without loading the whole collection. */
-  private async findCanonical(id: IdOf<U>): Promise<U | undefined> {
+  async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
     const inMemory = this.#state.find(id);
     if (inMemory) return inMemory;
@@ -131,15 +116,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         throw appendStack(err, new Error());
       });
     const taggedId = toTaggedId(this.otherMeta, id);
-    return includes ? (loadReference(this.entity.em, this.otherMeta, taggedId) as Promise<U>) : undefined;
+    return includes ? (getEmInternalApi(this.entity.em).load(this.otherMeta.cstr, taggedId) as Promise<U>) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
-    return this.includesCanonical(other);
-  }
-
-  /** Checks physical membership independently of caller visibility. */
-  private async includesCanonical(other: U): Promise<boolean> {
     ensureNotDeleted(this.entity, "pending");
     const inMemory = this.#state.includesInMemory(other);
     if (inMemory !== undefined) return inMemory;
@@ -187,16 +167,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get getWithDeleted(): U[] {
-    return this.getCanonical({ withDeleted: true });
+    return this.filterDeleted(this.doGet(), { withDeleted: true });
   }
 
   get get(): U[] {
-    return this.getCanonical();
-  }
-
-  /** @internal Returns canonical state without invoking public relation hooks. */
-  getCanonical(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.doGet(), opts);
+    return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
   set(values: readonly U[]): void {
@@ -229,7 +204,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   async cleanupOnEntityDeleted(): Promise<void> {
     if (this.#isCascadeDelete) return;
-    const entities = await this.loadCanonical({ withDeleted: true });
+    const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
       m2m.remove(this.entity);
@@ -336,29 +311,22 @@ class PluginManyToManyCollection<T extends Entity, U extends Entity> extends Man
   }
 
   override set(values: readonly U[]): void {
-    const plugins = getEmInternalApi(this.entity.em).pluginManager;
-    super.set(
-      plugins.beforeSetCollection(this.entity, this.fieldName, values, () =>
-        this.getCanonical({ withDeleted: true }),
-      ) as readonly U[],
-    );
+    super.set(replaceVisible(this.entity, this.fieldName, values, () => super.getWithDeleted) as readonly U[]);
   }
 
   override add(other: U, percolated = false): void {
-    if (!percolated)
-      getEmInternalApi(this.entity.em).pluginManager.beforeChangeCollection(this.entity, this.fieldName, other);
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
     super.add(other, percolated);
   }
 
   override remove(other: U, percolated = false): void {
-    if (!percolated)
-      getEmInternalApi(this.entity.em).pluginManager.beforeChangeCollection(this.entity, this.fieldName, other);
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
     super.remove(other, percolated);
   }
 
   /** Projects public results without changing stored membership. */
   private filter(values: readonly U[]): U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }
 

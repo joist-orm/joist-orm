@@ -1,9 +1,10 @@
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, getEmInternalApi } from "src/EntityManager.ts";
+import { type IdOf, getEmInternalApi, hasVisibilityHook } from "src/EntityManager.ts";
 import { type Collection, type LoadHint, ensureNotDeleted, fail } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
@@ -52,11 +53,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     entity: T,
     opts: CustomCollectionOpts<T, U>,
   ): CustomCollection<T, U> {
-    const plugins = entity.em && getEmInternalApi(entity.em).pluginManager;
-    const Relation =
-      plugins?.hasHook("filterCollection") || plugins?.hasHook("beforeSetCollection")
-        ? PluginCustomCollection
-        : CustomCollection;
+    const Relation = hasVisibilityHook(entity) ? PluginCustomCollection : CustomCollection;
     return new Relation<T, U>(entity, opts);
   }
 
@@ -75,17 +72,17 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   get get(): readonly U[] {
-    return this.getCanonical();
+    return this.doGet({ withDeleted: false });
   }
 
   get getWithDeleted(): readonly U[] {
-    return this.getCanonical({ withDeleted: true });
+    return this.doGet({ withDeleted: true });
   }
 
   get isLoaded(): boolean {
     if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    this.#isLoaded = runInTrustedContext(() => this.opts.isLoaded(this.entity));
+    this.#isLoaded = this.opts.isLoaded(this.entity);
     return this.#isLoaded;
   }
 
@@ -101,17 +98,11 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return this.#loadHint;
   }
 
-  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    return this.loadCanonical(opts);
-  }
-
-  /** Evaluates business logic against complete dependencies. */
-  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        // This is application business logic, not an ORM hydration bypass.
-        this.loadPromise = runInTrustedContext(() => this.opts.load(this.entity, opts));
+        this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this.#isLoaded = true;
@@ -119,7 +110,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
         await this.loadPromise;
       }
     }
-    return this.getCanonical(opts);
+    return this.doGet(opts);
   }
 
   get isPreloaded(): boolean {
@@ -137,7 +128,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
       set(this.entity, values);
       this.#hasBeenSet = true;
     } else if (add !== undefined && remove !== undefined) {
-      const current = this.getCanonical();
+      const current = this.get;
       current.filter((value) => !values.includes(value)).forEach((value) => this.remove(value));
       values.filter((value) => !current.includes(value)).forEach((value) => this.add(value));
       this.#hasBeenSet = true;
@@ -152,14 +143,13 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   async find(id: IdOf<U>): Promise<U | undefined> {
     if (!this.isLoaded) {
-      await this.loadCanonical();
+      await this.load();
     }
     const { find } = this.opts;
     if (find === undefined) {
-      return this.getCanonical().find((other) => other.id === id);
+      return this.doGet().find((other) => other.id === id);
     } else {
-      const value = runInTrustedContext(() => find(this.entity, id));
-      return value;
+      return find(this.entity, id);
     }
   }
 
@@ -203,12 +193,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return `CustomCollection(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
 
-  /** @internal Evaluates the business getter against complete dependencies. */
-  getCanonical(opts?: { withDeleted?: boolean }): readonly U[] {
+  private doGet(opts?: { withDeleted?: boolean }): readonly U[] {
     ensureNotDeleted(this.entity, "pending");
     this.ensureNewOrLoaded();
-    const values = runInTrustedContext(() => this.opts.get(this.entity));
-    return this.filterDeleted(values, opts);
+    return this.filterDeleted(this.opts.get(this.entity), opts);
   }
 
   private filterDeleted(entities: readonly U[], opts?: { withDeleted?: boolean }): readonly U[] {
@@ -229,34 +217,35 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
 /** Intercepts the custom relation result after its business callbacks have run. */
 class PluginCustomCollection<T extends Entity, U extends Entity> extends CustomCollection<T, U> {
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
+  }
+
   override get get(): readonly U[] {
-    return this.filter(super.get);
+    // Custom business logic needs complete dependencies; filter applies access checks back in the caller's context.
+    return this.filter(runInTrustedContext(() => super.get));
   }
 
   override get getWithDeleted(): readonly U[] {
-    return this.filter(super.getWithDeleted);
+    return this.filter(runInTrustedContext(() => super.getWithDeleted));
   }
 
   override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    return this.filter(await super.load(opts));
+    return this.filter(await runInTrustedContext(() => super.load(opts)));
   }
 
   override async find(id: IdOf<U>): Promise<U | undefined> {
-    const value = await super.find(id);
+    const value = await runInTrustedContext(() => super.find(id));
     return this.filter(value ? [value] : [])[0];
   }
 
   override set(values: U[]): void {
-    const plugins = getEmInternalApi(this.entity.em).pluginManager;
-    super.set([...plugins.beforeSetCollection(this.entity, this.fieldName, values, () => this.getCanonical())] as U[]);
+    const complete = replaceVisible(this.entity, this.fieldName, values, () => runInTrustedContext(() => this.get));
+    runInTrustedContext(() => super.set([...complete]));
   }
 
   /** Projects public results without changing the business getter's complete result. */
   private filter(values: readonly U[]): readonly U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(
-      this.entity,
-      this.fieldName,
-      values,
-    ) as readonly U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }

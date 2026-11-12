@@ -1,4 +1,5 @@
 import { type IdType } from "src/Entity.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
 import {
   type Entity,
   type EntityManager,
@@ -9,10 +10,12 @@ import {
   getMetadata,
   keyToNumber,
 } from "src/index.ts";
+import { isInTrustedContext } from "src/trusted.ts";
 
 // getProperties deletes its throwaway entity's own fields so callback access to `this` hits a guard proxy.
 // That includes these non-enumerable words, so they must be configurable (deletable).
 const readWordDescriptor: PropertyDescriptor = { value: 0, enumerable: false, writable: true, configurable: true };
+const trustedReadWordDescriptors: PropertyDescriptor[] = [];
 
 /**
  * Returns the internal `__data` tracking field for `entity`.
@@ -176,5 +179,26 @@ export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, 
   // in the same order for the entire inheritance family. Reusing the descriptor avoids per-entity descriptor objects.
   for (let word = 0; word < data.metadata.fieldReadWordCount; word++) {
     Object.defineProperty(entity, word === 0 ? "__readFields" : `__readFields${word}`, readWordDescriptor);
+  }
+  if (hasVisibilityHook(entity)) useTrustedReadCache(entity);
+}
+
+/** Replaces the __readFields fields with getters/setters that always return 0 for untrusted reads, so they are always access checked. */
+export function useTrustedReadCache(entity: Entity): void {
+  const data = getInstanceData(entity);
+  if (data.trustedReadFields) return;
+  data.trustedReadFields = [];
+  for (let word = 0; word < data.metadata.fieldReadWordCount; word++) {
+    const descriptor = (trustedReadWordDescriptors[word] ??= {
+      configurable: true,
+      enumerable: false,
+      get: function (this: Entity): number {
+        return isInTrustedContext() ? (getInstanceData(this).trustedReadFields![word] ?? 0) : 0;
+      },
+      set: function (this: Entity, value: number): void {
+        if (isInTrustedContext()) getInstanceData(this).trustedReadFields![word] = value;
+      },
+    });
+    Object.defineProperty(entity, word === 0 ? "__readFields" : `__readFields${word}`, descriptor);
   }
 }

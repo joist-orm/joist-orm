@@ -261,6 +261,7 @@ function calcLateralJoins<I extends EntityOrId>(
         if (subTree.entitiesKind === "ids" && !subTree.entities.has(root.idTagged as any)) return;
 
         // We get back an array of [[1, title], [2, title], [3, title]]
+        const api = getEmInternalApi(em);
         const children = arrays.map((array) => {
           const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
           const row: Record<string, any> = {};
@@ -268,15 +269,15 @@ function calcLateralJoins<I extends EntityOrId>(
             row[columnNames[i]] = columns[i].mapFromJsonAgg(array[m2mOffset + i]);
           }
           const entity =
-            em.findExistingInstance<Entity>(taggedId) ??
-            (em.hydrate(otherMeta.cstr, [row], { overwriteExisting: false }) as Entity[])[0];
+            api.getEntity(taggedId) ??
+            (api.hydrate(otherMeta.cstr, [row], { overwriteExisting: false }) as Entity[])[0];
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
             // TODO This `addExisting` needs to be pulled up, out of the `arrays.map`, so we can do a `loadRows`-ish
             // call that passes all now-known m2m rows into JoinRows as a single list, so that it can mark any
             // deleted-from-under-us m2m rows as deleted.
             const m2m = (parent as any)[key];
-            getEmInternalApi(em)
+            api
               .joinRows(m2m)
               .addPreloadedRow(m2m, field.hasJoinTableId ? (array[0] as any) : undefined, parent, entity);
           }
@@ -290,7 +291,7 @@ function calcLateralJoins<I extends EntityOrId>(
           return entity;
         });
         // Cache the entities so `.load`s will see them
-        getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
+        api.setPreloadedRelation(parent.idTagged, key, children);
       };
 
       results.push({ alias: otherAlias, relationAlias, join, hydrator });

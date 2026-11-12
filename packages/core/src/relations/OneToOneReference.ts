@@ -1,5 +1,6 @@
 import { oneToOneBatchLoader } from "src/batchloaders/oneToOneBatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
 import { type EntityMetadata } from "src/EntityMetadata.ts";
 import { setField } from "src/fields.ts";
 import {
@@ -22,6 +23,7 @@ import { isReactiveReference } from "src/relations/ReactiveReference.ts";
 import { type Reference } from "src/relations/Reference.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
 
 const OneToOne = Symbol();
 
@@ -29,10 +31,7 @@ const OneToOne = Symbol();
 export function hasOneToOne<T extends Entity, U extends Entity>(): OneToOneReference<T, U> {
   return lazyField((entity: T, fieldName) => {
     const o2o = getMetadata(entity).allFields[fieldName] as OneToOneField;
-    const Relation =
-      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("beforeGetReference")
-        ? PluginOneToOneReference
-        : OneToOneReferenceImpl;
+    const Relation = hasVisibilityHook(entity) ? PluginOneToOneReference : OneToOneReferenceImpl;
     return new Relation<T, U>(entity, o2o);
   });
 }
@@ -167,12 +166,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
-    return this.loadCanonical(opts);
-  }
-
-  /** Hydrates the target without letting user visibility change canonical state. */
-  async loadCanonical(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
     if (!this._isLoaded || opts.forceReload) {
       if (!this.entity.isNewEntity) {
@@ -234,16 +228,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get getWithDeleted(): U | undefined {
-    return this.getCanonical({ withDeleted: true });
+    return this.filterDeleted(this.doGet(), { withDeleted: true });
   }
 
   get get(): U | undefined {
-    return this.getCanonical();
-  }
-
-  /** @internal Returns canonical state without invoking public relation hooks. */
-  getCanonical(opts?: { withDeleted?: boolean }): U | undefined {
-    return this.filterDeleted(this.doGet(), opts);
+    return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
   get otherMeta(): EntityMetadata {
@@ -274,7 +263,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
-    const current = await this.loadCanonical({ withDeleted: true });
+    const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       const otherSide = this.getOtherRelation(current);
       // Don't call `ReactiveReference.set` because it'll blow up
@@ -334,26 +323,22 @@ class PluginOneToOneReference<T extends Entity, U extends Entity> extends OneToO
   }
 
   override get isSet(): boolean {
-    const value = super.isSet;
-    this.check(this.getCanonical({ withDeleted: true }));
-    return value;
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.isSet;
   }
 
   protected override get idMaybe(): IdOf<U> | undefined {
-    const value = super.idMaybe;
-    this.check(this.getCanonical({ withDeleted: true }));
-    return value;
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.idMaybe;
   }
 
   override get idTaggedMaybe(): TaggedId | undefined {
-    const value = super.idTaggedMaybe;
-    this.check(this.getCanonical({ withDeleted: true }));
-    return value;
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.idTaggedMaybe;
   }
 
   /** Checks the target without making required references nullable. */
   private check(value: U | undefined): U | undefined {
-    getEmInternalApi(this.entity.em).pluginManager.beforeGetReference(this.entity, this.fieldName, value);
-    return value;
+    return checkVisibleReference(this.entity, this.fieldName, value);
   }
 }

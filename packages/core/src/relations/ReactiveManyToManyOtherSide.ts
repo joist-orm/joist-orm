@@ -1,4 +1,6 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { isSoftDeleted } from "src/fields.ts";
 import type { ManyToManyLike } from "src/flush/JoinRows.ts";
 import {
   type Entity,
@@ -14,8 +16,8 @@ import {
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
-import { isCanonicalSoftDeleted } from "src/relations/isCanonicalSoftDeleted.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible } from "src/relations/relationVisibility.ts";
 
 /**
  * A read-only collection representing the "other side" of a ReactiveManyToMany.
@@ -32,10 +34,7 @@ export function hasReactiveManyToManyOtherSide<T extends Entity, U extends Entit
 > {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    const Relation =
-      entity.em && getEmInternalApi(entity.em).pluginManager.hasHook("filterCollection")
-        ? PluginReactiveManyToManyOtherSide
-        : ReactiveManyToManyOtherSideImpl;
+    const Relation = hasVisibilityHook(entity) ? PluginReactiveManyToManyOtherSide : ReactiveManyToManyOtherSideImpl;
     return new Relation<T, U>(entity, m2m);
   });
 }
@@ -59,12 +58,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     (getInstanceData(entity).relations ??= {})[field.fieldName] = this;
   }
 
-  load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
-    return this.loadCanonical(opts);
-  }
-
-  /** Hydrates materialized membership independently of caller visibility. */
-  async loadCanonical(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+  async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.#isLoaded || opts?.forceReload) {
       this.#isCached = false;
@@ -93,11 +87,6 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
 
   get getWithDeleted(): U[] {
     return this.#doGet({ withDeleted: true });
-  }
-
-  /** @internal Returns complete materialized membership without invoking public access hooks. */
-  getCanonical(opts?: { withDeleted?: boolean }): U[] {
-    return this.#doGet(opts);
   }
 
   set(): void {
@@ -222,7 +211,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     if (opts?.withDeleted === true) {
       return entities;
     }
-    return entities.filter((e) => !e.isDeletedEntity && !isCanonicalSoftDeleted(e));
+    return entities.filter((e) => !e.isDeletedEntity && !isSoftDeleted(e));
   }
 
   /** Finds stored membership published by a preloader or RunPlugin. */
@@ -254,7 +243,7 @@ class PluginReactiveManyToManyOtherSide<T extends Entity, U extends Entity> exte
 
   /** Keeps inverse bookkeeping independent of caller visibility. */
   private filter(values: readonly U[]): U[] {
-    return getEmInternalApi(this.entity.em).pluginManager.filterCollection(this.entity, this.fieldName, values) as U[];
+    return filterVisible(this.entity, this.fieldName, values);
   }
 }
 

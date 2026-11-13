@@ -1,5 +1,6 @@
 import { oneToOneBatchLoader } from "src/batchloaders/oneToOneBatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
 import { type EntityMetadata } from "src/EntityMetadata.ts";
 import { setField } from "src/fields.ts";
 import {
@@ -22,6 +23,7 @@ import { isReactiveReference } from "src/relations/ReactiveReference.ts";
 import { type Reference } from "src/relations/Reference.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
 
 const OneToOne = Symbol();
 
@@ -29,7 +31,8 @@ const OneToOne = Symbol();
 export function hasOneToOne<T extends Entity, U extends Entity>(): OneToOneReference<T, U> {
   return lazyField((entity: T, fieldName) => {
     const o2o = getMetadata(entity).allFields[fieldName] as OneToOneField;
-    return new OneToOneReferenceImpl<T, U>(entity, o2o);
+    const Relation = hasVisibilityHook(entity) ? PluginOneToOneReference : OneToOneReferenceImpl;
+    return new Relation<T, U>(entity, o2o);
   });
 }
 
@@ -135,7 +138,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return this.idUntaggedMaybe || failIfNewEntity(this.entity, this.fieldName, this.loaded);
   }
 
-  private get idMaybe(): IdOf<U> | undefined {
+  protected get idMaybe(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity, "pending");
     if (this._isLoaded) {
       return this.loaded?.idMaybe as IdOf<U> | undefined;
@@ -303,4 +306,39 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   [RelationU] = null!;
   [ReferenceN] = null!;
   [OneToOne] = null!;
+}
+
+/** Applies policy to public reads of inverse references, including loaded ids. */
+class PluginOneToOneReference<T extends Entity, U extends Entity> extends OneToOneReferenceImpl<T, U> {
+  override get get(): U | undefined {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | undefined {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
+    return this.check(await super.load(opts));
+  }
+
+  override get isSet(): boolean {
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.isSet;
+  }
+
+  protected override get idMaybe(): IdOf<U> | undefined {
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.idMaybe;
+  }
+
+  override get idTaggedMaybe(): TaggedId | undefined {
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return super.idTaggedMaybe;
+  }
+
+  /** Checks the target without making required references nullable. */
+  private check(value: U | undefined): U | undefined {
+    return checkVisibleReference(this.entity, this.fieldName, value);
+  }
 }

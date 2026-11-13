@@ -1,9 +1,11 @@
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, getEmInternalApi } from "src/EntityManager.ts";
+import { type IdOf, getEmInternalApi, hasVisibilityHook } from "src/EntityManager.ts";
 import { type Collection, type LoadHint, ensureNotDeleted, fail } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -27,7 +29,7 @@ export function hasCustomCollection<T extends Entity, U extends Entity>(
   opts: CustomCollectionOpts<T, U>,
 ): CustomCollection<T, U> {
   return lazyField((entity: T) => {
-    return new CustomCollection<T, U>(entity, opts);
+    return CustomCollection.create<T, U>(entity, opts);
   });
 }
 
@@ -46,6 +48,15 @@ export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, readonly U[]>
   implements Collection<T, U>
 {
+  /** Selects public interception once for custom, derived, and through collections. */
+  static create<T extends Entity, U extends Entity>(
+    entity: T,
+    opts: CustomCollectionOpts<T, U>,
+  ): CustomCollection<T, U> {
+    const Relation = hasVisibilityHook(entity) ? PluginCustomCollection : CustomCollection;
+    return new Relation<T, U>(entity, opts);
+  }
+
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
   private loadPromise: Promise<any> | undefined;
@@ -202,4 +213,39 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Intercepts the custom relation result after its business callbacks have run. */
+class PluginCustomCollection<T extends Entity, U extends Entity> extends CustomCollection<T, U> {
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
+  }
+
+  override get get(): readonly U[] {
+    // Custom business logic needs complete dependencies; filter applies access checks back in the caller's context.
+    return this.filter(runInTrustedContext(() => super.get));
+  }
+
+  override get getWithDeleted(): readonly U[] {
+    return this.filter(runInTrustedContext(() => super.getWithDeleted));
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await runInTrustedContext(() => super.load(opts)));
+  }
+
+  override async find(id: IdOf<U>): Promise<U | undefined> {
+    const value = await runInTrustedContext(() => super.find(id));
+    return this.filter(value ? [value] : [])[0];
+  }
+
+  override set(values: U[]): void {
+    const complete = replaceVisible(this.entity, this.fieldName, values, () => runInTrustedContext(() => this.get));
+    runInTrustedContext(() => super.set([...complete]));
+  }
+
+  /** Projects public results without changing the business getter's complete result. */
+  private filter(values: readonly U[]): readonly U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
 }

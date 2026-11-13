@@ -1,4 +1,5 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -23,6 +24,8 @@ import {
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 /**
  * A reactive, derived many-to-many collection.
@@ -41,7 +44,8 @@ export function hasReactiveManyToMany<T extends Entity, U extends Entity, const 
 ): ReactiveManyToMany<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveManyToManyImpl<T, U, H>(entity, m2m, hint, fn);
+    const Relation = hasVisibilityHook(entity) ? PluginReactiveManyToMany : ReactiveManyToManyImpl;
+    return new Relation<T, U, H>(entity, m2m, hint, fn);
   });
 }
 
@@ -336,6 +340,30 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Projects derived membership after business logic has evaluated its complete dependencies. */
+class PluginReactiveManyToMany<
+  T extends Entity,
+  U extends Entity,
+  H extends ReactiveHint<T>,
+> extends ReactiveManyToManyImpl<T, U, H> {
+  override get get(): U[] {
+    return this.filter(runInTrustedContext(() => super.get));
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(runInTrustedContext(() => super.getWithDeleted));
+  }
+
+  override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    return this.filter(await runInTrustedContext(() => super.load(opts)));
+  }
+
+  /** Leaves materialized membership intact for reactions. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
 }
 
 /** Type guard utility for determining if an entity field is a ReactiveManyToMany. */

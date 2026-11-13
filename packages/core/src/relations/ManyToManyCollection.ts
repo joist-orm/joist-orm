@@ -1,5 +1,7 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
 import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { isSoftDeleted } from "src/fields.ts";
 import {
   type Collection,
   type Entity,
@@ -18,13 +20,15 @@ import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleMutation, filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
 import { maybeAdd, maybeRemove, remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ManyToManyCollection<T, U>(entity, m2m);
+    const Relation = hasVisibilityHook(entity) ? PluginManyToManyCollection : ManyToManyCollection;
+    return new Relation<T, U>(entity, m2m);
   });
 }
 
@@ -76,7 +80,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (opts?.withDeleted === true) return [...entities];
     // Relations configured with `softDeletes: "include"` keep soft-deleted entities in `.get`/`.load`.
     const includeSoftDeleted = this.#field.softDeletes === "include";
-    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
+    return entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isSoftDeleted(e)));
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
@@ -112,7 +116,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         throw appendStack(err, new Error());
       });
     const taggedId = toTaggedId(this.otherMeta, id);
-    return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
+    return includes ? (getEmInternalApi(this.entity.em).load(this.otherMeta.cstr, taggedId) as Promise<U>) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
@@ -180,9 +184,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (!this.#state.isLoaded) {
       throw new Error("removeAll was called when not loaded");
     }
-    for (const other of [...this.#state.doGet()]) {
-      this.remove(other);
-    }
+    this.set([]);
   }
 
   // impl details
@@ -285,6 +287,49 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
  * Loaded + applyLoad (forceReload) → Loaded (refreshed)
  * ```
  */
+/** Intercepts public access while inverse percolation continues to use complete membership. */
+class PluginManyToManyCollection<T extends Entity, U extends Entity> extends ManyToManyCollection<T, U> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  override async find(id: IdOf<U>): Promise<U | undefined> {
+    const value = await super.find(id);
+    return this.filter(value ? [value] : [])[0];
+  }
+
+  override async includes(other: U): Promise<boolean> {
+    return this.filter([other]).length > 0 && super.includes(other);
+  }
+
+  override set(values: readonly U[]): void {
+    super.set(replaceVisible(this.entity, this.fieldName, values, () => super.getWithDeleted) as readonly U[]);
+  }
+
+  override add(other: U, percolated = false): void {
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
+    super.add(other, percolated);
+  }
+
+  override remove(other: U, percolated = false): void {
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
+    super.remove(other, percolated);
+  }
+
+  /** Projects public results without changing stored membership. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
+}
+
 interface M2MState<T extends Entity, U extends Entity> {
   /** Adds an entity; may transition UnloadedPristine → UnloadedAddedRemoved. */
   add(other: U, percolated: boolean): M2MState<T, U>;

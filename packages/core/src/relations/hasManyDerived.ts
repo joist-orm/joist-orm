@@ -25,7 +25,7 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
 ): Collection<T, U> {
   const { load, ...rest } = opts;
   return lazyField((entity: T) => {
-    return new CustomCollection<T, U>(entity, {
+    return CustomCollection.create<T, U>(entity, {
       load(entity, opts) {
         if (load) {
           return load(entity, opts);

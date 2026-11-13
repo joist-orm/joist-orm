@@ -1,5 +1,7 @@
 import { oneToManyBatchLoader } from "src/batchloaders/oneToManyBatchLoader.ts";
 import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { getStoredField, isSoftDeleted } from "src/fields.ts";
 import {
   type Collection,
   type Entity,
@@ -21,13 +23,17 @@ import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { type ManyToOneReferenceImpl } from "src/relations/ManyToOneReference.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible, replaceVisible } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 import { compareValues } from "src/utils.ts";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> {
   return lazyField((entity: T, fieldName) => {
     const field = getMetadata(entity).allFields[fieldName] as OneToManyField;
-    return new OneToManyCollection(entity, field);
+    // Metadata discovery also constructs relations, using an entity without an EM.
+    const Relation = hasVisibilityHook(entity) ? PluginOneToManyCollection : OneToManyCollection;
+    return new Relation<T, U>(entity, field);
   });
 }
 
@@ -99,7 +105,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.getOtherRelation(other).current());
+    return sameEntity(this.entity, getStoredField<Entity | string | undefined>(other, this.otherFieldName));
   }
 
   get isLoaded(): boolean {
@@ -179,9 +185,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (!this.#state.isLoaded) {
       throw new Error("removeAll was called when not loaded");
     }
-    for (const other of [...this.#state.doGet()]) {
-      this.remove(other);
-    }
+    this.set([]);
   }
 
   // internal impl
@@ -276,10 +280,21 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const list =
       opts?.withDeleted === true
         ? [...entities]
-        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !(e as any).isSoftDeletedEntity));
+        : entities.filter((e) => !e.isDeletedEntity && (includeSoftDeleted || !isSoftDeleted(e)));
     if (this.#field.orderBy) {
       const { field, direction } = this.#field.orderBy;
-      list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
+      const sortField = this.otherMeta.allFields[field];
+      if (
+        (sortField?.kind === "primitive" && !sortField.derived && !sortField.lazy) ||
+        (sortField?.kind === "enum" && !sortField.derived)
+      ) {
+        list.sort((a, b) => compareValues(getStoredField(a, field), getStoredField(b, field), direction));
+      } else if (hasVisibilityHook(this.entity)) {
+        // Reactive and reference sort keys use business getters, not just their stored column values.
+        runInTrustedContext(() => list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction)));
+      } else {
+        list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
+      }
     }
     return list;
   }
@@ -336,6 +351,39 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
  * Loaded + forceReload → Loaded (refreshed, re-merges pending)
  * ```
  */
+/** Selected once, when a relation is first accessed; late plugins do not upgrade existing relations. */
+class PluginOneToManyCollection<T extends Entity, U extends Entity> extends OneToManyCollection<T, U> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  override async find(id: IdOf<U>): Promise<U | undefined> {
+    const value = await super.find(id);
+    return this.filter(value ? [value] : [])[0];
+  }
+
+  override async includes(other: U): Promise<boolean> {
+    return this.filter([other]).length > 0 && super.includes(other);
+  }
+
+  override set(values: readonly U[]): void {
+    super.set(replaceVisible(this.entity, this.fieldName, values, () => super.getWithDeleted) as readonly U[]);
+  }
+
+  /** Projects public results without changing the collection's complete state. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
+}
+
 interface O2MState<T extends Entity, U extends Entity> {
   add(other: U): O2MState<T, U>;
   remove(other: U, opts: { requireLoaded: boolean }): O2MState<T, U>;
@@ -604,7 +652,7 @@ class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState
     // If we're an existing entity, we can scan for any in-memory entities that were previously
     // pointing to us, but now should not
     if (!o2m.entity.isNewEntity) {
-      for (const other of o2m.entity.em.getEntities(o2m.otherMeta.cstr) as Iterable<U>) {
+      for (const other of getEmInternalApi(o2m.entity.em).getEntities(o2m.otherMeta.cstr) as readonly U[]) {
         if (this.#pendingValues.has(other)) continue;
         if (sameEntity((other as any)[o2m.otherFieldName].current(), o2m.entity)) {
           o2m.percolateRemove(other);

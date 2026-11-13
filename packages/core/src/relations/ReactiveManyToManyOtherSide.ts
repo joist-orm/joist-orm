@@ -1,4 +1,6 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
+import { hasVisibilityHook } from "src/EntityManager.ts";
+import { isSoftDeleted } from "src/fields.ts";
 import type { ManyToManyLike } from "src/flush/JoinRows.ts";
 import {
   type Entity,
@@ -15,6 +17,7 @@ import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible } from "src/relations/relationVisibility.ts";
 
 /**
  * A read-only collection representing the "other side" of a ReactiveManyToMany.
@@ -31,7 +34,8 @@ export function hasReactiveManyToManyOtherSide<T extends Entity, U extends Entit
 > {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveManyToManyOtherSideImpl<T, U>(entity, m2m);
+    const Relation = hasVisibilityHook(entity) ? PluginReactiveManyToManyOtherSide : ReactiveManyToManyOtherSideImpl;
+    return new Relation<T, U>(entity, m2m);
   });
 }
 
@@ -207,7 +211,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     if (opts?.withDeleted === true) {
       return entities;
     }
-    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    return entities.filter((e) => !e.isDeletedEntity && !isSoftDeleted(e));
   }
 
   /** Finds stored membership published by a preloader or RunPlugin. */
@@ -218,6 +222,29 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Projects the inverse of a derived collection without changing its canonical contents. */
+class PluginReactiveManyToManyOtherSide<T extends Entity, U extends Entity> extends ReactiveManyToManyOtherSideImpl<
+  T,
+  U
+> {
+  override get get(): U[] {
+    return this.filter(super.get);
+  }
+
+  override get getWithDeleted(): U[] {
+    return this.filter(super.getWithDeleted);
+  }
+
+  override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    return this.filter(await super.load(opts));
+  }
+
+  /** Keeps inverse bookkeeping independent of caller visibility. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
 }
 
 export function isReactiveManyToManyOtherSide(

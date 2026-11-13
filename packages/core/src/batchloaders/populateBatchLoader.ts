@@ -46,10 +46,11 @@ export function populateBatchLoader(
   const batchKey =
     mode === "preload" ? `${meta.tagName}:${opts.forceReload}` : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
   return em.getBatchLoader(populateOperation, batchKey, async (populates) => {
+    const api = getEmInternalApi(em);
     async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<void> {
       // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
       // needs loading, just load everything
-      const { preloader } = getEmInternalApi(em);
+      const { preloader } = api;
       // We may not have a layerMeta if we're going through non-field properties
       if (preloader && layerMeta) {
         const preloadThisLayer = Object.entries(layerNode.hints).some(([key, hint]) => {
@@ -158,7 +159,7 @@ export function populateBatchLoader(
               }
             }
           }
-          fallbackPromises.push(relation.load(opts) as Promise<any>);
+          fallbackPromises.push(relation.load(opts));
         }
         if (batchPromise) batchPromises.add(batchPromise);
       }
@@ -180,7 +181,11 @@ export function populateBatchLoader(
         const childrenByParent = new Map<Entity, Entity[]>();
         for (const entity of tree.entities) {
           const relation = getRelationFromMaybePolyKey(entity, key);
-          childrenByParent.set(entity, relation ? toArray(getEvenDeleted(relation)) : []);
+          childrenByParent.set(
+            entity,
+            // Population runs in trusted context, so these getters return all values regardless of visibility.
+            relation ? toArray("getWithDeleted" in relation ? relation.getWithDeleted : relation.get) : [],
+          );
         }
         if (childrenByParent.size === 0) continue;
 
@@ -209,9 +214,4 @@ export function populateBatchLoader(
 
     await populateLayer(meta, buildHintTree(populates));
   });
-}
-
-/** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
-function getEvenDeleted(relation: any): any {
-  return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
 }

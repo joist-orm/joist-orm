@@ -132,17 +132,18 @@ describe("EntityManager.plugins", () => {
       expect(plugin.calls).toEqual([[image, "fileName"]]);
     });
 
-    it.withCtx("is called only the first time a field is accessed", async (ctx) => {
+    it.withCtx("is skipped once a stored field is warm", async (ctx) => {
       // Given an image with an unread filename and a read plugin
+      await insertImage({ type_id: 2, file_name: "image.jpg" });
       const { em } = ctx;
       const plugin = new BeforeGetFieldPlugin();
-      const image = em.createPartial(Image, {});
+      const image = await em.load(Image, "1");
       // And a plugin will observe its first filename read
       em.addPlugin(plugin);
-      // When application logic reads that undefined filename twice
+      // When application logic reads that stored filename twice
       void image.fileName;
       void image.fileName;
-      // Then the plugin observes one read, even though no value was cached
+      // Then the plugin observes only the cold read
       expect(plugin.calls).toEqual([[image, "fileName"]]);
     });
 
@@ -635,7 +636,7 @@ describe("EntityManager.plugins", () => {
     expect(ssn).toBe("123-45-6789");
   });
 
-  it.withCtx("observes a protected field once across internal and application reads", async (ctx) => {
+  it.withCtx("keeps a protected field cold until application read protection is applied", async (ctx) => {
     // Given an author whose protected shape has not been read
     await insertAuthor({ first_name: "a1", favorite_shape: "circle" });
     // And a plugin is installed before housekeeping reads it
@@ -646,8 +647,9 @@ describe("EntityManager.plugins", () => {
     getField(author, "favoriteShape", true);
     void author.favoriteShape;
     void author.favoriteShape;
-    // Then enrolling application read protection does not repeat the plugin callback
+    // Then both cold reads invoke the hook, while the subsequent warm read skips it
     expect(plugin.calls.filter((call) => call[0] === author && call[1] === "favoriteShape")).toEqual([
+      [author, "favoriteShape"],
       [author, "favoriteShape"],
     ]);
   });
@@ -684,11 +686,11 @@ describe("EntityManager.plugins", () => {
     expect(() => getField(author, "ssn")).toThrow("Cannot read ssn");
   });
 
-  it.withCtx("caches an always approval after an allow approval", async (ctx) => {
+  it.withCtx("checks every untrusted read while trusted reads bypass hooks", async (ctx) => {
     // Given an image whose filename this user can read
     await insertImage({ type_id: 2, file_name: "public.jpg" });
     const image = await ctx.em.load(Image, "1");
-    // And a plugin permits caching only after checking user access
+    // And a visibility-aware plugin permits user access
     const plugin = new TrustedFieldReadsPlugin(image, "fileName");
     plugin.allowUserReads = true;
     ctx.em.addPlugin(plugin);
@@ -698,11 +700,11 @@ describe("EntityManager.plugins", () => {
     getField(image, "fileName");
     void image.fileName;
     runInTrustedContext(() => image.fileName);
-    // Then the successful user check authorizes all subsequent accesses
-    expect(plugin.trustedReads).toEqual([true, false]);
+    // Then each user read is checked and trusted reads never invoke the hook
+    expect(plugin.trustedReads).toEqual([false, false, false]);
   });
 
-  it.withCtx("does not cache an allow approval even if the hook reads its own field", async (ctx) => {
+  it.withCtx("rechecks untrusted reads even if the hook reads its own field", async (ctx) => {
     // Given a persisted image with an unread filename
     await insertImage({ type_id: 2, file_name: "original.jpg" });
     const image = await ctx.em.load(Image, "1");
@@ -710,11 +712,13 @@ describe("EntityManager.plugins", () => {
     const observedNames: string[] = [];
     ctx.em.addPlugin(
       new (class extends Plugin {
+        canViewEntity(): boolean {
+          return true;
+        }
         /** Inspects its own field without calling the plugin again. */
-        beforeGetField(entity: Entity, field: string): "allow" | void {
+        beforeGetField(entity: Entity, field: string): void {
           if (entity !== image || field !== "fileName") return;
           observedNames.push(image.fileName);
-          return "allow";
         }
       })(),
     );
@@ -734,10 +738,9 @@ describe("EntityManager.plugins", () => {
     ctx.em.addPlugin(
       new (class extends Plugin {
         /** Counts approvals even when there is no stored value to cache. */
-        beforeGetField(entity: Entity, field: string): "allow" | void {
+        beforeGetField(entity: Entity, field: string): void {
           if (entity !== image || field !== "fileName") return;
           reads++;
-          return "allow";
         }
       })(),
     );
@@ -748,35 +751,34 @@ describe("EntityManager.plugins", () => {
     expect(reads).toBe(2);
   });
 
-  it.withCtx("preserves an allow vote while later plugins authorize or deny access", async (ctx) => {
+  it.withCtx("checks later plugins after an earlier plugin permits access", async (ctx) => {
     // Given an image with an unread filename
     await insertImage({ type_id: 2, file_name: "private.jpg" });
     const image = await ctx.em.load(Image, "1");
     // And the first plugin requires a check on every filename access
     ctx.em.addPlugin(
       new (class extends Plugin {
-        /** Prevents later approvals from making this field's reads cacheable. */
-        beforeGetField(entity: Entity, field: string): "allow" | void {
-          if (entity === image && field === "fileName") return "allow";
+        canViewEntity(): boolean {
+          return true;
         }
+        beforeGetField(): void {}
       })(),
     );
-    // And a later plugin initially permits all subsequent filename reads
+    // And a later plugin initially permits filename reads
     let allowUserReads = true;
     ctx.em.addPlugin(
       new (class extends Plugin {
         /** Denies reads when the user's access is revoked. */
-        beforeGetField(entity: Entity, field: string): "always" | void {
+        beforeGetField(entity: Entity, field: string): void {
           if (entity !== image || field !== "fileName") return;
           if (!allowUserReads) throw new Error("Filename access revoked");
-          return "always";
         }
       })(),
     );
     // When the filename is read and the user's access is subsequently revoked
     void image.fileName;
     allowUserReads = false;
-    // Then the later plugin can still deny access despite the first plugin's allow vote
+    // Then the later plugin can deny access despite the first plugin's approval
     expect(() => image.fileName).toThrow("Filename access revoked");
   });
 });
@@ -790,7 +792,7 @@ class FieldReadsPlugin extends Plugin {
   }
 }
 
-/** Allows trusted accesses without caching them, and checks user access before authorizing future reads. */
+/** Checks user access on every read; Joist bypasses this hook for trusted code. */
 class TrustedFieldReadsPlugin extends Plugin {
   allowUserReads = false;
   trustedReads: boolean[] = [];
@@ -803,12 +805,14 @@ class TrustedFieldReadsPlugin extends Plugin {
   }
 
   /** Records the context of each authorization check for this field. */
-  beforeGetField(entity: Entity, field: string): "allow" | "always" | void {
+  beforeGetField(entity: Entity, field: string): void {
     if (entity !== this.entity || field !== this.field) return;
     const trusted = isInTrustedContext();
     this.trustedReads.push(trusted);
-    if (trusted) return "allow";
     if (!this.allowUserReads) throw new Error(`Cannot read ${field}`);
-    return "always";
+  }
+
+  canViewEntity(): boolean {
+    return true;
   }
 }

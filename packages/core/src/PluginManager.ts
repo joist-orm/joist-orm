@@ -7,20 +7,17 @@ import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
   /**
-   * Called before the first read of each entity field, and again if any plugin returns `"allow"`.
-   * Includes ORM-internal reads.
+   * Called before a cold field read. Throw to deny access.
+   * On visibility-aware EMs, called for every untrusted read and skipped for trusted reads.
    *
-   * Return `"allow"` to allow only this access and check again on the next read. Return
-   * `"always"` or nothing to allow all subsequent accesses, regardless of trusted context.
-   * Throw to deny access. Any plugin returning `"allow"` prevents caching for all plugins.
-   *
-   * Install plugins before reading entities. Cached reads, including reads after a flush
-   * or refresh, do not invoke this callback again. A throwing callback can be retried.
+   * Ordinary EMs skip this hook once the field's getter is warm. Unset fields and internal reads
+   * awaiting application read protection remain cold. A throwing callback can be retried.
    *
    * @param entity The entity instance being accessed
    * @param field The field name being retrieved
    */
-  beforeGetField?(entity: Entity, field: string): "allow" | "always" | void;
+  beforeGetField?(entity: Entity, field: string): void;
+
   /**
    * Called before a field value is set on an entity via setField.
    *
@@ -29,6 +26,7 @@ interface PluginMethods {
    * @param newValue The new value being assigned to the field
    */
   beforeSetField?(entity: Entity, field: string, newValue: any): void;
+
   /**
    * Called before a find operation is executed.
    *
@@ -50,6 +48,7 @@ interface PluginMethods {
       keepAliases?: string[];
     },
   ): void;
+
   /**
    * Called after a find operation has been executed to observe the raw database rows.
    *
@@ -70,9 +69,19 @@ interface PluginMethods {
   afterValidate?(entities: readonly Entity[]): Promise<void> | void;
 
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
+
+  /**
+   * Decides whether a hydrated entity may be returned by public EM and relation reads, including cache hits.
+   *
+   * This hook is synchronous. Plugins should maintain any expensive visibility metadata during hydration or
+   * mutation and keep this lookup cheap. Joist skips this hook in trusted context. Relation factories select
+   * subclasses at construction, so install this hook before accessing relations.
+   */
+  canViewEntity?(entity: Entity): boolean;
 }
 
 const syncPluginMethods = [
+  "canViewEntity",
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
@@ -117,7 +126,10 @@ export interface Plugin extends PluginMethods {}
 export class PluginManager implements Required<PluginMethods> {
   #plugins = new Set<Plugin>();
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
-  constructor(public readonly em: EntityManager) {}
+  constructor(
+    public readonly em: EntityManager,
+    private readonly onVisibilityHook: () => void,
+  ) {}
 
   /** Returns whether any registered plugin implements `method`, i.e. so callers can skip building its args. */
   hasHook(method: keyof PluginMethods): boolean {
@@ -143,19 +155,14 @@ export class PluginManager implements Required<PluginMethods> {
         // once we have at least one plugin using that method. This is to make it so any unused plugin methods are
         // effectively no-ops when called from within the em.
         if (!Object.hasOwn(this, method)) {
-          if (method === "beforeGetField") {
-            // Other hooks return nothing; beforeGetField must combine the plugins' caching votes.
-            this.beforeGetField = function (this: PluginManager, entity: Entity, field: string): "allow" | "always" {
-              // Start cacheable: both "always" and void permit caching.
-              let result: "allow" | "always" = "always";
-
-              // A cache veto must not skip later plugins: they may still deny this access.
-              for (const plugin of this.#pluginsByCallback.beforeGetField!) {
-                // Once a plugin votes "allow", later "always" or void votes cannot restore caching.
-                if (plugin.beforeGetField!(entity, field) === "allow") result = "allow";
+          if (method === "canViewEntity") {
+            this.canViewEntity = function (entity) {
+              for (const plugin of this.#pluginsByCallback.canViewEntity!) {
+                if (!plugin.canViewEntity!(entity)) return false;
               }
-              return result;
+              return true;
             };
+            this.onVisibilityHook();
           } else {
             this[method] = function (this: PluginManager, ...args: any[]) {
               for (const plugin of this.#pluginsByCallback[method]!) {
@@ -196,7 +203,7 @@ export class PluginManager implements Required<PluginMethods> {
   // Defined as no-op functions initially instead of using optional chaining for performance reasons, see:
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
-  beforeGetField(entity: Entity, field: string): "allow" | "always" | void {}
+  beforeGetField(entity: Entity, field: string): void {}
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,
@@ -215,4 +222,8 @@ export class PluginManager implements Required<PluginMethods> {
   beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
+
+  canViewEntity(entity: Entity): boolean {
+    return true;
+  }
 }

@@ -1,9 +1,9 @@
 import { getInstanceData } from "src/BaseEntity.ts";
 import { type BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type Entity } from "src/Entity.ts";
-import { type EntityManager } from "src/EntityManager.ts";
+import { type EntityManager, getEmInternalApi } from "src/EntityManager.ts";
 import { type EntityMetadata, type PrimitiveField, getMetadata } from "src/EntityMetadata.ts";
-import { setField } from "src/fields.ts";
+import { getField, setField } from "src/fields.ts";
 import { keyToNumber, tagId } from "src/keys.ts";
 import { lazyField } from "src/newEntity.ts";
 import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
@@ -45,7 +45,7 @@ export function hasLazyField<T extends Entity, V>(): LazyField<T, V> {
 export class LazyFieldImpl<T extends Entity, V> extends AbstractPropertyImpl<T> implements LazyField<T, V> {
   #fieldName: string;
   #loaded = false;
-  #loadPromise: Promise<V> | undefined;
+  #loadPromise: Promise<void> | undefined;
 
   constructor(entity: T, fieldName: string) {
     super(entity);
@@ -61,12 +61,13 @@ export class LazyFieldImpl<T extends Entity, V> extends AbstractPropertyImpl<T> 
     }
     if (this.isLoaded) return Promise.resolve(this.#value);
     const meta = getMetadata(entity);
-    return (this.#loadPromise ??= lazyColumnBatchLoader(entity.em, meta, this.#fieldName)
+    const loading = (this.#loadPromise ??= lazyColumnBatchLoader(entity.em, meta, this.#fieldName)
       .load(entity.idTagged)
       .then(() => {
         this.#loaded = true;
-        return this.#value;
       }));
+    // Share hydration, but authorize the returned value in each caller's context.
+    return loading.then(() => this.#value);
   }
 
   get get(): V {
@@ -127,7 +128,7 @@ export class LazyFieldImpl<T extends Entity, V> extends AbstractPropertyImpl<T> 
 
   /** The domain value, which `load`/`set` keep in the entity's `__orm.data` like any other column. */
   get #value(): V {
-    return getInstanceData(this.entity).data[this.#fieldName] as V;
+    return getField(this.entity, this.#fieldName) as V;
   }
 
   [PropertyT] = undefined as any as T;
@@ -162,8 +163,9 @@ function lazyColumnBatchLoader(em: EntityManager, meta: EntityMetadata, fieldNam
     };
     const rows = await em["executeFind"](meta, lazyColumnLoadOperation, query, {});
     const rowData = new PojoRowData(rows);
+    const api = getEmInternalApi(em);
     for (let i = 0; i < rows.length; i++) {
-      const entity = em.findExistingInstance(tagId(meta, rows[i].id));
+      const entity = api.getEntity(tagId(meta, rows[i].id));
       if (entity) getInstanceData(entity).data[fieldName] = field.serde.fromRow(rowData, i);
     }
   });

@@ -148,6 +148,7 @@ export class JoinRows {
   /** Look up/create our internal JoinRow psuedo-entities for the db rows. */
   async loadRows(tuples: [string, string][], dbRows: any[]): Promise<void> {
     const { em } = this.m2m.entity;
+    const api = getEmInternalApi(em);
     const { columnName: column1, otherColumnName: column2, meta: meta1, otherMeta: meta2, otherEnum } = this.m2m;
 
     const oneIds: string[] = [];
@@ -156,17 +157,17 @@ export class JoinRows {
     for (const dbRow of dbRows) {
       oneIds.push(keyToTaggedId(meta1, dbRow[column1])!);
       twoVals.push(
-        otherEnum ? (dbRow[column2] as number) : (em.getEntity(keyToTaggedId(meta2!, dbRow[column2])!) as any),
+        otherEnum ? (dbRow[column2] as number) : (api.getEntity(keyToTaggedId(meta2!, dbRow[column2])!) as any),
       );
     }
 
     // Make sure we have entities in memory for all the joined-to tables. The enum side has no
     // entities to load; the entity sides do (and `twoVals` is re-resolved to entities below).
     await Promise.all([
-      em.loadAll(meta1.cstr, oneIds),
+      api.loadAll(meta1.cstr, oneIds),
       otherEnum
         ? Promise.resolve([])
-        : em.loadAll(
+        : api.loadAll(
             meta2!.cstr,
             dbRows.map((dbRow) => keyToTaggedId(meta2!, dbRow[column2])!),
           ),
@@ -177,14 +178,14 @@ export class JoinRows {
     // since `EnumCollection` relies on `JoinRows` to hold them rather than re-asserting on load).
     const existingRows = new Set<JoinRow>();
     for (const [columnName, id] of tuples) {
-      const others = this.index.getOthers(columnName, em.getEntity(id)!);
+      const others = this.index.getOthers(columnName, api.getEntity(id)!);
       for (const row of others) if (!otherEnum || row.persisted) existingRows.add(row);
     }
 
     let i = 0;
     for (const dbRow of dbRows) {
-      const e1 = em.getEntity(oneIds[i])!;
-      const e2 = otherEnum ? (dbRow[column2] as number) : em.getEntity(keyToTaggedId(meta2!, dbRow[column2])!)!;
+      const e1 = api.getEntity(oneIds[i])!;
+      const e2 = otherEnum ? (dbRow[column2] as number) : api.getEntity(keyToTaggedId(meta2!, dbRow[column2])!)!;
       i++;
       let row = this.index.get(this.m2m, e1, e2);
       if (!row) {

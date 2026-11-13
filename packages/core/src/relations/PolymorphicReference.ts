@@ -1,6 +1,6 @@
 import { maybeGetConstructorFromReference } from "src/configure.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
-import { type IdOf, type TaggedId, sameEntity } from "src/EntityManager.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, hasVisibilityHook, sameEntity } from "src/EntityManager.ts";
 import { type PolymorphicFieldComponent, getMetadata } from "src/EntityMetadata.ts";
 import { getField, setField } from "src/fields.ts";
 import {
@@ -20,6 +20,7 @@ import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
 import { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
 
 export function hasOnePolymorphic<
   T extends Entity,
@@ -27,7 +28,8 @@ export function hasOnePolymorphic<
   N extends never | undefined,
 >(): PolymorphicReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
-    return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName as keyof T & string);
+    const Relation = hasVisibilityHook(entity) ? PluginPolymorphicReference : PolymorphicReferenceImpl;
+    return new Relation<T, U, N>(entity, fieldName as keyof T & string);
   });
 }
 
@@ -112,7 +114,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
       this.loaded =
         isEntity(current) || current === undefined
           ? (current as U | undefined)
-          : ((await this.entity.em.load(getConstructorFromTaggedId(current), current)) as U);
+          : ((await getEmInternalApi(this.entity.em).load(getConstructorFromTaggedId(current), current)) as U);
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);
@@ -137,7 +139,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
     const { idTaggedMaybe } = this;
-    return this.loaded ?? (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U) : undefined);
+    return (
+      this.loaded ??
+      (idTaggedMaybe !== undefined ? getEmInternalApi(this.entity.em).getEntity<U>(idTaggedMaybe) : undefined)
+    );
   }
 
   get isPreloaded(): boolean {
@@ -339,10 +344,34 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.idTaggedMaybe !== undefined ? (this.entity.em.getEntity(this.idTagged) as U) : undefined;
+    return this.idTaggedMaybe !== undefined ? getEmInternalApi(this.entity.em).getEntity<U>(this.idTagged) : undefined;
   }
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Checks polymorphic targets at public entity-returning boundaries. */
+class PluginPolymorphicReference<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+> extends PolymorphicReferenceImpl<T, U, N> {
+  override get get(): U | N {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await super.load(opts));
+  }
+
+  /** Checks visibility when returning the target entity. */
+  private check<V extends Entity | undefined>(value: V): V {
+    return checkVisibleReference(this.entity, this.fieldName, value);
+  }
 }

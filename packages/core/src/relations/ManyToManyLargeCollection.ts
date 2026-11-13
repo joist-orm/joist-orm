@@ -1,11 +1,12 @@
 import { manyToManyFindDataLoader } from "src/dataloaders/manyToManyFindDataLoader.ts";
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, appendStack } from "src/EntityManager.ts";
+import { type IdOf, appendStack, getEmInternalApi, hasVisibilityHook } from "src/EntityManager.ts";
 import { type EntityMetadata, getMetadataForField } from "src/EntityMetadata.ts";
 import { type ManyToManyCollection, ensureNotDeleted, getMetadata, toTaggedId } from "src/index.ts";
 import { lazyField, resolveOtherMeta } from "src/newEntity.ts";
 import { type LargeCollection } from "src/relations/LargeCollection.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleMutation, filterVisible } from "src/relations/relationVisibility.ts";
 import { remove } from "src/utils.ts";
 
 /** An alias for creating `ManyToManyLargeCollection`s. */
@@ -19,7 +20,8 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ManyToManyLargeCollection(
+    const Relation = hasVisibilityHook(entity) ? PluginManyToManyLargeCollection : ManyToManyLargeCollection;
+    return new Relation<T, U>(
       joinTableName,
       entity,
       fieldName as keyof T & string,
@@ -81,7 +83,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
         throw appendStack(err, new Error());
       });
     const taggedId = toTaggedId(this.otherMeta, id);
-    return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
+    return includes ? getEmInternalApi(this.entity.em).load(this.otherMeta.cstr, taggedId) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
@@ -108,7 +110,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
       });
   }
 
-  add(other: U): void {
+  add(other: U, percolated = false): void {
     remove(this.locallyRemoved, other);
     if (!this.locallyAdded.includes(other)) {
       this.locallyAdded.push(other);
@@ -116,7 +118,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
   }
 
-  remove(other: U): void {
+  remove(other: U, percolated = false): void {
     remove(this.locallyAdded, other);
     if (!this.locallyRemoved.includes(other)) {
       this.locallyRemoved.push(other);
@@ -140,4 +142,31 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Intercepts explicit join edits and lookups, but not inverse percolation. */
+class PluginManyToManyLargeCollection<T extends Entity, U extends Entity> extends ManyToManyLargeCollection<T, U> {
+  override async find(id: IdOf<U>): Promise<U | undefined> {
+    const value = await super.find(id);
+    return this.filter(value ? [value] : [])[0];
+  }
+
+  override async includes(other: U): Promise<boolean> {
+    return this.filter([other]).length > 0 && super.includes(other);
+  }
+
+  override add(other: U, percolated = false): void {
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
+    super.add(other, percolated);
+  }
+
+  override remove(other: U, percolated = false): void {
+    if (!percolated) checkVisibleMutation(this.entity, this.fieldName, other);
+    super.remove(other, percolated);
+  }
+
+  /** Projects lookup results without changing physical membership. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
 }

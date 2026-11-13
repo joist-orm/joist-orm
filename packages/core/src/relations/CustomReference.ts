@@ -1,17 +1,19 @@
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, type TaggedId, getEmInternalApi } from "src/EntityManager.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, hasVisibilityHook } from "src/EntityManager.ts";
 import { type LoadHint, type Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 /** An alias for creating `CustomReference`s. */
 export function hasCustomReference<T extends Entity, U extends Entity, N extends never | undefined>(
   opts: CustomReferenceOpts<T, U, N>,
 ): CustomReference<T, U, N> {
   return lazyField((entity: T) => {
-    return new CustomReference<T, U, N>(entity, opts);
+    return CustomReference.create<T, U, N>(entity, opts);
   });
 }
 
@@ -45,6 +47,15 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   extends AbstractRelationImpl<T, U>
   implements Reference<T, U, N>
 {
+  /** Selects public interception once for custom, derived, and through references. */
+  static create<T extends Entity, U extends Entity, N extends never | undefined>(
+    entity: T,
+    opts: CustomReferenceOpts<T, U, N>,
+  ): CustomReference<T, U, N> {
+    const Relation = hasVisibilityHook(entity) ? PluginCustomReference : CustomReference;
+    return new Relation<T, U, N>(entity, opts);
+  }
+
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<unknown> | undefined;
@@ -192,4 +203,38 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Checks custom results without changing required-reference nullability. */
+class PluginCustomReference<T extends Entity, U extends Entity, N extends never | undefined> extends CustomReference<
+  T,
+  U,
+  N
+> {
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
+  }
+
+  override get get(): U | N {
+    // Custom business logic needs complete dependencies; check applies access checks back in the caller's context.
+    return this.check(runInTrustedContext(() => super.get));
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(runInTrustedContext(() => super.getWithDeleted));
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await runInTrustedContext(() => super.load(opts)));
+  }
+
+  override get isSet(): boolean {
+    checkVisibleReference(this.entity, this.fieldName, undefined);
+    return runInTrustedContext(() => super.isSet);
+  }
+
+  /** Keeps the plugin call in the caller's context, outside the business callback. */
+  private check(value: U | N): U | N {
+    return checkVisibleReference(this.entity, this.fieldName, value);
+  }
 }

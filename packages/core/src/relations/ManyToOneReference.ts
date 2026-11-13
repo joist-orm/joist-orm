@@ -1,5 +1,5 @@
 import { type Entity, isEntity } from "src/Entity.ts";
-import { type IdOf, type TaggedId, getEmInternalApi, sameEntity } from "src/EntityManager.ts";
+import { type IdOf, type TaggedId, getEmInternalApi, hasVisibilityHook, sameEntity } from "src/EntityManager.ts";
 import { type EntityMetadata, type ManyToOneField, getMetadata } from "src/EntityMetadata.ts";
 import { getField, setField } from "src/fields.ts";
 import {
@@ -23,13 +23,15 @@ import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { OneToManyCollection } from "src/relations/OneToManyCollection.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
 import { maybeAdd, maybeRemove } from "src/utils.ts";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
     const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
-    return new ManyToOneReferenceImpl<T, U, N>(entity, m2o);
+    const Relation = hasVisibilityHook(entity) ? PluginManyToOneReference : ManyToOneReferenceImpl;
+    return new Relation<T, U, N>(entity, m2o);
   });
 }
 
@@ -96,14 +98,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       if (isEntity(current) || current === undefined) {
         this.#state = new M2OLoadedState<U, N>(this, current as U | N | undefined);
       } else {
-        await (this.#loadPromise ??= this.entity.em.load(this.otherMeta.cstr, current).then((entity) => {
-          this.#loadPromise = undefined;
-          // In extremely rare cases, someone might have called `set` while this promise was in-flight,
-          // so make sure our current value is still the same as the fetched entity.
-          if (sameEntity(entity, this.current())) {
-            this.#state = this.#state.applyLoad(entity);
-          }
-        }));
+        await (this.#loadPromise ??= getEmInternalApi(this.entity.em)
+          .load(this.otherMeta.cstr, current)
+          .then((entity) => {
+            this.#loadPromise = undefined;
+            // In extremely rare cases, someone might have called `set` while this promise was in-flight,
+            // so make sure our current value is still the same as the fetched entity.
+            if (sameEntity(entity, this.current())) {
+              this.#state = this.#state.applyLoad(entity);
+            }
+          }));
       }
     }
     return this.filterDeleted(this.#state.doGet() as U | N, opts);
@@ -172,7 +176,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       return;
     }
 
-    const loaded = newId ? (this.entity.em.getEntity(newId) as U) : undefined;
+    const loaded = newId ? getEmInternalApi(this.entity.em).getEntity<U>(newId) : undefined;
     this.#state = loaded ? new M2OLoadedState<U, N>(this, loaded) : new M2OUnloadedState<U, N>(this);
     this.#loadPromise = undefined;
     this.#percolateRemove(previousId, previous);
@@ -231,7 +235,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
 
     // Setting to an entity | undefined => loaded, setting to an id might reverse to unloaded
-    const maybeEntity = isEntity(other) ? (other as U) : other ? this.entity.em.getEntity(other) : undefined;
+    const maybeEntity = isEntity(other)
+      ? (other as U)
+      : other
+        ? getEmInternalApi(this.entity.em).getEntity(other)
+        : undefined;
     if (maybeEntity || other === undefined) {
       this.#state = new M2OLoadedState<U, N>(this, (maybeEntity ?? other) as U | N);
     } else {
@@ -255,7 +263,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
         if (typeof current === "string") {
           // We're invoked twice, once sync on em.delete, and again in em.flush when we're loaded;
           // but even when loaded, current might still be the tagged id, but we can find the entity in the EM
-          const other = this.entity.em.getEntity(current);
+          const other = getEmInternalApi(this.entity.em).getEntity(current);
           if (other) this.entity.em.delete(other as U);
         } else {
           this.entity.em.delete(current as U);
@@ -405,7 +413,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     const current = this.current();
     if (isEntity(current)) return current as U;
     const { idTaggedMaybe } = this;
-    return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U) : undefined;
+    return idTaggedMaybe !== undefined ? getEmInternalApi(this.entity.em).getEntity<U>(idTaggedMaybe) : undefined;
   }
 
   [RelationT]: T = null!;
@@ -447,6 +455,30 @@ export function failIfNewEntity(entity: Entity, fieldName: string, current: stri
   return undefined;
 }
 
+/** Adds public reference policy without changing canonical loading or FK read tracking. */
+class PluginManyToOneReference<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+> extends ManyToOneReferenceImpl<T, U, N> {
+  override get get(): U | N {
+    return this.check(super.get);
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(super.getWithDeleted);
+  }
+
+  override async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+    return this.check(await super.load(opts));
+  }
+
+  /** Checks the target rather than a derived id, so new entities are checked as well. */
+  private check<V extends Entity | undefined>(value: V): V {
+    return checkVisibleReference(this.entity, this.fieldName, value);
+  }
+}
+
 interface M2OState<U extends Entity, N extends never | undefined> {
   readonly isLoaded: boolean;
   maybeInstantLoad(): M2OState<U, N>;
@@ -472,7 +504,7 @@ class M2OUnloadedState<U extends Entity, N extends never | undefined> implements
     if (current === undefined || isEntity(current)) {
       return new M2OLoadedState<U, N>(this.#m2o, current as U | undefined);
     } else {
-      const maybeFound = this.#m2o.entity.em.getEntity(current);
+      const maybeFound = getEmInternalApi(this.#m2o.entity.em).getEntity(current);
       if (maybeFound) {
         return new M2OLoadedState<U, N>(this.#m2o, maybeFound as U);
       }

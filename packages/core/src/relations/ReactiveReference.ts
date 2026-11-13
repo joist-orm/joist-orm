@@ -1,5 +1,5 @@
 import { type Entity } from "src/Entity.ts";
-import { type IdOf } from "src/EntityManager.ts";
+import { type IdOf, hasVisibilityHook } from "src/EntityManager.ts";
 import { getField, setField } from "src/fields.ts";
 import {
   type EntityMetadata,
@@ -31,6 +31,8 @@ import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
 import { type Reference } from "src/relations/Reference.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { checkVisibleReference } from "src/relations/relationVisibility.ts";
+import { runInTrustedContext } from "src/trusted.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
   T,
@@ -79,7 +81,8 @@ export function hasReactiveReference<
 >(hint: H, fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N): ReactiveReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
     const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
-    return new ReactiveReferenceImpl<T, U, H, N>(entity, m2o, hint, fn);
+    const Relation = hasVisibilityHook(entity) ? PluginReactiveReference : ReactiveReferenceImpl;
+    return new Relation<T, U, H, N>(entity, m2o, hint, fn);
   });
 }
 
@@ -431,7 +434,9 @@ export class ReactiveReferenceImpl<
       }
     }
     const { idTaggedMaybe } = this;
-    return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N);
+    return idTaggedMaybe !== undefined
+      ? (getEmInternalApi(this.entity.em).getEntity<U>(idTaggedMaybe) as U | N)
+      : (undefined as N);
   }
 
   [RelationT]: T = null!;
@@ -442,6 +447,31 @@ export class ReactiveReferenceImpl<
 /** Type guard utility for determining if an entity field is a ReactiveReference. */
 export function isReactiveReference(maybeReactiveRef: any): maybeReactiveRef is ReactiveReference<any, any, any> {
   return maybeReactiveRef instanceof ReactiveReferenceImpl;
+}
+
+/** Applies policy to derived targets after business logic has evaluated complete dependencies. */
+class PluginReactiveReference<
+  T extends Entity,
+  U extends Entity,
+  H extends ReactiveHint<T>,
+  N extends never | undefined,
+> extends ReactiveReferenceImpl<T, U, H, N> {
+  override get get(): U | N {
+    return this.check(runInTrustedContext(() => super.get));
+  }
+
+  override get getWithDeleted(): U | N {
+    return this.check(runInTrustedContext(() => super.getWithDeleted));
+  }
+
+  override async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
+    return this.check(await runInTrustedContext(() => super.load(opts)));
+  }
+
+  /** Checks visibility when returning the target entity. */
+  private check<V extends Entity | undefined>(value: V): V {
+    return checkVisibleReference(this.entity, this.fieldName, value);
+  }
 }
 
 interface RRState<U extends Entity, N extends never | undefined> {

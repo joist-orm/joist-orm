@@ -13,7 +13,7 @@ export const loadOperation = "load";
 
 /**
  * Batches em.load-style fetches, writing to identity map (via hydrate) instead of returning values.
- * After the batch resolves, callers retrieve their entity from `em.findExistingInstance`.
+ * After the batch resolves, callers retrieve their entity from the internal identity map.
  *
  * Accepts tuples of `{ taggedId, hint }` so the preloader can inject join-based
  * preloading into the same SELECT that fetches the entities.
@@ -38,7 +38,8 @@ export function loadBatchLoader(
     } satisfies ParsedFindQuery;
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     // Inject preloading joins into the query if enabled
-    const { preloader } = getEmInternalApi(em);
+    const api = getEmInternalApi(em);
+    const { preloader } = api;
     const preloadHydrator =
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
@@ -53,7 +54,7 @@ export function loadBatchLoader(
           for (let i = 0; i < rowData.rowCount; i++) foundIds.add(tagId(meta, rowData.get(i, "id")));
           for (const load of loads) {
             if (!foundIds.has(load.taggedId)) {
-              const existingEntity = em.findExistingInstance(load.taggedId);
+              const existingEntity = api.getEntity(load.taggedId);
               if (existingEntity) {
                 getInstanceData(existingEntity).markDeletedBecauseNotFound();
               }

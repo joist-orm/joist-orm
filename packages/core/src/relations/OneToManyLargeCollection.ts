@@ -1,18 +1,21 @@
 import { oneToManyFindDataLoader } from "src/dataloaders/oneToManyFindDataLoader.ts";
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, appendStack, sameEntity } from "src/EntityManager.ts";
+import { type IdOf, appendStack, hasVisibilityHook, sameEntity } from "src/EntityManager.ts";
 import { type EntityMetadata, type LargeOneToManyField, getMetadataForField } from "src/EntityMetadata.ts";
+import { getStoredField } from "src/fields.ts";
 import { type ManyToOneReferenceImpl, ensureNotDeleted, getMetadata } from "src/index.ts";
 import { lazyField } from "src/newEntity.ts";
 import { type LargeCollection } from "src/relations/LargeCollection.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
+import { filterVisible } from "src/relations/relationVisibility.ts";
 import { remove } from "src/utils.ts";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(): LargeCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
     const lo2m = getMetadata(entity).allFields[fieldName] as LargeOneToManyField;
-    return new OneToManyLargeCollection(entity, lo2m);
+    const Relation = hasVisibilityHook(entity) ? PluginOneToManyLargeCollection : OneToManyLargeCollection;
+    return new Relation<T, U>(entity, lo2m);
   });
 }
 
@@ -54,7 +57,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.#getOtherRelation(other).current());
+    return sameEntity(this.entity, getStoredField<Entity | string | undefined>(other, this.otherFieldName));
   }
 
   add(other: U): void {
@@ -113,4 +116,21 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/** Applies visibility to member lookups without loading the collection. */
+class PluginOneToManyLargeCollection<T extends Entity, U extends Entity> extends OneToManyLargeCollection<T, U> {
+  override async find(id: IdOf<U>): Promise<U | undefined> {
+    const value = await super.find(id);
+    return this.filter(value ? [value] : [])[0];
+  }
+
+  override async includes(other: U): Promise<boolean> {
+    return this.filter([other]).length > 0 && super.includes(other);
+  }
+
+  /** Projects lookup results without changing physical membership. */
+  private filter(values: readonly U[]): U[] {
+    return filterVisible(this.entity, this.fieldName, values);
+  }
 }

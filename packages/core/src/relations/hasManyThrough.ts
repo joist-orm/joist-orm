@@ -23,7 +23,7 @@ export function hasManyThrough<T extends Entity, U extends Entity>(
 ): Collection<T, U> {
   return lazyField((entity: T) => {
     const meta = getMetadata(entity);
-    return new CustomCollection<T, U>(entity, {
+    return CustomCollection.create<T, U>(entity, {
       load: (entity, opts) => loadLens(entity, lens, opts),
       get: () => getLens(meta, entity, lens),
       isLoaded: () => isLensLoaded(entity, lens),

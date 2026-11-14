@@ -88,6 +88,57 @@ beforeFind(
 }
 ```
 
+### beforeQuery
+
+`beforeQuery(query: ParsedReadQuery)` runs once for an entire read statement from `em.query` or
+`em.execute`. Like `beforeFind`, it receives a resolved AST before join pruning and SQL rendering.
+
+`ParsedReadQuery` is a `ParsedSelectQuery` or `ParsedSetQuery` (UNION, INTERSECT, or EXCEPT).
+Nested queries remain structured nodes in CTEs, sources, and expressions.
+
+You can directly mutate the query instance, or use a helper method like `visitQuery`:
+
+```ts
+beforeQuery(query: ParsedReadQuery): void {
+  visitQuery(query, (select) => {
+    for (const source of [select.from, ...select.joins.map((join) => join.source)]) {
+      // Inspect sources and modify the AST.
+    }
+  });
+}
+```
+
+You can modify the AST directly.
+
+`visitQueryExpressions(query, (node, context) => ...)` visits expressions and predicates across
+the read statement. The context provides the enclosing `select`, the expression's `clause`, and
+`resolveSource(alias)` for local or correlated FROM/JOIN sources. Nested SELECTs have their own
+clause context.
+
+### afterQuery
+
+`afterQuery(query: ParsedReadQuery, rows: RowData)` observes the top-level query's rows after they are
+returned, before decoding or entity hydration. Both `em.query` and reads through `em.execute` invoke
+this hook.
+
+For the SELECT root, plugins can use `query.entityMetadata` and append auxiliary columns to
+`query.selects` in `beforeQuery` if they want to return additional data as a sidecar.
+
+A plugin can implement `afterQuery` to inspect results without implementing `beforeQuery`.
+
+For a top-level set operation such as UNION, the root has `kind: "set"` and describes the combined
+result, i.e. a union of SELECT clauses.
+
+### beforeExecute
+
+`beforeExecute(query: ParsedExecuteQuery): void` runs after parsing an `em.execute` INSERT,
+UPDATE, or DELETE, before pruning and rendering it. The AST includes the target, assignments,
+VALUES or INSERT source, conditions, RETURNING, and nested read queries.
+
+Throw to reject writes that would bypass entity setters, reactions, and flush validation.
+Use `visitQuery(query, ...)` to apply policies to reads inside the mutation. Those reads do not
+invoke `beforeQuery` separately. A SELECT passed to `em.execute` uses `beforeQuery` instead.
+
 ### afterFind
 
 Called after a find operation has been executed with a read-only `RowData` view of the raw

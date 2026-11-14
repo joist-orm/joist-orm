@@ -2254,8 +2254,7 @@ describe("em.query", () => {
         await insertAuthor({ first_name: "Selected" });
         // And SQL tables for the Author report and its Book join
         const em = newEntityManager();
-        const a = table(Author);
-        const b = table(Book);
+        const [a, b] = tables(Author, Book);
         // And the domain condition is already bound by em.find, not merely an unresolved alias
         const domain = alias(Author);
         const condition = domain.firstName.eq("Selected");
@@ -2588,7 +2587,9 @@ describe("em.query", () => {
       await expect(
         em.query({ from: a, join: [{ inner: b, on: b.authorId.eq(authorId) }], select: { title: b.title } }),
       ).rejects.toThrow(
-        new Error("Join Table for books has no ON condition left (they all pruned), but the query still references it"),
+        new Error(
+          "Join table books AS b has no ON condition left (they all pruned), but the query still references it",
+        ),
       );
     });
 
@@ -2607,7 +2608,7 @@ describe("em.query", () => {
         }),
       ).rejects.toThrow(
         new Error(
-          "Join Table for book_reviews references 'b', which is joined later; move that join earlier in the join array",
+          "Join table book_reviews AS br references 'b', which is joined later; move that join earlier in the join array",
         ),
       );
     });

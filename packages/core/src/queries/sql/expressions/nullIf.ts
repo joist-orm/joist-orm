@@ -1,7 +1,8 @@
-import type { ExprContext, SqlFragment } from "src/queries/sql/Expr.ts";
+import type { ExprContext } from "src/queries/sql/Expr.ts";
 import { functionToSql } from "src/queries/sql/expressions/expression.ts";
 import { parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import type { ParsedSql } from "src/queries/sql/ParsedSqlExpression.ts";
 
 /** A value and the value it must equal for NULLIF to return SQL NULL. */
 export interface NullIfInput {
@@ -22,7 +23,7 @@ export function parseNullIfExpression(input: unknown): ParsedNullIfExpression {
 }
 
 /** Renders the returned value before its equality comparison operand. */
-export function nullIfToSql(parsed: ParsedNullIfExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
+export function nullIfToSql(parsed: ParsedNullIfExpression, ctx: ExprContext, codec: ResultCodec): ParsedSql {
   return functionToSql("NULLIF", [parsed.value, parsed.equals], ctx, codec);
 }
 

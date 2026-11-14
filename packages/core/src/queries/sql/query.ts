@@ -1,18 +1,17 @@
 import type { Entity } from "src/Entity.ts";
 import { type EntityMetadata, getBaseMeta } from "src/EntityMetadata.ts";
-import { ConditionBuilder } from "src/queries/ConditionBuilder.ts";
+import { parseExpression } from "src/queries/ConditionBuilder.ts";
 import {
   type ConditionGroup,
-  type ConditionInput,
+  type ConditionTree,
   type SqlCondition,
   type SqlPredicate,
   type UnbrandedPredicate,
   predicateBrand,
 } from "src/queries/conditions.ts";
-import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "src/queries/entityQueryUtils.ts";
+import { filterSoftDeletes, stiSubtypeFilter } from "src/queries/entityQueryUtils.ts";
 import { isDeferredAliasCondition } from "src/queries/find/DeferredAlias.ts";
-import { type ColumnCondition, type ParsedExpressionFilter, deepFindConditions } from "src/queries/parsedConditions.ts";
-import { buildWhereClause } from "src/queries/renderConditions.ts";
+import type { ColumnCondition } from "src/queries/parsedConditions.ts";
 import { skipCondition } from "src/queries/skipCondition.ts";
 import { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
 import {
@@ -22,15 +21,14 @@ import {
   type ExprLike,
   type InnerJoin,
   type LeftJoin,
-  type SqlFragment,
   TemplateExpr,
   asNode,
   deferredCondition,
   deferredSym,
   exprBrand,
+  isDeferredCondition,
   isExpr,
   orderByToSql,
-  resolveDeferredConditions,
   selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
 import {
@@ -42,7 +40,16 @@ import {
   buildExpr,
 } from "src/queries/sql/expressions/expression.ts";
 import { type CheckJoinInput, type TreeEntries, compileJoinTree } from "src/queries/sql/JoinTree.ts";
-import { kq, kqStar, safeKq } from "src/queries/sql/keywords.ts";
+import { kq, safeKq } from "src/queries/sql/keywords.ts";
+import type { ParsedReadQuery, ParsedSelectQuery, ParsedSetQuery } from "src/queries/sql/ParsedQuery.ts";
+import {
+  type ParsedSql,
+  type ParsedSqlConditionLeaf,
+  type ParsedSqlFilter,
+  type QuerySql,
+  columnSql,
+  joinSql,
+} from "src/queries/sql/ParsedSqlExpression.ts";
 import {
   type InQueryCondition,
   JoinTableHandle,
@@ -62,7 +69,6 @@ import {
   m2mJoinTable,
   referenceJoinSource,
   tableMgmt,
-  tableSqlName,
 } from "src/queries/sql/Tables.ts";
 import type { TypeInfo } from "src/serde/TypeInfo.ts";
 import { fail } from "src/utils.ts";
@@ -1000,7 +1006,7 @@ sql.booleanArrayOrNull = typedSql<boolean[] | null>;
 
 /** A raw condition for `where`, `having`, or `on`. */
 sql.condition = function condition(strings: TemplateStringsArray, ...values: unknown[]): SqlCondition {
-  return deferredCondition((ctx) => new TemplateExpr(strings, values).toSql(ctx));
+  return deferredCondition((ctx) => new TemplateExpr(strings, values).parseSql(ctx));
 };
 
 /**
@@ -1011,7 +1017,8 @@ sql.condition = function condition(strings: TemplateStringsArray, ...values: unk
  */
 export function parseRootQuery(arg: unknown): Plan {
   if (arg instanceof SubqueryExpr) fail("Scalar query values are expressions, not executable read inputs");
-  return parseQuery(toQuery(arg), undefined, new AliasAssigner());
+  const assigner = new AliasAssigner();
+  return parseQuery(toQuery(arg), undefined, assigner);
 }
 
 /**
@@ -1036,13 +1043,13 @@ export function projectionToSql(
   select: unknown,
   ctx: Ctx,
   joins?: QueryJoinList,
-): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
+): { selects: ParsedSql[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const output = joinedOutput(projectionOutput(select), joins);
   if (output.kind === "scalar") {
     // Scalar mode: one value per row, used by scalar/IN-list subqueries
     const expr = output.columns[0][1];
-    const fragment = expr.toSql(ctx);
-    const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
+    const fragment = expr.parseSql(ctx);
+    const selects = [joinSql([fragment, " AS value"])];
     return {
       selects,
       decodeRows: (_, rows) => rows.map((row) => decodeValue(expr, row.value)),
@@ -1053,8 +1060,8 @@ export function projectionToSql(
   const entries = output.columns;
   const selects = entries.map((entry) => {
     const [key, expr] = entry;
-    const fragment = expr.toSql(ctx);
-    return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
+    const fragment = expr.parseSql(ctx);
+    return joinSql([fragment, ` AS ${safeKq(key)}`]);
   });
   return {
     selects,
@@ -1075,11 +1082,8 @@ export interface EntityHydrator {
   hydrate(cstr: any, rows: readonly any[]): any[];
 }
 
-export interface Plan {
-  sql: string;
-  bindings: any[];
-  /** Aliases of enclosing queries this (sub)query referenced. */
-  outerRefs: string[];
+export interface Plan<Q = ParsedReadQuery> {
+  query: Q;
   /** Ordered SQL output columns and their existing expression codecs, before JS row decoding. */
   output: QueryOutput;
   decodeRows(em: EntityHydrator, rows: any[]): any[];
@@ -1189,10 +1193,9 @@ class SubqueryColumnExpr extends BaseExpr {
     return this.key;
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
+  parseSql(ctx: ExprContext): ParsedSql {
     const alias = ctx.aliasFor(this.handle);
-    // safeKq for the alias too: a subquery's canonical alias is its user-provided `as` name
-    return { sql: `${safeKq(alias)}.${safeKq(this.key)}`, bindings: [], refs: [alias] };
+    return columnSql(alias, this.key);
   }
 
   decode(value: unknown): unknown {
@@ -1244,15 +1247,15 @@ class SubqueryExpr extends BaseExpr {
     return true;
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
-    const bare = this.toSqlBare(ctx);
-    return { ...bare, sql: `(${bare.sql})` };
+  parseSql(ctx: ExprContext): ParsedSql {
+    const bare = this.parseSqlBare(ctx);
+    return joinSql(["(", bare, ")"]);
   }
 
-  toSqlBare(ctx: ExprContext): SqlFragment {
+  parseSqlBare(ctx: ExprContext): ParsedSql {
     const parent = ctx instanceof Ctx ? ctx : fail("Subqueries need the query parser's context");
     const plan = parseQuery(this.handle.q, parent, parent.assigner);
-    return { sql: plan.sql, bindings: plan.bindings, refs: plan.outerRefs };
+    return queryFragment(plan);
   }
 
   decode(value: unknown): unknown {
@@ -1568,8 +1571,8 @@ class OutputExpr extends BaseExpr {
     return this.nullable;
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
-    return this.inner.toSql(ctx);
+  parseSql(ctx: ExprContext): ParsedSql {
+    return this.inner.parseSql(ctx);
   }
 
   decode(value: unknown): unknown {
@@ -1599,37 +1602,22 @@ function parseSetQuery(
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
   const ctes = registerCtes(q, ctx, assigner);
   const plans = operands.map((operand) => parseQuery(toQuery(operand), ctx, assigner));
-  let sql = "";
-  for (const plan of plans) {
-    let branch = plan.sql;
-    if (output.columns.some(([key], i) => plan.output.columns[i][0] !== key)) {
-      const alias = safeKq(assigner.getLiteralAlias("sq"));
-      branch = `SELECT ${output.columns.map(([key]) => `${alias}.${safeKq(key)} AS ${safeKq(key)}`).join(", ")} FROM (${branch}) AS ${alias}`;
-    }
-    sql = sql ? `(${sql}) ${SET_OPERATIONS[operation]} (${branch})` : branch;
-  }
-  const orderBys = setOrderBys(q, output);
-  if (orderBys.length > 0) sql += ` ORDER BY ${orderBys.join(", ")}`;
-  const bindings = plans.flatMap((plan) => plan.bindings);
-  if (q.limit !== undefined) {
-    sql += " LIMIT ?";
-    bindings.push(q.limit);
-  }
-  if (q.offset !== undefined) {
-    sql += " OFFSET ?";
-    bindings.push(q.offset);
-  }
-  const withCtes = prependCtes(ctes, new Set(plans.flatMap((plan) => plan.outerRefs)), sql, bindings);
-  // An operand that reads one of our CTEs resolved that name here, not in the enclosing query, so the
-  // name must not go out in `outerRefs`. That list is how this query tells the enclosing one which of
-  // *its* aliases we depend on, and the enclosing query keeps those joins alive rather than pruning
-  // them; a CTE name in there would pin a join that has nothing to do with it.
-  const cteAliases = new Set(ctes.map((cte) => cte.alias));
-  const outerRefs = [...ctx.outerRefs, ...plans.flatMap((plan) => plan.outerRefs)];
+  const query: ParsedSetQuery = {
+    kind: "set",
+    operation: SET_OPERATIONS[operation],
+    operands: plans.map((plan) => ({
+      query: plan.query,
+      alignment: output.columns.some(([key], i) => plan.output.columns[i][0] !== key)
+        ? { alias: assigner.getLiteralAlias("sq"), columns: output.columns.map(([key]) => key) }
+        : undefined,
+    })),
+    ctes,
+    orderBys: setOrderBys(q, output),
+    limit: q.limit,
+    offset: q.offset,
+  };
   return {
-    sql: withCtes.sql,
-    bindings: withCtes.bindings,
-    outerRefs: [...new Set(outerRefs.filter((ref) => !cteAliases.has(ref)))],
+    query,
     output,
     decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
   };
@@ -1656,9 +1644,7 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
 /**
  * What an expression needs from the query it is generating SQL for.
  *
- * Each (sub)query gets its own `Ctx`; a lookup that misses locally walks up to the enclosing query and
- * records the hit in `outerRefs`, which is how a correlated subquery reports the outer aliases it
- * depends on (the way `ExistsCondition.outerAliases` does), so join pruning keeps them.
+ * Each (sub)query gets its own `Ctx`; a lookup that misses locally walks up to the enclosing query.
  */
 export class Ctx implements ExprContext {
   private aliases = new Map<object, string>();
@@ -1678,7 +1664,6 @@ export class Ctx implements ExprContext {
   private usedCtes = new Set<object>();
   /** The recursive CTE whose body this query is part of, if any; see `recursiveSelf`. */
   private ownRecursiveSelf: SubqueryHandle | undefined;
-  readonly outerRefs = new Set<string>();
 
   constructor(
     readonly assigner: AliasAssigner,
@@ -1714,9 +1699,6 @@ export class Ctx implements ExprContext {
   /**
    * The CTE name for `handle`, looking in the enclosing queries too, because a CTE is in scope for the
    * whole statement.
-   *
-   * Unlike `aliasFor`, a hit in an enclosing query is not added to `outerRefs`: reading a CTE by name
-   * is not a correlated reference, so it must not keep an enclosing join alive.
    */
   cteAliasFor(handle: object): string | undefined {
     return this.ctes.get(handle) ?? this.parent?.cteAliasFor(handle);
@@ -1761,20 +1743,17 @@ export class Ctx implements ExprContext {
   aliasFor(handle: object): string {
     const local = this.aliases.get(handle);
     if (local) return local;
-    if (this.parent) {
-      const outer = this.parent.aliasFor(handle);
-      this.outerRefs.add(outer);
-      return outer;
-    }
+    if (this.parent) return this.parent.aliasFor(handle);
     return fail(`${describeHandle(handle)} is not in this query's from/join`);
   }
 
-  conditionToSql(cond: QueryCondition): SqlFragment | undefined {
+  parseCondition(cond: QueryCondition): ParsedSql | undefined {
     // Inside another expression (i.e. a `sql` template), keep `a OR b` grouped
-    return conditionToSql(cond, this, false);
+    return parseCondition(cond, this, false);
   }
 }
 
+/** Names a source in parsing errors. */
 function describeHandle(handle: object): string {
   if (handle instanceof SubqueryHandle) return `Query value ${handle.describe()}`;
   if (handle instanceof JoinTableHandle) return `Join table ${handle.joinTableName}`;
@@ -1782,45 +1761,56 @@ function describeHandle(handle: object): string {
   return "Table";
 }
 
-interface ParsedSource {
+export type ParsedSource = ParsedTableSource | ParsedCteSource | ParsedQuerySource;
+
+interface ParsedSourceBase {
   handle: TableSourceMgmt | SubqueryHandle | JoinTableHandle;
   alias: string;
-  /** `table AS alias` or `(SELECT ...) AS alias`. */
-  sql: string;
-  bindings: any[];
-  /** Outer aliases a derived table references; PG rejects those without LATERAL, but pruning should still see them. */
-  refs: string[];
-  /** Entity-mode selects, i.e. `a.*` excluding lazy columns. */
-  entitySelects: string[];
   meta: EntityMetadata | undefined;
+}
+
+/** A physical table in FROM or JOIN. */
+export interface ParsedTableSource extends ParsedSourceBase {
+  kind: "table";
+  table: string;
+  schema?: string;
+}
+
+/** A reference to a named CTE. */
+export interface ParsedCteSource extends ParsedSourceBase {
+  kind: "cte";
+  cte: string;
+}
+
+/** An inline subquery in FROM or JOIN. */
+export interface ParsedQuerySource extends ParsedSourceBase {
+  kind: "query";
+  query: ParsedReadQuery;
 }
 
 /** A parsed `with` entry: the CTE's name and its body, ready to render into the WITH clause. */
 export interface ParsedCte {
   alias: string;
-  plan: Plan;
+  query: ParsedReadQuery;
   /** A recursive CTE reads itself, and makes the whole clause `WITH RECURSIVE`. */
   recursive: boolean;
 }
 
-interface ParsedJoin {
+export interface ParsedJoin {
   kind: "inner" | "left";
   source: ParsedSource;
-  /** The user's ON alone; `undefined` means it pruned away entirely, an error if the join is kept. */
-  userOn: SqlFragment | undefined;
-  /** The ON to emit: the user's ON plus any injected soft-delete conditions. */
-  fullOn: SqlFragment | undefined;
+  /** An absent ON is an error if the join survives pruning. */
+  on: ParsedSql | undefined;
   keep: boolean;
 }
 
 /**
- * Parses one `Query` POJO into SQL, recursively for subqueries.
+ * Parses one query occurrence into a resolved tree.
  *
  * 1. Register every source's runtime identity with its SQL alias in this parse's context.
- * 2. Generate SQL for sources, selects, conditions, group-bys, and order-bys against the context; every fragment
- *    reports the aliases it references.
- * 3. Prune: drop joins nothing references (see below), then reject a kept join whose ON collapsed.
- * 4. Assemble the SQL from the kept fragments, so pruned bindings disappear with their SQL.
+ * 2. Resolve sources, selects, conditions, group-bys, and order-bys against the context.
+ * 3. Return the complete AST to the statement-level plugin hook.
+ * Pruning, join validation, and SQL assembly happen later in renderQuery.
  */
 function parseQuery(
   q: AnyReadQuery,
@@ -1829,7 +1819,19 @@ function parseQuery(
   recursiveSelf?: SubqueryHandle,
 ): Plan {
   validateReadQuery(q);
-  if (isSetQuery(q)) return parseSetQuery(q, parent, assigner, recursiveSelf);
+  const plan = isSetQuery(q)
+    ? parseSetQuery(q, parent, assigner, recursiveSelf)
+    : parseSelectQuery(q, parent, assigner, recursiveSelf);
+  return plan;
+}
+
+/** Resolves SELECT clauses once, retaining child queries for the statement-level rewrite hook. */
+function parseSelectQuery(
+  q: AnyQuery,
+  parent: Ctx | undefined,
+  assigner: AliasAssigner,
+  recursiveSelf?: SubqueryHandle,
+): Plan {
   q = normalizeQueryJoins(q);
   const ctx = new Ctx(assigner, parent);
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
@@ -1862,11 +1864,11 @@ function parseQuery(
   const from = parseFrom();
   const userJoins: ParsedJoin[] = pendingJoins.map((j) => {
     const source = j.parseSource();
-    // `userOn` is the user's ON alone, so the collapsed-ON check below is not fooled by injections
-    const userOn = conditionToSql(j.on, ctx, true);
+    // Soft-delete predicates must not rescue an ON whose optional conditions all disappeared.
+    const userOn = parseCondition(j.on, ctx, true);
     const injected = injectedConditions(source, j.softDeletes ? softDeletes : "include");
-    const fullOn = userOn && injected.length > 0 ? conditionToSql({ and: [j.on, ...injected] }, ctx, true) : userOn;
-    return { kind: j.kind, keep: j.keep, source, userOn, fullOn };
+    const on = userOn && injected.length > 0 ? parseCondition({ and: [j.on, ...injected] }, ctx, true) : userOn;
+    return { kind: j.kind, keep: j.keep, source, on };
   });
   const cti = ctiEntityPlan(q, from, assigner);
   const joins = [...cti.joins, ...userJoins];
@@ -1874,70 +1876,30 @@ function parseQuery(
   const { selects, decodeRows, output } = selectsToSql(q, ctx, from, cti.selects ?? sti.selects);
   const fromInjected = [...injectedConditions(from, softDeletes), ...sti.conditions];
   const predicate = normalizeWhere(q.where);
-  const where = conditionToSql(fromInjected.length > 0 ? { and: [predicate, ...fromInjected] } : predicate, ctx, true);
-  const having = conditionToSql(q.having, ctx, true);
-  const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
+  const where = parseCondition(fromInjected.length > 0 ? { and: [predicate, ...fromInjected] } : predicate, ctx, true);
+  const having = parseCondition(q.having, ctx, true);
+  const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").parseSql(ctx));
   const orderBys = orderBysToSql(q, ctx);
 
-  // 3. Prune.
-  const { joins: kept, ctes: keptCtes } = pruneJoins(
-    q,
-    ctx,
+  const query: ParsedSelectQuery = {
+    kind: "select",
+    selects,
     from,
     joins,
     ctes,
-    [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined),
-  );
-  // Joins emit in declaration order, so an ON may only reference sources declared before it; a forward
-  // reference would reach PG as invalid SQL ("missing FROM-clause entry"). Reordering is not offered:
-  // it is not semantics-preserving once INNER and LEFT joins mix, and the caller's fix is trivial.
-  const laterAliases = new Set(kept.map((j) => j.source.alias));
-  for (const j of kept) {
-    if (!j.userOn) {
-      fail(
-        `Join ${describeHandle(j.source.handle)} has no ON condition left (they all pruned), but the query still references it`,
-      );
-    }
-    laterAliases.delete(j.source.alias);
-    const forward = j.fullOn!.refs.find((r) => laterAliases.has(r));
-    if (forward) {
-      fail(
-        `Join ${describeHandle(j.source.handle)} references '${forward}', which is joined later; move that join earlier in the join array`,
-      );
-    }
-  }
-
-  // 4. Assemble.
-  const out: SqlFragment[] = [];
-  // WITH leads the statement, so its bindings must be pushed before the SELECT's.
-  if (keptCtes.length > 0) out.push(withFragment(keptCtes));
-  out.push({ sql: `SELECT ${q.distinct ? "DISTINCT " : ""}`, bindings: [], refs: [] });
-  out.push(joinFragmentParts(selects, ", "));
-  out.push({ sql: ` FROM ${from.sql}`, bindings: from.bindings, refs: [] });
-  for (const j of kept) {
-    const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
-    out.push({
-      sql: ` ${keyword} ${j.source.sql} ON ${j.fullOn!.sql}`,
-      bindings: [...j.source.bindings, ...j.fullOn!.bindings],
-      refs: [],
-    });
-  }
-  if (where) out.push({ sql: ` WHERE ${where.sql}`, bindings: where.bindings, refs: [] });
-  if (groupBys.length > 0)
-    out.push({ ...joinFragmentParts(groupBys, ", "), sql: ` GROUP BY ${groupBys.map((g) => g.sql).join(", ")}` });
-  if (having) out.push({ sql: ` HAVING ${having.sql}`, bindings: having.bindings, refs: [] });
-  if (orderBys.length > 0)
-    out.push({ ...joinFragmentParts(orderBys, ", "), sql: ` ORDER BY ${orderBys.map((o) => o.sql).join(", ")}` });
-  if (q.limit !== undefined) out.push({ sql: ` LIMIT ?`, bindings: [q.limit], refs: [] });
-  if (q.offset !== undefined) out.push({ sql: ` OFFSET ?`, bindings: [q.offset], refs: [] });
-
-  return {
-    sql: out.map((o) => o.sql).join(""),
-    bindings: out.flatMap((o) => o.bindings),
-    outerRefs: [...ctx.outerRefs],
-    output,
-    decodeRows,
+    where,
+    having,
+    groupBys,
+    orderBys,
+    entityMetadata: output.kind === "entity" ? from.meta : undefined,
+    distinct: q.distinct ?? false,
+    limit: q.limit,
+    offset: q.offset,
+    pruneJoins: q.pruneJoins !== false,
+    recursiveAlias: [from, ...joins.map((join) => join.source)].find((source) => source.handle === ctx.recursiveSelf)
+      ?.alias,
   };
+  return { query, output, decodeRows };
 }
 
 /**
@@ -1953,12 +1915,10 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
     ctx.useCte(handle);
     // A declared CTE is read by its name; the `with` that declared it already parsed its body.
     return () => ({
+      kind: "cte",
       handle,
       alias: cteAlias,
-      sql: safeKq(cteAlias),
-      bindings: [],
-      refs: [],
-      entitySelects: [],
+      cte: cteAlias,
       meta: undefined,
     });
   }
@@ -1973,12 +1933,10 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
     return () => {
       const inner = parseQuery(handle.q, ctx, assigner);
       return {
+        kind: "query",
         handle,
         alias,
-        sql: `(${inner.sql}) AS ${safeKq(alias)}`,
-        bindings: inner.bindings,
-        refs: inner.outerRefs,
-        entitySelects: [],
+        query: inner.query,
         meta: undefined,
       };
     };
@@ -1988,19 +1946,14 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
     const meta = "meta" in mgmt ? mgmt.meta : undefined;
     const alias = assigner.getAlias(tableName);
     ctx.register(handle, alias);
-    return () => {
-      // Ordinary entity mode selects the table's columns, excluding lazy ones like em.find.
-      const entitySelects = !meta ? [] : meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
-      return {
-        handle,
-        alias,
-        sql: `${tableSqlName(mgmt)} AS ${kq(alias)}`,
-        bindings: [],
-        refs: [],
-        entitySelects,
-        meta,
-      };
-    };
+    return () => ({
+      kind: "table",
+      handle,
+      alias,
+      table: tableName,
+      schema: "schema" in mgmt ? mgmt.schema : undefined,
+      meta,
+    });
   }
 }
 
@@ -2039,12 +1992,10 @@ function registerJoinTable(handle: JoinTableHandle, ctx: Ctx, assigner: AliasAss
   const alias = assigner.getAlias(handle.joinTableName);
   ctx.register(handle, alias);
   return () => ({
+    kind: "table",
     handle,
     alias,
-    sql: `${kq(handle.joinTableName)} AS ${kq(alias)}`,
-    bindings: [],
-    refs: [],
-    entitySelects: [],
+    table: handle.joinTableName,
     meta: undefined,
   });
 }
@@ -2054,8 +2005,8 @@ function selectsToSql(
   q: AnyQuery,
   ctx: Ctx,
   from: ParsedSource,
-  entitySelects?: SqlFragment[],
-): { selects: SqlFragment[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
+  entitySelects?: ParsedSql[],
+): { selects: ParsedSql[]; decodeRows: Plan["decodeRows"]; output: QueryOutput } {
   const { select } = q;
   if (isTable(select) && !isEntityTable(select)) {
     fail("A custom table cannot be selected as an entity; select its columns individually");
@@ -2066,9 +2017,8 @@ function selectsToSql(
     if (from.handle !== getTableMgmt(select)) {
       fail("Selecting a joined table is not supported yet; select the from table, or select its columns individually");
     }
-    const alias = ctx.aliasFor(getTableMgmt(select));
     const meta = getTableMetadata(select);
-    const selects = entitySelects ?? from.entitySelects.map((s) => ({ sql: s, bindings: [], refs: [alias] }));
+    const selects = entitySelects ?? entitySelectFragments(meta, from.alias);
     return {
       selects,
       decodeRows: (em, rows) => em.hydrate(meta.cstr as any, rows),
@@ -2085,11 +2035,7 @@ function selectsToSql(
     }
     const alias = ctx.aliasFor(handle);
     const output = handle.output();
-    const selects = output.columns.map(([k]) => ({
-      sql: `${safeKq(alias)}.${safeKq(k)} AS ${safeKq(k)}`,
-      bindings: [],
-      refs: [alias],
-    }));
+    const selects = output.columns.map(([k]) => joinSql([columnSql(alias, k), ` AS ${safeKq(k)}`]));
     return {
       selects,
       decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
@@ -2111,7 +2057,7 @@ function ctiEntityPlan(
   q: AnyQuery,
   from: ParsedSource,
   assigner: AliasAssigner,
-): { joins: ParsedJoin[]; selects: SqlFragment[] | undefined } {
+): { joins: ParsedJoin[]; selects: ParsedSql[] | undefined } {
   // CTI expansion belongs only to entity mode. Column projections keep their explicit physical-table shape.
   if (!isEntityTable(q.select) || from.handle !== getTableMgmt(q.select)) return { joins: [], selects: undefined };
   const meta = getTableMetadata(q.select);
@@ -2119,7 +2065,7 @@ function ctiEntityPlan(
 
   // Start with the selected table. Hydration expects one flat row containing every CTI table's columns.
   const joins: ParsedJoin[] = [];
-  const selects: SqlFragment[] = from.entitySelects.map((sql) => ({ sql, bindings: [], refs: [from.alias] }));
+  const selects = entitySelectFragments(meta, from.alias);
 
   // A subtype starts from its own table, so join each base table to recover inherited fields.
   for (const [i, baseMeta] of meta.baseTypes.entries()) {
@@ -2146,28 +2092,28 @@ function ctiEntityPlan(
   }
 
   // Joined `table.*` projections can overwrite id, so finish with the selected table's canonical entity id.
-  selects.push({
-    sql: `${safeKq(from.alias)}.${kq("id")} AS ${kq("id")}`,
-    bindings: [],
-    refs: [from.alias],
-  });
+  selects.push(joinSql([columnSql(from.alias, "id"), ` AS ${kq("id")}`]));
   // Collapse same-named sibling fields into the one column name that entity hydration reads.
   for (const [column, aliases] of subtypeColumns) {
     if (aliases.length < 2) continue;
-    selects.push({
-      sql: `COALESCE(${aliases.map((alias) => `${safeKq(alias)}.${kq(column)}`).join(", ")}) AS ${kq(column)}`,
-      bindings: [],
-      refs: aliases,
-    });
+    selects.push(
+      joinSql([
+        "COALESCE(",
+        joinSql(
+          aliases.map((alias) => columnSql(alias, column)),
+          ", ",
+        ),
+        `) AS ${kq(column)}`,
+      ]),
+    );
   }
   // The first present subtype row identifies the concrete constructor; `_` means the base table itself.
   if (meta.subTypes.length > 0) {
     const subtypeAliases = joins.slice(meta.baseTypes.length).map((join) => join.source.alias);
-    selects.push({
-      sql: `CASE ${subtypeAliases.map((alias) => `WHEN ${safeKq(alias)}.${kq("id")} IS NOT NULL THEN ?`).join(" ")} ELSE '_' END AS ${kq("__class")}`,
-      bindings: meta.subTypes.map((subtype) => subtype.type),
-      refs: subtypeAliases,
-    });
+    const branches = subtypeAliases.map((alias, i) =>
+      joinSql(["WHEN ", columnSql(alias, "id"), " IS NOT NULL THEN ", { value: meta.subTypes[i].type }]),
+    );
+    selects.push(joinSql(["CASE ", joinSql(branches, " "), ` ELSE '_' END AS ${kq("__class")}`]));
   }
   return { joins, selects };
 }
@@ -2176,22 +2122,18 @@ function ctiEntityPlan(
 function stiEntityPlan(
   q: AnyQuery,
   from: ParsedSource,
-): { selects: SqlFragment[] | undefined; conditions: ColumnCondition[] } {
+): { selects: ParsedSql[] | undefined; conditions: ColumnCondition[] } {
   // As with CTI, only a table selected from itself requests entity hydration and inheritance behavior.
   if (!isEntityTable(q.select) || from.handle !== getTableMgmt(q.select)) return { selects: undefined, conditions: [] };
   const meta = getTableMetadata(q.select);
   if (meta.inheritanceType !== "sti") return { selects: undefined, conditions: [] };
 
   // STI stores the complete family in one row, so the ordinary physical projection already supplies its fields.
-  const selects: SqlFragment[] = from.entitySelects.map((sql) => ({ sql, bindings: [], refs: [from.alias] }));
+  const selects = entitySelectFragments(meta, from.alias);
   // `table.*` includes the discriminator. An explicit lazy-safe projection might not, so append it for hydration.
-  if (!(from.entitySelects.length === 1 && from.entitySelects[0] === kqStar(from.alias))) {
+  if (!(selects.length === 1 && selects[0].kind === "star")) {
     const discriminator = getBaseMeta(meta).stiDiscriminatorColumnName!;
-    selects.push({
-      sql: `${safeKq(from.alias)}.${kq(discriminator)} AS ${kq(discriminator)}`,
-      bindings: [],
-      refs: [from.alias],
-    });
+    selects.push(joinSql([columnSql(from.alias, discriminator), ` AS ${kq(discriminator)}`]));
   }
   // Root reads may hydrate any concrete class. Subtype reads must exclude sibling rows to preserve their result type.
   const condition = stiSubtypeFilter(meta, from.alias);
@@ -2200,32 +2142,28 @@ function stiEntityPlan(
 
 /** Creates one mandatory CTI join through the selected source's primary key. */
 function ctiJoin(from: ParsedSource, meta: EntityMetadata, alias: string): ParsedJoin {
-  const on = {
-    sql: `${safeKq(from.alias)}.${kq("id")} = ${safeKq(alias)}.${kq("id")}`,
-    bindings: [],
-    refs: [from.alias, alias],
-  };
+  const on = joinSql([columnSql(from.alias, "id"), " = ", columnSql(alias, "id")]);
   return {
     kind: "left",
     source: {
+      kind: "table",
       handle: { tableName: meta.tableName, meta } as TableMgmt,
       alias,
-      sql: `${kq(meta.tableName)} AS ${safeKq(alias)}`,
-      bindings: [],
-      refs: [],
-      entitySelects: [],
+      table: meta.tableName,
       meta,
     },
-    userOn: on,
-    fullOn: on,
+    on,
     keep: true,
   };
 }
 
 /** Selects one physical CTI table while preserving lazy-field exclusions. */
-function entitySelectFragments(meta: EntityMetadata, alias: string): SqlFragment[] {
-  const selects = meta.hasLazyColumns ? lazyExcludedSelects(meta, alias) : [kqStar(alias)];
-  return selects.map((sql) => ({ sql, bindings: [], refs: [alias] }));
+function entitySelectFragments(meta: EntityMetadata, alias: string): ParsedSql[] {
+  if (!meta.hasLazyColumns) return [{ kind: "star", alias }];
+  return Object.values(meta.fields).flatMap((field) => {
+    if (!field.serde || (field.kind === "primitive" && field.lazy)) return [];
+    return field.serde.columns.map((column) => columnSql(alias, column.columnName));
+  });
 }
 
 function decodeRow(row: any, decoders: readonly (readonly [string, BaseExpr])[]): any {
@@ -2263,10 +2201,10 @@ const ORDER_BY_DIRECTIONS: readonly OrderByDirection[] = [
  * Expression entries retain bindings and alias references for join pruning. Undefined entries and
  * directions are omitted before expression references are collected.
  */
-function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
+function orderBysToSql(q: AnyQuery, ctx: Ctx): ParsedSql[] {
   const { orderBy, select } = q;
   if (!orderBy) return [];
-  const result: SqlFragment[] = [];
+  const result: ParsedSql[] = [];
   for (const entry of Array.isArray(orderBy) ? orderBy : [orderBy]) {
     if (entry === undefined) continue;
     // A select key can also be named sort, order, or nulls, so distinguish by the sort value.
@@ -2283,15 +2221,15 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
       if (isTable(select)) {
         const column = (select as any)[key];
         if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable column of the table`);
-        const fragment = asNode(column).toSql(ctx);
-        result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
+        const fragment = asNode(column).parseSql(ctx);
+        result.push(joinSql([fragment, ` ${dir}`]));
       } else {
         if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
         const keys = isSubqueryValue(select)
           ? select[subqueryBrand].columnKeys()
           : projectionOutput(select).columns.map(([key]) => key);
         if (!keys.includes(key)) return fail(`orderBy key '${key}' is not a key of select`);
-        result.push({ sql: `${safeKq(key)} ${dir}`, bindings: [], refs: [] });
+        result.push(joinSql([`${safeKq(key)} ${dir}`]));
       }
     }
   }
@@ -2304,19 +2242,17 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
  * `pruneIfUndefined` applies unchanged. Deferred SQL expression conditions are resolved
  * against the context first.
  */
-export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
+export function parseCondition(cond: QueryCondition | undefined, ctx: Ctx, topLevel: boolean): ParsedSql | undefined {
   checkCondition(cond);
   if (cond === undefined) return undefined;
-  const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx);
+  const resolved = resolveQueryCondition(cond, ctx);
   if (resolved === undefined) return undefined;
-  const filter: ConditionGroup<ConditionInput> = isFilter(resolved) ? resolved : { and: [resolved] };
-  const cb = new ConditionBuilder();
-  cb.maybeAddExpression(filter);
-  const parsed = cb.toExpressionFilter();
+  const filter: ConditionGroup<ConditionTree<ParsedSqlConditionLeaf>> = isFilter(resolved)
+    ? resolved
+    : { and: [resolved] };
+  const parsed = parseExpression<ParsedSqlConditionLeaf>(filter);
   if (!parsed) return undefined;
-  const where = buildWhereClause(parsed, topLevel);
-  if (!where) return undefined;
-  return { sql: where[0], bindings: where[1], refs: refsOf(parsed) };
+  return conditionFragment(parsed, topLevel);
 }
 
 /**
@@ -2333,6 +2269,12 @@ function checkCondition(value: unknown): void {
       "Domain alias conditions are only supported by em.find; use table(...) predicates in SQL queries and mutations.",
     );
   if (value === undefined || value === skipCondition) return;
+  if (isDeferredCondition(value)) {
+    checkPojoKeys(value, ["kind", deferredSym, predicateBrand], "Query deferred condition");
+    if (value.kind !== "deferred" || typeof value[deferredSym] !== "function")
+      fail("Malformed query deferred condition");
+    return;
+  }
   if (isInQueryCondition(value)) {
     const q = normalizeQueryJoins(toQuery(value[inQueryCondition].query) as AnyQuery);
     checkCondition(normalizeWhere(q.where));
@@ -2453,14 +2395,20 @@ export function checkPojoKeys(value: object, allowed: readonly PropertyKey[], de
  * Converts query-valued predicates to SQL conditions for the shared condition builder.
  * Keeps each subquery's projection and reports its outer aliases for join pruning.
  */
-function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): ConditionInput | undefined {
-  if (cond === undefined) return undefined;
+function resolveQueryCondition(
+  cond: QueryCondition | undefined,
+  ctx: Ctx,
+): ConditionTree<ParsedSqlConditionLeaf> | undefined {
+  if (cond === undefined || cond === skipCondition) return undefined;
+  if (isDeferredCondition(cond)) {
+    return { kind: "expression", expression: cond[deferredSym](ctx) };
+  }
   if (isInQueryCondition(cond)) {
     const { column, query } = cond[inQueryCondition];
     const value = createMaybeQueryValue(query as AnyQuery);
     if (value === undefined) return undefined;
     if (!isExpr(value)) return fail("An in query literal must select one expression");
-    return column.in(value);
+    return resolveQueryCondition(column.in(value), ctx);
   }
   if ("and" in cond && cond.and) {
     return {
@@ -2477,17 +2425,16 @@ function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): Cond
     if (subquery === undefined) return undefined;
     const plan = parseQuery(toQuery(subquery), ctx, ctx.assigner);
     return {
-      kind: "raw",
-      condition: `${positive ? "EXISTS" : "NOT EXISTS"} (${plan.sql})`,
-      bindings: plan.bindings,
-      aliases: plan.outerRefs,
-      pruneable: false,
+      kind: "expression",
+      expression: joinSql([`${positive ? "EXISTS" : "NOT EXISTS"} (`, queryFragment(plan), ")"]),
     };
   }
-  return cond as ConditionInput;
+  return cond as ParsedSqlConditionLeaf;
 }
 
-function isFilter(cond: ConditionInput): cond is ConditionGroup<ConditionInput> {
+function isFilter(
+  cond: ConditionTree<ParsedSqlConditionLeaf>,
+): cond is ConditionGroup<ConditionTree<ParsedSqlConditionLeaf>> {
   return ("and" in cond && cond.and !== undefined) || ("or" in cond && cond.or !== undefined);
 }
 
@@ -2520,70 +2467,6 @@ function isInQueryCondition(value: unknown): value is InQueryCondition {
   return typeof value === "object" && value !== null && inQueryCondition in value;
 }
 
-/** The physical source aliases a parsed condition tree references. */
-function refsOf(parsed: ParsedExpressionFilter): string[] {
-  return deepFindConditions(parsed, false).flatMap((c) =>
-    c.kind === "column" ? [c.alias] : c.kind === "raw" ? c.aliases : c.outerAliases,
-  );
-}
-
-/**
- * Pruning: em.find's paradigm, on a flat join list.
- *
- * A condition given `undefined` was already dropped by `ConditionBuilder`. Now a join that nothing
- * references anymore drops with it: a join is required if the source, a select, a surviving condition,
- * a group-by, an order-by, or another required join's ON references it, or if it is pinned with
- * `keep: true`. Marking follows ON dependencies transitively, exactly like `pruneUnusedJoins`'s
- * `DependencyTracker`.
- *
- * em.find's joins almost never filter rows by themselves, so pruning them is semantics-preserving. An
- * explicit `{ inner: b, on }` here does filter rows, so pruning it when unreferenced drops that filter;
- * that matches `{ books: { title: undefined } }` in em.find and is deliberate. `keep: true` pins it, and
- * a pure existence filter is better written as `a.id.in(query({ ... }))`, which is never `undefined`.
- *
- * CTEs prune on the same rule and through the same dependency map: a `with` entry nothing reads
- * anymore drops with the join that read it, and a CTE read only by another CTE survives with it.
- * A CTE joined into the query shares its alias with that join, so their dependencies are merged.
- *
- * The one join that never prunes is a recursive term's reference to its own CTE: PostgreSQL requires
- * it, so it is not the caller's optional filter (see `Ctx.recursiveSelf`).
- */
-function pruneJoins(
-  q: AnyQuery,
-  ctx: Ctx,
-  from: ParsedSource,
-  joins: ParsedJoin[],
-  ctes: ParsedCte[],
-  used: SqlFragment[],
-): { joins: ParsedJoin[]; ctes: ParsedCte[] } {
-  if (q.pruneJoins === false) return { joins, ctes };
-  const deps = new Map<string, string[]>();
-  function addDeps(alias: string, refs: readonly string[]): void {
-    const own = refs.filter((r) => r !== alias);
-    const existing = deps.get(alias);
-    if (existing) existing.push(...own);
-    else deps.set(alias, own);
-  }
-  for (const j of joins) addDeps(j.source.alias, [...(j.userOn?.refs ?? []), ...j.source.refs]);
-  for (const c of ctes) addDeps(c.alias, c.plan.outerRefs);
-  const required = new Set<string>();
-  function markRequired(alias: string): void {
-    if (required.has(alias)) return;
-    required.add(alias);
-    for (const dep of deps.get(alias) ?? []) markRequired(dep);
-  }
-  markRequired(from.alias);
-  for (const r of used.flatMap((u) => u.refs)) markRequired(r);
-  for (const j of joins) if (j.keep) markRequired(j.source.alias);
-  // A recursive term must keep its reference to its own CTE; PostgreSQL rejects a term without one,
-  // and pruning it would quietly turn the recursion into a plain select over the base term's table.
-  for (const j of joins) if (j.source.handle === ctx.recursiveSelf) markRequired(j.source.alias);
-  return {
-    joins: joins.filter((j) => required.has(j.source.alias)),
-    ctes: ctes.filter((c) => required.has(c.alias)),
-  };
-}
-
 /**
  * Names and parses each `with` entry, in declaration order.
  *
@@ -2606,7 +2489,7 @@ export function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasA
     // Otherwise parse first, then promote: the body sees earlier siblings, but not itself or later ones.
     const plan = parseQuery(handle.q, ctx, assigner, handle.recursive ? handle : undefined);
     if (!handle.recursive) ctx.promoteCte(handle);
-    return { alias: aliases[i], plan, recursive: handle.recursive };
+    return { alias: aliases[i], query: plan.query, recursive: handle.recursive };
   });
 }
 
@@ -2622,54 +2505,6 @@ function withEntryHandle(entry: unknown): SubqueryHandle {
   return readValueHandle(entry);
 }
 
-/**
- * Puts a statement's surviving `with` entries in front of it, dropping the ones nothing reads.
- *
- * `referenced` is the aliases the rest of the statement used. The WITH clause leads the statement, so
- * its bindings lead the statement's bindings too.
- */
-export function prependCtes(
-  ctes: ParsedCte[],
-  referenced: Set<string>,
-  sql: string,
-  bindings: any[],
-): { sql: string; bindings: any[] } {
-  const kept = pruneCtes(ctes, referenced);
-  if (kept.length === 0) return { sql, bindings };
-  const clause = withFragment(kept);
-  return { sql: clause.sql + sql, bindings: [...clause.bindings, ...bindings] };
-}
-
-/**
- * Drops the CTEs that nothing reads, given the aliases the rest of the statement referenced.
- *
- * A CTE can only read earlier siblings, so going last to first means every CTE that could read this one
- * was already visited, and its own reads are already in `referenced`. That makes one pass enough; first
- * to last would have to repeat until the set stopped growing. `unshift` restores WITH order.
- */
-export function pruneCtes(ctes: ParsedCte[], referenced: Set<string>): ParsedCte[] {
-  const kept: ParsedCte[] = [];
-  for (let i = ctes.length - 1; i >= 0; i--) {
-    const cte = ctes[i];
-    if (!referenced.has(cte.alias)) continue;
-    for (const ref of cte.plan.outerRefs) referenced.add(ref);
-    kept.unshift(cte);
-  }
-  return kept;
-}
-
-/**
- * Renders `WITH a AS (...), b AS (...) `, whose bindings lead the statement, as their SQL does.
- *
- * One recursive CTE makes the whole clause `WITH RECURSIVE`, PostgreSQL's rule: the keyword is on the
- * clause, not on the entry that needs it, and it does not force the other entries to be recursive.
- */
-export function withFragment(ctes: ParsedCte[]): SqlFragment {
-  const recursive = ctes.some((c) => c.recursive) ? " RECURSIVE" : "";
-  const sql = ctes.map((c) => `${safeKq(c.alias)} AS (${c.plan.sql})`).join(", ");
-  return { sql: `WITH${recursive} ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };
-}
-
 function asExpr(value: unknown, where: string): BaseExpr {
   if (value instanceof BaseExpr) return value;
   return fail(`${where} must be an expression, i.e. a table column, aggregate, sql\`...\`, or scalar query(...)`);
@@ -2680,10 +2515,6 @@ function asSelectExpr(value: unknown, where: string): BaseExpr {
   if (value instanceof BaseExpr) return value;
   if (isPlainSelect(value)) return buildExpr(value);
   return fail(`${where} must be a column, an expression, or an expression literal`);
-}
-
-function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {
-  return { sql: parts.map((p) => p.sql).join(sep), bindings: parts.flatMap((p) => p.bindings), refs: [] };
 }
 
 function isDefined<T>(value: T | undefined): value is T {
@@ -2718,4 +2549,14 @@ function createQueryValue(q: AnyReadQuery): unknown {
 /** Keeps shorthand declarations callable-only, without recursively copying sql's own shorthand properties. */
 function typedSql<R>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
   return new TemplateExpr(strings, values) as unknown as Expr<R, never>;
+}
+
+/** Retains the parsed condition tree until nested query rewrites are complete. */
+function conditionFragment(filter: ParsedSqlFilter, topLevel: boolean): ParsedSql {
+  return { kind: "condition", condition: filter, topLevel };
+}
+
+/** Embeds a parsed child by reference for rendering after the statement hook. */
+export function queryFragment(plan: Pick<Plan, "query">): QuerySql {
+  return { kind: "query", query: plan.query };
 }

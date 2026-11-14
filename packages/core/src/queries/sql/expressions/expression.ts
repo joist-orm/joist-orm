@@ -1,4 +1,4 @@
-import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import { BaseExpr, type ExprContext } from "src/queries/sql/Expr.ts";
 import { arrayAggToSql } from "src/queries/sql/expressions/arrayAgg.ts";
 import { caseNullable, caseToSql } from "src/queries/sql/expressions/case.ts";
 import { coalesceNullable, coalesceToSql } from "src/queries/sql/expressions/coalesce.ts";
@@ -14,6 +14,7 @@ import type {
   ParsedExpression,
   ResultCodec,
 } from "src/queries/sql/expressions/types.ts";
+import { type ParsedSql, joinSql } from "src/queries/sql/ParsedSqlExpression.ts";
 import type { TypeInfo } from "src/serde/TypeInfo.ts";
 import { assertNever } from "src/utils.ts";
 
@@ -53,7 +54,7 @@ class ObjectExpr extends BaseExpr {
     return expressionNullable(this.parsed);
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
+  parseSql(ctx: ExprContext): ParsedSql {
     return expressionToSql(this.parsed, ctx, this.codec);
   }
 
@@ -96,16 +97,15 @@ export function expressionNullable(parsed: ParsedExpression): boolean | undefine
  * Renders a ParsedExpression in SQL binding order, resolving CASE conditions and collecting references for join pruning.
  * An omitted CASE condition removes its value as well. I.e. an unused Book.title branch must not keep the Book join.
  */
-export function expressionToSql(parsed: ParsedExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
-  if (parsed instanceof BaseExpr) return parsed.toSql(ctx);
+export function expressionToSql(parsed: ParsedExpression, ctx: ExprContext, codec: ResultCodec): ParsedSql {
+  if (parsed instanceof BaseExpr) return parsed.parseSql(ctx);
   switch (parsed.kind) {
     case "literal": {
       const dbType = codec.outputType?.dbType;
-      return {
-        sql: dbType ? `?::${dbType}` : "?",
-        bindings: [parsed.value === null ? null : codec.encode(parsed.value)],
-        refs: [],
-      };
+      return joinSql([
+        { value: parsed.value === null ? null : codec.encode(parsed.value) },
+        ...(dbType ? [`::${dbType}`] : []),
+      ]);
     }
     case "arrayAgg":
       return arrayAggToSql(parsed, ctx, chooseExpressionCodec(parsed.value));
@@ -130,10 +130,10 @@ export function functionToSql(
   args: readonly ParsedExpression[],
   ctx: ExprContext,
   codec: ResultCodec,
-): SqlFragment {
-  const parts = joinFragments(
+): ParsedSql {
+  const parts = joinSql(
     args.map((arg) => expressionToSql(arg, ctx, codec)),
     ", ",
   );
-  return { ...parts, sql: `${name}(${parts.sql})` };
+  return joinSql([`${name}(`, parts, ")"]);
 }

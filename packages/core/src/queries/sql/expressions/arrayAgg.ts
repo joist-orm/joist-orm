@@ -1,15 +1,8 @@
-import {
-  type ArrayAggOptions,
-  BaseExpr,
-  type ExprContext,
-  type ExprLike,
-  type SqlFragment,
-  joinFragments,
-  orderByToSql,
-} from "src/queries/sql/Expr.ts";
+import { type ArrayAggOptions, BaseExpr, type ExprContext, type ExprLike, orderByToSql } from "src/queries/sql/Expr.ts";
 import { expressionToSql } from "src/queries/sql/expressions/expression.ts";
 import { checkKeys, isObject, parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import { type ParsedSql, joinSql } from "src/queries/sql/ParsedSqlExpression.ts";
 
 /** The aggregate value alone, or the value together with PostgreSQL aggregate options. */
 export interface ArrayAggInput {
@@ -53,13 +46,9 @@ export function parseArrayAggExpression(input: unknown): ParsedArrayAggExpressio
 }
 
 /** Renders ARRAY_AGG's value, ordering, and filter in SQL binding order. */
-export function arrayAggToSql(
-  parsed: ParsedArrayAggExpression,
-  ctx: ExprContext,
-  valueCodec: ResultCodec,
-): SqlFragment {
+export function arrayAggToSql(parsed: ParsedArrayAggExpression, ctx: ExprContext, valueCodec: ResultCodec): ParsedSql {
   const value = expressionToSql(parsed.value, ctx, valueCodec);
-  const ordering = joinFragments(
+  const ordering = joinSql(
     (parsed.options?.orderBy ?? []).flatMap((entry) => {
       if (entry === undefined) return [];
       const fragment = orderByToSql(entry, ctx);
@@ -68,12 +57,14 @@ export function arrayAggToSql(
     ", ",
   );
   const filter = parsed.options?.filter;
-  const condition = filter === undefined ? undefined : ctx.conditionToSql(filter);
-  return {
-    sql: `array_agg(${parsed.options?.distinct ? "DISTINCT " : ""}${value.sql}${ordering.sql ? ` ORDER BY ${ordering.sql}` : ""})${condition ? ` FILTER (WHERE ${condition.sql})` : ""}`,
-    bindings: [...value.bindings, ...ordering.bindings, ...(condition?.bindings ?? [])],
-    refs: [...value.refs, ...ordering.refs, ...(condition?.refs ?? [])],
-  };
+  const condition = filter === undefined ? undefined : ctx.parseCondition(filter);
+  return joinSql([
+    `array_agg(${parsed.options?.distinct ? "DISTINCT " : ""}`,
+    value,
+    ...(ordering.parts.length ? [" ORDER BY ", ordering] : []),
+    ")",
+    ...(condition ? [" FILTER (WHERE ", condition, ")"] : []),
+  ]);
 }
 
 /** Distinguishes expanded options from nested object expressions. */

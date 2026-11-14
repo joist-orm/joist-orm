@@ -27,7 +27,7 @@
     "mitata": "^1.0.34"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^7.4.6",
+    "@graphql-codegen/cli": "^8.0.0",
     "@graphql-tools/graphql-file-loader": "^9.1.1",
     "@graphql-tools/load": "^9.1.1",
     "@homebound/graphql-typescript-possible-types": "^2.20.0",

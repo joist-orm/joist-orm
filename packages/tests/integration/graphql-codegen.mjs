@@ -6,7 +6,6 @@ export default {
   overwrite: true,
   schema: "./schema/**/*.graphql",
   documents: null,
-  emitLegacyCommonJSImports: true,
   generates: {
     "src/generated/graphql-types.ts": {
       config: {

@@ -21,7 +21,7 @@
     "temporal-polyfill": "^1.0.6"
   },
   "devDependencies": {
-    "@graphql-codegen/add": "^7.1.1",
+    "@graphql-codegen/add": "^8.0.0",
     "@graphql-codegen/cli": "^7.4.6",
     "@homebound/graphql-typescript-simple-resolvers": "^1.60.0",
     "@swc/core": "1.16.21",

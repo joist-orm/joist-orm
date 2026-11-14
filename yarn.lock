@@ -1730,6 +1730,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@graphql-codegen/add@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "@graphql-codegen/add@npm:8.0.0"
+  dependencies:
+    "@graphql-codegen/plugin-helpers": "npm:^8.0.0"
+    tslib: "npm:^2.8.0"
+  peerDependencies:
+    graphql: ^16.0.0 || ^17.0.0
+  checksum: 10/b1dd02948b12dc7fc1c137afe7028f9447e41b63394725b7b6e44fd496f4e74fd747191df5739505938b107baf9c38d622c3a33331f075dc73ff16fefdcc6aef
+  languageName: node
+  linkType: hard
+
 "@graphql-codegen/cli@npm:^7.4.6":
   version: 7.4.6
   resolution: "@graphql-codegen/cli@npm:7.4.6"
@@ -1886,6 +1898,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@graphql-codegen/plugin-helpers@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "@graphql-codegen/plugin-helpers@npm:8.0.0"
+  dependencies:
+    "@graphql-tools/apollo-engine-loader": "npm:^9.0.2"
+    "@graphql-tools/utils": "npm:^13.0.2"
+    change-case-all: "npm:^2.1.0"
+    common-tags: "npm:1.8.2"
+    import-from: "npm:4.0.0"
+    tslib: "npm:^2.8.0"
+  peerDependencies:
+    graphql: ^16.0.0 || ^17.0.0
+  checksum: 10/60904b16d847eaf08196e8d2fb02e50862efc2e35ae212baf07febabbf249c4704b927c9093223660d988f9dd4f3474ee844411035a7bca602b7c8fa5dc86713
+  languageName: node
+  linkType: hard
+
 "@graphql-codegen/schema-ast@npm:^6.1.0":
   version: 6.1.0
   resolution: "@graphql-codegen/schema-ast@npm:6.1.0"
@@ -2019,6 +2047,20 @@ __metadata:
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
   checksum: 10/f7b306549eb4c641c5da5b1e0ce45e2d9b18e4dcc1720a56f2f55d880c72908069cde2389b88b8ce3fcacd19f1aef27de7398c45866d20b11a1408f4f0b68a47
+  languageName: node
+  linkType: hard
+
+"@graphql-tools/apollo-engine-loader@npm:^9.0.2":
+  version: 9.0.8
+  resolution: "@graphql-tools/apollo-engine-loader@npm:9.0.8"
+  dependencies:
+    "@graphql-tools/utils": "npm:^13.2.1"
+    "@whatwg-node/fetch": "npm:^0.12.0"
+    sync-fetch: "npm:0.7.1"
+    tslib: "npm:^2.4.0"
+  peerDependencies:
+    graphql: ^16.0.0 || ^17.0.0
+  checksum: 10/ef141f867f5c27c79413f75b458e9ef277cabfeae29a9f1485d55043dbfc612408ec1fd441e4af6eb248f84fd4159d9d1bf4ab3f00be765603667188cb68a815
   languageName: node
   linkType: hard
 
@@ -2511,7 +2553,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphql-tools/utils@npm:^13.2.1":
+"@graphql-tools/utils@npm:^13.0.2, @graphql-tools/utils@npm:^13.2.1":
   version: 13.2.1
   resolution: "@graphql-tools/utils@npm:13.2.1"
   dependencies:
@@ -11521,7 +11563,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-esm@workspace:packages/tests/esm"
   dependencies:
-    "@graphql-codegen/add": "npm:^7.1.1"
+    "@graphql-codegen/add": "npm:^8.0.0"
     "@graphql-codegen/cli": "npm:^7.4.6"
     "@homebound/graphql-typescript-simple-resolvers": "npm:^1.60.0"
     "@swc/core": "npm:1.16.21"

@@ -11645,7 +11645,7 @@ __metadata:
     knex: "npm:3.3.0"
     mitata: "npm:^1.0.34"
     postgrejs: "npm:3.14.1"
-    postgres: "npm:^3.4.9"
+    postgres: "npm:^4.1.0"
     superstruct: "npm:^2.0.2"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.23.15"
@@ -15387,10 +15387,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres@npm:^3.4.9":
-  version: 3.4.9
-  resolution: "postgres@npm:3.4.9"
-  checksum: 10/c6c7e85f5cfb00d455bcfee98e7af2abded43323552295044f00a602431465c9296ef6152d45d4a53bf3a72323ca00e03585b7ba6f8713367e42d1ef34d1fa5d
+"postgres@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "postgres@npm:4.1.0"
+  checksum: 10/cae8800f806d18d7291497e28cb5527df1a8f95b27bff10d4e08fa5ad7ce0275269dda48d90feb8777e88ae8a35aa0ae4cbd4ff8c7313b2197362e08d476206f
   languageName: node
   linkType: hard
 

@@ -3,9 +3,19 @@ import { type EntityManager, type FindOperation, isDefined } from "src/EntityMan
 import { type EntityMetadata } from "src/EntityMetadata.ts";
 import type { JoinRowTodo, Todo } from "src/flush/Todo.ts";
 import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import type { ParsedExecuteQuery, ParsedReadQuery } from "src/queries/sql/ParsedQuery.ts";
 import { type RowData } from "src/RowData.ts";
 
 interface PluginMethods {
+  /** Called once with the complete read tree, before join pruning and SQL rendering. */
+  beforeQuery?(query: ParsedReadQuery): void;
+
+  /** Observes the outer read's driver rows once, before decoding/hydration; nested reads have no result hooks. */
+  afterQuery?(query: ParsedReadQuery, rows: RowData): void;
+
+  /** Called before immediate mutations, which bypass entity setters and flush validation. Throw to deny. */
+  beforeExecute?(query: ParsedExecuteQuery): void;
+
   /**
    * Called before a cold field read. Throw to deny access.
    * On visibility-aware EMs, called for every untrusted read and skipped for trusted reads.
@@ -85,6 +95,9 @@ const syncPluginMethods = [
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
+  "beforeQuery",
+  "afterQuery",
+  "beforeExecute",
   "afterFind",
   "afterWrite",
 ] as const satisfies readonly (keyof PluginMethods)[];
@@ -204,6 +217,9 @@ export class PluginManager implements Required<PluginMethods> {
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
   beforeGetField(entity: Entity, field: string): void {}
+  beforeQuery(query: ParsedReadQuery): void {}
+  afterQuery(query: ParsedReadQuery, rows: RowData): void {}
+  beforeExecute(query: ParsedExecuteQuery): void {}
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,

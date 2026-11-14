@@ -133,6 +133,14 @@ export { InstanceData } from "src/InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "src/flush/JoinRows.ts";
 export type * from "src/flush/PendingChanges.ts";
 export { Plugin } from "src/PluginManager.ts";
+export {
+  visitQuery,
+  type ParsedReadQuery,
+  type ParsedSelectQuery,
+  type ParsedSetQuery,
+  type ParsedExecuteQuery,
+  type ParsedQueryTable,
+} from "src/queries/sql/ParsedQuery.ts";
 export * from "src/queries/find/QueryParser.ts";
 export * from "src/queries/find/buildFindQuery.ts";
 export * from "src/queries/renderConditions.ts";

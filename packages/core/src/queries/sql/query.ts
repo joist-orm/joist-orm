@@ -10,8 +10,14 @@ import {
   predicateBrand,
 } from "src/queries/conditions.ts";
 import { filterSoftDeletes, lazyExcludedSelects, stiSubtypeFilter } from "src/queries/entityQueryUtils.ts";
+import { buildRawQuery } from "src/queries/find/buildFindQuery.ts";
 import { isDeferredAliasCondition } from "src/queries/find/DeferredAlias.ts";
-import { type ColumnCondition, type ParsedExpressionFilter, deepFindConditions } from "src/queries/parsedConditions.ts";
+import {
+  type ColumnCondition,
+  type ParsedExpressionCondition,
+  type ParsedExpressionFilter,
+  deepFindConditions,
+} from "src/queries/parsedConditions.ts";
 import { buildWhereClause } from "src/queries/renderConditions.ts";
 import { skipCondition } from "src/queries/skipCondition.ts";
 import { AliasAssigner } from "src/queries/sql/AliasAssigner.ts";
@@ -25,11 +31,14 @@ import {
   type SqlFragment,
   TemplateExpr,
   asNode,
+  composeSql,
   deferredCondition,
   deferredSym,
   exprBrand,
   isExpr,
+  joinFragments,
   orderByToSql,
+  renderSql,
   resolveDeferredConditions,
   selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
@@ -43,6 +52,7 @@ import {
 } from "src/queries/sql/expressions/expression.ts";
 import { type CheckJoinInput, type TreeEntries, compileJoinTree } from "src/queries/sql/JoinTree.ts";
 import { kq, kqStar, safeKq } from "src/queries/sql/keywords.ts";
+import type { ParsedReadQuery, ParsedSelectQuery, ParsedSetQuery } from "src/queries/sql/ParsedQuery.ts";
 import {
   type InQueryCondition,
   JoinTableHandle,
@@ -1011,7 +1021,8 @@ sql.condition = function condition(strings: TemplateStringsArray, ...values: unk
  */
 export function parseRootQuery(arg: unknown): Plan {
   if (arg instanceof SubqueryExpr) fail("Scalar query values are expressions, not executable read inputs");
-  return parseQuery(toQuery(arg), undefined, new AliasAssigner());
+  const assigner = new AliasAssigner();
+  return parseQuery(toQuery(arg), undefined, assigner);
 }
 
 /**
@@ -1042,7 +1053,7 @@ export function projectionToSql(
     // Scalar mode: one value per row, used by scalar/IN-list subqueries
     const expr = output.columns[0][1];
     const fragment = expr.toSql(ctx);
-    const selects = [{ ...fragment, sql: `${fragment.sql} AS value` }];
+    const selects = [composeSql([fragment, " AS value"])];
     return {
       selects,
       decodeRows: (_, rows) => rows.map((row) => decodeValue(expr, row.value)),
@@ -1054,7 +1065,7 @@ export function projectionToSql(
   const selects = entries.map((entry) => {
     const [key, expr] = entry;
     const fragment = expr.toSql(ctx);
-    return { ...fragment, sql: `${fragment.sql} AS ${safeKq(key)}` };
+    return composeSql([fragment, ` AS ${safeKq(key)}`]);
   });
   return {
     selects,
@@ -1075,9 +1086,8 @@ export interface EntityHydrator {
   hydrate(cstr: any, rows: readonly any[]): any[];
 }
 
-export interface Plan {
-  sql: string;
-  bindings: any[];
+export interface Plan<Q = ParsedReadQuery> {
+  query: Q;
   /** Aliases of enclosing queries this (sub)query referenced. */
   outerRefs: string[];
   /** Ordered SQL output columns and their existing expression codecs, before JS row decoding. */
@@ -1246,13 +1256,13 @@ class SubqueryExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const bare = this.toSqlBare(ctx);
-    return { ...bare, sql: `(${bare.sql})` };
+    return composeSql(["(", bare, ")"]);
   }
 
   toSqlBare(ctx: ExprContext): SqlFragment {
     const parent = ctx instanceof Ctx ? ctx : fail("Subqueries need the query parser's context");
     const plan = parseQuery(this.handle.q, parent, parent.assigner);
-    return { sql: plan.sql, bindings: plan.bindings, refs: plan.outerRefs };
+    return queryFragment(plan);
   }
 
   decode(value: unknown): unknown {
@@ -1599,27 +1609,21 @@ function parseSetQuery(
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
   const ctes = registerCtes(q, ctx, assigner);
   const plans = operands.map((operand) => parseQuery(toQuery(operand), ctx, assigner));
-  let sql = "";
-  for (const plan of plans) {
-    let branch = plan.sql;
-    if (output.columns.some(([key], i) => plan.output.columns[i][0] !== key)) {
-      const alias = safeKq(assigner.getLiteralAlias("sq"));
-      branch = `SELECT ${output.columns.map(([key]) => `${alias}.${safeKq(key)} AS ${safeKq(key)}`).join(", ")} FROM (${branch}) AS ${alias}`;
-    }
-    sql = sql ? `(${sql}) ${SET_OPERATIONS[operation]} (${branch})` : branch;
-  }
-  const orderBys = setOrderBys(q, output);
-  if (orderBys.length > 0) sql += ` ORDER BY ${orderBys.join(", ")}`;
-  const bindings = plans.flatMap((plan) => plan.bindings);
-  if (q.limit !== undefined) {
-    sql += " LIMIT ?";
-    bindings.push(q.limit);
-  }
-  if (q.offset !== undefined) {
-    sql += " OFFSET ?";
-    bindings.push(q.offset);
-  }
-  const withCtes = prependCtes(ctes, new Set(plans.flatMap((plan) => plan.outerRefs)), sql, bindings);
+  const query: ParsedSetQuery = {
+    kind: "set",
+    operation: SET_OPERATIONS[operation],
+    operands: plans.map((plan) => ({
+      query: plan.query,
+      outerRefs: plan.outerRefs,
+      alignment: output.columns.some(([key], i) => plan.output.columns[i][0] !== key)
+        ? { alias: assigner.getLiteralAlias("sq"), columns: output.columns.map(([key]) => key) }
+        : undefined,
+    })),
+    ctes,
+    orderBys: setOrderBys(q, output),
+    limit: q.limit,
+    offset: q.offset,
+  };
   // An operand that reads one of our CTEs resolved that name here, not in the enclosing query, so the
   // name must not go out in `outerRefs`. That list is how this query tells the enclosing one which of
   // *its* aliases we depend on, and the enclosing query keeps those joins alive rather than pruning
@@ -1627,8 +1631,7 @@ function parseSetQuery(
   const cteAliases = new Set(ctes.map((cte) => cte.alias));
   const outerRefs = [...ctx.outerRefs, ...plans.flatMap((plan) => plan.outerRefs)];
   return {
-    sql: withCtes.sql,
-    bindings: withCtes.bindings,
+    query,
     outerRefs: [...new Set(outerRefs.filter((ref) => !cteAliases.has(ref)))],
     output,
     decodeRows: (_, rows) => rows.map((row) => decodeRow(row, output.columns)),
@@ -1661,6 +1664,8 @@ function setOrderBys(q: SetQuery<readonly SetOperand[]>, output: QueryOutput): s
  * depends on (the way `ExistsCondition.outerAliases` does), so join pruning keeps them.
  */
 export class Ctx implements ExprContext {
+  readonly columns = new Map<object, Set<string>>();
+  hasRawSql = false;
   private aliases = new Map<object, string>();
   /**
    * The subset of `aliases` that are CTE names. A `from`/`join` on one of these emits just the name,
@@ -1684,6 +1689,34 @@ export class Ctx implements ExprContext {
     readonly assigner: AliasAssigner,
     private parent: Ctx | undefined,
   ) {}
+
+  /** Assigns correlated reads to the context declaring the table, before its hook runs. */
+  recordColumn(handle: object, column: string): void {
+    if (!this.aliases.has(handle)) {
+      this.parent?.recordColumn(handle, column);
+      return;
+    }
+    let columns = this.columns.get(handle);
+    if (!columns) this.columns.set(handle, (columns = new Set()));
+    columns.add(column);
+  }
+
+  /** Raw fragments may contain reads that never pass through a table handle. */
+  recordRawSql(): void {
+    this.hasRawSql = true;
+  }
+
+  /** Records explicit column conditions, which carry an SQL alias rather than a table handle. */
+  recordAliasColumn(alias: string, column: string): void {
+    for (const [handle, registered] of this.aliases) {
+      if (registered === alias) {
+        this.recordColumn(handle, column);
+        return;
+      }
+    }
+    if (this.parent) this.parent.recordAliasColumn(alias, column);
+    else this.recordRawSql();
+  }
 
   /**
    * One handle can hold only one alias per query, so a value used twice must be told apart, not
@@ -1782,7 +1815,8 @@ function describeHandle(handle: object): string {
   return "Table";
 }
 
-interface ParsedSource {
+export interface ParsedSource extends SqlFragment {
+  query?: ParsedReadQuery;
   handle: TableSourceMgmt | SubqueryHandle | JoinTableHandle;
   alias: string;
   /** `table AS alias` or `(SELECT ...) AS alias`. */
@@ -1798,12 +1832,13 @@ interface ParsedSource {
 /** A parsed `with` entry: the CTE's name and its body, ready to render into the WITH clause. */
 export interface ParsedCte {
   alias: string;
-  plan: Plan;
+  query: ParsedReadQuery;
+  outerRefs: string[];
   /** A recursive CTE reads itself, and makes the whole clause `WITH RECURSIVE`. */
   recursive: boolean;
 }
 
-interface ParsedJoin {
+export interface ParsedJoin {
   kind: "inner" | "left";
   source: ParsedSource;
   /** The user's ON alone; `undefined` means it pruned away entirely, an error if the join is kept. */
@@ -1814,13 +1849,13 @@ interface ParsedJoin {
 }
 
 /**
- * Parses one `Query` POJO into SQL, recursively for subqueries.
+ * Parses one query occurrence into a resolved tree.
  *
  * 1. Register every source's runtime identity with its SQL alias in this parse's context.
- * 2. Generate SQL for sources, selects, conditions, group-bys, and order-bys against the context; every fragment
+ * 2. Resolve sources, selects, conditions, group-bys, and order-bys against the context; every expression
  *    reports the aliases it references.
- * 3. Prune: drop joins nothing references (see below), then reject a kept join whose ON collapsed.
- * 4. Assemble the SQL from the kept fragments, so pruned bindings disappear with their SQL.
+ * 3. Return the complete AST to the statement-level plugin hook.
+ * Pruning, join validation, and SQL assembly happen later in renderQuery.
  */
 function parseQuery(
   q: AnyReadQuery,
@@ -1829,7 +1864,19 @@ function parseQuery(
   recursiveSelf?: SubqueryHandle,
 ): Plan {
   validateReadQuery(q);
-  if (isSetQuery(q)) return parseSetQuery(q, parent, assigner, recursiveSelf);
+  const plan = isSetQuery(q)
+    ? parseSetQuery(q, parent, assigner, recursiveSelf)
+    : parseSelectQuery(q, parent, assigner, recursiveSelf);
+  return plan;
+}
+
+/** Resolves SELECT clauses once, retaining child queries for the statement-level rewrite hook. */
+function parseSelectQuery(
+  q: AnyQuery,
+  parent: Ctx | undefined,
+  assigner: AliasAssigner,
+  recursiveSelf?: SubqueryHandle,
+): Plan {
   q = normalizeQueryJoins(q);
   const ctx = new Ctx(assigner, parent);
   if (recursiveSelf) ctx.setRecursiveSelf(recursiveSelf);
@@ -1879,13 +1926,67 @@ function parseQuery(
   const groupBys = (q.groupBy ?? []).map((g) => asExpr(g, "groupBy").toSql(ctx));
   const orderBys = orderBysToSql(q, ctx);
 
-  // 3. Prune.
-  const { joins: kept, ctes: keptCtes } = pruneJoins(
-    q,
-    ctx,
+  const sources = [
+    { source: from, join: "primary" as const },
+    ...joins.map((j) => ({ source: j.source, join: j.kind })),
+  ];
+  const tables = sources.flatMap((entry) => {
+    const handle = entry.source.handle;
+    if (handle instanceof SubqueryHandle) return [];
+    return [
+      {
+        table: handle instanceof JoinTableHandle ? handle.joinTableName : handle.tableName,
+        schema: "schema" in handle ? handle.schema : undefined,
+        alias: entry.source.alias,
+        metadata: entry.source.meta,
+        columns: ctx.columns.get(handle) ?? new Set<string>(),
+        join: entry.join,
+        conditions: [] as ParsedExpressionCondition[],
+      },
+    ];
+  });
+  const query: ParsedSelectQuery = {
+    kind: "select",
+    tables,
+    selects,
     from,
     joins,
     ctes,
+    where,
+    having,
+    groupBys,
+    orderBys,
+    hasRawSql: ctx.hasRawSql,
+    entityMetadata: output.kind === "entity" ? from.meta : undefined,
+    distinct: q.distinct ?? false,
+    limit: q.limit,
+    offset: q.offset,
+    pruneJoins: q.pruneJoins !== false,
+    recursiveAlias: sources.find((entry) => entry.source.handle === ctx.recursiveSelf)?.source.alias,
+  };
+  return { query, outerRefs: [...ctx.outerRefs], output, decodeRows };
+}
+
+/**
+ * Prunes and renders the rewritten tree. Parsing never calls this function.
+ *
+ * Table-local policies apply only after pruning, so authorizing an unused LEFT join does not
+ * turn it into a required join. Ordinary expression/WHERE rewrites do participate in pruning.
+ */
+export function renderQuery(query: ParsedReadQuery): SqlFragment {
+  return renderSql(queryFragment({ query, outerRefs: [] }));
+}
+
+/** Builds SQL expression parts from the rewritten AST without rendering child queries. */
+function renderQueryParts(query: ParsedReadQuery): SqlFragment {
+  if (query.kind === "set") return renderSetQuery(query);
+  const { from, selects, groupBys, orderBys, having } = query;
+  let where = query.where;
+  const { joins: kept, ctes: keptCtes } = pruneJoins(
+    query,
+    from,
+    query.joins,
+    query.ctes,
     [...selects, ...groupBys, ...orderBys, where, having].filter(isDefined),
   );
   // Joins emit in declaration order, so an ON may only reference sources declared before it; a forward
@@ -1907,37 +2008,36 @@ function parseQuery(
     }
   }
 
+  const joinConditions = new Map<string, SqlFragment>();
+  for (const table of query.tables) {
+    const conditions = table.conditions.map(renderPluginCondition).filter(isDefined);
+    if (!conditions.length) continue;
+    if (table.join === "primary") {
+      where = andQueryFragments([...(where ? [where] : []), ...conditions]);
+    } else {
+      const join = kept.find((j) => j.source.alias === table.alias);
+      if (join) joinConditions.set(table.alias, andQueryFragments([join.fullOn!, ...conditions]));
+    }
+  }
+
   // 4. Assemble.
   const out: SqlFragment[] = [];
   // WITH leads the statement, so its bindings must be pushed before the SELECT's.
   if (keptCtes.length > 0) out.push(withFragment(keptCtes));
-  out.push({ sql: `SELECT ${q.distinct ? "DISTINCT " : ""}`, bindings: [], refs: [] });
+  out.push({ sql: `SELECT ${query.distinct ? "DISTINCT " : ""}`, bindings: [], refs: [] });
   out.push(joinFragmentParts(selects, ", "));
-  out.push({ sql: ` FROM ${from.sql}`, bindings: from.bindings, refs: [] });
+  out.push(composeSql([" FROM ", from]));
   for (const j of kept) {
     const keyword = j.kind === "inner" ? "JOIN" : "LEFT OUTER JOIN";
-    out.push({
-      sql: ` ${keyword} ${j.source.sql} ON ${j.fullOn!.sql}`,
-      bindings: [...j.source.bindings, ...j.fullOn!.bindings],
-      refs: [],
-    });
+    out.push(composeSql([` ${keyword} `, j.source, " ON ", joinConditions.get(j.source.alias) ?? j.fullOn!]));
   }
-  if (where) out.push({ sql: ` WHERE ${where.sql}`, bindings: where.bindings, refs: [] });
-  if (groupBys.length > 0)
-    out.push({ ...joinFragmentParts(groupBys, ", "), sql: ` GROUP BY ${groupBys.map((g) => g.sql).join(", ")}` });
-  if (having) out.push({ sql: ` HAVING ${having.sql}`, bindings: having.bindings, refs: [] });
-  if (orderBys.length > 0)
-    out.push({ ...joinFragmentParts(orderBys, ", "), sql: ` ORDER BY ${orderBys.map((o) => o.sql).join(", ")}` });
-  if (q.limit !== undefined) out.push({ sql: ` LIMIT ?`, bindings: [q.limit], refs: [] });
-  if (q.offset !== undefined) out.push({ sql: ` OFFSET ?`, bindings: [q.offset], refs: [] });
-
-  return {
-    sql: out.map((o) => o.sql).join(""),
-    bindings: out.flatMap((o) => o.bindings),
-    outerRefs: [...ctx.outerRefs],
-    output,
-    decodeRows,
-  };
+  if (where) out.push(composeSql([" WHERE ", where]));
+  if (groupBys.length > 0) out.push(composeSql([" GROUP BY ", joinFragmentParts(groupBys, ", ")]));
+  if (having) out.push(composeSql([" HAVING ", having]));
+  if (orderBys.length > 0) out.push(composeSql([" ORDER BY ", joinFragmentParts(orderBys, ", ")]));
+  if (query.limit !== undefined) out.push({ sql: ` LIMIT ?`, bindings: [query.limit], refs: [] });
+  if (query.offset !== undefined) out.push({ sql: ` OFFSET ?`, bindings: [query.offset], refs: [] });
+  return composeSql(out);
 }
 
 /**
@@ -1975,8 +2075,20 @@ function registerSource(source: unknown, ctx: Ctx, assigner: AliasAssigner): () 
       return {
         handle,
         alias,
-        sql: `(${inner.sql}) AS ${safeKq(alias)}`,
-        bindings: inner.bindings,
+        query: inner.query,
+        render() {
+          return composeSql([
+            "(",
+            queryFragment({ query: this.query!, outerRefs: this.refs }),
+            `) AS ${safeKq(this.alias)}`,
+          ]);
+        },
+        get sql() {
+          return renderSql(this).sql;
+        },
+        get bindings() {
+          return renderSql(this).bindings;
+        },
         refs: inner.outerRefs,
         entitySelects: [],
         meta: undefined,
@@ -2284,7 +2396,7 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
         const column = (select as any)[key];
         if (!isExpr(column)) return fail(`orderBy key '${key}' is not a sortable column of the table`);
         const fragment = asNode(column).toSql(ctx);
-        result.push({ ...fragment, sql: `${fragment.sql} ${dir}` });
+        result.push(composeSql([fragment, ` ${dir}`]));
       } else {
         if (isExpr(select)) return fail(`the keyed orderBy form needs a POJO or entity select`);
         const keys = isSubqueryValue(select)
@@ -2306,6 +2418,7 @@ function orderBysToSql(q: AnyQuery, ctx: Ctx): SqlFragment[] {
  */
 export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLevel: boolean): SqlFragment | undefined {
   checkCondition(cond);
+  recordOpaqueConditions(cond, ctx);
   if (cond === undefined) return undefined;
   const resolved = resolveDeferredConditions(resolveQueryCondition(cond, ctx), ctx);
   if (resolved === undefined) return undefined;
@@ -2314,9 +2427,7 @@ export function conditionToSql(cond: QueryCondition | undefined, ctx: Ctx, topLe
   cb.maybeAddExpression(filter);
   const parsed = cb.toExpressionFilter();
   if (!parsed) return undefined;
-  const where = buildWhereClause(parsed, topLevel);
-  if (!where) return undefined;
-  return { sql: where[0], bindings: where[1], refs: refsOf(parsed) };
+  return conditionFragment(parsed, topLevel);
 }
 
 /**
@@ -2476,10 +2587,16 @@ function resolveQueryCondition(cond: QueryCondition | undefined, ctx: Ctx): Cond
     const subquery = positive ? cond.exists : cond.notExists;
     if (subquery === undefined) return undefined;
     const plan = parseQuery(toQuery(subquery), ctx, ctx.assigner);
+    const fragment = composeSql([`${positive ? "EXISTS" : "NOT EXISTS"} (`, queryFragment(plan), ")"]);
     return {
       kind: "raw",
-      condition: `${positive ? "EXISTS" : "NOT EXISTS"} (${plan.sql})`,
-      bindings: plan.bindings,
+      fragment,
+      get condition() {
+        return fragment.sql;
+      },
+      get bindings() {
+        return fragment.bindings;
+      },
       aliases: plan.outerRefs,
       pruneable: false,
     };
@@ -2549,8 +2666,7 @@ function refsOf(parsed: ParsedExpressionFilter): string[] {
  * it, so it is not the caller's optional filter (see `Ctx.recursiveSelf`).
  */
 function pruneJoins(
-  q: AnyQuery,
-  ctx: Ctx,
+  q: ParsedSelectQuery,
   from: ParsedSource,
   joins: ParsedJoin[],
   ctes: ParsedCte[],
@@ -2565,7 +2681,7 @@ function pruneJoins(
     else deps.set(alias, own);
   }
   for (const j of joins) addDeps(j.source.alias, [...(j.userOn?.refs ?? []), ...j.source.refs]);
-  for (const c of ctes) addDeps(c.alias, c.plan.outerRefs);
+  for (const c of ctes) addDeps(c.alias, c.outerRefs);
   const required = new Set<string>();
   function markRequired(alias: string): void {
     if (required.has(alias)) return;
@@ -2577,7 +2693,7 @@ function pruneJoins(
   for (const j of joins) if (j.keep) markRequired(j.source.alias);
   // A recursive term must keep its reference to its own CTE; PostgreSQL rejects a term without one,
   // and pruning it would quietly turn the recursion into a plain select over the base term's table.
-  for (const j of joins) if (j.source.handle === ctx.recursiveSelf) markRequired(j.source.alias);
+  if (q.recursiveAlias) markRequired(q.recursiveAlias);
   return {
     joins: joins.filter((j) => required.has(j.source.alias)),
     ctes: ctes.filter((c) => required.has(c.alias)),
@@ -2606,7 +2722,7 @@ export function registerCtes(q: { with?: WithInput }, ctx: Ctx, assigner: AliasA
     // Otherwise parse first, then promote: the body sees earlier siblings, but not itself or later ones.
     const plan = parseQuery(handle.q, ctx, assigner, handle.recursive ? handle : undefined);
     if (!handle.recursive) ctx.promoteCte(handle);
-    return { alias: aliases[i], plan, recursive: handle.recursive };
+    return { alias: aliases[i], query: plan.query, outerRefs: plan.outerRefs, recursive: handle.recursive };
   });
 }
 
@@ -2623,24 +2739,6 @@ function withEntryHandle(entry: unknown): SubqueryHandle {
 }
 
 /**
- * Puts a statement's surviving `with` entries in front of it, dropping the ones nothing reads.
- *
- * `referenced` is the aliases the rest of the statement used. The WITH clause leads the statement, so
- * its bindings lead the statement's bindings too.
- */
-export function prependCtes(
-  ctes: ParsedCte[],
-  referenced: Set<string>,
-  sql: string,
-  bindings: any[],
-): { sql: string; bindings: any[] } {
-  const kept = pruneCtes(ctes, referenced);
-  if (kept.length === 0) return { sql, bindings };
-  const clause = withFragment(kept);
-  return { sql: clause.sql + sql, bindings: [...clause.bindings, ...bindings] };
-}
-
-/**
  * Drops the CTEs that nothing reads, given the aliases the rest of the statement referenced.
  *
  * A CTE can only read earlier siblings, so going last to first means every CTE that could read this one
@@ -2652,7 +2750,7 @@ export function pruneCtes(ctes: ParsedCte[], referenced: Set<string>): ParsedCte
   for (let i = ctes.length - 1; i >= 0; i--) {
     const cte = ctes[i];
     if (!referenced.has(cte.alias)) continue;
-    for (const ref of cte.plan.outerRefs) referenced.add(ref);
+    for (const ref of cte.outerRefs) referenced.add(ref);
     kept.unshift(cte);
   }
   return kept;
@@ -2666,8 +2764,8 @@ export function pruneCtes(ctes: ParsedCte[], referenced: Set<string>): ParsedCte
  */
 export function withFragment(ctes: ParsedCte[]): SqlFragment {
   const recursive = ctes.some((c) => c.recursive) ? " RECURSIVE" : "";
-  const sql = ctes.map((c) => `${safeKq(c.alias)} AS (${c.plan.sql})`).join(", ");
-  return { sql: `WITH${recursive} ${sql} `, bindings: ctes.flatMap((c) => c.plan.bindings), refs: [] };
+  const bodies = ctes.map((c) => composeSql([`${safeKq(c.alias)} AS (`, queryFragment(c), ")"]));
+  return composeSql([`WITH${recursive} `, joinFragments(bodies, ", "), " "]);
 }
 
 function asExpr(value: unknown, where: string): BaseExpr {
@@ -2683,7 +2781,7 @@ function asSelectExpr(value: unknown, where: string): BaseExpr {
 }
 
 function joinFragmentParts(parts: SqlFragment[], sep: string): SqlFragment {
-  return { sql: parts.map((p) => p.sql).join(sep), bindings: parts.flatMap((p) => p.bindings), refs: [] };
+  return joinFragments(parts, sep);
 }
 
 function isDefined<T>(value: T | undefined): value is T {
@@ -2718,4 +2816,109 @@ function createQueryValue(q: AnyReadQuery): unknown {
 /** Keeps shorthand declarations callable-only, without recursively copying sql's own shorthand properties. */
 function typedSql<R>(strings: TemplateStringsArray, ...values: unknown[]): Expr<R, never> {
   return new TemplateExpr(strings, values) as unknown as Expr<R, never>;
+}
+
+/** Parenthesizes policy fragments so an existing OR cannot bypass the injected restriction. */
+function andQueryFragments(parts: SqlFragment[]): SqlFragment {
+  return joinFragments(
+    parts.map((part) => composeSql(["(", part, ")"])),
+    " AND ",
+  );
+}
+
+/** Deferred DSL predicates report their columns during resolution; literal SQL cannot do so. */
+function recordOpaqueConditions(value: unknown, ctx: Ctx): void {
+  if (!value || typeof value !== "object") return;
+  const condition = value as Record<string, unknown>;
+  if (condition.kind === "raw" && !(deferredSym in value)) ctx.recordRawSql();
+  if (condition.kind === "column") ctx.recordAliasColumn(condition.alias as string, condition.column as string);
+  for (const key of ["and", "or"]) {
+    if (Array.isArray(condition[key])) {
+      for (const child of condition[key]) recordOpaqueConditions(child, ctx);
+    }
+  }
+}
+
+/** Renders plugin predicates at SQL assembly, including structured EXISTS subqueries. */
+function renderPluginCondition(condition: ParsedExpressionCondition): SqlFragment | undefined {
+  const filter: ParsedExpressionFilter =
+    condition.kind === "exp" ? condition : { kind: "exp", op: "and", conditions: [condition] };
+  return conditionFragment(filter, true);
+}
+
+/** Retains the parsed condition tree until nested query rewrites are complete. */
+function conditionFragment(filter: ParsedExpressionFilter, topLevel: boolean): SqlFragment {
+  return {
+    condition: filter,
+    render(render) {
+      const resolved = renderConditionExpressions(filter, render) as ParsedExpressionFilter;
+      const result = buildWhereClause(resolved, topLevel, (query) => buildRawQuery(query, {}));
+      return { sql: result?.[0] ?? "", bindings: result?.[1] ?? [], refs: refsOf(filter) };
+    },
+    get sql() {
+      return renderSql(this).sql;
+    },
+    get bindings() {
+      return renderSql(this).bindings;
+    },
+    refs: refsOf(filter),
+  };
+}
+
+/** Embeds a parsed child by reference; reading SQL happens only after the root hook. */
+export function queryFragment(plan: Pick<Plan, "query" | "outerRefs">): SqlFragment {
+  return {
+    query: plan.query,
+    render() {
+      return renderQueryParts(this.query!);
+    },
+    get sql() {
+      return renderSql(this).sql;
+    },
+    get bindings() {
+      return renderSql(this).bindings;
+    },
+    refs: plan.outerRefs,
+  };
+}
+
+/** Resolves expression leaves without losing the condition builder's boolean grouping. */
+function renderConditionExpressions(
+  condition: ParsedExpressionCondition,
+  render: (fragment: SqlFragment) => SqlFragment,
+): ParsedExpressionCondition {
+  if (condition.kind === "exp") {
+    return { ...condition, conditions: condition.conditions.map((child) => renderConditionExpressions(child, render)) };
+  }
+  if (condition.kind === "raw" && condition.fragment) {
+    const fragment = render(condition.fragment);
+    return {
+      kind: "raw",
+      condition: fragment.sql,
+      bindings: fragment.bindings,
+      aliases: condition.aliases,
+      pruneable: condition.pruneable,
+    };
+  }
+  return condition;
+}
+
+/** Renders set operands after their SELECT nodes have been rewritten. */
+function renderSetQuery(query: ParsedSetQuery): SqlFragment {
+  let body: SqlFragment | undefined;
+  for (const operand of query.operands) {
+    let branch = queryFragment(operand);
+    if (operand.alignment) {
+      const alias = safeKq(operand.alignment.alias);
+      const columns = operand.alignment.columns.map((key) => `${alias}.${safeKq(key)} AS ${safeKq(key)}`).join(", ");
+      branch = composeSql([`SELECT ${columns} FROM (`, branch, `) AS ${alias}`]);
+    }
+    body = body ? composeSql(["(", body, `) ${query.operation} (`, branch, ")"]) : branch;
+  }
+  const ctes = pruneCtes(query.ctes, new Set(query.operands.flatMap((operand) => operand.outerRefs)));
+  const parts: SqlFragment[] = ctes.length ? [withFragment(ctes), body!] : [body!];
+  if (query.orderBys.length) parts.push({ sql: ` ORDER BY ${query.orderBys.join(", ")}`, bindings: [], refs: [] });
+  if (query.limit !== undefined) parts.push({ sql: " LIMIT ?", bindings: [query.limit], refs: [] });
+  if (query.offset !== undefined) parts.push({ sql: " OFFSET ?", bindings: [query.offset], refs: [] });
+  return composeSql(parts);
 }

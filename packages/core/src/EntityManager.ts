@@ -114,6 +114,7 @@ import {
   decodeStatementResult,
   isMutation,
   parseStatement,
+  renderStatement,
 } from "src/queries/sql/execute.ts";
 import {
   type CheckSetQuery,
@@ -129,6 +130,7 @@ import {
   type SetQuery,
   type SetQueryRow,
   parseRootQuery,
+  renderQuery,
 } from "src/queries/sql/query.ts";
 import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
@@ -673,11 +675,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#assertFindAllowed("query");
     const em = this;
     return (async function query() {
+      const plugins = em.__api.pluginManager;
       const plan = parseRootQuery(q);
       if (options?.populate && plan.output.kind !== "entity") {
         fail("em.query populate requires an entity selection");
       }
-      const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      plugins.beforeQuery(plan.query);
+      const sql = renderQuery(plan.query);
+      const { rows } = await em.driver.executeQuery(em, sql.sql, sql.bindings);
+      // Nested SELECTs contribute to this result, but only the outer read owns returned rows.
+      if (plugins.hasHook("afterQuery")) {
+        plugins.afterQuery(plan.query, new PojoRowData(rows));
+      }
       const result = plan.decodeRows(em.__api, rows);
       if (options?.populate) {
         await em.populate(result, options.populate);
@@ -712,9 +721,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       } else {
         em.#assertFindAllowed("execute");
       }
+      const plugins = em.__api.pluginManager;
       const plan = parseStatement(statement);
-      if (!plan) return { rowCount: 0, rows: [] };
-      const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      const query = plan.query;
+      const read = query.kind === "select" || query.kind === "set" ? query : undefined;
+      if (query.kind === "select" || query.kind === "set") plugins.beforeQuery(query);
+      else plugins.beforeExecute(query);
+      if (query.kind === "insert" && query.values?.length === 0) return { rowCount: 0, rows: [] };
+      const sql = renderStatement(query);
+      const result = await em.driver.executeQuery(em, sql.sql, sql.bindings);
+      // Mutation RETURNING rows are not read-query results, even when the mutation contains SELECTs.
+      if (read && plugins.hasHook("afterQuery")) {
+        plugins.afterQuery(read, new PojoRowData(result.rows));
+      }
       const decoded = decodeStatementResult(em.__api, plan, result);
       if (plan.output.kind === "entity") decoded.rows = em.#filterVisible(decoded.rows as Entity[]);
       return decoded;

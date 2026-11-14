@@ -1,4 +1,5 @@
 import type { ParsedFindQuery } from "src/queries/find/QueryParser.ts";
+import type { SqlFragment } from "src/queries/sql/Expr.ts";
 import { assertNever } from "src/utils.ts";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
@@ -27,6 +28,8 @@ export interface ColumnCondition {
 /** A user-provided condition like `SUM(${alias}.amount) > 1000` or `a1.last_name = b1.title`. */
 export interface RawCondition {
   kind: "raw";
+  /** Resolved em.query expressions retain child queries until the whole statement is rewritten. */
+  fragment?: SqlFragment;
   /** The aliases, i.e. `[a, b]`, used within the condition, to ensure we don't prune them. */
   aliases: string[];
   /** The condition itself, i.e. `SUM(a.age) DESC`. */

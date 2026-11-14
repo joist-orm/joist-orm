@@ -8,7 +8,7 @@ import {
   getBaseSelfAndSubMetas,
   getMetadata,
 } from "src/EntityMetadata.ts";
-import { getField, isChangeableField } from "src/fields.ts";
+import { getField, getStoredField, isChangeableField } from "src/fields.ts";
 import type { Todo } from "src/flush/Todo.ts";
 import { keyToNumber } from "src/keys.ts";
 import { type FieldColumn, type TimestampSerde, hasSerde } from "src/serde/fieldSerde.ts";
@@ -240,13 +240,16 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     return undefined;
   }
 
-  // We already have the bumped updated_at column, but also include the original updated_at for the data CTE
+  // Dry runs leave updatedAt unchanged; their lock predicate still needs the stored version.
   if (updatedAt) {
     const serde = meta.fields[updatedAt].serde as TimestampSerde<unknown>;
     columns.push({
       columnName: "__original_updated_at",
       dbType: "timestamptz",
-      dbValue: (_, entity) => serde.dbValue(getInstanceData(entity).originalData),
+      dbValue: (_, entity) => {
+        const original = getInstanceData(entity).originalData;
+        return serde.dbValue(updatedAt in original ? original : { [updatedAt]: getStoredField(entity, updatedAt) });
+      },
     });
   }
 

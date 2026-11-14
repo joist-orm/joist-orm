@@ -292,7 +292,7 @@ export * from "src/serde/fieldSerde.ts";
 export * from "src/queries/find/scopes.ts";
 export { maybeRequireTemporal, requireTemporal, Temporal } from "src/serde/temporal.ts";
 export * from "src/serde/temporalMappers.ts";
-export { isInTrustedContext, runInTrustedContext } from "src/trusted.ts";
+export { isInTrustedContext, runInTrustedContext, runInUntrustedContext } from "src/trusted.ts";
 export type * from "src/typeMap.ts";
 export { buildUnnestCte, ensureRectangularArraySizes } from "src/queries/unnest.ts";
 export { type DeepPartialOrNull, updatePartial, upsert } from "src/upsert.ts";
@@ -481,3 +481,4 @@ export function failNoIdYet(entity: string): never {
 export function isNewEntity<T extends Entity>(entity: T): entity is New<T> {
   return entity.isNewEntity;
 }
+export * from "./session/index.ts";

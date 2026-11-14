@@ -268,6 +268,20 @@ export type EntityManagerOpts<TX = unknown> = (
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
   skipValidation?: boolean;
+  /**
+   * Experimental preparation without committing changes.
+   *
+   * - "validate": Run defaults, hooks, ordinary reactions, and pre-write validation, then stop before
+   *   writing SQL. Keep changes pending so callers can correct validation errors and retry on the same EM.
+   *   RQF loops, commit rules, and database constraints are not checked by this pass.
+   * - true: Also execute SQL, RQF loops, and commit rules, then roll back. Use a disposable EM: entities
+   *   and join rows remain marked as written, so another flush on this EM is rejected.
+   *
+   * Both skip entity/transaction beforeCommit and afterCommit callbacks and leave existing timestamps
+   * unchanged. Neither supports an enclosing transaction. Hooks may still perform reads or external I/O.
+   * Omit or pass false for an ordinary flush.
+   */
+  dryRun?: boolean | "validate";
 }
 
 /**
@@ -2007,7 +2021,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
-    const entities = await runInTrustedContext(() => this.#flush(flushOptions));
+    if (this.txn && flushOptions.dryRun) {
+      throw new Error("Dry runs require their own transaction");
+    }
+    const entities = await runInTrustedContext(async () => {
+      try {
+        return await this.#flush(flushOptions);
+      } catch (error) {
+        // Only a supported validation failure is recoverable; raw database/hook errors still taint the EM.
+        if (flushOptions.dryRun === "validate" && error instanceof ValidationErrors) this.#flushError = undefined;
+        throw error;
+      }
+    });
     return this.#filterVisible(entities);
   }
 
@@ -2015,7 +2040,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (this.mode === "read-only") throw new ReadOnlyError();
     if (this.#flushError !== undefined) throw new FailedFlushError(this.#flushError);
 
-    const { skipValidation = false } = flushOptions;
+    const { skipValidation = false, dryRun = false } = flushOptions;
 
     this.#fl.startLock();
 
@@ -2066,10 +2091,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           alreadyRanHooks,
         );
 
-        // If we're re-looping for AsyncReactiveField, make sure to bump updatedAt
-        // each time, so that for an INSERT-then-UPDATE the triggers don't think the
-        // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
-        if (alreadyRanHooks.size > 0) {
+        // Each persisted RQF iteration needs a fresh row version; dry runs retain the database baseline.
+        if (!dryRun && alreadyRanHooks.size > 0) {
           maybeBumpUpdatedAt(this.#rm, createTodos(alreadyRanHooks), now);
         }
 
@@ -2079,7 +2102,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             let todos = createTodos(pendingHooks);
 
             await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
-            maybeBumpUpdatedAt(this.#rm, todos, now);
+            if (!dryRun) maybeBumpUpdatedAt(this.#rm, todos, now);
 
             // Run our hooks
             for (const group of maybeSetupHookOrdering(todos)) {
@@ -2250,12 +2273,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
+      // Staging feedback is pre-write only. RQFs, commit rules, and database constraints wait for preview.
+      if (dryRun === "validate") return [...allFlushedEntities];
+
       if (
         Object.keys(entityTodos).length > 0 ||
         Object.keys(joinRowTodos).length > 0 ||
         this.#rm.hasPendingCommitTransitions() ||
         this.#readSet.size > 0 ||
-        this.#forceTransaction
+        this.#forceTransaction ||
+        dryRun
       ) {
         const checkedReads = new Set<EntityW>();
         // The driver will handle the right thing if we're already in an existing transaction.
@@ -2282,8 +2309,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                 // If any ReactiveFields depended on AsyncReactiveFields, go ahead and calc those now
                 await this.#rm.recalcPendingReactables("reactables");
               });
-              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
-              // updated_at, and bump it themselves, which could cause a subsequent error.
+              // Give the next persisted write iteration its own row version.
               now = getNow();
               // See if any RQFs actually changed any entities. If they did, run the hooks on them.
               entitiesToFlush = await runHooksOnPendingEntities();
@@ -2310,11 +2336,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             await runCommitValidation(commitRuleTodos, commitRuleJoinRowTodos);
           }
           // Run `beforeCommit once right before COMMIT
-          await beforeCommit(this.ctx, allFlushedEntities);
+          if (!dryRun) await beforeCommit(this.ctx, allFlushedEntities);
           await this.#rm.runCommitTransitions();
           // Commit rules and callbacks can assert dependencies after the last write loop.
           if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
-          if (this.mode === "in-memory-writes") {
+          if (this.mode === "in-memory-writes" || dryRun) {
             throw new InMemoryRollbackError();
           }
         });
@@ -2395,6 +2421,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       }
       if (e instanceof InMemoryRollbackError) {
+        // Rollback leaves entities/join rows marked as already written.
+        // Reject another flush instead of resetting a disposable preview EM.
+        if (dryRun === true) this.#flushError = e;
         return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
       }
       // For raw (non-pretty) pg errors, fold the DETAIL into `message` so it survives into logs.
@@ -3850,11 +3879,7 @@ export function setLastNow(now: Date | undefined) {
 
 function getNow(): Date {
   let now = new Date();
-  // If we detect time has not progressed (or went backwards), we're probably in test that
-  // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
-  // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
-  // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
-  // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
+  // Consecutive writes need distinct row versions even within one millisecond or under a frozen clock.
   if (lastNow && (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime())) {
     now = new Date(lastNow.getTime() + 1);
   }

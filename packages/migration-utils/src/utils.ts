@@ -99,7 +99,7 @@ function validateEnumCode(code: string): void {
     throw `ERROR: Invalid enum code specified: ${code}. Codes must match the regex: ${codeRegex}`;
 }
 
-/** Makes a trigger to update the `updated_at` column. */
+/** Supplies timestamp defaults on INSERT; writers must explicitly advance updated_at on UPDATE. */
 export function createTriggers(b: MigrationBuilder, tableName: string): void {
   b.createTrigger(tableName, `${tableName}_created_at`, {
     when: "BEFORE",
@@ -107,14 +107,9 @@ export function createTriggers(b: MigrationBuilder, tableName: string): void {
     level: "ROW",
     function: "trigger_maybe_set_created_at",
   });
-  b.createTrigger(tableName, `${tableName}_updated_at`, {
-    when: "BEFORE",
-    operation: "UPDATE",
-    level: "ROW",
-    function: "trigger_maybe_set_updated_at",
-  });
 }
 
+/** Retained for existing migrations; createTriggers no longer attaches this legacy UPDATE trigger. */
 export function createUpdatedAtFunction(b: MigrationBuilder): void {
   b.createFunction(
     "trigger_maybe_set_updated_at",
@@ -122,6 +117,26 @@ export function createUpdatedAtFunction(b: MigrationBuilder): void {
     { replace: true, language: "plpgsql", returns: "TRIGGER" },
     "BEGIN IF NEW.updated_at = OLD.updated_at THEN NEW.updated_at = NOW(); END IF; RETURN NEW; END;",
   );
+}
+
+/** Removes legacy Joist UPDATE timestamp triggers from existing tables, including custom schemas. */
+export function dropUpdatedAtTriggers(b: MigrationBuilder): void {
+  b.sql(`
+    DO $$
+    DECLARE t record;
+    BEGIN
+      FOR t IN
+        SELECT tg.tgname, ns.nspname, c.relname
+        FROM pg_trigger tg
+        JOIN pg_class c ON c.oid = tg.tgrelid
+        JOIN pg_namespace ns ON ns.oid = c.relnamespace
+        WHERE tg.tgfoid = to_regprocedure('trigger_maybe_set_updated_at()')
+          AND NOT tg.tgisinternal
+      LOOP
+        EXECUTE format('DROP TRIGGER %I ON %I.%I', t.tgname, t.nspname, t.relname);
+      END LOOP;
+    END $$;
+  `);
 }
 
 /**

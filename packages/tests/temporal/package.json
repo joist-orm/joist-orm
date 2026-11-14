@@ -19,7 +19,7 @@
     "temporal-polyfill": "^1.0.8"
   },
   "devDependencies": {
-    "@swc/core": "1.16.21",
+    "@swc/core": "1.16.22",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",
@@ -30,7 +30,7 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
-    "postgrejs": "3.14.1",
+    "postgrejs": "3.14.2",
     "superstruct": "^2.0.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"

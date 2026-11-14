@@ -45,7 +45,7 @@
     "joist-utils": "workspace:*"
   },
   "dependencies": {
-    "ansis": "^4.4.0",
+    "ansis": "^4.5.0",
     "dataloader": "^2.2.3",
     "temporal-spec": "^1.0.1"
   },
@@ -55,7 +55,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",
     "jest": "30.4.2",
-    "temporal-polyfill": "^1.0.6",
+    "temporal-polyfill": "^1.0.8",
     "tsconfig-paths": "^4.2.0",
     "typescript": "7.0.2"
   }

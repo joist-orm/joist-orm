@@ -40,7 +40,7 @@
     "@types/node": "^26.6.6",
     "concurrently": "^10.0.6",
     "env-cmd": "^11.0.0",
-    "graphql": "^17.0.2",
+    "graphql": "^17.1.0",
     "jest": "30.4.2",
     "jest-junit": "^17.0.0",
     "joist-codegen": "workspace:*",

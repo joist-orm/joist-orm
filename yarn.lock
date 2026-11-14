@@ -313,7 +313,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/markdown-satteri@npm:0.4.2, @astrojs/markdown-satteri@npm:^0.4.0":
+"@astrojs/markdown-satteri@npm:0.4.2":
   version: 0.4.2
   resolution: "@astrojs/markdown-satteri@npm:0.4.2"
   dependencies:
@@ -337,7 +337,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/markdown-satteri@npm:0.4.7":
+"@astrojs/markdown-satteri@npm:0.4.7, @astrojs/markdown-satteri@npm:^0.4.3":
   version: 0.4.7
   resolution: "@astrojs/markdown-satteri@npm:0.4.7"
   dependencies:
@@ -385,6 +385,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@astrojs/mdx@npm:^8.0.3":
+  version: 8.1.3
+  resolution: "@astrojs/mdx@npm:8.1.3"
+  dependencies:
+    "@astrojs/internal-helpers": "npm:0.13.1"
+    "@astrojs/markdown-satteri": "npm:0.4.7"
+    es-module-lexer: "npm:^3.0.4"
+  peerDependencies:
+    "@astrojs/markdown-remark": ^7.3.0
+    "@astrojs/markdown-satteri": ^0.4.0
+    astro: ^7.2.10
+  peerDependenciesMeta:
+    "@astrojs/markdown-remark":
+      optional: true
+  checksum: 10/a612620664dd299e6731a4b483197dc5b1c0d89e7292f4a66cc18753686e6744d2e8d3b93684d31aa6f5ee601ef9588448dd4f4a10ea1952131745de5db73aa4
+  languageName: node
+  linkType: hard
+
 "@astrojs/prism@npm:4.0.2":
   version: 4.0.2
   resolution: "@astrojs/prism@npm:4.0.2"
@@ -423,14 +441,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/sitemap@npm:^3.7.3":
-  version: 3.7.3
-  resolution: "@astrojs/sitemap@npm:3.7.3"
+"@astrojs/sitemap@npm:^3.7.4":
+  version: 3.7.4
+  resolution: "@astrojs/sitemap@npm:3.7.4"
   dependencies:
     sitemap: "npm:^9.0.0"
-    stream-replace-string: "npm:^2.0.0"
     zod: "npm:^4.3.6"
-  checksum: 10/e0820d0788abb7808a29ed013b6cd1f021e684d4065b4d92ba78293b8fcec5aec4faf73f8824087d7354010707e9ed16e411ed33ff0ee4dea2e34d5bd1f3df86
+  checksum: 10/1e24670fa6a289705960bcf73c872fc9d59aaba5fe544b4ab67e0bb1714f0d6147efbb4ae7b0289a991096233ae9158282139737c8742a853aad8483fa737dd1
   languageName: node
   linkType: hard
 
@@ -444,16 +461,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/starlight@npm:0.42.8":
-  version: 0.42.8
-  resolution: "@astrojs/starlight@npm:0.42.8"
+"@astrojs/starlight@npm:0.42.10":
+  version: 0.42.10
+  resolution: "@astrojs/starlight@npm:0.42.10"
   dependencies:
-    "@astrojs/markdown-satteri": "npm:^0.4.0"
-    "@astrojs/mdx": "npm:^8.0.0"
-    "@astrojs/sitemap": "npm:^3.7.3"
+    "@astrojs/markdown-satteri": "npm:^0.4.3"
+    "@astrojs/mdx": "npm:^8.0.3"
+    "@astrojs/sitemap": "npm:^3.7.4"
     "@pagefind/default-ui": "npm:^1.3.0"
     "@types/hast": "npm:^3.0.5"
-    "@types/js-yaml": "npm:^4.0.9"
     "@types/mdast": "npm:^4.0.4"
     astro-expressive-code: "npm:^0.44.0"
     bcp-47: "npm:^2.1.0"
@@ -463,7 +479,6 @@ __metadata:
     hast-util-to-string: "npm:^3.0.1"
     hastscript: "npm:^9.0.1"
     i18next: "npm:^26.0.7"
-    js-yaml: "npm:^4.1.1"
     klona: "npm:^2.0.6"
     magic-string: "npm:^1.2.3"
     mdast-util-directive: "npm:^3.1.0"
@@ -476,13 +491,14 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.1.0"
     vfile: "npm:^6.0.3"
+    yaml: "npm:^2.9.1"
   peerDependencies:
     "@astrojs/markdown-remark": ^7.3.0
     astro: ^7.2.10
   peerDependenciesMeta:
     "@astrojs/markdown-remark":
       optional: true
-  checksum: 10/3aeb4ca1314f5b3ff1c28f524976eafdd784faeca8789bdf1adc30cb135ccb502c4861126f8adeaa57952c8cc0b3c3c5aeeb51b7f43ad111e4499b24780f02cb
+  checksum: 10/63e216f263d8b341dc9c3c9f8e363517d0940f1175d96ed1d7a602497430d26f9068957a3ea4f745c0b9041380d97bd888dfbc3c4d632375fbb68ed6a3fa7233
   languageName: node
   linkType: hard
 
@@ -1326,10 +1342,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@dprint/json@npm:^0.25.2":
-  version: 0.25.2
-  resolution: "@dprint/json@npm:0.25.2"
-  checksum: 10/27a84f588bff69874c506bf92f835e65c87167bdae85fadaa3c474f2565430ada2603bcc8e59541dd33ce559cd38ee700ca2b9fefa1f9fbca1c7185b1018f85a
+"@dprint/json@npm:^0.26.0":
+  version: 0.26.0
+  resolution: "@dprint/json@npm:0.26.0"
+  checksum: 10/c299c802e95dbc2986bbe98504dbbadf0991ae0fb04a637ecc4c6d992184ddfc87f0849ed1408068c8e889713005d6e864d9ddb26fdaa2349b25846b3ff9ba72
   languageName: node
   linkType: hard
 
@@ -5968,13 +5984,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/js-yaml@npm:^4.0.9":
-  version: 4.0.9
-  resolution: "@types/js-yaml@npm:4.0.9"
-  checksum: 10/a0ce595db8a987904badd21fc50f9f444cb73069f4b95a76cc222e0a17b3ff180669059c763ec314bc4c3ce284379177a9da80e83c5f650c6c1310cafbfaa8e6
-  languageName: node
-  linkType: hard
-
 "@types/jscodeshift@npm:^17.3.0":
   version: 17.3.0
   resolution: "@types/jscodeshift@npm:17.3.0"
@@ -6849,10 +6858,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansis@npm:^4.4.0":
-  version: 4.4.0
-  resolution: "ansis@npm:4.4.0"
-  checksum: 10/bd0d19e4f213d0829e91816df7c83b9194841cc64e174a6d93af6a5e7b716803baa49f03eaaece583776a14694314d209973c679d8b25a47138ec33066a13bfc
+"ansis@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "ansis@npm:4.5.0"
+  checksum: 10/d2b35da9873847a728648650b80d69d37d17d6bed3bb38ed185b916b9927bd7c53b00ce8fc012925487a170fc3bba65d4d9bd79961b4c709caa755521076efb6
   languageName: node
   linkType: hard
 
@@ -9643,10 +9652,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql@npm:^17.0.2":
-  version: 17.0.2
-  resolution: "graphql@npm:17.0.2"
-  checksum: 10/e3760187b08cafd0755cc504bf272623cba8a05c29671c9ec5709fe634aaf62011a98e7831f67add3775261a0617e1b0d548da99ab70532b72d6dd5e1f0915ca
+"graphql@npm:^17.1.0":
+  version: 17.1.0
+  resolution: "graphql@npm:17.1.0"
+  checksum: 10/8b64da761e4ac5bc671c8f40badea6e6c266665e2ac06d9f77804196b578ea3a60118469b1b86999d5a791f87b288f55f7c9cb7e35e869e2fb0aa4d7057c76de
   languageName: node
   linkType: hard
 
@@ -11304,7 +11313,7 @@ __metadata:
   resolution: "joist-codegen@workspace:packages/codegen"
   dependencies:
     "@dprint/formatter": "npm:^0.6.0"
-    "@dprint/json": "npm:^0.25.2"
+    "@dprint/json": "npm:^0.26.0"
     "@inquirer/prompts": "npm:^8.7.5"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
@@ -11340,10 +11349,10 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^26.6.6"
-    ansis: "npm:^4.4.0"
+    ansis: "npm:^4.5.0"
     dataloader: "npm:^2.2.3"
     jest: "npm:30.4.2"
-    temporal-polyfill: "npm:^1.0.6"
+    temporal-polyfill: "npm:^1.0.8"
     temporal-spec: "npm:^1.0.1"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
@@ -11357,7 +11366,7 @@ __metadata:
   resolution: "joist-docs@workspace:docs"
   dependencies:
     "@astrojs/markdown-remark": "npm:7.3.5"
-    "@astrojs/starlight": "npm:0.42.8"
+    "@astrojs/starlight": "npm:0.42.10"
     "@astrojs/starlight-tailwind": "npm:5.0.0"
     "@tailwindcss/vite": "npm:^4.3.3"
     "@types/react": "npm:^19.3.0"
@@ -11390,13 +11399,13 @@ __metadata:
   resolution: "joist-graphql-codegen@workspace:packages/graphql-codegen"
   dependencies:
     "@dprint/formatter": "npm:^0.6.0"
-    "@dprint/json": "npm:^0.25.2"
+    "@dprint/json": "npm:^0.26.0"
     "@swc/core": "npm:1.16.21"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^26.6.6"
     change-case: "npm:^5.4.4"
-    graphql: "npm:^17.0.2"
+    graphql: "npm:^17.1.0"
     jest: "npm:30.4.2"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.9.10"
@@ -11418,7 +11427,7 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^26.6.6"
-    graphql: "npm:^17.0.2"
+    graphql: "npm:^17.1.0"
     jest: "npm:30.4.2"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
@@ -11582,7 +11591,7 @@ __metadata:
     joist-utils: "workspace:*"
     node-pg-migrate: "npm:^9.0.0"
     superstruct: "npm:^2.0.2"
-    temporal-polyfill: "npm:^1.0.6"
+    temporal-polyfill: "npm:^1.0.8"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
   languageName: unknown
@@ -11629,7 +11638,7 @@ __metadata:
     "@types/node": "npm:^26.6.6"
     concurrently: "npm:^10.0.6"
     env-cmd: "npm:^11.0.0"
-    graphql: "npm:^17.0.2"
+    graphql: "npm:^17.1.0"
     jest: "npm:30.4.2"
     jest-junit: "npm:^17.0.0"
     joist-codegen: "workspace:*"
@@ -11743,7 +11752,7 @@ __metadata:
     node-pg-migrate: "npm:^9.0.0"
     postgrejs: "npm:3.14.1"
     superstruct: "npm:^2.0.2"
-    temporal-polyfill: "npm:^1.0.6"
+    temporal-polyfill: "npm:^1.0.8"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:7.0.2"
   languageName: unknown
@@ -11876,7 +11885,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:^4.1.0, js-yaml@npm:^4.1.1, js-yaml@npm:^4.3.0":
+"js-yaml@npm:^4.1.0, js-yaml@npm:^4.3.0":
   version: 4.3.1
   resolution: "js-yaml@npm:4.3.1"
   dependencies:
@@ -17188,13 +17197,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stream-replace-string@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "stream-replace-string@npm:2.0.0"
-  checksum: 10/dcf4b1bd3ee4e7a4d4468cc0b6bc1ee8bd0be1cb4c2dbcf171f981c4723ab577a62d5a4b25c728ff9379c98bec624924276758db0314d7e8c915a0331e230820
-  languageName: node
-  linkType: hard
-
 "string-env-interpolation@npm:^1.0.1":
   version: 1.0.1
   resolution: "string-env-interpolation@npm:1.0.1"
@@ -17591,13 +17593,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-polyfill@npm:^1.0.6":
-  version: 1.0.6
-  resolution: "temporal-polyfill@npm:1.0.6"
+"temporal-polyfill@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "temporal-polyfill@npm:1.0.8"
   dependencies:
     temporal-spec: "npm:1.0.1"
-    temporal-utils: "npm:1.0.3"
-  checksum: 10/68be452a22552e5ad322dd14ae247b5d84e254fed323ba1092f25e457e2fe6f8241278848288b80179d39a14bade8bd32cd014bb04002f25ba541e87011a0ed8
+    temporal-utils: "npm:1.0.4"
+  checksum: 10/93dbae875f02ab589ec7669350d4bf39a1ee7b98042475a6fb6e1e8a71985cf15a8dda618886128848f618997516ee2fecfb5389cfddee134c1d028752943b30
   languageName: node
   linkType: hard
 
@@ -17615,10 +17617,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"temporal-utils@npm:1.0.3":
-  version: 1.0.3
-  resolution: "temporal-utils@npm:1.0.3"
-  checksum: 10/fc4b391fbfec4c4775b85fbd04f09b998d65c9fcd2490600b22a8cf54aa4522da598e9ee1bb203e81dcd750025a3079d451a60e2b8afdc3e9bdc6df43dfeed1a
+"temporal-utils@npm:1.0.4":
+  version: 1.0.4
+  resolution: "temporal-utils@npm:1.0.4"
+  checksum: 10/41a27c23b7a9dc883798ddbecb72581097635c14719ea37738ce9f73319784439af55ade3e27154c1207b2723e8ec3aaf6aa046866cbe2ac803d8e8cf3b9b913
   languageName: node
   linkType: hard
 

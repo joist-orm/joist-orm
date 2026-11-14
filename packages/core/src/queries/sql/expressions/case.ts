@@ -1,4 +1,4 @@
-import { type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import { type ExprContext, type SqlFragment, composeSql, joinFragments } from "src/queries/sql/Expr.ts";
 import { expressionNullable, expressionToSql } from "src/queries/sql/expressions/expression.ts";
 import { checkKeys, isObject, parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
 import type { CheckExpression, ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
@@ -108,13 +108,13 @@ export function caseToSql(parsed: ParsedCaseExpression, ctx: ExprContext, codec:
     const when = entry.when === undefined ? undefined : ctx.conditionToSql(entry.when);
     if (!when) continue;
     const branch = joinFragments([when, expressionToSql(entry.then, ctx, codec)], " THEN ");
-    parts.push({ ...branch, sql: `WHEN ${branch.sql}` });
+    parts.push(composeSql(["WHEN ", branch]));
   }
   const otherwise = expressionToSql(parsed.else ?? { kind: "literal", value: null }, ctx, codec);
   if (parts.length === 0) return otherwise;
-  if (parsed.else) parts.push({ ...otherwise, sql: `ELSE ${otherwise.sql}` });
+  if (parsed.else) parts.push(composeSql(["ELSE ", otherwise]));
   const body = joinFragments(parts, " ");
-  return { ...body, sql: `(CASE ${body.sql} END)` };
+  return composeSql(["(CASE ", body, " END)"]);
 }
 
 /** CASE is definitely non-null only when every THEN value and the ELSE value are non-null. */

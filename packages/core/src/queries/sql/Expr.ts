@@ -1,8 +1,9 @@
 import type { EntityMetadata } from "src/EntityMetadata.ts";
 import { type ConditionInput, type PredicateBrand, type SqlCondition, brandPredicate } from "src/queries/conditions.ts";
-import type { RawCondition } from "src/queries/parsedConditions.ts";
+import type { ParsedExpressionFilter, RawCondition } from "src/queries/parsedConditions.ts";
 import { skipCondition } from "src/queries/skipCondition.ts";
 import { safeKq } from "src/queries/sql/keywords.ts";
+import type { ParsedReadQuery } from "src/queries/sql/ParsedQuery.ts";
 import type { ExpressionOrderBy, QueryCondition } from "src/queries/sql/query.ts";
 import { type TypeInfo, arrayOutputType } from "src/serde/TypeInfo.ts";
 
@@ -137,6 +138,12 @@ export interface SqlFragment {
   sql: string;
   bindings: any[];
   refs: string[];
+  /** Structured composition retains nested queries until the statement is rendered. */
+  readonly parts?: readonly (string | SqlFragment)[];
+  readonly query?: ParsedReadQuery;
+  readonly condition?: ParsedExpressionFilter;
+  /** @internal Materializes a structured query/condition using the enclosing rendering pass. */
+  readonly render?: (render: (fragment: SqlFragment) => SqlFragment) => SqlFragment;
 }
 
 /**
@@ -144,6 +151,10 @@ export interface SqlFragment {
  * source, and a way to turn nested conditions into SQL (which needs `ConditionBuilder`, so it lives in `query.ts`).
  */
 export interface ExprContext {
+  /** Records physical column lineage for query plugins, including correlated references. */
+  recordColumn?(handle: object, column: string): void;
+  /** Marks a SQL fragment whose physical reads cannot be determined by the compiler. */
+  recordRawSql?(): void;
   /** Returns the SQL alias for a table's `TableMgmt` or a subquery handle, searching enclosing queries. */
   aliasFor(handle: object): string;
   /** Turns a user-facing condition into SQL; `undefined` if it pruned away entirely. */
@@ -166,7 +177,7 @@ export const deferredSym: unique symbol = Symbol("joist.deferredCondition");
  * `bookStats.bookCount.gt(1)` or `bs.authorId.eq(a.id)`.
  *
  * It is shaped like a `RawCondition` with a SQL brand so it can sit in any `SqlCondition`; `resolveDeferredConditions`
- * snapshots `condition`, `bindings`, and `aliases` before the filter is parsed. Domain alias conditions
+ * resolves its expression and aliases while retaining child queries for later rendering. Domain alias conditions
  * use a separate protocol in the `em.find` parser.
  */
 export interface DeferredCondition extends RawCondition, PredicateBrand<"sql"> {
@@ -187,8 +198,18 @@ export function deferredCondition(fn: (ctx: ExprContext) => SqlFragment): Deferr
       bindings: [],
       pruneable: false,
       [deferredSym]: (ctx: ExprContext): RawCondition => {
-        const { sql, bindings, refs } = fn(ctx);
-        return { ...cond, condition: sql, bindings, aliases: refs };
+        const fragment = fn(ctx);
+        return {
+          ...cond,
+          fragment,
+          get condition() {
+            return fragment.sql;
+          },
+          get bindings() {
+            return fragment.bindings;
+          },
+          aliases: fragment.refs,
+        };
       },
     },
     "sql",
@@ -217,11 +238,7 @@ export function resolveDeferredConditions(
 
 /** Concatenates SQL fragments with `sep`, keeping bindings and refs in order. */
 export function joinFragments(parts: SqlFragment[], sep: string): SqlFragment {
-  return {
-    sql: parts.map((p) => p.sql).join(sep),
-    bindings: parts.flatMap((p) => p.bindings),
-    refs: parts.flatMap((p) => p.refs),
-  };
+  return composeSql(parts.flatMap((part, index) => (index === 0 ? [part] : [sep, part])));
 }
 
 /**
@@ -401,7 +418,7 @@ export abstract class BaseExpr {
       const not = op === "=" ? "" : op === "!=" ? "NOT " : fail(`Cannot compare ${op} to null`);
       return deferredCondition((ctx) => {
         const left = this.toSql(ctx);
-        return { ...left, sql: `${left.sql} IS ${not}NULL` };
+        return composeSql([left, ` IS ${not}NULL`]);
       });
     }
     if (isExpr(value)) {
@@ -409,7 +426,7 @@ export abstract class BaseExpr {
     }
     return deferredCondition((ctx) => {
       const left = this.toSql(ctx);
-      return { sql: `${left.sql} ${op} ?`, bindings: [...left.bindings, this.encode(value)], refs: left.refs };
+      return composeSql([left, { sql: ` ${op} ?`, bindings: [this.encode(value)], refs: [] }]);
     });
   }
 
@@ -420,18 +437,14 @@ export abstract class BaseExpr {
       return deferredCondition((ctx) => {
         const left = this.toSql(ctx);
         const right = asNode(values).toSqlBare(ctx);
-        return joinFragments([left, { ...right, sql: `(${right.sql})` }], ` ${op} `);
+        return joinFragments([left, composeSql(["(", right, ")"])], ` ${op} `);
       });
     }
     if (!Array.isArray(values)) fail(`Expected an array or subquery for ${op}, got ${values}`);
     const fn = op === "IN" ? "= ANY(?)" : "!= ALL(?)";
     return deferredCondition((ctx) => {
       const left = this.toSql(ctx);
-      return {
-        sql: `${left.sql} ${fn}`,
-        bindings: [...left.bindings, values.map((v) => this.encode(v))],
-        refs: left.refs,
-      };
+      return composeSql([left, { sql: ` ${fn}`, bindings: [values.map((v) => this.encode(v))], refs: [] }]);
     });
   }
 }
@@ -501,11 +514,14 @@ export class FnExpr extends BaseExpr {
     );
     const filter = this.opts.aggregate?.filter;
     const condition = filter === undefined ? undefined : ctx.conditionToSql(filter);
-    return {
-      sql: `${this.name}(${this.opts.prefix ?? ""}${args.sql}${ordering.sql ? ` ORDER BY ${ordering.sql}` : ""})${condition ? ` FILTER (WHERE ${condition.sql})` : ""}${this.opts.suffix ?? ""}`,
-      bindings: [...args.bindings, ...ordering.bindings, ...(condition?.bindings ?? [])],
-      refs: [...args.refs, ...ordering.refs, ...(condition?.refs ?? [])],
-    };
+    return composeSql([
+      `${this.name}(${this.opts.prefix ?? ""}`,
+      args,
+      ...(ordering.parts?.length ? [" ORDER BY ", ordering] : []),
+      ")",
+      ...(condition ? [" FILTER (WHERE ", condition, ")"] : []),
+      this.opts.suffix ?? "",
+    ]);
   }
 
   decode(value: unknown): unknown {
@@ -553,7 +569,7 @@ export class OperatorExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const joined = joinFragments([this.left.toSql(ctx), this.right.toSql(ctx)], ` ${this.op} `);
-    return { ...joined, sql: `(${joined.sql})` };
+    return composeSql(["(", joined, ")"]);
   }
 }
 
@@ -587,6 +603,7 @@ export class RefExpr extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.handle);
+    ctx.recordColumn?.(this.handle, this.column);
     // safeKq for both halves: an unmodeled column is a user string, and a subquery alias is its `as` name
     return { sql: `${safeKq(alias)}.${safeKq(this.column)}`, bindings: [], refs: [alias] };
   }
@@ -612,6 +629,7 @@ export class TemplateExpr extends BaseExpr {
   }
 
   toSql(ctx: ExprContext): SqlFragment {
+    ctx.recordRawSql?.();
     const parts: SqlFragment[] = [];
     this.strings.forEach((s, i) => {
       parts.push({ sql: s, bindings: [], refs: [] });
@@ -713,7 +731,7 @@ export function orderByToSql(o: ExpressionOrderBy, ctx: ExprContext): SqlFragmen
   }
   const fragment = o.sort.toSql(ctx);
   const nulls = o.nulls ? ` NULLS ${o.nulls.toUpperCase()}` : "";
-  return { ...fragment, sql: `${fragment.sql} ${o.order}${nulls}` };
+  return composeSql([fragment, ` ${o.order}${nulls}`]);
 }
 
 function identity(value: unknown): unknown {
@@ -722,4 +740,59 @@ function identity(value: unknown): unknown {
 
 function fail(message: string): never {
   throw new Error(message);
+}
+
+/**
+ * Composes resolved expressions without flattening nested queries into SQL.
+ *
+ * The getters preserve the existing SqlFragment interface for expression implementations. Each child
+ * is parsed once; the statement renderer reads the structured parts after plugins rewrite the AST.
+ */
+export function composeSql(parts: readonly (string | SqlFragment)[]): SqlFragment {
+  return {
+    parts,
+    get sql() {
+      return renderSql(this).sql;
+    },
+    get bindings() {
+      return renderSql(this).bindings;
+    },
+    refs: parts.flatMap((part) => (typeof part === "string" ? [] : part.refs)),
+  };
+}
+
+/**
+ * Materializes an expression tree once per statement, after plugin rewrites.
+ *
+ * SQL and bindings share the same traversal. Without this cache, separately asking each nested
+ * expression for SQL and bindings would render deeply nested subqueries exponentially many times.
+ */
+export function renderSql(fragment: SqlFragment): SqlFragment {
+  const cache = new Map<SqlFragment, SqlFragment>();
+
+  /** Shares rendered leaves across SQL and bindings without caching across plugin invocations. */
+  function render(part: SqlFragment): SqlFragment {
+    const cached = cache.get(part);
+    if (cached) return cached;
+
+    let result: SqlFragment;
+    if (part.render) {
+      result = render(part.render(render));
+    } else if (part.parts) {
+      const children = part.parts.map((child) =>
+        typeof child === "string" ? { sql: child, bindings: [], refs: [] } : render(child),
+      );
+      result = {
+        sql: children.map((child) => child.sql).join(""),
+        bindings: children.flatMap((child) => child.bindings),
+        refs: part.refs,
+      };
+    } else {
+      result = { sql: part.sql, bindings: part.bindings, refs: part.refs };
+    }
+
+    cache.set(part, result);
+    return result;
+  }
+  return render(fragment);
 }

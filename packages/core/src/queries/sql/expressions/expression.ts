@@ -1,4 +1,4 @@
-import { BaseExpr, type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import { BaseExpr, type ExprContext, type SqlFragment, composeSql, joinFragments } from "src/queries/sql/Expr.ts";
 import { arrayAggToSql } from "src/queries/sql/expressions/arrayAgg.ts";
 import { caseNullable, caseToSql } from "src/queries/sql/expressions/case.ts";
 import { coalesceNullable, coalesceToSql } from "src/queries/sql/expressions/coalesce.ts";
@@ -135,5 +135,5 @@ export function functionToSql(
     args.map((arg) => expressionToSql(arg, ctx, codec)),
     ", ",
   );
-  return { ...parts, sql: `${name}(${parts.sql})` };
+  return composeSql([`${name}(`, parts, ")"]);
 }

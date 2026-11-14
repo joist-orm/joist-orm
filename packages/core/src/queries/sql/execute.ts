@@ -11,8 +11,19 @@ import {
   type CustomColumnsOf,
   type CustomTableFor,
 } from "src/queries/sql/custom.ts";
-import { type ExprBrand, type ExprLike, type SqlFragment, asNode, exprBrand, isExpr } from "src/queries/sql/Expr.ts";
+import {
+  type ExprBrand,
+  type ExprLike,
+  type SqlFragment,
+  asNode,
+  composeSql,
+  exprBrand,
+  isExpr,
+  joinFragments,
+  renderSql,
+} from "src/queries/sql/Expr.ts";
 import { kq, safeKq } from "src/queries/sql/keywords.ts";
+import type { ParsedExecuteQuery, ParsedReadQuery } from "src/queries/sql/ParsedQuery.ts";
 import {
   type CheckReadQuery,
   type CheckScope,
@@ -37,10 +48,13 @@ import {
   isReadQueryValue,
   parseNestedQuery,
   parseRootQuery,
-  prependCtes,
   projectionToSql,
+  pruneCtes,
+  queryFragment,
   registerCtes,
+  renderQuery,
   subqueryBrand,
+  withFragment,
 } from "src/queries/sql/query.ts";
 import {
   type TableFor,
@@ -206,9 +220,9 @@ export function isMutation(arg: unknown): boolean {
 /**
  * Compiles one immediate statement using the read compiler's scopes, projections, and codecs.
  * INSERT SELECT keeps source rows in PostgreSQL; only RETURNING rows pass through JS decoders.
- * An undefined plan represents a validated standalone empty VALUES array, not DEFAULT VALUES.
+ * An empty VALUES array remains in the AST so plugins see it before execution short-circuits.
  */
-export function parseStatement(arg: unknown): Plan | undefined {
+export function parseStatement(arg: unknown): Plan<ParsedReadQuery | ParsedExecuteQuery> {
   if (!isMutation(arg)) return parseRootQuery(arg);
   const statement = arg as Record<string, unknown>;
   const roots = ["insert", "update", "delete"].filter((key) => key in statement);
@@ -248,14 +262,20 @@ export function parseStatement(arg: unknown): Plan | undefined {
   const withCtx = new Ctx(assigner, undefined);
   const ctes = registerCtes(statement, withCtx, assigner);
   // Aliases the rest of the statement reads, so an unread CTE prunes like it does on a read query.
-  const refs: string[] = [];
   const ctx = new Ctx(assigner, withCtx);
   const alias = assigner.getAlias(target.mgmt.tableName);
   ctx.register(target.mgmt, alias);
   const returning = statement.returning === undefined ? undefined : projectionToSql(statement.returning, ctx);
-  if (returning) for (const select of returning.selects) refs.push(...select.refs);
-  let sql = `${operation === "delete" ? "DELETE FROM" : operation.toUpperCase() + (operation === "insert" ? " INTO" : "")} ${tableSqlName(target.mgmt)} AS ${kq(alias)}`;
-  const bindings: unknown[] = [];
+  const query: ParsedExecuteQuery = {
+    kind: operation as ParsedExecuteQuery["kind"],
+    target: { table: target.mgmt.tableName, schema: target.mgmt.schema, alias, metadata: meta },
+    ctes,
+    columns: [],
+    assignments: [],
+    conditions: [],
+    returning: returning?.selects ?? [],
+    hasRawSql: false,
+  };
   if (operation === "insert") {
     if ("values" in statement === "from" in statement) fail("INSERT requires exactly one of values or from");
     const required = fields.filter(([, column]) => column.insert === "required");
@@ -274,24 +294,18 @@ export function parseStatement(arg: unknown): Plan | undefined {
           if (!row.some((entry) => entry[0] === key)) fail(`INSERT requires ${target.name}.${key}`);
         }
       }
-      if (rows.length === 0) return undefined;
       const keys = fields
         .filter(([key]) => entries.some((row) => row.some((entry) => entry[0] === key)))
         .map(([key, field]) => [key, field.columnName] as const);
-      sql += ` (${keys.map(([, column]) => kq(column)).join(", ")}) VALUES `;
-      sql += entries
-        .map((row) => {
-          const cells = keys.map(([key]) => {
-            const entry = row.find((entry) => entry[0] === key);
-            if (!entry) return "DEFAULT";
-            const cell = assignmentToSql(target, writableField(target, key, "insert"), entry[1], valuesCtx);
-            bindings.push(...cell.bindings);
-            refs.push(...cell.refs);
-            return cell.sql;
-          });
-          return `(${cells.join(", ")})`;
-        })
-        .join(", ");
+      query.columns = keys.map(([, column]) => column);
+      query.values = entries.map((row) => {
+        return keys.map(([key]) => {
+          const entry = row.find((entry) => entry[0] === key);
+          if (!entry) return { sql: "DEFAULT", bindings: [], refs: [] };
+          return assignmentToSql(target, writableField(target, key, "insert"), entry[1], valuesCtx);
+        });
+      });
+      query.hasRawSql ||= valuesCtx.hasRawSql;
     } else {
       const source = parseNestedQuery(statement.from, withCtx, assigner);
       if (source.output.kind !== "pojo") fail("INSERT SELECT requires named POJO output columns");
@@ -320,10 +334,13 @@ export function parseStatement(arg: unknown): Plan | undefined {
       const keys = fields
         .filter(([key]) => columns.some((column) => column[0] === key))
         .map(([key, field]) => [key, field.columnName] as const);
-      const sourceAlias = safeKq(assigner.getLiteralAlias("sq"));
-      sql += ` (${keys.map(([, column]) => kq(column)).join(", ")}) SELECT ${keys.map(([key]) => `${sourceAlias}.${safeKq(key)}`).join(", ")} FROM (${source.sql}) AS ${sourceAlias}`;
-      bindings.push(...source.bindings);
-      refs.push(...source.outerRefs);
+      query.columns = keys.map(([, column]) => column);
+      query.source = {
+        query: source.query,
+        outerRefs: source.outerRefs,
+        alias: assigner.getLiteralAlias("sq"),
+        columns: keys.map(([key]) => key),
+      };
     }
   } else {
     if (statement.allowAll !== undefined && typeof statement.allowAll !== "boolean") fail("allowAll must be a boolean");
@@ -338,39 +355,20 @@ export function parseStatement(arg: unknown): Plan | undefined {
       fail("UPDATE and DELETE require allowAll: true when a supplied where is undefined or fully pruned");
     if (operation === "update") {
       const entries = assignments(target, statement.set, "update");
-      sql +=
-        " SET " +
-        entries
-          .map((entry) => {
-            const [key, value] = entry;
-            const field = writableField(target, key, "update");
-            const cell = assignmentToSql(target, field, value, ctx);
-            bindings.push(...cell.bindings);
-            refs.push(...cell.refs);
-            return `${kq(field.columnName)} = ${cell.sql}`;
-          })
-          .join(", ");
+      query.assignments = entries.map((entry) => {
+        const [key, value] = entry;
+        const field = writableField(target, key, "update");
+        return { column: field.columnName, value: assignmentToSql(target, field, value, ctx) };
+      });
     }
     const injected = meta
       ? conditionToSql({ and: injectedConditions({ meta, alias }, statement.softDeletes ?? "exclude") }, ctx, true)
       : undefined;
-    const conditions = [whereCondition, injected].filter((condition) => condition !== undefined);
-    if (conditions.length) {
-      sql += ` WHERE ${conditions.map((condition) => `(${condition.sql})`).join(" AND ")}`;
-      for (const condition of conditions) {
-        bindings.push(...condition.bindings);
-        refs.push(...condition.refs);
-      }
-    }
+    query.conditions = [whereCondition, injected].filter((condition) => condition !== undefined);
   }
-  if (returning) {
-    sql += ` RETURNING ${returning.selects.map((select) => select.sql).join(", ")}`;
-    for (const select of returning.selects) bindings.push(...select.bindings);
-  }
-  const withCtes = prependCtes(ctes, new Set(refs), sql, bindings);
+  query.hasRawSql ||= ctx.hasRawSql;
   return {
-    sql: withCtes.sql,
-    bindings: withCtes.bindings,
+    query,
     outerRefs: [],
     output: returning?.output ?? { kind: "pojo", columns: [] },
     decodeRows: returning?.decodeRows ?? (() => []),
@@ -380,12 +378,44 @@ export function parseStatement(arg: unknown): Plan | undefined {
 /** Retains native counts even when no rows return, and propagates decoding failures after execution. */
 export function decodeStatementResult(
   em: EntityHydrator,
-  plan: Plan,
+  plan: Pick<Plan, "decodeRows">,
   result: DriverQueryResult,
 ): ExecuteResult<unknown> {
   if (typeof result.rowCount !== "number" || !Number.isInteger(result.rowCount) || result.rowCount < 0)
     fail("The driver did not return a numeric command rowCount");
   return { rowCount: result.rowCount, rows: plan.decodeRows(em, result.rows) };
+}
+
+/** Renders an immediate statement only after its whole-tree plugin hook has returned. */
+export function renderStatement(query: ParsedReadQuery | ParsedExecuteQuery): SqlFragment {
+  if (query.kind === "select" || query.kind === "set") return renderQuery(query);
+  const operation = query.kind === "delete" ? "DELETE FROM" : query.kind === "insert" ? "INSERT INTO" : "UPDATE";
+  const target = tableSqlName({ tableName: query.target.table, schema: query.target.schema });
+  const parts: (string | SqlFragment)[] = [`${operation} ${target} AS ${kq(query.target.alias)}`];
+  if (query.kind === "insert") {
+    parts.push(` (${query.columns.map(kq).join(", ")})`);
+    if (query.values) {
+      const rows = query.values.map((row) => composeSql(["(", joinFragments(row, ", "), ")"]));
+      parts.push(" VALUES ", joinFragments(rows, ", "));
+    } else {
+      const source = query.source!;
+      const alias = safeKq(source.alias);
+      const columns = source.columns.map((key) => `${alias}.${safeKq(key)}`).join(", ");
+      parts.push(` SELECT ${columns} FROM (`, queryFragment(source), `) AS ${alias}`);
+    }
+  } else if (query.kind === "update") {
+    const assignments = query.assignments.map((entry) => composeSql([`${kq(entry.column)} = `, entry.value]));
+    parts.push(" SET ", joinFragments(assignments, ", "));
+  }
+
+  if (query.conditions.length) {
+    const conditions = query.conditions.map((condition) => composeSql(["(", condition, ")"]));
+    parts.push(" WHERE ", joinFragments(conditions, " AND "));
+  }
+  if (query.returning.length) parts.push(" RETURNING ", joinFragments(query.returning, ", "));
+  const body = composeSql(parts);
+  const ctes = pruneCtes(query.ctes, new Set(body.refs));
+  return renderSql(ctes.length ? composeSql([withFragment(ctes), body]) : body);
 }
 
 /** An entity table whose generated metadata permits direct SQL mutations. */

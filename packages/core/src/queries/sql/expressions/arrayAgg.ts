@@ -4,6 +4,7 @@ import {
   type ExprContext,
   type ExprLike,
   type SqlFragment,
+  composeSql,
   joinFragments,
   orderByToSql,
 } from "src/queries/sql/Expr.ts";
@@ -69,11 +70,13 @@ export function arrayAggToSql(
   );
   const filter = parsed.options?.filter;
   const condition = filter === undefined ? undefined : ctx.conditionToSql(filter);
-  return {
-    sql: `array_agg(${parsed.options?.distinct ? "DISTINCT " : ""}${value.sql}${ordering.sql ? ` ORDER BY ${ordering.sql}` : ""})${condition ? ` FILTER (WHERE ${condition.sql})` : ""}`,
-    bindings: [...value.bindings, ...ordering.bindings, ...(condition?.bindings ?? [])],
-    refs: [...value.refs, ...ordering.refs, ...(condition?.refs ?? [])],
-  };
+  return composeSql([
+    `array_agg(${parsed.options?.distinct ? "DISTINCT " : ""}`,
+    value,
+    ...(ordering.parts?.length ? [" ORDER BY ", ordering] : []),
+    ")",
+    ...(condition ? [" FILTER (WHERE ", condition, ")"] : []),
+  ]);
 }
 
 /** Distinguishes expanded options from nested object expressions. */

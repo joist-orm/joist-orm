@@ -43,6 +43,7 @@ import {
   RefExpr,
   type SqlFragment,
   asNode,
+  composeSql,
   deferredCondition,
   isExpr,
   selectKeyBrand,
@@ -577,6 +578,7 @@ class TableColumn extends BaseExpr {
 
   toSql(ctx: ExprContext): SqlFragment {
     const alias = ctx.aliasFor(this.mgmt);
+    ctx.recordColumn?.(this.mgmt, this.column.columnName);
     return { sql: kqDot(alias, this.column.columnName), bindings: [], refs: [alias] };
   }
 
@@ -637,7 +639,7 @@ class TableColumn extends BaseExpr {
     if (negate) {
       return deferredCondition((ctx) => {
         const comparison = ctx.conditionToSql(this.compareToExpr(op, value))!;
-        return { ...comparison, sql: `NOT (${comparison.sql})` };
+        return composeSql(["NOT (", comparison, ")"]);
       });
     }
     return super.compare(op, value);
@@ -1116,12 +1118,14 @@ class ManyToManyJoinImpl extends CollectionJoinImpl {
     const jtOn = deferredCondition((ctx) => {
       const jtAlias = ctx.aliasFor(jt);
       const id = ourId.toSql(ctx);
-      return { sql: `${kqDot(jtAlias, ourColumn)} = ${id.sql}`, bindings: id.bindings, refs: id.refs };
+      return composeSql([`${kqDot(jtAlias, ourColumn)} = `, id]);
     });
     const on = deferredCondition((ctx) => {
       const jtAlias = ctx.aliasFor(jt);
       const id = otherId.toSql(ctx);
-      return { sql: `${id.sql} = ${kqDot(jtAlias, otherColumn)}`, bindings: id.bindings, refs: [...id.refs, jtAlias] };
+      const comparison = composeSql([id, ` = ${kqDot(jtAlias, otherColumn)}`]);
+      comparison.refs.push(jtAlias);
+      return comparison;
     });
     const filtered = this.field.softDeletes !== "include";
     return {

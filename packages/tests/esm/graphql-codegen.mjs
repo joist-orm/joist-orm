@@ -8,10 +8,11 @@ export default {
   overwrite: true,
   schema: "./schema/**/*.graphql",
   documents: null,
-  emitLegacyCommonJSImports: false, // GraphQL Codegen ESM setting
   generates: {
     "src/generated/graphql-types.ts": {
       config: {
+        // The resolver plugin still uses this plugin-specific setting to append .js imports.
+        emitLegacyCommonJSImports: false,
         contextType: "src/context#Context",
         noSchemaStitching: true,
         avoidOptionals: true,

@@ -130,6 +130,7 @@ import {
   type SetQueryRow,
   parseRootQuery,
 } from "src/queries/sql/query.ts";
+import { renderQuery, renderStatement } from "src/queries/sql/renderSql.ts";
 import { ReactionsManager } from "src/reactivity/ReactionsManager.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
 import { type AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
@@ -673,11 +674,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#assertFindAllowed("query");
     const em = this;
     return (async function query() {
+      const plugins = em.__api.pluginManager;
       const plan = parseRootQuery(q);
       if (options?.populate && plan.output.kind !== "entity") {
         fail("em.query populate requires an entity selection");
       }
-      const { rows } = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+
+      plugins.beforeQuery(plan.query);
+      const sql = renderQuery(plan.query);
+      const { rows } = await em.driver.executeQuery(em, sql.sql, sql.bindings);
+
+      if (plugins.hasHook("afterQuery")) {
+        plugins.afterQuery(plan.query, new PojoRowData(rows));
+      }
+
       const result = plan.decodeRows(em.__api, rows);
       if (options?.populate) {
         await em.populate(result, options.populate);
@@ -712,11 +722,34 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       } else {
         em.#assertFindAllowed("execute");
       }
+
+      const plugins = em.__api.pluginManager;
       const plan = parseStatement(statement);
-      if (!plan) return { rowCount: 0, rows: [] };
-      const result = await em.driver.executeQuery(em, plan.sql, plan.bindings);
+      const query = plan.query;
+      const read = query.kind === "select" || query.kind === "set" ? query : undefined;
+
+      if (query.kind === "select" || query.kind === "set") {
+        plugins.beforeQuery(query);
+      } else {
+        plugins.beforeExecute(query);
+      }
+
+      // Empty inserts still run plugin hooks, but have no rows to send to the database.
+      if (query.kind === "insert" && query.values?.length === 0) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      const sql = renderStatement(query);
+      const result = await em.driver.executeQuery(em, sql.sql, sql.bindings);
+
+      if (read && plugins.hasHook("afterQuery")) {
+        plugins.afterQuery(read, new PojoRowData(result.rows));
+      }
+
       const decoded = decodeStatementResult(em.__api, plan, result);
-      if (plan.output.kind === "entity") decoded.rows = em.#filterVisible(decoded.rows as Entity[]);
+      if (plan.output.kind === "entity") {
+        decoded.rows = em.#filterVisible(decoded.rows as Entity[]);
+      }
       return decoded;
     })().catch(function execute(err) {
       throw appendStack(err, new Error());

@@ -110,7 +110,7 @@ export type {
 export type { EnumMetadata } from "src/EnumMetadata.ts";
 // `em.query`'s expression surface. Only the user-facing types are re-exported: the runtime half
 // (BaseExpr, asNode, deferredCondition, the FnExpr/TemplateExpr node classes) stays internal to
-// joist-core, so `toSql`/`decode`/`encode` never show up as something a user could call.
+// joist-core, so `parseSql`/`decode`/`encode` never show up as something a user could call.
 export {
   type ArrayAggOptions,
   type Expr,
@@ -133,6 +133,33 @@ export { InstanceData } from "src/InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "src/flush/JoinRows.ts";
 export type * from "src/flush/PendingChanges.ts";
 export { Plugin } from "src/PluginManager.ts";
+export {
+  type ParsedSql,
+  type ColumnSql,
+  type StarSql,
+  type BoundValue,
+  type SqlPart,
+  type ParsedSqlCondition,
+  type RawSql,
+  type JoinedSql,
+  type QuerySql,
+  type ConditionSql,
+  type ExpressionCondition as SqlExpressionCondition,
+  joinSql,
+  columnSql,
+  visitSql,
+} from "src/queries/sql/ParsedSqlExpression.ts";
+export {
+  visitQuery,
+  visitQueryExpressions,
+  type QueryExpressionContext,
+  type QueryExpressionClause,
+  type ParsedReadQuery,
+  type ParsedSelectQuery,
+  type ParsedSetQuery,
+  type ParsedExecuteQuery,
+} from "src/queries/sql/ParsedQuery.ts";
+export type { ParsedSource, ParsedTableSource, ParsedCteSource, ParsedQuerySource } from "src/queries/sql/query.ts";
 export * from "src/queries/find/QueryParser.ts";
 export * from "src/queries/find/buildFindQuery.ts";
 export * from "src/queries/renderConditions.ts";

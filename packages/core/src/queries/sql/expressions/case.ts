@@ -1,7 +1,8 @@
-import { type ExprContext, type SqlFragment, joinFragments } from "src/queries/sql/Expr.ts";
+import type { ExprContext } from "src/queries/sql/Expr.ts";
 import { expressionNullable, expressionToSql } from "src/queries/sql/expressions/expression.ts";
 import { checkKeys, isObject, parseExpression } from "src/queries/sql/expressions/parseExpression.ts";
 import type { CheckExpression, ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import { type ParsedSql, joinSql } from "src/queries/sql/ParsedSqlExpression.ts";
 import type { QueryCondition } from "src/queries/sql/query.ts";
 
 /** One condition and the value to return when it is true. */
@@ -102,19 +103,19 @@ export function parseCaseExpression(input: unknown): ParsedCaseExpression {
 }
 
 /** Removes CASE entries with omitted conditions, falling back to ELSE or SQL NULL if none remain. */
-export function caseToSql(parsed: ParsedCaseExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
-  const parts: SqlFragment[] = [];
+export function caseToSql(parsed: ParsedCaseExpression, ctx: ExprContext, codec: ResultCodec): ParsedSql {
+  const parts: ParsedSql[] = [];
   for (const entry of parsed.whens) {
-    const when = entry.when === undefined ? undefined : ctx.conditionToSql(entry.when);
+    const when = entry.when === undefined ? undefined : ctx.parseCondition(entry.when);
     if (!when) continue;
-    const branch = joinFragments([when, expressionToSql(entry.then, ctx, codec)], " THEN ");
-    parts.push({ ...branch, sql: `WHEN ${branch.sql}` });
+    const branch = joinSql([when, expressionToSql(entry.then, ctx, codec)], " THEN ");
+    parts.push(joinSql(["WHEN ", branch]));
   }
   const otherwise = expressionToSql(parsed.else ?? { kind: "literal", value: null }, ctx, codec);
   if (parts.length === 0) return otherwise;
-  if (parsed.else) parts.push({ ...otherwise, sql: `ELSE ${otherwise.sql}` });
-  const body = joinFragments(parts, " ");
-  return { ...body, sql: `(CASE ${body.sql} END)` };
+  if (parsed.else) parts.push(joinSql(["ELSE ", otherwise]));
+  const body = joinSql(parts, " ");
+  return joinSql(["(CASE ", body, " END)"]);
 }
 
 /** CASE is definitely non-null only when every THEN value and the ELSE value are non-null. */

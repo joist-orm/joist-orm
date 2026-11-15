@@ -21,7 +21,6 @@ import {
 import { maybeResolveReferenceToId, taggedIdPrefix, toIdOf } from "src/keys.ts";
 import type { SqlCondition } from "src/queries/conditions.ts";
 import type { ParsedValueFilter } from "src/queries/parsedConditions.ts";
-import { buildValueCondition } from "src/queries/renderConditions.ts";
 import { skipCondition } from "src/queries/skipCondition.ts";
 import {
   type CustomColumnInputs,
@@ -41,13 +40,13 @@ import {
   type LeftJoin,
   OperatorExpr,
   RefExpr,
-  type SqlFragment,
   asNode,
   deferredCondition,
   isExpr,
   selectKeyBrand,
 } from "src/queries/sql/Expr.ts";
 import { kq, kqDot, safeKq } from "src/queries/sql/keywords.ts";
+import { type ColumnSql, type ParsedSql, columnSql, joinSql } from "src/queries/sql/ParsedSqlExpression.ts";
 import type { QueryArg, QueryJoinInput, QuerySource } from "src/queries/sql/query.ts";
 import { makeLike, mapToDb, parseEntityFilter, parseValueFilter } from "src/queries/valueFilters.ts";
 import type { Column } from "src/serde/columns.ts";
@@ -575,9 +574,9 @@ class TableColumn extends BaseExpr {
     return this.mgmt;
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
+  parseSql(ctx: ExprContext): ColumnSql {
     const alias = ctx.aliasFor(this.mgmt);
-    return { sql: kqDot(alias, this.column.columnName), bindings: [], refs: [alias] };
+    return columnSql(alias, this.column.columnName);
   }
 
   /** Decodes result-set values with public PK/FK ids, while hydration keeps internal tagged ids. */
@@ -597,21 +596,44 @@ class TableColumn extends BaseExpr {
     return this.column.idMetadata?.();
   }
 
-  /** Encodes literals when the condition is created and renders with each query's aliases. */
+  /** Encodes literals and resolves the column's alias when the condition is parsed. */
   addCondition(value: ParsedValueFilter<unknown>): SqlCondition {
     const encoded = mapToDb(this.column, value);
     return deferredCondition((ctx) => {
-      const left = this.toSql(ctx);
-      const [sql, bindings] = buildValueCondition(left.sql, encoded);
-      return { sql, bindings: [...left.bindings, ...bindings], refs: left.refs };
+      const left = this.parseSql(ctx);
+      return {
+        kind: "condition",
+        topLevel: true,
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [{ ...left, dbType: this.column.dbType, cond: encoded }],
+        },
+      };
     });
   }
 
   /** Renders raw operators against the same quoted column SQL as other expressions. */
   protected addRawCondition(exp: string, bindings: readonly any[]): SqlCondition {
     return deferredCondition((ctx) => {
-      const left = this.toSql(ctx);
-      return { sql: `${left.sql} ${exp}`, bindings: [...left.bindings, ...bindings], refs: left.refs };
+      const left = this.parseSql(ctx);
+      return {
+        kind: "condition",
+        topLevel: true,
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "raw",
+              condition: `${kqDot(left.alias, left.column)} ${exp}`,
+              bindings,
+              aliases: [left.alias],
+              pruneable: false,
+            },
+          ],
+        },
+      };
     });
   }
 
@@ -636,8 +658,8 @@ class TableColumn extends BaseExpr {
   protected compareToExpr(op: string, value: ExprLike<any>, negate = false): SqlCondition {
     if (negate) {
       return deferredCondition((ctx) => {
-        const comparison = ctx.conditionToSql(this.compareToExpr(op, value))!;
-        return { ...comparison, sql: `NOT (${comparison.sql})` };
+        const comparison = ctx.parseCondition(this.compareToExpr(op, value))!;
+        return joinSql(["NOT (", comparison, ")"]);
       });
     }
     return super.compare(op, value);
@@ -842,14 +864,10 @@ class TaggedIdExpr extends BaseExpr {
     super();
   }
 
-  toSql(ctx: ExprContext): SqlFragment {
-    const fragment = this.column.toSql(ctx);
+  parseSql(ctx: ExprContext): ParsedSql {
+    const fragment = this.column.parseSql(ctx);
     const meta = this.column.idMetadata ?? fail("Tagged IDs require an ID column");
-    return {
-      ...fragment,
-      sql: `(? || ${fragment.sql}::text)`,
-      bindings: [taggedIdPrefix(meta), ...fragment.bindings],
-    };
+    return joinSql(["(", { value: taggedIdPrefix(meta) }, " || ", fragment, "::text)"]);
   }
 
   get outputType(): TypeInfo {
@@ -1054,11 +1072,7 @@ class SubtypeJoinImpl extends CollectionJoinImpl {
     // Discriminator values are database enum ids, not domain enum values to pass through the field codec.
     const discriminator = deferredCondition((ctx) => {
       const alias = ctx.aliasFor(other[tableMgmt]);
-      return {
-        sql: `${kqDot(alias, columnName)} = ?`,
-        bindings: [this.subtype.stiDiscriminatorValue],
-        refs: [alias],
-      };
+      return joinSql([columnSql(alias, columnName), " = ", { value: this.subtype.stiDiscriminatorValue }]);
     });
     return { [kind]: other, on: { and: [on, discriminator] } };
   }
@@ -1115,13 +1129,13 @@ class ManyToManyJoinImpl extends CollectionJoinImpl {
     const otherId = idColumnOf(other);
     const jtOn = deferredCondition((ctx) => {
       const jtAlias = ctx.aliasFor(jt);
-      const id = ourId.toSql(ctx);
-      return { sql: `${kqDot(jtAlias, ourColumn)} = ${id.sql}`, bindings: id.bindings, refs: id.refs };
+      const id = ourId.parseSql(ctx);
+      return joinSql([columnSql(jtAlias, ourColumn), " = ", id]);
     });
     const on = deferredCondition((ctx) => {
       const jtAlias = ctx.aliasFor(jt);
-      const id = otherId.toSql(ctx);
-      return { sql: `${id.sql} = ${kqDot(jtAlias, otherColumn)}`, bindings: id.bindings, refs: [...id.refs, jtAlias] };
+      const id = otherId.parseSql(ctx);
+      return joinSql([id, " = ", columnSql(jtAlias, otherColumn)]);
     });
     const filtered = this.field.softDeletes !== "include";
     return {

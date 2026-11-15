@@ -1,4 +1,4 @@
-import { Deferred, ReadOnlyError, query, table } from "joist-orm";
+import { Deferred, ReadOnlyError, query, table, tables } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { PostgreJsDriver } from "joist-orm/postgrejs";
 import { Author, AuthorSchedule, Book, Tag, newAuthorSchedule } from "src/entities";
@@ -111,8 +111,7 @@ describe("em.execute / execution", () => {
       const author = await em.load(Author, "a:1");
       // And the pending value must remain in memory until the Author hook completes
       author.firstName = "Flushed";
-      const a = table(Author);
-      const t = table(Tag);
+      const [a, t] = tables(Author, Tag);
       // And the existing beforeFlush API hook pauses deterministically without a timer
       const entered = new Deferred<void>();
       const release = new Deferred<void>();

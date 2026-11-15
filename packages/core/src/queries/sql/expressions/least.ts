@@ -1,7 +1,8 @@
-import type { ExprContext, SqlFragment } from "src/queries/sql/Expr.ts";
+import type { ExprContext } from "src/queries/sql/Expr.ts";
 import { expressionNullable, functionToSql } from "src/queries/sql/expressions/expression.ts";
 import { parseNonEmptyOperands } from "src/queries/sql/expressions/parseExpression.ts";
 import type { ParsedExpression, ResultCodec } from "src/queries/sql/expressions/types.ts";
+import type { ParsedSql } from "src/queries/sql/ParsedSqlExpression.ts";
 
 /** Values whose smallest non-null member is selected by PostgreSQL. */
 export interface LeastInput {
@@ -20,7 +21,7 @@ export function parseLeastExpression(input: unknown): ParsedLeastExpression {
 }
 
 /** Renders the values compared by LEAST. */
-export function leastToSql(parsed: ParsedLeastExpression, ctx: ExprContext, codec: ResultCodec): SqlFragment {
+export function leastToSql(parsed: ParsedLeastExpression, ctx: ExprContext, codec: ResultCodec): ParsedSql {
   return functionToSql("LEAST", parsed.values, ctx, codec);
 }
 

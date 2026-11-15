@@ -1,5 +1,5 @@
 import { isDefined } from "src/EntityManager.ts";
-import type { ConditionGroup, ConditionInput } from "src/queries/conditions.ts";
+import type { ConditionGroup, ConditionInput, ConditionTree } from "src/queries/conditions.ts";
 import type {
   ColumnCondition,
   ParsedExpressionCondition,
@@ -23,7 +23,7 @@ export class ConditionBuilder {
 
   /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
   maybeAddExpression(expression: ConditionGroup<ConditionInput>): void {
-    const parsed = parseExpression(expression);
+    const parsed = parseExpression<ColumnCondition | RawCondition>(expression);
     if (parsed) this.expressions.push(parsed);
   }
 
@@ -105,8 +105,17 @@ export class ConditionBuilder {
   }
 }
 
-/** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedExpressionFilter`. */
-function parseExpression(expression: ConditionGroup<ConditionInput>): ParsedExpressionFilter | undefined {
+/** A normalized boolean group. */
+export interface ParsedConditionGroup<C> {
+  kind: "exp";
+  op: "and" | "or";
+  conditions: (C | ParsedConditionGroup<C>)[];
+}
+
+/** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedConditionGroup`. */
+export function parseExpression<C extends object>(
+  expression: ConditionGroup<ConditionTree<C>>,
+): ParsedConditionGroup<C> | undefined {
   // Look for `{ and: [...] }` or `{ or: [...] }`
   const [op, expressions] =
     "and" in expression && expression.and
@@ -115,7 +124,11 @@ function parseExpression(expression: ConditionGroup<ConditionInput>): ParsedExpr
         ? ["or" as const, expression.or]
         : fail(`Invalid expression ${expression}`);
   // Potentially recurse into nested expressions
-  const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
+  const conditions = expressions.map((exp) =>
+    exp && ("and" in exp || "or" in exp)
+      ? parseExpression<C>(exp as ConditionGroup<ConditionTree<C>>)
+      : (exp as C | undefined),
+  );
   const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
   if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
     return undefined;

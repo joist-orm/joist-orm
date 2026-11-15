@@ -1,4 +1,5 @@
 import type { ColumnCondition, RawCondition } from "src/queries/parsedConditions.ts";
+import type { DeferredCondition } from "src/queries/sql/Expr.ts";
 
 export const predicateBrand: unique symbol = Symbol("joist.predicate");
 
@@ -28,7 +29,10 @@ export interface PredicateBrand<K extends "domain" | "sql"> {
 export type DomainPredicate = (ColumnCondition | RawCondition) & PredicateBrand<"domain">;
 
 /** A predicate built from table(...), an SQL expression, or sql.condition. */
-export type SqlPredicate = (ColumnCondition | RawCondition) & PredicateBrand<"sql">;
+export type SqlPredicate = (ColumnCondition | RawCondition | DeferredCondition) & PredicateBrand<"sql">;
+
+/** Boolean groups shared by both em.find and em.query predicates. */
+export type ConditionTree<C> = C | AndCondition<ConditionTree<C>> | OrCondition<ConditionTree<C>>;
 
 /** Existing hand-written conditions remain an escape hatch, but cannot accept a foreign branded predicate. */
 export type UnbrandedPredicate = (ColumnCondition | RawCondition) & { readonly [predicateBrand]?: never };

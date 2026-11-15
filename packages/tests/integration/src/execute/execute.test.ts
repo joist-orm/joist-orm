@@ -9,6 +9,7 @@ import {
   query,
   sql,
   table,
+  tables,
 } from "joist-orm";
 import {
   AdminUser,
@@ -148,8 +149,7 @@ describe("em.execute", () => {
     const user = newUser(em, { passwordHistory: [password] });
     await em.flush();
     // And User's inherited family supplies a scalar subquery, not a mutation target
-    const u = table(User);
-    const t = table(Tag);
+    const [u, t] = tables(User, Tag);
     const history = query({ from: u, where: u.id.eq(user.id), select: u.passwordHistory });
     // When a Tag mutation returns the stored password history
     const inserted = await em.execute({ insert: t, values: [{ name: "Password audit" }], returning: history });
@@ -661,8 +661,7 @@ describe("em.execute", () => {
       // And Gamma must not be copied after the source limit
       await insertTag({ name: "Gamma" });
       const em = newEntityManager();
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       // And the source exposes the target's physical column name rather than a scalar projection
       const read = {
         from: source,
@@ -690,8 +689,7 @@ describe("em.execute", () => {
       // And the source Book supplies a title, notes, and its Author foreign key
       await insertBook({ title: "Copied", author_id: 1 });
       const em = newEntityManager();
-      const source = table(Book);
-      const target = table(Book);
+      const [source, target] = tables(Book, Book);
       // And the second UNION ALL branch deliberately orders its named output keys differently
       const copies = query({
         unionAll: [
@@ -740,8 +738,7 @@ describe("em.execute", () => {
       // Given an Author address with an extra key that its real Zod decoder would strip
       await insertAuthor({ first_name: "Source", business_address: { street: "Main", imported: true } });
       const em = newEntityManager();
-      const source = table(Author);
-      const target = table(Author);
+      const [source, target] = tables(Author, Author);
       // And both directions of the actual schema-backed column codec are observed after fixture setup
       const column = getMetadata(Author).fields.businessAddress.serde!.columns[0];
       const decode = jest.spyOn(column, "mapFromDb");
@@ -787,8 +784,7 @@ describe("em.execute", () => {
       // Given an Author address deliberately containing a numeric street that AddressSchema rejects
       await insertAuthor({ first_name: "Source", business_address: { street: 123 } });
       const em = newEntityManager();
-      const source = table(Author);
-      const target = table(Author);
+      const [source, target] = tables(Author, Author);
       // When copying the schema-backed JSON column directly between SQL stages
       const result = await em.execute({
         insert: target,
@@ -812,8 +808,7 @@ describe("em.execute", () => {
     it("returns a zero INSERT count when its SQL source has no rows", async () => {
       // Given an empty source Tag table
       const em = newEntityManager();
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       resetQueryCount();
       // When a valid INSERT SELECT evaluates an empty source rather than an empty VALUES shortcut
       const result = await em.execute({
@@ -843,8 +838,7 @@ describe("em.execute", () => {
       // And the second Tag is outside both compound branches
       await insertTag({ name: "Retained" });
       const em = newEntityManager();
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       // And the compound's named ids are wrapped in an ordinary scalar query for IN
       const ids = query({
         unionAll: [
@@ -1089,8 +1083,7 @@ describe("em.execute", () => {
       const password = PasswordValue.fromPlainText("secret");
       await insertUser({ name: "User", password: password.encoded });
       const em = newEntityManager();
-      const u = table(User);
-      const t = table(Tag);
+      const [u, t] = tables(User, Tag);
       // And User's CTI family is read-only to mutations, so a scalar source supplies the password
       const passwordQuery = query({ from: u, where: u.id.eq("u:1"), select: u.password });
       // And the actual custom decoder is observed for stored passwords and SQL NULL
@@ -1354,8 +1347,7 @@ describe("em.execute", () => {
       // Given real polymorphic Comment storage and an Author generated tsvector omitted from its domain fields
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const c = table(Comment);
-      const a = table(Author);
+      const [c, a] = tables(Comment, Author);
       // When trying to assign the polymorphic relationship instead of one supported physical reference
       await expect(execute({ update: c, set: { parent: "a:1" }, allowAll: true })).rejects.toThrow(
         "Unsupported SQL mutation field Comment.parent",
@@ -1448,8 +1440,7 @@ describe("em.execute", () => {
     it("keeps INSERT source aliases out of target RETURNING and unrelated aliases out of UPDATE", async () => {
       // Given distinct source and target Tag aliases
       const em = newEntityManager();
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       // When RETURNING tries to read the INSERT SELECT source rather than the new target
       await expect(
         em.execute({ insert: target, from: { from: source, select: { name: source.name } }, returning: source.name }),
@@ -1601,9 +1592,7 @@ describe("em.execute", () => {
       // Given Book source and target aliases plus a User with an incompatible custom password codec
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = table(Book);
-      const target = table(Book);
-      const u = table(User);
+      const [source, target, u] = tables(Book, Book, User);
       // When a scalar read omits target-field names
       await expect(execute({ insert: target, from: { from: source, select: source.title } })).rejects.toThrow(
         "INSERT SELECT requires named POJO output columns",
@@ -1773,27 +1762,27 @@ describe("em.execute", () => {
         await expect(
           execute({ ...statement, where: { ...selected, cond: { kind: "eq", value: "Selected", extra: true } } }),
         ).rejects.toThrow("Query column filter does not support 'extra'");
-        // And deferred raw predicates cannot carry the old column storage and filter fields
+        // And deferred predicates cannot carry column storage and filter fields
         await expect(execute({ ...statement, where: { ...deferred, dbType: 1 } })).rejects.toThrow(
-          "Query raw condition does not support 'dbType'",
+          "Query deferred condition does not support 'dbType'",
         );
         await expect(execute({ ...statement, where: { ...deferred, cond: undefined } })).rejects.toThrow(
-          "Query raw condition does not support 'cond'",
+          "Query deferred condition does not support 'cond'",
         );
-        // And a deferred raw condition with non-array bindings is malformed before SQL resolution
+        // And deferred predicates cannot supply raw SQL bindings
         await expect(
           execute({
             ...statement,
             where: { ...deferred, bindings: {} },
           }),
-        ).rejects.toThrow("Malformed query raw condition");
-        // And raw aliases must name SQL sources rather than contain arbitrary values
+        ).rejects.toThrow("Query deferred condition does not support 'bindings'");
+        // And deferred predicates cannot supply raw SQL aliases
         await expect(
           execute({
             ...statement,
             where: { ...deferred, aliases: [1] },
           }),
-        ).rejects.toThrow("Malformed query raw condition");
+        ).rejects.toThrow("Query deferred condition does not support 'aliases'");
         // Then all invalid leaves fail before any Tag can be changed or deleted
         expect(queries).toEqual([]);
       },
@@ -1803,8 +1792,7 @@ describe("em.execute", () => {
       // Given a reusable scalar Tag-id read that starts with a valid name restriction
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       const read = { from: source, select: source.id, where: { and: [source.name.eq("Selected")] } };
       const ids = query(read);
       // And the stored read is corrupted after construction with conflicting nested AND and OR groups
@@ -1825,8 +1813,7 @@ describe("em.execute", () => {
       // Given two valid named Tag reads whose UNION ALL output can populate Tag.name
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       const first = { from: source, select: { name: source.name } };
       const second = { from: source, select: { name: source.name }, where: { and: [source.name.eq("Selected")] } };
       const compound = { unionAll: [first, second] };
@@ -1843,8 +1830,7 @@ describe("em.execute", () => {
       // Given a named Tag source and a reusable scalar Tag-id source for mutation predicates
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = table(Tag);
-      const target = table(Tag);
+      const [source, target] = tables(Tag, Tag);
       const named = { from: source, select: { name: source.name } };
       const scalar = { from: source, select: source.id };
       const ids = query(scalar);
@@ -1878,8 +1864,7 @@ describe("em.execute", () => {
       // Given valid named and scalar Author reads with a real soft-delete metadata policy
       const em = newEntityManager();
       const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
-      const source = table(Author);
-      const target = table(Author);
+      const [source, target] = tables(Author, Author);
       const named = {
         from: source,
         select: { first_name: source.firstName, number_of_books: source.numberOfBooks },
@@ -2046,11 +2031,8 @@ describe("em.execute", () => {
         const em = newEntityManager();
         const execute = em.execute.bind(em) as (statement: unknown) => Promise<ExecuteResult<unknown>>;
         const t = table(Tag);
-        // And the raw leaf, bindings, aliases, group, and array are all frozen before alias resolution
-        const selected = t.name.like("Selected%") as RawCondition;
-        Object.freeze(selected.bindings);
-        Object.freeze(selected.aliases);
-        Object.freeze(selected);
+        // And the predicate, group, and array are all frozen before alias resolution
+        const selected = Object.freeze(t.name.like("Selected%"));
         const where = { and: [selected, undefined] };
         Object.freeze(where.and);
         Object.freeze(where);
@@ -2067,11 +2049,6 @@ describe("em.execute", () => {
         // Then UPDATE remains repeatable while DELETE correctly finds no row on its second execution
         expect(first).toEqual({ rowCount: 1, rows: ["t:1"] });
         expect(second).toEqual(operation === "update" ? { rowCount: 1, rows: ["t:1"] } : { rowCount: 0, rows: [] });
-        expect(selected.kind).toBe("raw");
-        expect(selected.condition).toBe("<unresolved>");
-        expect(selected.bindings).toEqual([]);
-        expect(selected.aliases).toEqual([]);
-        expect(selected.pruneable).toBe(false);
         expect(where.and).toEqual([selected, undefined]);
         expect(await select("tags")).toMatchObject(
           operation === "update" ? [{ name: "Selected changed" }, { name: "Retained" }] : [{ name: "Retained" }],
@@ -2083,13 +2060,9 @@ describe("em.execute", () => {
       // Given a source Tag whose id will keep both imports restricted to the original row
       await insertTag({ name: "Source" });
       const em = newEntityManager();
-      const source = table(Tag);
-      const target = table(Tag);
-      // And the source's deferred raw guard, bindings, aliases, and pruning group are immutable
-      const selected = source.name.like("Source") as RawCondition;
-      Object.freeze(selected.bindings);
-      Object.freeze(selected.aliases);
-      Object.freeze(selected);
+      const [source, target] = tables(Tag, Tag);
+      // And the source's deferred guard and pruning group are immutable
+      const selected = Object.freeze(source.name.like("Source"));
       const where = { and: [selected, source.id.eq("t:1"), undefined] };
       Object.freeze(where.and[1]);
       Object.freeze(where.and);
@@ -2104,11 +2077,6 @@ describe("em.execute", () => {
       // Then each import copies only the original Tag and leaves deferred source metadata untouched
       expect(first).toEqual({ rowCount: 1, rows: ["t:2"] });
       expect(second).toEqual({ rowCount: 1, rows: ["t:3"] });
-      expect(selected.kind).toBe("raw");
-      expect(selected.condition).toBe("<unresolved>");
-      expect(selected.bindings).toEqual([]);
-      expect(selected.aliases).toEqual([]);
-      expect(selected.pruneable).toBe(false);
       expect(where.and[2]).toBeUndefined();
       expect(read.where).toBe(where);
       expect(await select("tags")).toMatchObject([{ name: "Source" }, { name: "Source" }, { name: "Source" }]);

@@ -405,8 +405,7 @@ describe("em.query / join trees", () => {
   it("rejects a root binding that differs from from", async () => {
     // Given separate Author handles
     const em = newEntityManager();
-    const a = table(Author);
-    const other = table(Author);
+    const [a, other] = tables(Author, Author);
     // When the root binding points at a different handle
     // Then it cannot silently replace from
     await expect(em.query({ from: a, join: { as: other }, select: a })).rejects.toThrow("same table handle as from");

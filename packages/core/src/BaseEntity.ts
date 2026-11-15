@@ -71,6 +71,11 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   /** @returns the entity's id, always tagged, or undefined if it's new/unassigned. */
   abstract get idTaggedMaybe(): TaggedId | undefined;
 
+  /** The stable EM-local alias, independent of database identity and debug formatting. */
+  get $clientId(): TaggedId | undefined {
+    return this.__data.clientId;
+  }
+
   /** @returns the entity's id, always untagged, or a runtime error if it's unassigned. */
   get idUntagged(): string {
     return deTagId(getMetadata(this), this.id);
@@ -153,9 +158,8 @@ function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string
   let result = prefix;
   // Add `#1` if this is an em.create-d entity
   const data = getInstanceData(entity);
-  const createId = data.createId;
-  if (createId) {
-    result += `#${createId}`;
+  if (data.isOrWasNew && data.clientId) {
+    result += data.clientId.slice(meta.tagName.length);
   }
   // Add the `:1` but only after our flush is complete, otherwise the id is
   // internally assigned but not really flushed/committed to the db yet

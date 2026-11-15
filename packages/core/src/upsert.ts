@@ -22,7 +22,7 @@ import { type OptIdsOf, type OptsOf } from "src/typeMap.ts";
 import { type NullOrDefinedOr, toArray } from "src/utils.ts";
 
 /**
- * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.
+ * Deep partial input for `EntityManager.upsert` and `Entity.setDeepPartial`.
  *
  * I.e. `T` is an entity with an optional id (create if unset, update if set), and we recurse
  * into any relations (references or collections) to allow those relations themselves to be
@@ -62,7 +62,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
  * A utility function to do partial-update style updates.
  *
  * The difference between this and `Entity.setPartial` is that we accept `DeepPartialOrNull`
- * updates, similar to `createOrUpdateUnsafe`, instead of just a flat/shallow list of opts.
+ * updates, similar to `upsert`, instead of just a flat/shallow list of opts.
  */
 export async function updatePartial<T extends Entity>(entity: T, input: DeepPartialOrNull<T>): Promise<void> {
   if (Object.keys(input).length === 0) return;
@@ -84,7 +84,8 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         if (flagField) return;
         // Look for non-field properties like a fullName setter
         const prop = getProperties(meta)[key];
-        if (prop) {
+        // Let setOpt explain why the creation-only $clientId option cannot be assigned here.
+        if (prop || key === "$clientId") {
           setOpt(meta, entity, key, value);
           return;
         } else {
@@ -268,7 +269,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
 }
 
 /**
- * A utility function to create-or-update/upsert entities coming from a partial-update style API.
+ * Creates or updates an entity from partial input.
+ *
+ * An id selects an existing entity by database ID or registered client ID. Omitting id keeps the
+ * existing creation and soft-delete resurrection behavior.
  */
 export async function upsert<T extends Entity>(
   em: EntityManager<any, any, any>,
@@ -279,7 +283,7 @@ export async function upsert<T extends Entity>(
   const entity =
     id !== null && id !== undefined
       ? await em.load(constructor, id)
-      : // Look for an existing entity we could resurrect
+      : // Look for an existing entity we could resurrect.
         ((id === undefined ? await findExistingIfUniqueBy(em, constructor, rest) : undefined) ??
         em.createPartial(asConcreteCstr(constructor), {}));
   await updatePartial(entity, rest as any);

@@ -158,6 +158,7 @@ function getRecursivePrototypeKeys(instance: any): string[] {
     curr = Object.getPrototypeOf(curr)
   ) {
     for (const name of Object.getOwnPropertyNames(curr)) {
+      if (name === "$clientId") throw new Error("$clientId is reserved for EM-local client identity");
       if (!ignoredKeys.has(name)) {
         keys.push(name);
       }

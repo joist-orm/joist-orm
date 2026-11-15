@@ -47,18 +47,19 @@ However, letting Joist handle this means it can apply your SQL changes in the mo
 ## API
 
 ### `#create`
-Load an instance of a given entity and id
+Create a new entity.
 
 ```ts
 const em = newEntityManager();
 const a = await em.create(Author, { email: 'foo@bar.com' });
 ```
 
-Optionally, another way to create an entity is to do:
+Relationships accept entity instances, registered client IDs, and, for many-to-one references, database IDs:
 
 ```ts
 const em = newEntityManager();
-const a = em.create(Author, { firstName: "a1", address: { street: "123 Main" } });
+const a = em.create(Author, { firstName: "a1" });
+const b = em.create(Book, { title: "b1", author: a });
 ```
 
 
@@ -67,6 +68,48 @@ const a = em.create(Author, { firstName: "a1", address: { street: "123 Main" } }
 ```ts
 const em = newEntityManager();
 const a1 = await em.upsert(Author, { firstName: "a1" });
+```
+
+`upsert` accepts deep partial input. Pass `id` to update an existing entity, using its database ID or registered client ID.
+Without `id`, upsert creates a new entity unless `uniqueBy` matches a soft-deleted row, which it restores and updates.
+To update a row that is not soft-deleted, pass its `id`; matching its unique fields is not enough.
+Setting `id: null` always creates a new entity without resurrection.
+
+### Client IDs
+
+`$clientId` gives an entity an addressable identity before it has a database primary key. It is scoped to one
+`EntityManager`, not persisted, and not a cross-request upsert key.
+
+```ts
+const em = newEntityManager();
+
+// The author already exists in the database.
+const existingAuthor = await em.load(Author, "a:123");
+
+// Create a new author with a new book.
+const author = em.create(Author, {
+  $clientId: "a#7",
+  firstName: "Ursula",
+  lastName: "Le Guin",
+});
+
+// And the book can refer to both the newly-added author and the existing reviewer via IDs.
+const book = em.create(Book, {
+  $clientId: "b#2",
+  title: "A Wizard of Earthsea",
+  // Registered, newly created author.
+  author: "a#7",
+  // Existing database author.
+  reviewer: existingAuthor.id,
+});
+
+await em.flush();
+// Still "a#7".
+author.$clientId;
+// A database ID, e.g. "a:124".
+author.id;
+// true.
+(await em.load(Author, author.id)) === author;
 ```
 
 
@@ -135,4 +178,3 @@ Load multiple instances of a given entity and ids, and ignores ids that don't ex
 const em = newEntityManager();
 const a = await em.loadAllIfExists(Author, ["a:1", "a:2"]);
 ```
-

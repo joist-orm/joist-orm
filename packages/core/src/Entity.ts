@@ -16,6 +16,12 @@ export interface Entity {
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
+  /**
+   * An immutable EM-local alias, retained after database ID assignment and flush.
+   *
+   * Created entities always have one. This is undefined for entities loaded from the database.
+   */
+  readonly $clientId: TaggedId | undefined;
   readonly em: EntityManager;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;

@@ -1,5 +1,6 @@
 import { isPlainObject } from "joist-utils";
 import { getInstanceData } from "src/BaseEntity.ts";
+import { clientIdTag } from "src/clientIds.ts";
 import { hasDefaultValue, setAsyncDefaultsSynchronously } from "src/defaults.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import {
@@ -59,8 +60,8 @@ export const factories: Record<string, any> = new Proxy(Object.create(null), {
     if (!match) throw new Error(`Invalid id '${prop}', expected 'b1' or 'a2'`);
     const [, tag, id] = match;
     if (!lastFactoryEm) throw new Error("No EntityManager available; call a factory like newAuthor(em) first");
-    const testId = `${tag}#${id}`;
-    const entity = lastFactoryEm.entities.find((e) => getTestId(lastFactoryEm!, e) === testId);
+    const testId = `${tag}${clientIdTag}${id}`;
+    const entity = lastFactoryEm.entities.find((e) => getTestId(e) === testId);
     if (!entity) throw new Error(`No factory entity found for '${testId}'`);
     return entity;
   },
@@ -249,7 +250,7 @@ export function newTestInstance<T extends Entity>(
   // Verify the `as` assertion if provided
   if ((opts as any).is) {
     const expected = (opts as any).is;
-    const actual = getTestId(em, entity);
+    const actual = getTestId(entity);
     if (actual !== expected) {
       throw new Error(`Test used 'is: ${expected}' but the entity is actually ${actual}`);
     }
@@ -369,7 +370,7 @@ function resolveFactoryOpt<T extends Entity>(
     return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
-    const found = (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
+    const found = (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(e) === opt) as T) || opt;
     logger?.logFoundOpt(fieldWithIndex, found);
     return found;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
@@ -671,11 +672,10 @@ export function getTestIndex<T extends Entity>(em: EntityManager, type: MaybeAbs
   return existing.length + 1;
 }
 
-/** Returns the stable `a#1` factory id for em.create-d entities, using the createId assigned at creation time. */
-function getTestId<T extends Entity>(em: EntityManager, entity: T): string | undefined {
-  const meta = getMetadata(entity);
-  const createId = getInstanceData(entity).createId;
-  return createId ? `${meta.tagName}#${createId}` : undefined;
+/** Returns the stored client ID for entities created in this EM, including after flush. */
+function getTestId(entity: Entity): string | undefined {
+  const data = getInstanceData(entity);
+  return data.isOrWasNew ? data.clientId : undefined;
 }
 
 // We keep a local copy of `global.Date`, in case a faking library

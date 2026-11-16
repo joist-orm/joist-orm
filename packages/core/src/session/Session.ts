@@ -1,127 +1,122 @@
-import { randomUUID } from "node:crypto";
-
-import { type Entity, isEntity } from "../Entity.ts";
-import type { EntityConstructor, EntityManager } from "../EntityManager.ts";
-import { type Field, getMetadata } from "../EntityMetadata.ts";
-import { getField } from "../fields.ts";
+import { assertClientId } from "../clientIds.ts";
+import { getMetadataForType } from "../configure.ts";
+import type { Entity } from "../Entity.ts";
+import { type EntityConstructor, type EntityManager, getEmInternalApi } from "../EntityManager.ts";
+import { getMetadata } from "../EntityMetadata.ts";
 import { ValidationErrors } from "../rules.ts";
 import { runInUntrustedContext } from "../trusted.ts";
-import { captureSessionChanges, encodeSessionValue, sessionRef } from "./changes.ts";
-import type {
-  SessionCommand,
-  SessionExecution,
-  SessionOptions,
-  SessionRef,
-  SessionReview,
-  SessionSnapshot,
-  SessionValidation,
-  SessionValue,
-} from "./types.ts";
+import { type SessionChange, captureSessionChanges } from "./changes.ts";
+import {
+  type SessionEntityData,
+  type SessionError,
+  type SessionValue,
+  copyJson,
+  decodeCollectionMember,
+  decodeValues,
+  encodeValidationErrors,
+  readSessionEntityData,
+  resolveSessionId,
+  sessionId,
+} from "./json.ts";
+
+export interface SessionOptions<EM extends EntityManager> {
+  /** Lazily supplies a fresh, empty writable application EM with its context and plugins for each execution. */
+  createEm: () => EM | Promise<EM>;
+}
+
+export type SessionCommand =
+  | { op: "create"; type: string; $clientId: string; values: Record<string, SessionValue> }
+  | { op: "update"; entity: string; values: Record<string, SessionValue> }
+  | { op: "add" | "remove"; entity: string; field: string; value: string }
+  | { op: "delete"; entity: string };
+
+export type SessionValidation =
+  | { status: "valid"; scope: "pre-write" | "full"; changes: SessionChange[] }
+  | { status: "invalid"; errors: SessionError[] };
+
+export type SessionReview =
+  | { status: "valid"; revision: number; changes: SessionChange[] }
+  | { status: "invalid"; errors: SessionError[] };
 
 /**
- * Experimental JSON workspace: caller commands are the log, while ordinary entities remain private.
+ * Collects entity changes for validation, review, and commit.
  *
- * Staging is warm and advisory. Review and commit replay accepted commands on fresh application EMs.
+ * Preview and commit replay commands on fresh EntityManagers.
  */
 export class Session<EM extends EntityManager = EntityManager> {
   readonly #options: SessionOptions<EM>;
-  readonly #types = new Map<string, EntityConstructor<Entity>>();
-  #staging: SessionExecution | undefined;
+  #staging: EM | undefined;
+  readonly #createdIds = new Set<string>(); // Client IDs from accepted create commands.
   readonly #executions = new WeakSet<EntityManager>();
   readonly #log: SessionCommand[] = [];
-  #revision = 0;
-  #state: "open" | "tainted" | "committed" | "disposed" = "open";
+  #revision = 0; // Counts successful commands so a preview identifies which edits it includes.
+  #state: "open" | "tainted" | "committed" = "open";
   #busy = false;
-  #review: { token: string; revision: number } | undefined;
 
   constructor(options: SessionOptions<EM>) {
     this.#options = options;
-    for (const type of options.types) this.#types.set(getMetadata(type).type, type);
   }
 
-  /** Applies and records one JSON command; unexpected partial mutation failures taint the workspace. */
-  async apply(command: SessionCommand): Promise<SessionRef> {
-    return this.#exclusive((staging) => this.#apply(staging, command));
+  /** Applies and records one JSON command. */
+  async apply(command: SessionCommand): Promise<{ id: string }> {
+    return this.#withStaging((staging) => this.#apply(staging, command));
   }
 
   /** Applies commands sequentially, retaining successful commands and stopping at the first failure. */
-  async applyBatch(commands: readonly SessionCommand[]): Promise<SessionRef[]> {
-    return this.#exclusive(async (staging) => {
-      const refs: SessionRef[] = [];
-      for (const command of commands) refs.push(await this.#apply(staging, command));
-      return refs;
+  async applyBatch(commands: readonly SessionCommand[]): Promise<{ id: string }[]> {
+    return this.#withStaging(async (staging) => {
+      const results: { id: string }[] = [];
+      for (const command of commands) results.push(await this.#apply(staging, command));
+      return results;
     });
   }
 
   /** Reads selected metadata fields, never arbitrary methods or a live entity instance. */
-  async read(input: { target: SessionRef; fields: readonly string[] }): Promise<SessionSnapshot> {
-    return this.#exclusive(async (staging) => {
-      const entity = await this.#resolve(staging, input.target);
-      return readSnapshot(staging, entity, input.fields);
-    });
-  }
-
-  /** Finds persisted rows using allowlisted equality filters; subsequent writes log resolved references. */
-  async find(input: {
-    type: string;
-    where: Record<string, SessionValue>;
-    fields: readonly string[];
-  }): Promise<SessionSnapshot[]> {
-    return this.#exclusive(async (staging) => {
-      const type = this.#types.get(input.type);
-      if (!type) throw new Error(`Unknown session type ${input.type}`);
-      const where: Record<string, unknown> = {};
-      for (const [name, value] of Object.entries(copyJson(input.where))) {
-        const field = getMetadata(type).allFields[name];
-        if (!Object.hasOwn(getMetadata(type).allFields, name) || !field?.serde)
-          throw new Error(`Unsupported filter field ${name}`);
-        where[name] = value === null ? null : await this.#decode(staging, field, value);
-      }
-      const entities = await staging.em.find(type, where as never);
-      return Promise.all(entities.map((entity) => readSnapshot(staging, entity, input.fields)));
-    });
-  }
-
-  /** Runs recoverable pre-SQL validation; query-derived and database checks are deferred to preview. */
-  async validateChanges(): Promise<SessionValidation> {
-    return this.#exclusive(async (staging) => {
-      try {
-        return await dryRun(staging, "validate");
-      } catch (error) {
-        this.#state = "tainted";
-        throw error;
-      }
-    });
-  }
-
-  /** Replays intent once on a disposable EM and binds a review to the current revision. */
-  async previewChanges(): Promise<SessionReview> {
-    return this.#exclusive(async () => {
-      this.#review = undefined;
-      const execution = await this.#replay();
-      const result = await dryRun(execution);
-      if (result.status === "invalid") return result;
-      const token = randomUUID();
-      this.#review = { token, revision: this.#revision };
-      return { status: "valid", reviewToken: token, revision: this.#revision, changes: result.changes };
+  async read(input: { entity: string; fields: readonly string[] }): Promise<SessionEntityData> {
+    return this.#withStaging(async (staging) => {
+      const entity = await resolveSessionId(staging, input.entity);
+      return readSessionEntityData(entity, input.fields);
     });
   }
 
   /**
-   * Replays the reviewed command revision and performs an ordinary flush.
+   * Runs an application-owned query against the current staging EM without recording a command.
    *
-   * Preview is advisory: this does not compare the final writes with previewed values.
+   * The callback shares the operation lock and normal application permissions; it is not a privileged
+   * ORM context. Data that is returned to clients/external callers should be serialized instead of
+   * returning direct entity references, which clients could then mutate & side-step the Session's command log.
    */
-  async commitChanges(input: { reviewToken: string }): Promise<{ ids: Record<string, string> }> {
-    return this.#exclusive(async () => {
-      const review = this.#review;
-      if (!review || review.token !== input.reviewToken || review.revision !== this.#revision)
-        throw new Error("Invalid or stale review token");
-      // Consume before attempting SQL: failed commits need a new review rather than ambiguous retries.
-      this.#review = undefined;
-      const execution = await this.#replay();
+  async query<T>(callback: (em: EM) => T | Promise<T>): Promise<T> {
+    return this.#withStaging(async (em) => callback(em));
+  }
+
+  /** Runs recoverable pre-SQL validation; query-derived and database checks are deferred to preview. */
+  async validateChanges(): Promise<SessionValidation> {
+    return this.#withStaging(async (staging) => {
       try {
-        await execution.em.flush();
+        return await dryRun(staging, "validate");
+      } finally {
+        // A callback may have changed entities before throwing. Keep only the accepted commands.
+        if (getEmInternalApi(staging).hasFailedFlush) this.#staging = undefined;
+      }
+    });
+  }
+
+  /** Previews the current commands on a disposable EM without saving changes. */
+  async previewChanges(): Promise<SessionReview> {
+    return this.#exclusive(async () => {
+      const result = await dryRun(await this.#replay());
+      if (result.status === "invalid") return result;
+      return { status: "valid", revision: this.#revision, changes: result.changes };
+    });
+  }
+
+  /** Replays the current commands and saves changes with an ordinary flush. */
+  async commitChanges(): Promise<{ ids: Record<string, string> }> {
+    return this.#exclusive(async () => {
+      const em = await this.#replay();
+      try {
+        await em.flush();
       } catch (error) {
         // An after-commit failure or a lost COMMIT response must never enable a duplicate commit attempt.
         this.#state = "tainted";
@@ -129,234 +124,121 @@ export class Session<EM extends EntityManager = EntityManager> {
       }
       this.#state = "committed";
       const ids: Record<string, string> = {};
-      for (const [key, entity] of execution.entities) {
-        if (!entity.isDeletedEntity && entity.idTaggedMaybe !== undefined) ids[key] = entity.idTagged;
+      for (const entity of em.entities) {
+        const clientId = entity.$clientId;
+        if (clientId && this.#createdIds.has(clientId) && !entity.isDeletedEntity && entity.idTaggedMaybe !== undefined)
+          ids[clientId] = entity.idTagged;
       }
       return { ids };
     });
   }
 
-  /** Makes abandoned staging and review state inaccessible; no transaction is held between calls. */
-  dispose(): void {
-    if (this.#busy) throw new Error("Session operation already in progress");
-    this.#state = "disposed";
-    this.#review = undefined;
-    this.#log.length = 0;
-    this.#staging?.entities.clear();
-    this.#staging?.refs.clear();
-    this.#staging = undefined;
+  /** Rebuilds the editing EM without flushing so the caller can correct the input before callbacks run. */
+  async #withStaging<T>(fn: (em: EM) => Promise<T>): Promise<T> {
+    return this.#exclusive(async () => {
+      this.#staging ??= await this.#replay();
+      return fn(this.#staging);
+    });
   }
 
-  /** Serializes operations so a command cannot race a review's revision check. */
-  async #exclusive<T>(fn: (staging: SessionExecution) => Promise<T>): Promise<T> {
+  /** Prevents concurrent operations from sharing an EntityManager. */
+  async #exclusive<T>(fn: () => Promise<T>): Promise<T> {
     if (this.#state !== "open") throw new Error(`Session is ${this.#state}`);
     if (this.#busy) throw new Error("Session operation already in progress");
     this.#busy = true;
     try {
-      // Await inside the operation so factory rejection is observed and leaves initialization retryable.
-      this.#staging ??= await this.#newExecution();
-      return await fn(this.#staging);
+      return await fn();
     } finally {
       this.#busy = false;
     }
   }
 
   /** Uses the caller's factory for every role so context and enforcing plugins are never cloned away. */
-  async #newExecution(): Promise<SessionExecution> {
+  async #newEm(): Promise<EM> {
     const em = await this.#options.createEm();
     if (this.#executions.has(em)) throw new Error("Session factory must return a fresh EntityManager");
     if (em.txn || em.entities.length || em.mode !== "writes")
       throw new Error("Session requires a fresh writable EntityManager");
     this.#executions.add(em);
-    return { em, entities: new Map(), refs: new Map() };
+    return em;
   }
 
   /** Fresh replay is authoritative; speculative staging flush boundaries are deliberately not logged. */
-  async #replay(): Promise<SessionExecution> {
-    const execution = await this.#newExecution();
-    for (const command of this.#log) (await this.#prepareCommand(execution, copyJson(command)))();
-    return execution;
+  async #replay(): Promise<EM> {
+    const em = await this.#newEm();
+    for (const command of this.#log) await this.#executeCommand(em, copyJson(command));
+    return em;
   }
 
   /** Executes and records a command identically for single-command and batch operations. */
-  async #apply(staging: SessionExecution, command: SessionCommand): Promise<SessionRef> {
+  async #apply(em: EM, command: SessionCommand): Promise<{ id: string }> {
     const copy = copyJson(command);
-    // Decode and resolve before mutation so malformed commands do not taint an otherwise usable workspace.
-    const apply = await this.#prepareCommand(staging, copy);
-    try {
-      const entity = apply();
-      this.#log.push(copy);
-      this.#revision++;
-      this.#review = undefined;
-      return { ref: sessionRef(staging, entity) };
-    } catch (error) {
-      this.#state = "tainted";
-      throw error;
-    }
+    if (copy.op === "create" && this.#createdIds.has(copy.$clientId))
+      throw new Error(`Client id ${copy.$clientId} is already registered`);
+    const entity = await this.#executeCommand(em, copy, this.#createdIds);
+    const id = sessionId(entity);
+    this.#log.push(copy);
+    if (copy.op === "create") this.#createdIds.add(copy.$clientId);
+    this.#revision++;
+    return { id };
   }
 
-  /** Resolves only explicit creation keys or durable IDs from the allowlisted entity families. */
-  async #resolve(execution: SessionExecution, target: SessionRef): Promise<Entity> {
-    if (!target || typeof target.ref !== "string") throw new Error("Expected a session reference");
-    const known = execution.entities.get(target.ref);
-    if (known) return known;
-    const tag = target.ref.split(":")[0];
-    const type = [...this.#types.values()].find((candidate) => getMetadata(candidate).tagName === tag);
-    if (!type || !target.ref.includes(":")) throw new Error(`Unknown session reference ${target.ref}`);
-    const entity = await execution.em.load(type, target.ref);
-    if (entity.isNewEntity) throw new Error("Execution-generated entities are not command targets");
+  /**
+   * Resolves IDs, decodes values, and applies one command.
+   *
+   * A setter can throw after changing earlier fields. Only successful commands are recorded for replay.
+   */
+  async #executeCommand(em: EM, command: SessionCommand, createdIds?: ReadonlySet<string>): Promise<Entity> {
+    function resolve(id: string): Promise<Entity> {
+      return resolveSessionId(em, id, createdIds);
+    }
+
+    // Create a new entity with the caller's client ID.
+    if (command.op === "create") {
+      const type = getMetadataForType(command.type).cstr as EntityConstructor<Entity>;
+      assertClientId(getMetadata(type), command.$clientId);
+      if (em.getEntity(command.$clientId)) throw new Error(`Client id ${command.$clientId} is already registered`);
+      const values = await decodeValues(resolve, type, command.values);
+      return em.create(type, { ...values, $clientId: command.$clientId } as never);
+    }
+
+    // Resolve the entity used by the remaining commands.
+    const entity = await resolve(command.entity);
+    if (entity.isDeletedEntity) throw new Error("Cannot mutate a deleted session entity");
+
+    // Delete the entity.
+    if (command.op === "delete") {
+      em.delete(entity);
+      return entity;
+    }
+
+    // Update the requested fields.
+    if (command.op === "update") {
+      const values = await decodeValues(resolve, entity.constructor as EntityConstructor<Entity>, command.values);
+      entity.set(values);
+      return entity;
+    }
+
+    // Resolve the collection and its member for add/remove.
+    if (command.op !== "add" && command.op !== "remove") throw new Error("Unknown session command");
+    const value = await decodeCollectionMember(resolve, entity, command.field, command.value);
+    const relation = (entity as unknown as Record<string, MutableCollection>)[command.field];
+
+    // Add the member to the collection.
+    if (command.op === "add") {
+      relation.add(value);
+      return entity;
+    }
+
+    // Remove the member from the collection.
+    relation.remove(value);
     return entity;
   }
-
-  /**
-   * Prepares a narrow public-ORM mutation after all asynchronous decoding has succeeded.
-   *
-   * Returning an operation separates input errors from errors that may have partially mutated staging.
-   */
-  async #prepareCommand(execution: SessionExecution, command: SessionCommand): Promise<() => Entity> {
-    if (command.op === "create") {
-      const type = this.#types.get(command.type);
-      if (!type) throw new Error(`Unknown session type ${command.type}`);
-      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(command.key) || execution.entities.has(command.key))
-        throw new Error("Invalid or duplicate creation key");
-      const values = await this.#decodeValues(execution, type, command.values);
-      return () => {
-        const entity = execution.em.create(type, values as never);
-        execution.entities.set(command.key, entity);
-        execution.refs.set(entity, command.key);
-        return entity;
-      };
-    }
-
-    const entity = await this.#resolve(execution, command.target);
-    if (entity.isDeletedEntity) throw new Error("Cannot mutate a deleted session entity");
-    if (command.op === "delete")
-      return () => {
-        execution.em.delete(entity);
-        return entity;
-      };
-    if (command.op === "touch")
-      return () => {
-        execution.em.touch(entity);
-        return entity;
-      };
-    if (command.op === "set") {
-      const values = await this.#decodeValues(
-        execution,
-        entity.constructor as EntityConstructor<Entity>,
-        command.values,
-      );
-      return () => {
-        entity.set(values);
-        return entity;
-      };
-    }
-    const field = writableField(entity.constructor as EntityConstructor<Entity>, command.field);
-    const value = await this.#decode(execution, field, command.value as unknown as SessionValue);
-    if (field.kind !== "m2m" && field.kind !== "o2m") throw new Error("add/remove requires an entity collection");
-    if (!isEntity(value)) throw new Error("add/remove requires one entity reference");
-    const relation = (entity as unknown as Record<string, MutableCollection>)[command.field];
-    return () => {
-      if (command.op === "add") relation.add(value);
-      else if (command.op === "remove") relation.remove(value);
-      else throw new Error("Unknown session command");
-      return entity;
-    };
-  }
-
-  /** Decodes create/set values before invoking the entity's ordinary mutation behavior. */
-  async #decodeValues(
-    execution: SessionExecution,
-    type: EntityConstructor<Entity>,
-    input: Record<string, SessionValue>,
-  ): Promise<Record<string, unknown>> {
-    const values: Record<string, unknown> = {};
-    for (const [name, value] of Object.entries(input)) {
-      values[name] = await this.#decode(execution, writableField(type, name), value);
-    }
-    return values;
-  }
-
-  /**
-   * Maps JSON references through normal loads and rejects unsupported value codecs explicitly.
-   *
-   * Null is the command boundary's explicit unset value; omitted fields are never synthesized as edits.
-   */
-  async #decode(execution: SessionExecution, field: Field, value: SessionValue): Promise<unknown> {
-    if (value === null) return undefined;
-    if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m" || field.kind === "o2m") {
-      if (Array.isArray(value)) {
-        if (field.kind !== "m2m" && field.kind !== "o2m") throw new Error("Expected one entity reference");
-        return Promise.all(value.map((entry) => this.#decode(execution, field, entry)));
-      }
-      if (typeof value !== "object" || !("ref" in value) || typeof value.ref !== "string")
-        throw new Error("Expected a session reference");
-      const entity = await this.#resolve(execution, { ref: value.ref });
-      if (field.kind !== "poly" && !(entity instanceof field.otherMetadata().cstr))
-        throw new Error("Reference has the wrong entity type");
-      return entity;
-    }
-    if (field.kind === "primitive" || field.kind === "enum") {
-      if (field.serde.columns[0].isArray) {
-        if (!Array.isArray(value)) throw new Error("Expected an array");
-        return value.map((entry) => decodeScalar(field, entry));
-      }
-      return decodeScalar(field, value);
-    }
-    return value;
-  }
 }
 
-interface Loadable {
-  load(): Promise<unknown>;
-}
 interface MutableCollection {
   add(value: unknown): void;
   remove(value: unknown): void;
-}
-
-/** Parses supported JSON scalar encodings without translating application validation rules. */
-function decodeScalar(field: Extract<Field, { kind: "primitive" | "enum" }>, value: SessionValue): unknown {
-  if (field.kind === "enum") {
-    if (!Object.values(field.enumType).includes(value)) throw new Error("Invalid enum code");
-    return value;
-  }
-  if (field.type === "Date" || field.type === Date) {
-    if (typeof value !== "string" || !Number.isFinite(Date.parse(value)))
-      throw new Error("Expected an ISO date string");
-    return new Date(value);
-  }
-  if (
-    typeof field.type === "string" &&
-    ["string", "number", "boolean"].includes(field.type) &&
-    typeof value !== field.type
-  ) {
-    throw new Error(`Expected ${field.type}`);
-  }
-  if (typeof field.type === "function") throw new Error("Session prototype does not support this field codec");
-  return value;
-}
-
-/** Loads only selected public fields and encodes their values through the JSON boundary. */
-async function readSnapshot(
-  execution: SessionExecution,
-  entity: Entity,
-  names: readonly string[],
-): Promise<SessionSnapshot> {
-  const meta = getMetadata(entity);
-  const values: Record<string, SessionValue> = {};
-  for (const name of names) {
-    const field = meta.allFields[name];
-    if (!Object.hasOwn(meta.allFields, name) || !field) throw new Error(`Unknown field ${name}`);
-    if (field.kind === "primitive" && field.lazy) throw new Error("Session prototype does not support lazy fields");
-    if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
-      values[name] = encodeSessionValue(execution, getField(entity, name));
-    } else {
-      const relation = (entity as unknown as Record<string, Loadable>)[name];
-      values[name] = encodeSessionValue(execution, await relation.load());
-    }
-  }
-  return { ref: sessionRef(execution, entity), type: meta.type, values };
 }
 
 /**
@@ -364,64 +246,13 @@ async function readSnapshot(
  *
  * Serialization runs outside trusted ORM access so preview output cannot inherit internal permissions.
  */
-async function dryRun(execution: SessionExecution, mode: true | "validate" = true): Promise<SessionValidation> {
+async function dryRun(em: EntityManager, mode: true | "validate" = true): Promise<SessionValidation> {
   try {
-    await execution.em.flush({ dryRun: mode });
-    const changes = runInUntrustedContext(() => captureSessionChanges(execution));
+    await em.flush({ dryRun: mode });
+    const changes = runInUntrustedContext(() => captureSessionChanges(em));
     return { status: "valid", scope: mode === "validate" ? "pre-write" : "full", changes };
   } catch (error) {
     if (!(error instanceof ValidationErrors)) throw error;
-    return {
-      status: "invalid",
-      errors: error.errors.map((entry) => ({
-        ...("entity" in entry ? { ref: sessionRef(execution, entry.entity) } : {}),
-        ...(entry.field !== undefined ? { field: entry.field } : {}),
-        ...(entry.code !== undefined ? { code: entry.code } : {}),
-        message: entry.message,
-      })),
-    };
+    return { status: "invalid", errors: encodeValidationErrors(error) };
   }
-}
-
-/** Limits commands to actual mutable metadata fields instead of arbitrary entity properties or methods. */
-function writableField(type: EntityConstructor<Entity>, name: string): Field {
-  const meta = getMetadata(type);
-  const field = meta.allFields[name];
-  if (!Object.hasOwn(meta.allFields, name) || !field) throw new Error(`Unknown field ${name}`);
-  if (field.kind === "primaryKey" || ("derived" in field && field.derived) || ("protected" in field && field.protected))
-    throw new Error(`Field ${name} is not writable`);
-  if (
-    field.kind === "o2o" ||
-    field.kind === "lo2m" ||
-    field.kind === "m2mEnum" ||
-    (field.kind === "primitive" && field.lazy)
-  )
-    throw new Error(`Session prototype does not support ${field.kind} field ${name}`);
-  return field;
-}
-
-/** Validates the JSON boundary before cloning; never silently strips undefined, functions, or non-finite values. */
-function copyJson<T>(value: T): T {
-  checkJson(value);
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-/** Rejects non-JSON values even when called directly instead of through an MCP JSON parser. */
-function checkJson(value: unknown): void {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  )
-    return;
-  if (Array.isArray(value)) {
-    value.forEach((entry) => checkJson(entry));
-    return;
-  }
-  if (typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-    Object.values(value).forEach((entry) => checkJson(entry));
-    return;
-  }
-  throw new Error("Session commands must contain only JSON values");
 }

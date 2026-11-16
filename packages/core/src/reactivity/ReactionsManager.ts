@@ -5,7 +5,7 @@ import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
 import { NoIdError } from "src/index.ts";
 import { type ReactionLogger, globalLogger, noopReactionLogger } from "src/logging/ReactionLogger.ts";
 import { followReverseHint } from "src/reactivity/reactiveHints.ts";
-import { type ValidationError, ValidationErrors } from "src/rules.ts";
+import { TransitionGuardErrors, type ValidationError, ValidationErrors } from "src/rules.ts";
 import {
   type TransitionCallback,
   type TransitionStep,
@@ -227,7 +227,7 @@ export class ReactionsManager {
    *
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
-  async recalcPendingReactables(kind: "reactables" | "reactiveQueries") {
+  async recalcPendingReactables(kind: "reactables" | "reactiveQueries", validateOnly = false) {
     if (this.needsRecalc(kind)) this.logger.logStartingRecalc(this.em, kind);
 
     let loops = 0;
@@ -327,7 +327,7 @@ export class ReactionsManager {
 
       if (failures.length > 0) throw failures[0];
       if (kind === "reactables") {
-        await runInTrustedContext(() => this.processPendingTransitions());
+        await runInTrustedContext(() => this.processPendingTransitions(validateOnly));
       }
       // Record any successful actions that should only run once so we don't run them again
       for (const action of actions) {
@@ -443,7 +443,7 @@ export class ReactionsManager {
    * We might eventually treat A -> B -> A as an undo and ignore both transitions before reactions
    * have seen them. For now, each transition is meaningful, even when the final state is unchanged.
    */
-  private async processPendingTransitions(): Promise<void> {
+  private async processPendingTransitions(validateOnly: boolean): Promise<void> {
     // Ordinary reactions may have created more entities during this pass.
     this.endTransitionCreations();
     if (this.pendingTransitions.length === 0) return;
@@ -452,14 +452,19 @@ export class ReactionsManager {
     for (let i = 0; i < waves.length; i++) {
       const wave = waves[i];
       const guardResults = await Promise.allSettled(wave.map((pending) => this.evaluateTransitionGuards(pending)));
-      try {
-        const errors = failIfAnyRejected(guardResults).flat();
-        if (errors.length > 0) throw new ValidationErrors(errors);
-      } catch (error) {
-        // No callbacks in this wave have run. Preserve it and later waves for a corrected validation attempt.
-        // Earlier waves have already applied their callbacks and must not run again.
-        this.pendingTransitions.unshift(...waves.slice(i).flat());
-        throw error;
+      const errors = failIfAnyRejected(guardResults).flat();
+      if (errors.length > 0) {
+        // Only a validate-only flush can retry on this EM, so other flushes skip rebuilding the queue.
+        if (!validateOnly) throw new ValidationErrors(errors);
+        // Retry the rejected wave and later waves before transitions queued by earlier callbacks.
+        // Reuse the drained batch; spreading a large queue into unshift can exceed JS's argument limit.
+        batch.length = 0;
+        for (let j = i; j < waves.length; j++) {
+          for (const pending of waves[j]) batch.push(pending);
+        }
+        for (const pending of this.pendingTransitions) batch.push(pending);
+        this.pendingTransitions = batch;
+        throw new TransitionGuardErrors(errors);
       }
       const callbackResults = await Promise.allSettled(wave.map((pending) => this.runTransitionCallbacks(pending)));
       failIfAnyRejected(callbackResults);

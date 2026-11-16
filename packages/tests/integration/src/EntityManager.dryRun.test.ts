@@ -14,18 +14,19 @@ describe("EntityManager.dryRun", () => {
   });
 
   it("can ordinarily flush the same graph after repeated pre-write validations", async () => {
-    // Given a tag prepared twice without durable writes
+    // Given a tag whose beforeCreate hook creates a sibling
     const em = newEntityManager();
-    em.create(Tag, { name: "draft" });
+    em.create(Tag, { name: "create sibling" });
+    // And two validations on the same EM before either tag reaches the database
     await em.flush({ dryRun: "validate" });
     await em.flush({ dryRun: "validate" });
     // When committing on the same manager
     await em.flush();
-    // Then its pending insert is persisted exactly once
-    expect(await select("tags")).toMatchObject([{ name: "draft" }]);
+    // Then the ordinary flush persists the original pair without creating another sibling
+    expect((await select("tags")).map((tag) => tag.name).sort()).toEqual(["create sibling", "generated sibling"]);
   });
 
-  it("leaves existing timestamps out of dry-run changes", async () => {
+  it("leaves existing timestamps out of pre-write validation changes", async () => {
     // Given a publisher with a known database version and a staged rename
     await insertPublisher({ name: "publisher", updated_at: new Date("2020-01-01T00:00:00.000Z") });
     const em = newEntityManager();
@@ -38,7 +39,7 @@ describe("EntityManager.dryRun", () => {
     expect(publisher.changes.updatedAt.hasChanged).toEqual(false);
   });
 
-  it("preserves an existing timestamp through dry runs", async () => {
+  it("advances the publisher's timestamp on the disposable preview EM", async () => {
     // Given a publisher with a known database version and a staged rename
     const updatedAt = new Date("2020-01-01T00:00:00.000Z");
     await insertPublisher({ name: "publisher", updated_at: updatedAt });
@@ -47,11 +48,11 @@ describe("EntityManager.dryRun", () => {
     publisher.name = "renamed";
     // When preparing without committing
     await em.flush({ dryRun: true });
-    // Then the entity still has its original version
-    expect(publisher.updatedAt).toEqual(updatedAt);
+    // Then the preview entity has the newer version it wrote
+    expect(publisher.updatedAt.getTime()).toBeGreaterThan(updatedAt.getTime());
   });
 
-  it("advances the timestamp only when ordinarily flushing after a dry run", async () => {
+  it("advances the timestamp when flushing after pre-write validation", async () => {
     // Given a publisher renamed in a dry run
     const updatedAt = new Date("2020-01-01T00:00:00.000Z");
     await insertPublisher({ name: "publisher", updated_at: updatedAt });
@@ -61,11 +62,11 @@ describe("EntityManager.dryRun", () => {
     await em.flush({ dryRun: "validate" });
     // When persisting that same graph normally
     await em.flush();
-    // Then the ORM advances its row version without an UPDATE trigger
+    // Then the ORM advances its row version
     expect(publisher.updatedAt.getTime()).toBeGreaterThan(updatedAt.getTime());
   });
 
-  it("still rejects stale writes when a dry run does not bump timestamps", async () => {
+  it("rejects stale writes during full preview", async () => {
     // Given a loaded publisher with a pending edit
     await insertPublisher({ name: "publisher", updated_at: new Date("2020-01-01T00:00:00.000Z") });
     const em = newEntityManager();
@@ -77,7 +78,7 @@ describe("EntityManager.dryRun", () => {
     concurrent.name = "concurrent";
     await other.flush();
     // When validating against the stale version
-    // Then the unchanged timestamp still participates in optimistic locking
+    // Then optimistic locking detects the concurrent write
     await expect(em.flush({ dryRun: true })).rejects.toThrow("Oplock failure");
   });
 
@@ -133,5 +134,46 @@ describe("EntityManager.dryRun", () => {
     await em.flush({ dryRun: "validate" });
     // Then the signature callback runs once and only the blocked payment is resumed
     expect(advance.transientFields.transitions).toEqual([AdvanceStatus.Signed, AdvanceStatus.Paid]);
+  });
+
+  it("reruns only beforeFlush when a pending insert is edited after validation", async () => {
+    // Given a new author whose creation and flush hooks have run
+    const em = newEntityManager();
+    const author = em.create(Author, { firstName: "Alice" });
+    await em.flush({ dryRun: "validate" });
+    author.transientFields.beforeCreateRan = false;
+    author.transientFields.beforeFlushRan = false;
+    // When editing the pending author and validating again
+    author.firstName = "Alicia";
+    await em.flush({ dryRun: "validate" });
+    // Then the edit runs beforeFlush without treating the pending insert as another creation or an update
+    expect(author.transientFields).toMatchObject({
+      beforeFlushRan: true,
+      beforeCreateRan: false,
+      beforeUpdateRan: false,
+    });
+  });
+
+  it("reruns update hooks only for the author edited since validation", async () => {
+    // Given two saved authors with pending renames
+    await insertAuthor({ first_name: "Alice" });
+    await insertAuthor({ first_name: "Bob" });
+    const em = newEntityManager();
+    const [alice, bob] = await em.loadAll(Author, ["a:1", "a:2"]);
+    alice.firstName = "Al";
+    bob.firstName = "Robert";
+    // And both authors have completed their hooks for these edits
+    await em.flush({ dryRun: "validate" });
+    for (const author of [alice, bob]) {
+      expect(author.transientFields).toMatchObject({ beforeUpdateRan: true, beforeFlushRan: true });
+      author.transientFields.beforeUpdateRan = author.transientFields.beforeFlushRan = false;
+    }
+    // When changing Alice's already-dirty field and assigning Bob his current name
+    alice.firstName = "Alicia";
+    bob.firstName = "Robert";
+    await em.flush({ dryRun: "validate" });
+    // Then only Alice's update and flush hooks ran again
+    expect(alice.transientFields).toMatchObject({ beforeUpdateRan: true, beforeFlushRan: true });
+    expect(bob.transientFields).toMatchObject({ beforeUpdateRan: false, beforeFlushRan: false });
   });
 });

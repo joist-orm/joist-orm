@@ -1,3 +1,5 @@
+import { ValidationErrors } from "joist-orm";
+
 import { AdvanceStatus, BookAdvanceCodegen, bookAdvanceConfig as config } from "./entities";
 
 export class BookAdvance extends BookAdvanceCodegen {
@@ -51,6 +53,10 @@ config.addTransitionRule("status", { to: "Paid" }, "book", (ba) => {
 // For testing which transitions fire, and in what order, including creation (since `onCreate` defaults to true)
 config.addTransitionReaction("status", {}, "book", (ba, _ctx, transition) => {
   ba.transientFields.transitions.push(transition.to);
+  // For testing Session recovery when a callback throws after recording the signature.
+  if (transition.to === AdvanceStatus.Signed && ba.book.get.title === "Missing contract") {
+    throw new ValidationErrors([{ entity: ba, message: "Missing signature contract" }]);
+  }
   if (transition.to === AdvanceStatus.Paid && ba.transientFields.unpublishWhenPaid) ba.book.get.title = "Unpublished";
 });
 

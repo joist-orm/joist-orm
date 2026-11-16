@@ -14,7 +14,7 @@ config.beforeFlush("books", (tag) => {
   }
 });
 
-// Exercises speculative hook-created work without adding schema or bypassing the normal hook pipeline.
+// For testing that review and commit replay do not duplicate entities created by dry-run beforeCreate hooks.
 config.beforeCreate((tag) => {
   if (tag.name === "create sibling") tag.em.create(Tag, { name: "generated sibling" });
 });

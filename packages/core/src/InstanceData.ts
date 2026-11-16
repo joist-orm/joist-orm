@@ -34,8 +34,8 @@ export class InstanceData {
   flushedData: Record<any, any> | undefined;
   /** Packs the new/deleted `Operation`s + isTouched into one slot; see the accessors below. */
   #flags: number = 0;
-  /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
-  createId: string | undefined;
+  /** Assigned at creation and never changed or persisted. */
+  clientId: string | undefined;
   /** The zero-based order this entity was registered with its EntityManager. */
   entityIndex: number = -1;
 

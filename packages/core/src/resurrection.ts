@@ -1,3 +1,4 @@
+import { isClientId, resolveClientId } from "src/clientIds.ts";
 import { type Entity, isEntity } from "src/Entity.ts";
 import { type EntityManager, type MaybeAbstractEntityConstructor, TooManyError } from "src/EntityManager.ts";
 import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "src/EntityMetadata.ts";
@@ -21,7 +22,7 @@ export async function findExistingIfUniqueBy<T extends Entity>(
   input: object,
 ): Promise<T | undefined> {
   const meta = getMetadata(constructor);
-  const candidates = getUniqueByCandidates(meta, input);
+  const candidates = getUniqueByCandidates(em, meta, input);
   for (const where of candidates) {
     const inMemory = onlySoftDeleted(em.filterEntities(constructor as any, where as any) as T[]);
     if (inMemory.length > 1) {
@@ -56,13 +57,16 @@ function onlySoftDeleted<T extends Entity>(entities: T[]): T[] {
 }
 
 /** Builds pushdown-safe where clauses from configured identity fields. */
-function getUniqueByCandidates(meta: EntityMetadata, input: object): object[] {
+function getUniqueByCandidates(em: EntityManager, meta: EntityMetadata, input: object): object[] {
   return (meta.uniqueBy ?? getBaseMeta(meta).uniqueBy ?? []).flatMap((fields) => {
     const where: Record<string, unknown> = {};
     for (const fieldName of fields) {
       const field = meta.allFields[fieldName];
       if (!field || !isQueryableIdentityField(field)) return [];
-      const value = getIdentityValue(field, input);
+      let value = getIdentityValue(field, input);
+      if ((field.kind === "m2o" || field.kind === "poly") && isClientId(value)) {
+        value = resolveClientId(em, field, value);
+      }
       if (value === undefined || value === null) return [];
       where[field.fieldName] = value;
     }

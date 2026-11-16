@@ -10,6 +10,7 @@ import { populateBatchLoader, type populateOperation } from "src/batchloaders/po
 import { type recursiveChildrenOperation } from "src/batchloaders/recursiveChildrenBatchLoader.ts";
 import { type recursiveM2mOperation } from "src/batchloaders/recursiveM2mBatchLoader.ts";
 import { type recursiveParentsOperation } from "src/batchloaders/recursiveParentsBatchLoader.ts";
+import { assertClientId, clientIdTag, isClientId } from "src/clientIds.ts";
 import { type ReactiveRule, constraintNameToValidationError } from "src/config.ts";
 import { getConstructorFromTag, getMetadataForType } from "src/configure.ts";
 import { findByUniqueDataLoader, type findByUniqueOperation } from "src/dataloaders/findByUniqueDataLoader.ts";
@@ -328,7 +329,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #entitiesArray: Entity[] = [];
   // Incrementally track dirty entities so we don't have to scan `#entityArray` during flush
   readonly #maybePendingFlushEntities: Set<Entity> = new Set();
-  // Indexes the currently loaded entities by their tagged ids and `toTaggedString` ids (i.e. `a#`). This fixes
+  // Indexes the currently loaded entities by their tagged database ids and stable client ids (i.e. `a#1`). This fixes
   // real-world performance issues where identity lookups scanning `#entities` were an `O(n^2)`.
   readonly #entitiesById: Map<string, Entity> = new Map();
   readonly #entitiesByTag: Map<string, Entity[]> = new Map();
@@ -580,8 +581,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   getEntity<T extends Entity & { id: string }>(id: IdOf<T>): T | undefined;
   getEntity(id: TaggedId): Entity | undefined;
   getEntity(id: TaggedId): Entity | undefined {
-    // Skip this both for performance + we allow toTaggedString-style `a#1` ids
-    // assertIdIsTagged(id);
     const entity = this.#entitiesById.get(id);
     return entity && this.#canViewEntity(entity) ? entity : undefined;
   }
@@ -1205,7 +1204,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * See `upsert` for the upsert/deep upsert behavior.
    */
-  public createPartial<T extends EntityW>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends EntityW>(
+    type: EntityConstructor<T>,
+    opts: PartialOrNull<OptsOf<T>> & { $clientId?: TaggedId },
+  ): T {
     return this.#doCreate(type, opts, true);
   }
 
@@ -1215,6 +1217,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * This supports upsert behavior, i.e.:
    *
    * - findOrCreate the primary entity being updated (based on the `id` key being provided),
+   * - `id` accepts a database ID or an already-registered client ID,
    * - upsert relation markers like `op`, `delete`, and `remove` are supported,
    * - deep input is supported, i.e. `{ firstName: "Bob", books: [{ title: "b1" } ] }`, and
    * - fields set to `undefined` will be skipped instead of unset
@@ -1563,7 +1566,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hint?: any,
   ): Promise<T> {
     const entity = await this.#load(typeOrId, id, hint);
-    if (!this.#canViewEntity(entity)) throw new NotFoundError(`${entity.idTagged} was not found`);
+    if (!this.#canViewEntity(entity)) throw new NotFoundError(`${id ?? typeOrId} was not found`);
     return entity;
   }
 
@@ -1584,6 +1587,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       id = id || fail(`Invalid ${typeOrId.name} id: ${id}`);
     }
     const meta = getMetadata(type);
+
+    // Client IDs refer only to entities already registered in this EM; never query them as database IDs.
+    if (isClientId(id)) {
+      const entity = this.#getEntity<T>(id);
+      if (!entity) throw new NotFoundError(`${id} was not found`);
+      if (!(entity instanceof type)) {
+        throw new Error(`${id} is ${entity.constructor.name} but should be ${type.name}`);
+      }
+      if (hint) await this.populate(entity, hint);
+      return entity;
+    }
+
     const taggedId = toTaggedId(meta, id);
     let entity = this.#getEntity<T>(taggedId);
     if (!entity) {
@@ -1623,9 +1638,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const entities = await this.#loadAll(type, _ids, hint);
     if (this.#hasVisibilityHook) {
-      const hidden = entities.filter((entity) => !this.#canViewEntity(entity));
-      if (hidden.length > 0)
-        throw new NotFoundError(`${hidden.map((entity) => entity.idTagged).join(",")} were not found`);
+      const hidden = _ids.filter((_, i) => !this.#canViewEntity(entities[i]));
+      if (hidden.length > 0) throw new NotFoundError(`${hidden.join(",")} were not found`);
     }
     return entities;
   }
@@ -1645,8 +1659,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     let positionsToLoad: number[] | undefined;
 
     for (let i = 0; i < _ids.length; i++) {
-      const id = tagId(meta, _ids[i]);
+      const input = _ids[i];
+      const client = isClientId(input);
+      const id = client ? input : tagId(meta, input);
       const entity = this.#getEntity<T>(id);
+      if (client && !entity) throw new NotFoundError(`${id} was not found`);
+      if (client && entity && !(entity instanceof type)) {
+        throw new Error(`${id} is ${entity.constructor.name} but should be ${type.name}`);
+      }
       if (entity) {
         entities[i] = entity;
       } else {
@@ -1706,20 +1726,27 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const maybeEntities = new Array<T | undefined>(_ids.length);
     let idsToLoad: string[] | undefined;
     let positionsToLoad: number[] | undefined;
+    let allFound = true;
 
     // Ensure the ids are tagged, and find any not-yet-loaded
     for (let i = 0; i < _ids.length; i++) {
-      const id = tagId(meta, _ids[i]);
+      const input = _ids[i];
+      const client = isClientId(input);
+      const id = client ? input : tagId(meta, input);
       const entity = this.#getEntity<T>(id);
+      if (client && entity && !(entity instanceof type)) {
+        throw new Error(`${id} is ${entity.constructor.name} but should be ${type.name}`);
+      }
       if (entity) {
         maybeEntities[i] = entity;
       } else {
+        allFound = false;
+        if (client) continue;
         (idsToLoad ??= []).push(id);
         (positionsToLoad ??= []).push(i);
       }
     }
 
-    let entities: T[];
     if (idsToLoad) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
@@ -1730,12 +1757,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (let j = 0; j < positionsToLoad!.length; j++) {
         maybeEntities[positionsToLoad![j]] = this.#getEntity<T>(idsToLoad[j]);
       }
+    }
+    let entities: T[];
+    if (allFound) {
+      entities = maybeEntities as T[];
+    } else {
       entities = [];
       for (const entity of maybeEntities) {
         if (entity !== undefined) entities.push(entity);
       }
-    } else {
-      entities = maybeEntities as T[];
     }
     entities = this.#filterVisible(entities);
     if (hint) {
@@ -3039,9 +3069,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         } else if (instanceData.isNewEntity) {
           // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
           // allowPendingChanges step as they should not be present otherwise.
-          // (I'd thought we should copy over `InstanceData.createId`, but since we're iterating over `oldEm.#entitiesByTag`
-          // in stable as-created order, the `newEm.create` will assign the same/incrementing `createId`s as in oldEm.)
-          newEm.create(entity.constructor as EntityConstructor<Entity>, {} as any);
+          // Keep the same client ID even when it was supplied explicitly.
+          newEm.create(entity.constructor as EntityConstructor<Entity>, { $clientId: entity.$clientId } as any);
         } else {
           // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
           // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
@@ -3055,11 +3084,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     function mapEntity(oldEntity: Entity): Entity {
       if (oldEntity.isNewEntity) {
-        return newEm.#entitiesById.get(oldEntity.toTaggedString())!;
+        return newEm.#entitiesById.get(oldEntity.$clientId!)!;
       } else {
         return newEm.#entitiesById.get(oldEntity.idTagged)!;
       }
     }
+
+    // Hydration copies database fields only. Copy persisted entities' client IDs separately,
+    // and keep the creation counters so automatic IDs do not reuse deleted entities' numbers.
+    for (const entity of oldEm.#entitiesArray) {
+      if (entity.$clientId) {
+        const copy = mapEntity(entity);
+        getInstanceData(copy).clientId = entity.$clientId;
+        newEm.#entitiesById.set(entity.$clientId, copy);
+      }
+    }
+    if (oldEm.#createCounter) newEm.#createCounter = new Map(oldEm.#createCounter);
 
     function mapEntities<U extends Entity>(v: U[] | undefined): U[] | undefined {
       if (v === undefined) return undefined;
@@ -3230,17 +3270,43 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
-    const entity = newEntity(this, type, true);
-
-    // Assign the next `a#1`, `a#2`, etc. id
     const meta = getMetadata(type);
-    const counter = (this.#createCounter ??= new Map<string, number>());
-    const i = (counter.get(meta.tagName) ?? 0) + 1;
-    counter.set(meta.tagName, i);
-    getInstanceData(entity).createId = String(i);
+
+    // Check the $clientId if the caller is using one
+    const $clientId = opts.$clientId;
+    let fields = opts;
+    if ("$clientId" in opts) {
+      // Avoid copying ordinary creation inputs just to strip an option they do not have.
+      fields = { ...opts };
+      delete fields.$clientId;
+    }
+
+    if (isClientId(fields.id)) {
+      throw new Error("id must be a database id; use $clientId for client identity");
+    } else if ($clientId !== undefined) {
+      assertClientId(meta, $clientId);
+      if (this.#getEntity($clientId)) throw new Error(`Client id ${$clientId} is already registered`);
+      // Explicitly check for writes, since technically "only setting $clientId" won't go through
+      // setters like the rest of opts do, which would normally do the writes-allowed check.
+      this.__api.checkWritesAllowed();
+    }
+
+    // Assign the next `a#1`, `a#2`, etc. id; automatic and explicit client IDs share one namespace.
+    let clientId: TaggedId = $clientId;
+    if (clientId === undefined) {
+      const counter = (this.#createCounter ??= new Map<string, number>());
+      let i = counter.get(meta.tagName) ?? 0;
+      do {
+        clientId = `${meta.tagName}${clientIdTag}${++i}`;
+      } while (this.#getEntity(clientId));
+      counter.set(meta.tagName, i);
+    }
+    const entity = newEntity(this, type, true);
+    const data = getInstanceData(entity);
+    data.clientId = clientId;
 
     // Check opts.id for an explicitly-set id
-    this.#doRegister(entity as any, opts.id);
+    this.#doRegister(entity as any, fields.id);
 
     // Set a default createdAt/updatedAt
     const baseMeta = getBaseMeta(getMetadata(entity));
@@ -3257,7 +3323,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const api = getEmInternalApi(this);
     api?.fieldLogger.logCreate(entity);
 
-    setOpts(entity, opts, { partial, calledFromConstructor: true });
+    setOpts(entity, fields, { partial, calledFromConstructor: true });
 
     // Apply any synchronous defaults, after the opts have been applied
     if (!(this as any).fakeInstance) {
@@ -3292,10 +3358,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
       this.#entitiesById.set(maybeId, entity);
-    } else {
-      // Also register by the `a#1` style tagged string for new entities
-      this.#entitiesById.set(entity.toTaggedString(), entity);
     }
+    const clientId = getInstanceData(entity).clientId;
+    if (clientId) this.#entitiesById.set(clientId, entity);
     getInstanceData(entity).entityIndex = this.#entitiesArray.length;
     this.#entitiesArray.push(entity);
 

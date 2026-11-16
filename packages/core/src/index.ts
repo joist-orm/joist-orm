@@ -1,4 +1,5 @@
 import { getInstanceData } from "src/BaseEntity.ts";
+import { isClientId, maybeResolveClientReference } from "src/clientIds.ts";
 import { getDefaultDependencies } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
 import { type EntityConstructor, type MaybeAbstractEntityConstructor, getEmInternalApi } from "src/EntityManager.ts";
@@ -389,6 +390,12 @@ export function setOpt<T extends Entity>(
   partial = false,
   calledFromConstructor = false,
 ): void {
+  if (key === "$clientId") {
+    throw new Error("$clientId can only be assigned by em.create or em.createPartial");
+  }
+  if (key === "id" && isClientId(_value)) {
+    throw new Error("id must be a database id; use $clientId for client identity");
+  }
   const field = meta.allFields[key];
   if (!field) {
     // Allow setting non-field properties like fullName setters
@@ -404,7 +411,8 @@ export function setOpt<T extends Entity>(
   if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) return;
 
   // We let optional opts fields be `| null` for convenience, and convert to undefined.
-  const value = _value === null ? undefined : _value;
+  let value = _value === null ? undefined : _value;
+  if (field) value = maybeResolveClientReference(entity, field, value);
 
   // Use `getField` to side-step `id` blowing up on new entities that are setting an
   // explicit id. Read configured fields as internal so applying opts does not mark the entity for read locking.

@@ -1,3 +1,4 @@
+import { clientIdTag } from "src/clientIds.ts";
 import { type Reactable, setAfterMetadataLocked, setBooted } from "src/config.ts";
 import { AsyncDefault } from "src/defaults.ts";
 import { type Entity } from "src/Entity.ts";
@@ -64,6 +65,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 /** Installs lazy lookup getters for metadata-derived caches. */
 function installMetadataGetters(metas: EntityMetadata[]): void {
   for (const meta of metas) {
+    if (meta.fields.$clientId) throw new Error(`${meta.type}.$clientId is reserved for EM-local client identity`);
     defineLazyGetter(meta, "subTypesByType", function buildSubTypesByType() {
       return new Map(meta.subTypes.map((st) => [st.type, st]));
     });
@@ -224,6 +226,8 @@ function populateConstructorMaps(metas: EntityMetadata[]): void {
   setTaggedIdDelimiter(tagDelimiter);
 
   for (const meta of metas) {
+    if (meta.tagName.includes(clientIdTag))
+      throw new Error(`${clientIdTag} is reserved for client IDs and cannot be part of ${meta.type}'s tag`);
     // Add each (root) constructor into our tag -> constructor map for future lookups
     if (!meta.baseType) {
       const existing = tagToConstructorMap.get(meta.tagName);

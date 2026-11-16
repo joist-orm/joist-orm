@@ -1,4 +1,5 @@
 import { BaseEntity } from "src/BaseEntity.ts";
+import { clientIdTag } from "src/clientIds.ts";
 import { type Entity, type IdType, isEntity } from "src/Entity.ts";
 import { type EntityConstructor, type IdOf, type TaggedId } from "src/EntityManager.ts";
 import { type EntityMetadata, getMetadata } from "src/EntityMetadata.ts";
@@ -9,6 +10,8 @@ let tagDelimiter: string | undefined = ":";
 
 /** Sets the process-wide tagged-id format during metadata boot. */
 export function setTaggedIdDelimiter(delimiter: string | undefined): void {
+  if (delimiter?.includes(clientIdTag))
+    throw new Error(`${clientIdTag} is reserved for client IDs and cannot be a database ID delimiter`);
   tagDelimiter = delimiter;
 }
 
@@ -241,6 +244,9 @@ export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
 
 /** Given a tagged id, returns its tag. */
 export function tagFromId(id: string): string {
+  // Client IDs use # regardless of the configured database-ID delimiter.
+  const hash = id.indexOf(clientIdTag);
+  if (hash !== -1) return id.slice(0, hash);
   if (tagDelimiter === undefined) {
     return validSlugId.exec(id)?.[1] ?? fail(`Unknown tagged id format: "${id}"`);
   }

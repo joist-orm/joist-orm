@@ -86,6 +86,57 @@ describe("em.findOrCreate", () => {
     expect(a.age).toEqual(20);
   });
 
+  it("can find with findOrCreate without ifNew", async () => {
+    // Given an existing author
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+    // When we look it up with a where that already covers the required fields
+    const a = await em.findOrCreate(Author, { firstName: "a1" });
+    // Then we found the existing author
+    expect(a.id).toEqual("a:1");
+  });
+
+  it("can create with findOrCreate without ifNew", async () => {
+    // Given an existing author
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+    // When we look up a different author, without an ifNew
+    const a = await em.findOrCreate(Author, { firstName: "a2" });
+    // Then a new author is created from the where clause
+    expect(a.idMaybe).toBeUndefined();
+    expect(a.firstName).toEqual("a2");
+  });
+
+  it("can create with findOrCreate without ifNew when upsert covers the required fields", async () => {
+    // Given no authors
+    const em = newEntityManager();
+    // When the required firstName is only provided via upsert
+    const a = await em.findOrCreate(Author, { age: 20 }, undefined, { firstName: "a1" });
+    // Then the new author has both the where and upsert fields
+    expect(a.idMaybe).toBeUndefined();
+    expect(a.firstName).toEqual("a1");
+    expect(a.age).toEqual(20);
+  });
+
+  it("can findOrCreate without ifNew and populate", async () => {
+    // Given an existing author
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+    // When we find it without an ifNew, but with populate options
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, undefined, undefined, { populate: "books" });
+    // Then the books are loaded
+    expect(a.books.get).toEqual([]);
+  });
+
+  it("findOrCreate doesn't compile without ifNew if required field is missing", async () => {
+    const em = newEntityManager();
+    // @ts-expect-error
+    await em.findOrCreate(Author, { age: 20 });
+  });
+
   it("can create with findOrCreate and hook up to parent", async () => {
     await insertPublisher({ name: "p1" });
     const em = newEntityManager();

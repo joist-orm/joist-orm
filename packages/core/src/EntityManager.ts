@@ -1156,12 +1156,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * be valid, _unless_ those opts are already included in either the `where` or
    * `upsert` params.
    *
+   * If the `where` (and `upsert`) params already include all of the opts necessary for
+   * the `em.create` call, then the `ifNew` param can be omitted (or passed as `undefined`).
+   *
    * The optional `upsert` param are fields to always set/update, regardless of whether
    * the entity is created or not.
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by
-   * @param ifNew the fields to set if the entity is new
+   * @param ifNew the fields to set if the entity is new, optional if `where`/`upsert` cover all required fields
    * @param upsert the fields to update if the entity is either existing or new
    */
   async findOrCreate<
@@ -1170,6 +1173,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     U extends Partial<OptsOf<T>> | {},
     N extends Omit<OptsOf<T>, keyof F | keyof U>,
   >(type: EntityConstructor<T>, where: F, ifNew: N, upsert?: U): Promise<T>;
+  async findOrCreate<
+    T extends EntityW,
+    F extends Partial<OptsOf<T>>,
+    U extends Partial<OptsOf<T>> | {},
+    const H extends LoadHint<T>,
+  >(
+    type: EntityConstructor<T>,
+    // Only allow omitting `ifNew` when `where` + `upsert` cover every required opt
+    where: F & ({} extends Omit<OptsOf<T>, keyof F | keyof U> ? unknown : never),
+    ifNew?: undefined,
+    upsert?: U,
+    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+  ): Promise<Loaded<T, H>>;
   async findOrCreate<
     T extends EntityW,
     F extends Partial<OptsOf<T>>,
@@ -1192,13 +1208,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   >(
     type: EntityConstructor<T>,
     where: F,
-    ifNew: N,
+    ifNew: N | undefined,
     upsert?: U,
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<T> {
     const { softDeletes = "exclude", populate } = options ?? {};
     const entity = await findOrCreateDataLoader(this, type, where, softDeletes)
-      .load({ ifNew: ifNew as OptsOf<T>, upsert })
+      .load({ ifNew: (ifNew ?? {}) as OptsOf<T>, upsert })
       .catch(function findOrCreate(err) {
         throw appendStack(err, new Error());
       });

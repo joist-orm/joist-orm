@@ -142,7 +142,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { LazyFieldImpl, type lazyColumnLoadOperation } from "src/relations/LazyField.ts";
 import { RecursiveCycleError } from "src/relations/RecursiveCollection.ts";
 import { PojoRowData, type RowData } from "src/RowData.ts";
-import type { SimpleRule } from "src/rules.ts";
+import { type SimpleRule, TransitionGuardErrors } from "src/rules.ts";
 import { isInTrustedContext, runInTrustedContext } from "src/trusted.ts";
 import { type OptsOf, type OrderOf, type TypeMap } from "src/typeMap.ts";
 import { upsert } from "src/upsert.ts";
@@ -270,6 +270,22 @@ export type EntityManagerOpts<TX = unknown> = (
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
   skipValidation?: boolean;
+  /**
+   * Experimental preparation without committing changes.
+   *
+   * - "validate": Run defaults, hooks, ordinary reactions, and pre-write validation, then stop before
+   *   writing SQL. Keep changes pending so callers can correct validation errors and retry on the same EM.
+   *   RQF loops, commit rules, and database constraints are not checked by this pass.
+   * - true: Also executes SQL, RQF loops, commit rules, and then rolls back. Currently entities & join rows
+   *   are still marked as written, so the EM cannot be used again for a real/non-dry-run flush, so you should
+   *   only use this with a disposable EM.
+   *
+   * Only "validate" leaves existing timestamps unchanged. Full preview advances them inside its transaction.
+   * Both skip entity/transaction beforeCommit and afterCommit callbacks. Neither supports an enclosing
+   * transaction. Hooks may still perform reads or external I/O.
+   * Omit or pass false for an ordinary flush.
+   */
+  dryRun?: boolean | "validate";
 }
 
 /**
@@ -338,6 +354,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #isValidating: boolean = false;
   /** The error that failed a previous `em.flush`, after which this EntityManager can't flush again. */
   #flushError: unknown = undefined;
+  // A later ordinary flush on this EM must honor hooks completed during validate-only flushes.
+  #hasRunPreWriteValidation = false;
   // Set while regular (pre-flush) validation rules run, so `em.find*` can fail fast (see #assertFindAllowed)
   #findRestricted: boolean = false;
   readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
@@ -432,6 +450,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get entities() {
         return em.#entitiesArray;
+      },
+
+      get hasFailedFlush() {
+        return em.#flushError !== undefined;
       },
 
       getEntities<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>): readonly T[] {
@@ -2070,6 +2092,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
+    if (this.txn && flushOptions.dryRun) {
+      throw new Error("Dry runs require their own transaction");
+    }
     const entities = await runInTrustedContext(() => this.#flush(flushOptions));
     return this.#filterVisible(entities);
   }
@@ -2078,11 +2103,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (this.mode === "read-only") throw new ReadOnlyError();
     if (this.#flushError !== undefined) throw new FailedFlushError(this.#flushError);
 
-    const { skipValidation = false } = flushOptions;
+    const { skipValidation = false, dryRun = false } = flushOptions;
 
     this.#fl.startLock();
+    const validateOnly = dryRun === "validate";
+    if (validateOnly) this.#hasRunPreWriteValidation = true;
 
     const allFlushedEntities: Set<Entity> = new Set();
+    let failedValidationRule = false;
 
     try {
       await this.#fl.allowWrites(async () => {
@@ -2092,7 +2120,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // that would NPE their logic anyway).
         await this.flushDeletes();
         // Recalc before we run hooks, so the hooks will see the latest calculated values.
-        await this.#rm.recalcPendingReactables("reactables");
+        await this.#rm.recalcPendingReactables("reactables", validateOnly);
       });
 
       const createdThenDeleted: Set<Entity> = new Set();
@@ -2129,9 +2157,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           alreadyRanHooks,
         );
 
-        // If we're re-looping for AsyncReactiveField, make sure to bump updatedAt
-        // each time, so that for an INSERT-then-UPDATE the triggers don't think the
-        // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
+        // Each RQF write needs a fresh row version, including writes in a rollback-only preview.
         if (alreadyRanHooks.size > 0) {
           maybeBumpUpdatedAt(this.#rm, createTodos(alreadyRanHooks), now);
         }
@@ -2142,13 +2168,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             let todos = createTodos(pendingHooks);
 
             await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
-            maybeBumpUpdatedAt(this.#rm, todos, now);
+            if (dryRun !== "validate") maybeBumpUpdatedAt(this.#rm, todos, now);
 
             // Run our hooks
             for (const group of maybeSetupHookOrdering(todos)) {
-              await beforeCreate(this.ctx, group);
-              await beforeUpdate(this.ctx, group);
-              await beforeFlush(this.ctx, group);
+              if (this.#hasRunPreWriteValidation) {
+                await runPreWriteHooks(this.ctx, group, validateOnly);
+              } else {
+                await runHookOnTodos(this.ctx, "beforeCreate", group, ["inserts"]);
+                await runHookOnTodos(this.ctx, "beforeUpdate", group, ["updates"]);
+                await runHookOnTodos(this.ctx, "beforeFlush", group, ["inserts", "updates"]);
+              }
             }
 
             // Call `setField` just to get the column marked as dirty if needed.
@@ -2162,14 +2192,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             do {
               await this.flushDeletes();
               // The hooks could have changed fields, so recalc again.
-              await this.#rm.recalcPendingReactables("reactables");
+              await this.#rm.recalcPendingReactables("reactables", validateOnly);
             } while (this.#pendingDeletes.length > 0);
             // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
             // deletes have been processed
             if (this.#rm.hasPendingTypeErrors) {
               await this.#rm.recalcPendingTypeErrors();
               // We need to re-run reactables again if we dirtied something while retrying type errors
-              if (this.#rm.needsRecalc("reactables")) await this.#rm.recalcPendingReactables("reactables");
+              if (this.#rm.needsRecalc("reactables"))
+                await this.#rm.recalcPendingReactables("reactables", validateOnly);
             }
 
             for (const e of pendingHooks) hooksInvoked.add(e);
@@ -2224,6 +2255,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // that the user should see.
               if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
               await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            } catch (error) {
+              // A validation rule can safely run again. Remember where the error came from so validate-only flush can retry.
+              failedValidationRule = error instanceof ValidationErrors;
+              throw error;
             } finally {
               this.#findRestricted = false;
             }
@@ -2313,12 +2348,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
+      // A validate-only dry run stops here, before any RQF loops/etc.
+      if (dryRun === "validate") return [...allFlushedEntities];
+
       if (
         Object.keys(entityTodos).length > 0 ||
         Object.keys(joinRowTodos).length > 0 ||
         this.#rm.hasPendingCommitTransitions() ||
         this.#readSet.size > 0 ||
-        this.#forceTransaction
+        this.#forceTransaction ||
+        dryRun
       ) {
         const checkedReads = new Set<EntityW>();
         // The driver will handle the right thing if we're already in an existing transaction.
@@ -2345,8 +2384,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
                 // If any ReactiveFields depended on AsyncReactiveFields, go ahead and calc those now
                 await this.#rm.recalcPendingReactables("reactables");
               });
-              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
-              // updated_at, and bump it themselves, which could cause a subsequent error.
+              // Give the next persisted write iteration its own row version.
               now = getNow();
               // See if any RQFs actually changed any entities. If they did, run the hooks on them.
               entitiesToFlush = await runHooksOnPendingEntities();
@@ -2373,11 +2411,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             await runCommitValidation(commitRuleTodos, commitRuleJoinRowTodos);
           }
           // Run `beforeCommit once right before COMMIT
-          await beforeCommit(this.ctx, allFlushedEntities);
+          if (!dryRun) await beforeCommit(this.ctx, allFlushedEntities);
           await this.#rm.runCommitTransitions();
           // Commit rules and callbacks can assert dependencies after the last write loop.
           if (this.#readSet.size > 0) await checkReadDrift(this, this.#readSet, allFlushedEntities, checkedReads);
-          if (this.mode === "in-memory-writes") {
+          if (this.mode === "in-memory-writes" || dryRun) {
             throw new InMemoryRollbackError();
           }
         });
@@ -2428,7 +2466,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       // A failed flush may have already run reactions, hooks, or SQL, so we don't try to resume from it
-      if (!(e instanceof InMemoryRollbackError)) this.#flushError = e;
+      // Rules will run again, and a rejected guard has requeued its wave. A callback may have partially run.
+      const canRetry = dryRun === "validate" && (failedValidationRule || e instanceof TransitionGuardErrors);
+      if (!(e instanceof InMemoryRollbackError) && !canRetry) this.#flushError = e;
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
         // Look up a custom cycle message — check both the exact field name and its opposite
@@ -2458,6 +2498,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       }
       if (e instanceof InMemoryRollbackError) {
+        // Rollback leaves entities/join rows marked as already written.
+        // Reject another flush instead of resetting a disposable preview EM.
+        if (dryRun === true) this.#flushError = e;
         return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
       }
       // For raw (non-pretty) pg errors, fold the DETAIL into `message` so it survives into logs.
@@ -3401,6 +3444,9 @@ export interface EntityManagerInternalApi {
   /** Complete identity-map membership for ORM bookkeeping, independent of public visibility. */
   readonly entities: readonly Entity[];
 
+  /** Whether another flush on this EM would throw FailedFlushError. */
+  readonly hasFailedFlush: boolean;
+
   /** Type-indexed canonical membership, including entities hidden from public reads. */
   getEntities<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): readonly T[];
   joinRows: (m2m: ManyToManyLike) => JoinRows;
@@ -3728,16 +3774,57 @@ function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknow
   return runHookOnTodos(ctx, "beforeDelete", todos, ["deletes"]);
 }
 
-function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHookOnTodos(ctx, "beforeFlush", todos, ["inserts", "updates"]);
-}
+/**
+ * Run the pending write hooks in create, update, flush order.
+ *
+ * Capture the entities due for this pass before invoking any callbacks. On validate-only flushes
+ * record completion after each hook batch succeeds, before validation rules can reject the changes.
+ * The ordinary flush loop still owns discovery of new entities and all SQL work.
+ */
+async function runPreWriteHooks(
+  ctx: unknown,
+  todos: Record<string, Todo>,
+  trackHookCompletion: boolean,
+): Promise<void> {
+  const creates: EntityW[] = [],
+    updates: EntityW[] = [],
+    flushes: EntityW[] = [];
+  for (const todo of Object.values(todos)) {
+    const hasCreate = metaHasHook(todo.metadata, "beforeCreate");
+    const hasUpdate = metaHasHook(todo.metadata, "beforeUpdate");
+    const hasFlush = metaHasHook(todo.metadata, "beforeFlush");
+    if (hasCreate || hasFlush) {
+      for (const entity of todo.inserts) {
+        const data = getInstanceData(entity);
+        if (hasCreate && !data.beforeCreateRan) creates.push(entity);
+        if (hasFlush && !data.flushHooksCurrent) flushes.push(entity);
+      }
+    }
+    if (hasUpdate || hasFlush) {
+      for (const entity of todo.updates) {
+        if (getInstanceData(entity).flushHooksCurrent) continue;
+        if (hasUpdate) updates.push(entity);
+        if (hasFlush) flushes.push(entity);
+      }
+    }
+  }
 
-function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHookOnTodos(ctx, "beforeCreate", todos, ["inserts"]);
-}
+  await dispatch("beforeCreate", creates);
+  await dispatch("beforeUpdate", updates);
+  await dispatch("beforeFlush", flushes);
 
-function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHookOnTodos(ctx, "beforeUpdate", todos, ["updates"]);
+  async function dispatch(hook: "beforeCreate" | "beforeUpdate" | "beforeFlush", entities: EntityW[]) {
+    if (!entities.length) return;
+    const live = entities.filter((e) => !e.isDeletedEntity);
+    await runHook(ctx, hook, live);
+    if (!trackHookCompletion) return;
+
+    for (const entity of live) {
+      const data = getInstanceData(entity);
+      if (hook === "beforeCreate") data.markBeforeCreateRan();
+      else data.flushHooksCurrent = true;
+    }
+  }
 }
 
 function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
@@ -3953,6 +4040,7 @@ function getNow(): Date {
   // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
   // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
   // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
+  // (We're technically moving away from trigger-driven oplocks, but keeping this for now.)
   if (lastNow && (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime())) {
     now = new Date(lastNow.getTime() + 1);
   }

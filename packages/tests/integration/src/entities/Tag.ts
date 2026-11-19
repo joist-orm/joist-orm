@@ -13,3 +13,8 @@ config.beforeFlush("books", (tag) => {
     tag.name = `Books Changed`;
   }
 });
+
+// For testing that review and commit replay do not duplicate entities created by dry-run beforeCreate hooks.
+config.beforeCreate((tag) => {
+  if (tag.name === "create sibling") tag.em.create(Tag, { name: "generated sibling" });
+});

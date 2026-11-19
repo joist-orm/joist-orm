@@ -32,7 +32,7 @@ export class InstanceData {
   #referenceHistory: Record<string, any[]> | undefined = undefined;
   /** A bag to keep the flushed-to-database values, only for AsyncReactiveField reactivity. */
   flushedData: Record<any, any> | undefined;
-  /** Packs the new/deleted `Operation`s + isTouched into one slot; see the accessors below. */
+  /** Packs new/deleted operations, touch state, and pre-write hook state into one slot. */
   #flags: number = 0;
   /** Assigned at creation and never changed or persisted. */
   clientId: string | undefined;
@@ -72,6 +72,24 @@ export class InstanceData {
 
   set isTouched(value: boolean) {
     this.#flags = value ? this.#flags | 0b10000 : this.#flags & ~0b10000;
+  }
+
+  /** A validate-only flush can finish beforeCreate while the INSERT is still pending. */
+  get beforeCreateRan(): boolean {
+    return (this.#flags & 0b100000) !== 0;
+  }
+
+  markBeforeCreateRan(): void {
+    this.#flags |= 0b100000;
+  }
+
+  /** Whether pre-write validation already ran this entity's update/flush hooks for its current changes. */
+  get flushHooksCurrent(): boolean {
+    return (this.#flags & 0b1000000) !== 0;
+  }
+
+  set flushHooksCurrent(value: boolean) {
+    this.#flags = value ? this.#flags | 0b1000000 : this.#flags & ~0b1000000;
   }
 
   /** Creates the `#orm` field. */
@@ -118,6 +136,7 @@ export class InstanceData {
     this.#referenceHistory = undefined;
     this.flushedData = undefined;
     this.isTouched = false;
+    this.flushHooksCurrent = false;
     if (this.#new === Operation.Pending || this.#new === Operation.Flushed) {
       this.#new = Operation.Complete;
     }
@@ -221,6 +240,7 @@ export class InstanceData {
   /** Marks this entity as needing a flush even if no fields changed. */
   markTouched(): void {
     this.isTouched = true;
+    this.flushHooksCurrent = false;
     this.markMaybePending();
   }
 

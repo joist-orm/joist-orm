@@ -139,6 +139,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
+      if (instanceData.flushHooksCurrent && !("derived" in field && field.derived === "sync"))
+        instanceData.flushHooksCurrent = false;
       instanceData.markFieldClean(fieldName);
 
       fieldLogger.logSet(entity, fieldName, newValue);
@@ -172,6 +174,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   pluginManager.beforeSetField(entity, fieldName, newValue);
   data[fieldName] = newValue;
+  // Writing back a synchronous getter after hooks does not change what the hooks already saw.
+  if (instanceData.flushHooksCurrent && !("derived" in field && field.derived === "sync"))
+    instanceData.flushHooksCurrent = false;
   return true;
 }
 

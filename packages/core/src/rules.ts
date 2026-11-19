@@ -78,6 +78,9 @@ export class ValidationErrors extends Error {
   }
 }
 
+/** The rejected transition wave is back in the queue, so validation can retry its guards. */
+export class TransitionGuardErrors extends ValidationErrors {}
+
 function ruleWithOpts<T extends Entity>(
   opts: ValidationRuleOpts<T> | undefined,
   fn: (entity: T) => ValidationRuleResult,

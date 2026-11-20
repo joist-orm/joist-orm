@@ -125,6 +125,18 @@ If you have multiple test databases (i.e. one per Jest work), you can set the pa
 }
 ```
 
+### `scaffoldTests`
+
+By default, `joist-codegen` creates a starter `<Entity>.test.ts` alongside each new entity file. If you use another test runner, such as Node's built-in test runner, set this option to `false` to skip the Jest-style starter tests:
+
+```json
+{
+  "scaffoldTests": false
+}
+```
+
+Omitting this option or setting it to `true` keeps starter tests enabled. Codegen never overwrites or deletes existing tests as part of scaffolding. This option does not affect entity class, factory, or metadata generation, and is independent of [`createFlushFunction`](#createflushfunction).
+
 ### `temporal`
 
 Joist supports the [Temporal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal) standard through the runtime's native implementation or `temporal-polyfill`. When native Temporal is unavailable, install `temporal-polyfill`; Joist loads its `/global` entry point on demand so Joist and database clients share `globalThis.Temporal`.

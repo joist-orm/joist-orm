@@ -44,6 +44,7 @@
       ]
     },
     "createFlushFunction": { "anyOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }] },
+    "scaffoldTests": { "type": "boolean" },
     "entitiesDirectory": { "default": "./src/entities", "type": "string" },
     "codegenPlugins": { "type": "array", "items": { "type": "string" } },
     "entities": {

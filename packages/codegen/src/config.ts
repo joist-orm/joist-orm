@@ -149,6 +149,8 @@ export const config = z
      * of test database names, i.e. `mydb_test_1`, `mydb_test_2`, etc.
      */
     createFlushFunction: z.optional(z.union([z.boolean(), z.array(z.string())])),
+    /** Creates a starter test alongside each new entity file unless explicitly disabled. */
+    scaffoldTests: z.optional(z.boolean()),
     entitiesDirectory: z.string().default("./src/entities"),
     codegenPlugins: z.optional(z.array(z.string())),
     entities: z.record(z.string(), entityConfig).default({}),

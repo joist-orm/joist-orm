@@ -343,6 +343,16 @@ const em = newEntityManager();
 const author = await em.findOrCreate(Author, { email: "foo@bar.com" });
 ```
 
+The `where` is also used as the opts for the `em.create` call if no entity is found, so if it already includes all of the entity's required fields, no other arguments are necessary.
+
+If additional required fields are needed for a new entity, pass them as the third `ifNew` argument, which is only used when creating:
+
+```ts
+const author = await em.findOrCreate(Author, { email: "foo@bar.com" }, { firstName: "Bob" });
+```
+
+An optional fourth `upsert` argument contains fields that are set on the entity regardless of whether it was found or created.
+
 ### `#findWithNewOrChanged`
 
 The normal `em.find` method creates a SQL `SELECT` statement that is issued against the database.

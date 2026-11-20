@@ -85,20 +85,22 @@ Even if you're not using GraphQL, both benefits/rationale of:
 
 Are applicable to any system, so ideally you could apply the "id is a string" approach to your REST or GRPC or other APIs.
 
-That said, if you have an existing `number`-based API that you can't change, Joist provides `deTagId`, `deTagIds`, and `tagId` methods to convert to/from tagged ids to the actual number value.
+That said, if you have an existing `number`-based API that you can't change, use `entity.idDb` for entities with integer keys. Use `tagId` to tag incoming numeric IDs.
 
 (Also, see the section below for disabling tagged IDs if you'd prefer that.)
 
 ## Running SQL Queries
 
-When writing raw SQL queries, you can get the numeric value using `deTagId`
+If you have an entity, use `book.idDb` to get its untagged database key. The type is `number` for a Postgres `int` key and `string` for `bigint`, UUID, or text, regardless of the configured `idType`. Like `book.id`, it throws if no ID has been assigned yet.
+
+If you only have a tagged ID, use `deTagId` to get its untagged string:
 
 ```typescript
 const query = someKnexQuery();
 query.whereIn("books.id", deTagId(getMetadata(Book), bookId));
 ```
 
-Note that `deTagId` accepts the `Book` entity as its 1st parameter because it still applies the tagged id runtime check, i.e. ensure that `bookId` starts with `b:...`.
+`deTagId` uses the `Book` metadata to check that any tag on `bookId` matches the expected `b:` prefix.
 
 If you need to detag a value without knowing the entity type, you can use `unsafeDeTagIds`.
 

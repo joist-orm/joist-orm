@@ -139,7 +139,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> implements Entity {
+export abstract class T3BookCodegen extends BaseEntity<EntityManager, number, number> implements Entity {
   static readonly tagName = "t3Book";
   static readonly metadata: EntityMetadata<T3Book>;
 

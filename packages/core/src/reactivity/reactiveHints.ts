@@ -115,6 +115,7 @@ export type Reacted<T extends Entity, H> = Entity & {
                   ? T[K] & LoadedMethod<T, A, V>
                   : T[K];
 } & {
+  readonly idDb: T["idDb"];
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.
    *

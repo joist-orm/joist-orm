@@ -183,7 +183,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string, number> implements Entity {
   static readonly tagName = "cg";
   static readonly metadata: EntityMetadata<ChildGroup>;
 

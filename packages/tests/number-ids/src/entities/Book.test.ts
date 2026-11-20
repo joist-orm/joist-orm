@@ -1,5 +1,5 @@
 import { Book, newAuthor, newBook } from "src/entities";
-import { newEntityManager, select } from "src/setupDbTests";
+import { knex, newEntityManager, select } from "src/setupDbTests";
 
 describe("Book", () => {
   it("can save a book", async () => {
@@ -26,5 +26,18 @@ describe("Book", () => {
     await em.flush();
 
     expect(await select("books")).toMatchObject([{ id: "1", author_id: 2 }]);
+  });
+
+  it("keeps bigint database keys as strings even with numeric entity IDs", async () => {
+    // Given a book with a database key beyond JavaScript's safe integer range
+    const tooBigId = "9007199254740993";
+    const em = newEntityManager();
+    const book = newBook(em);
+    await em.flush();
+    await knex("books").where({ id: book.id }).update({ id: tooBigId });
+    // When the book is loaded
+    const loaded = await newEntityManager().findOneOrFail(Book, {});
+    // Then its database key is the original decimal string
+    expect(loaded.idDb).toEqual(tooBigId);
   });
 });

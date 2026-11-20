@@ -379,7 +379,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class PublisherCodegen extends BaseEntity<EntityManager, string, number> implements Entity {
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
 

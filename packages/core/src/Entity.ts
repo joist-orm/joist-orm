@@ -16,6 +16,8 @@ export interface Entity {
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
+  /** The untagged database key: a number for Postgres `int`, or a string for `bigint`, UUID, and text. */
+  readonly idDb: IdType;
   /**
    * An immutable EM-local alias, retained after database ID assignment and flush.
    *

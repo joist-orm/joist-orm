@@ -26,6 +26,7 @@ const bookMetaColumns = {
   "title": new Column("title", false, false, false, false, true, undefined, new PrimitiveSerde("character varying")),
   "createdAt": new Column("created_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
   "updatedAt": new Column("updated_at", false, false, false, true, true, undefined, new DateSerde("timestamp with time zone")),
+  "authorIdSnapshot": new Column("author_id_snapshot", true, false, false, false, true, undefined, new PrimitiveSerde("int")),
   "authorId": new Column("author_id", false, false, false, false, true, () => authorMeta, new KeySerde("a", "int")),
 } satisfies ColumnDescriptors;
 const commentMetaColumns = {
@@ -83,12 +84,13 @@ export const bookMeta: EntityMetadata<Book> = {
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new SimpleFieldSerde("title", bookMetaColumns["title"]), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("createdAt", bookMetaColumns["createdAt"]), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new SimpleFieldSerde("updatedAt", bookMetaColumns["updatedAt"]), immutable: false },
+    "authorIdSnapshot": { kind: "primitive", fieldName: "authorIdSnapshot", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new SimpleFieldSerde("authorIdSnapshot", bookMetaColumns["authorIdSnapshot"]), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: bookMetaColumns["authorId"].idMetadata!, otherFieldName: "books", serde: new SimpleFieldSerde("author", bookMetaColumns["authorId"]), immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", otherColumnName: "parent_book_id", serde: undefined, immutable: false },
   },
   columns: bookMetaColumns,
   allFields: {},
-  fieldReadIndexes: { "author": 0, "createdAt": 1, "id": 2, "title": 3, "updatedAt": 4 },
+  fieldReadIndexes: { "author": 0, "authorIdSnapshot": 1, "createdAt": 2, "id": 3, "title": 4, "updatedAt": 5 },
   fieldReadWordCount: 1,
   orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },

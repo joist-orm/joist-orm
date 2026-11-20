@@ -1,5 +1,5 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
-import { hasVisibilityHook } from "src/EntityManager.ts";
+import { checkBeforeGetField } from "src/fields.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -24,7 +24,7 @@ import {
 import { AbstractRelationImpl } from "src/relations/AbstractRelationImpl.ts";
 import { isCascadeDelete } from "src/relations/isCascadeDelete.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
-import { filterVisible } from "src/relations/relationVisibility.ts";
+import { hasReactiveReadHook, visibleMembers } from "src/relations/relationVisibility.ts";
 import { runInTrustedContext } from "src/trusted.ts";
 
 /**
@@ -44,7 +44,7 @@ export function hasReactiveManyToMany<T extends Entity, U extends Entity, const 
 ): ReactiveManyToMany<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    const Relation = hasVisibilityHook(entity) ? PluginReactiveManyToMany : ReactiveManyToManyImpl;
+    const Relation = hasReactiveReadHook(entity) ? PluginReactiveManyToMany : ReactiveManyToManyImpl;
     return new Relation<T, U, H>(entity, m2m, hint, fn);
   });
 }
@@ -349,20 +349,25 @@ class PluginReactiveManyToMany<
   H extends ReactiveHint<T>,
 > extends ReactiveManyToManyImpl<T, U, H> {
   override get get(): U[] {
-    return this.filter(runInTrustedContext(() => super.get));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const members = runInTrustedContext(() => super.get);
+    return visibleMembers(this.entity, members);
   }
 
   override get getWithDeleted(): U[] {
-    return this.filter(runInTrustedContext(() => super.getWithDeleted));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const members = runInTrustedContext(() => super.getWithDeleted);
+    return visibleMembers(this.entity, members);
   }
 
   override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
-    return this.filter(await runInTrustedContext(() => super.load(opts)));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const members = await runInTrustedContext(() => super.load(opts));
+    return visibleMembers(this.entity, members);
   }
 
-  /** Leaves materialized membership intact for reactions. */
-  private filter(values: readonly U[]): U[] {
-    return filterVisible(this.entity, this.fieldName, values);
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
   }
 }
 

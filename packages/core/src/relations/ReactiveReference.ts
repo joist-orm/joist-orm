@@ -1,6 +1,6 @@
 import { type Entity } from "src/Entity.ts";
-import { type IdOf, hasVisibilityHook } from "src/EntityManager.ts";
-import { getField, setField } from "src/fields.ts";
+import type { IdOf } from "src/EntityManager.ts";
+import { checkBeforeGetField, getField, setField } from "src/fields.ts";
 import {
   type EntityMetadata,
   type ManyToOneField,
@@ -31,8 +31,8 @@ import { failIfNewEntity, failNoId } from "src/relations/ManyToOneReference.ts";
 import { type Reference } from "src/relations/Reference.ts";
 import { ReferenceN } from "src/relations/ReferenceSymbols.ts";
 import { RelationT, RelationU } from "src/relations/RelationSymbols.ts";
-import { checkVisibleReference } from "src/relations/relationVisibility.ts";
-import { runInTrustedContext } from "src/trusted.ts";
+import { checkVisibleTarget, hasReactiveReadHook } from "src/relations/relationVisibility.ts";
+import { isInTrustedContext, runInTrustedContext } from "src/trusted.ts";
 
 export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
   T,
@@ -81,7 +81,7 @@ export function hasReactiveReference<
 >(hint: H, fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N): ReactiveReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
     const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
-    const Relation = hasVisibilityHook(entity) ? PluginReactiveReference : ReactiveReferenceImpl;
+    const Relation = hasReactiveReadHook(entity) ? PluginReactiveReference : ReactiveReferenceImpl;
     return new Relation<T, U, H, N>(entity, m2o, hint, fn);
   });
 }
@@ -456,21 +456,36 @@ class PluginReactiveReference<
   H extends ReactiveHint<T>,
   N extends never | undefined,
 > extends ReactiveReferenceImpl<T, U, H, N> {
+  /**
+   * Unlike a cached ReactiveField, a cached reference returns its target without calling `getField`.
+   * Check access to the reference before resolving it, then check the target's visibility for the caller.
+   */
   override get get(): U | N {
-    return this.check(runInTrustedContext(() => super.get));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const target = runInTrustedContext(() => super.get);
+    return this.check(target);
   }
 
   override get getWithDeleted(): U | N {
-    return this.check(runInTrustedContext(() => super.getWithDeleted));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const target = runInTrustedContext(() => super.getWithDeleted);
+    return this.check(target);
   }
 
   override async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
-    return this.check(await runInTrustedContext(() => super.load(opts)));
+    checkBeforeGetField(this.entity, this.fieldName);
+    const target = await runInTrustedContext(() => super.load(opts));
+    return this.check(target);
+  }
+
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
   }
 
   /** Checks visibility when returning the target entity. */
   private check<V extends Entity | undefined>(value: V): V {
-    return checkVisibleReference(this.entity, this.fieldName, value);
+    if (value !== undefined && !isInTrustedContext()) checkVisibleTarget(this.entity, this.fieldName, value);
+    return value;
   }
 }
 

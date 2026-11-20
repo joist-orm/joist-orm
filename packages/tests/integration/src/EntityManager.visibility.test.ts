@@ -300,19 +300,21 @@ describe("EntityManager.visibility", () => {
     expect(() => loaded.firstName).toThrow("Cannot read firstName");
   });
 
-  it("returns trusted fields without invoking a denying read hook", async () => {
+  it("lets a field hook reject a trusted read even with entity visibility enabled", async () => {
     // Given a field policy that denies names regardless of context
     await insertAuthor({ first_name: "private" });
     const em = newEntityManager();
-    em.addPlugin(new FieldVisibilityPlugin("firstName"));
+    em.addPlugin(
+      new (class extends VisibilityPlugin {
+        beforeGetField(_entity: Entity, field: string): void {
+          if (field === "firstName") throw new Error("Cannot read firstName");
+        }
+      })(),
+    );
     const loaded = await em.load(Author, "a:1");
-    // When trusted code reads the field twice
-    const name = runInTrustedContext(() => {
-      getField(loaded, "firstName");
-      return loaded.firstName;
-    });
-    // Then both the cold read and warm getter bypass authorization
-    expect(name).toEqual("private");
+    // When trusted code reads the name
+    // Then the field hook can still reject that read
+    expect(() => runInTrustedContext(() => loaded.firstName)).toThrow("Cannot read firstName");
   });
 
   it("rechecks untrusted fields after permission is revoked", async () => {
@@ -477,6 +479,6 @@ class FieldVisibilityPlugin extends VisibilityPlugin {
   }
 
   beforeGetField(_entity: Entity, field: string): void {
-    if (field === this.field && !this.allowed) throw new Error(`Cannot read ${field}`);
+    if (field === this.field && !this.allowed && !isInTrustedContext()) throw new Error(`Cannot read ${field}`);
   }
 }

@@ -1,7 +1,7 @@
 import { type Entity } from "src/Entity.ts";
 import { getEmInternalApi } from "src/EntityManager.ts";
 import { type PrimitiveField, getMetadata } from "src/EntityMetadata.ts";
-import { getField, isFieldSet, setField } from "src/fields.ts";
+import { checkBeforeGetField, getField, isFieldSet, setField } from "src/fields.ts";
 import { isLoaded } from "src/index.ts";
 import type { IsLoadedCachable } from "src/loading/IsLoadedCache.ts";
 import { EvaluationSlot } from "src/metrics/EntityMetrics.ts";
@@ -9,6 +9,9 @@ import { lazyField } from "src/newEntity.ts";
 import { type Reacted, type ReactiveHint, convertToLoadHint } from "src/reactivity/reactiveHints.ts";
 import { AbstractPropertyImpl } from "src/relations/AbstractPropertyImpl.ts";
 import { PropertyT } from "src/relations/PropertySymbols.ts";
+import { runInTrustedContext } from "src/trusted.ts";
+
+import { hasReactiveReadHook } from "./relationVisibility.ts";
 
 /**
  * A `ReactiveField` is a value that is derived from other entities/values,
@@ -78,7 +81,8 @@ export function hasReactiveField<T extends Entity, const H extends ReactiveHint<
     const meta = getMetadata(entity);
     const field = meta.allFields[fieldName] as PrimitiveField;
     evaluation ??= new EvaluationSlot(`${meta.type}.${fieldName}`);
-    return new ReactiveFieldImpl(entity, field, hint, fn, evaluation, opts?.onInvalidate);
+    const Relation = hasReactiveReadHook(entity) ? PluginReactiveField : ReactiveFieldImpl;
+    return new Relation(entity, field, hint, fn, evaluation, opts?.onInvalidate);
   });
 }
 
@@ -133,9 +137,15 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     return this.get;
   }
 
-  /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
+  /**
+   * Reuses the cached value until it is invalidated. Without a cached value, calculates from loaded
+   * dependencies or falls back to the stored value. Throws if neither is available.
+   *
+   * The field itself is read in the caller's context (trusted or untrusted). Its load check and
+   * calculation read dependencies in trusted context, so a plugin can allow `employee.departmentName`
+   * without granting the caller direct access to `employee.department.name`.
+   */
   get get(): V {
-    const { fn } = this;
     // Some ReactiveFields can have surprisingly expensive calculations, especially in loops
     // or those that invoke loops, so cache the value.
     if (this.#isCached) return this.fieldValue;
@@ -143,28 +153,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // our IsLoadedCache cache that is immediately invalidated on write-path), and if we've drifted to not-loaded, it's
     // better to fail and tell the user.
     if (this.isLoaded) {
-      const metrics = getEmInternalApi(this.entity.em).metrics;
-      let newValue: V;
-      if (metrics) {
-        const totals = metrics.start(this.evaluation);
-        const started = performance.now();
-        try {
-          newValue = fn(this.entity as Reacted<T, H>);
-        } catch (error) {
-          metrics.finish(totals, started);
-          throw error;
-        }
-        newValue = metrics.finish(totals, started, newValue);
-      } else {
-        newValue = fn(this.entity as Reacted<T, H>);
-      }
-      if (!getEmInternalApi(this.entity.em).isValidating) {
-        // setField will immediately invalidate downstream #isLoaded/#isCached values
-        setField(this.entity, this.fieldName, newValue);
-        this.#isCached = true;
-        getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-      }
-      return newValue;
+      return this.recalc();
     } else if (this.isSet) {
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
@@ -218,6 +207,34 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
 
   [PropertyT] = undefined as any as T;
 
+  /** Invokes `fn` against our loaded subgraph, and stores the latest value in the entity. */
+  protected recalc(): V {
+    const { fn } = this;
+    const metrics = getEmInternalApi(this.entity.em).metrics;
+    let newValue: V;
+    if (metrics) {
+      const totals = metrics.start(this.evaluation);
+      const started = performance.now();
+      try {
+        newValue = fn(this.entity as Reacted<T, H>);
+      } catch (error) {
+        metrics.finish(totals, started);
+        throw error;
+      }
+      newValue = metrics.finish(totals, started, newValue);
+    } else {
+      newValue = fn(this.entity as Reacted<T, H>);
+    }
+
+    if (!getEmInternalApi(this.entity.em).isValidating) {
+      // setField will immediately invalidate downstream #isLoaded/#isCached values
+      setField(this.entity, this.fieldName, newValue);
+      this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    }
+    return newValue;
+  }
+
   private resetCacheUnlessFactoryPinned(): void {
     // If factories asked for a hard-coded value, don't reset the cached flag
     if (this.#isCached === "factory-value") return;
@@ -228,4 +245,26 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
 /** Type guard utility for determining if an entity field is a ReactiveField. */
 export function isReactiveField(maybeReactiveField: any): maybeReactiveField is ReactiveField<any, any> {
   return maybeReactiveField instanceof ReactiveFieldImpl;
+}
+
+/**
+ * The inherited `.get` reads cached and stored values through `getField` in the caller's context.
+ * When it needs a fresh value, it calls `recalc` instead. We check access to the field there
+ * before running the calculation in trusted context.
+ */
+class PluginReactiveField<T extends Entity, H extends ReactiveHint<T>, V> extends ReactiveFieldImpl<T, H, V> {
+  protected override recalc(): V {
+    checkBeforeGetField(this.entity, this.fieldName);
+    return runInTrustedContext(() => super.recalc());
+  }
+
+  override async load(opts?: { forceReload?: boolean }): Promise<V> {
+    // Check the caller's access before loading dependencies on their behalf.
+    checkBeforeGetField(this.entity, this.fieldName);
+    return super.load(opts);
+  }
+
+  override get isLoaded(): boolean {
+    return runInTrustedContext(() => super.isLoaded);
+  }
 }

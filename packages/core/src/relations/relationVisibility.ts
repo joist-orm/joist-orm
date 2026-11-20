@@ -3,11 +3,28 @@ import { getEmInternalApi } from "src/EntityManager.ts";
 import { getMetadata } from "src/EntityMetadata.ts";
 import { isInTrustedContext } from "src/trusted.ts";
 
+/** Selects the plugin implementation when the materialized relation is constructed. */
+export function hasReactiveReadHook(entity: Entity): boolean {
+  if (!entity.em) return false;
+  const plugins = getEmInternalApi(entity.em).pluginManager;
+  return plugins.hasHook("beforeGetField") || plugins.hasHook("canViewEntity");
+}
+
 /** Projects a plugin-aware collection without changing its canonical membership. */
 export function filterVisible<U extends Entity>(entity: Entity, field: string, values: readonly U[]): U[] {
+  return visibleMembers(entity, values, field);
+}
+
+/**
+ * Returns all members for trusted reads and only caller-visible members for untrusted reads.
+ * Pass `field` to check access to the collection itself. `PluginReactiveManyToMany` omits it
+ * because its getter and loader check that permission before calculating membership.
+ */
+export function visibleMembers<U extends Entity>(entity: Entity, values: readonly U[], field?: string): U[] {
   if (isInTrustedContext()) return values as U[];
   const plugins = getEmInternalApi(entity.em).pluginManager;
-  plugins.beforeGetField(entity, field);
+  if (field !== undefined) plugins.beforeGetField(entity, field);
+  if (!plugins.hasHook("canViewEntity")) return values as U[];
   let visible: U[] | undefined;
   for (let i = 0; i < values.length; i++) {
     const value = values[i];
@@ -54,7 +71,7 @@ export function checkVisibleMutation(entity: Entity, field: string, value: Entit
 }
 
 /** Target visibility is independent of permission to read the owner's relationship field. */
-function checkVisibleTarget(entity: Entity, field: string, target: Entity): void {
+export function checkVisibleTarget(entity: Entity, field: string, target: Entity): void {
   if (!getEmInternalApi(entity.em).pluginManager.canViewEntity(target)) {
     throw new Error(`No read permission for ${getMetadata(entity).type}.${field} target`);
   }

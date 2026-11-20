@@ -15,7 +15,7 @@ type EntityReadWords = Entity & Record<ReadWordName, number>;
  * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
  * Ordinary EMs skip hooks once a field is warm. Visibility-aware EMs
- * check every untrusted read and cache only trusted reads, which skip read hooks.
+ * check every untrusted read and cache trusted reads separately.
  *
  * Install plugins before reading entities; adding one later does not replay cached reads.
  * Generated getters and direct application calls are protected by default. Only ORM
@@ -31,6 +31,14 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
     return instanceData.data[fieldName];
   }
   return readField(entity, instanceData, fieldName, isInternal, index);
+}
+
+/**
+ * Checks the caller's access to a derived field before recalculating it in trusted context,
+ * without reading or caching its value.
+ */
+export function checkBeforeGetField(entity: Entity, field: string): void {
+  runFieldReadHooks(entity, getInstanceData(entity), field);
 }
 
 /** Reads stored state for ORM bookkeeping without authorizing or warming a public read. */
@@ -231,7 +239,8 @@ function readField(
   index: number,
 ): any {
   const { em, metadata } = instanceData;
-  // Ordinary EMs pay this check only until the field is warm; subsequent reads skip this path.
+  // Ordinary EMs pay this check only once, as once its __readFields bit is set, then
+  // getField/readField is never called on subsequent getter calls.
   const shouldMarkReadField = runFieldReadHooks(entity, instanceData, fieldName);
 
   const field = metadata.allFields[fieldName];
@@ -255,20 +264,29 @@ function readField(
 /**
  * Invokes cold-read hooks without letting a reentrant read authorize the outer read.
  *
- * The active-field guard permits synchronous hook reentrancy without caching its approval.
- * The entity's read-word descriptors discard untrusted warm-bit writes from the shared read path.
+ * This function is solely for `beforeGetField` calls and the behavior is:
+ *
+ * - visibility-aware EMs (i.e. EMs with an AuthPlugin.canViewEntity hook) get to "pretend"
+ *   to set the `__readFields` bit all the time, but really we've rewritten `__readFields` to
+ *   be a getter that _always returns zero_ for untrusted callers, b/c their auth decision
+ *   could always change.
+ * - ordinary EMs only conditionally set the `__readFields` bit, because for them it's a real
+ *   bit (not a getter), and trusted callers need to leave it unset, so the plugins that are
+ *   potentially "early-returning/ignoring all trusted callers" get to see the 1st untrusted call.
  */
 function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName: string): boolean {
   const plugins = getEmInternalApi(instanceData.em).pluginManager;
   if (!plugins.hasHook("beforeGetField")) return true;
 
   if (instanceData.activeReadFields?.has(fieldName)) return false;
-  if (instanceData.trustedReadFields && isInTrustedContext()) return true;
   const active = (instanceData.activeReadFields ??= new Set<string>());
   active.add(fieldName);
   try {
     plugins.beforeGetField(entity, fieldName);
-    return true;
+
+    // Decide whether we can set the __readFields bit, see jsdocs above.
+    const isVisAwareEm = instanceData.trustedReadFields !== undefined;
+    return isVisAwareEm || !isInTrustedContext();
   } catch (error) {
     // A reentrant ID getter may have cached a conversion before the outer hook failed.
     if (fieldName === "id") instanceData.idCache = undefined;

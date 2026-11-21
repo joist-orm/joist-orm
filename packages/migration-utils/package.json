@@ -45,7 +45,7 @@
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
-    "@swc/core": "1.16.21",
+    "@swc/core": "1.16.22",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",

@@ -157,7 +157,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string, number> implements Entity {
   static readonly tagName = "pi";
   static readonly metadata: EntityMetadata<ParentItem>;
 

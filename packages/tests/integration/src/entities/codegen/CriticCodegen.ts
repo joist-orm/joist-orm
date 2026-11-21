@@ -193,7 +193,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class CriticCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class CriticCodegen extends BaseEntity<EntityManager, string, number> implements Entity {
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Critic>;
 

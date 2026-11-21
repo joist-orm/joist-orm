@@ -30,4 +30,14 @@ describe("slug id relations", () => {
     expect(deTagId(meta, `book${id}`)).toEqual(id);
     expect((await em.load(Book, id)).id).toEqual(`book${id}`);
   });
+
+  it("stores a new author's database key in a reactive field", async () => {
+    // Given a book whose new author doesn't have an assigned ID yet
+    const em = newEntityManager();
+    newBook(em, { author: { firstName: "a1" } });
+    // When the book and author are saved
+    await em.flush();
+    // Then the book stores the author's database key, not its slug
+    expect(await select("books")).toMatchObject([{ author_id_snapshot: 1 }]);
+  });
 });

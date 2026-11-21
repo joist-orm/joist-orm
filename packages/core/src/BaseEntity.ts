@@ -7,6 +7,7 @@ import {
   InstanceData,
   type TaggedId,
   deTagId,
+  getBaseMeta,
   getMetadata,
   keyToNumber,
 } from "src/index.ts";
@@ -31,7 +32,11 @@ export function getInstanceData(entity: Entity): InstanceData {
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
-export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
+export abstract class BaseEntity<
+  EM extends EntityManager,
+  I extends IdType = IdType,
+  DbId extends IdType = IdType,
+> implements Entity {
   public static getInstanceData(entity: Entity): InstanceData {
     return (entity as BaseEntity<any>).__data;
   }
@@ -79,6 +84,12 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   /** @returns the entity's id, always untagged, or a runtime error if it's unassigned. */
   get idUntagged(): string {
     return deTagId(getMetadata(this), this.id);
+  }
+
+  /** The untagged database key, or a `NoIdError` if it hasn't been assigned. */
+  get idDb(): DbId {
+    // Inheritance shares the root's identity, even when a subtype has its own table.
+    return getBaseMeta(this.__data.metadata).columns.id.mapToDbValue(this.idTagged) as DbId;
   }
 
   abstract set(opts: unknown): void;

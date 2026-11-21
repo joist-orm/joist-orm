@@ -28,6 +28,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReactiveField,
   type Scope,
   setField,
   setOpts,
@@ -58,6 +59,7 @@ export interface BookFields {
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  authorIdSnapshot: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
   comments: { kind: "o2m"; type: Comment };
 }
@@ -67,6 +69,7 @@ export interface BookColumns {
   title: { type: string; fieldName: "title"; nullable: false; insert: "required"; update: true };
   createdAt: { type: Date; fieldName: "createdAt"; nullable: false; insert: "optional"; update: true };
   updatedAt: { type: Date; fieldName: "updatedAt"; nullable: false; insert: "optional"; update: true };
+  authorIdSnapshot: { type: number; fieldName: "authorIdSnapshot"; nullable: true; insert: "optional"; update: true };
   authorId: {
     type: IdOf<Author>;
     entity: Author;
@@ -93,6 +96,7 @@ export interface BookFilter {
   title?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  authorIdSnapshot?: ValueFilter<number, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
@@ -102,6 +106,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  authorIdSnapshot?: ValueGraphQLFilter<number>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   authorId?: ValueGraphQLFilter<AuthorId>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
@@ -112,10 +117,12 @@ export interface BookOrder {
   title?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  authorIdSnapshot?: OrderBy;
   author?: AuthorOrder;
 }
 
 export interface BookFactoryExtras {
+  withAuthorIdSnapshot?: number | null;
 }
 
 export interface BookScopes {
@@ -151,7 +158,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class BookCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class BookCodegen extends BaseEntity<EntityManager, string, string> implements Entity {
   static readonly tagName = "book";
   static readonly metadata: EntityMetadata<Book>;
 
@@ -173,11 +180,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return (this.__readFields & 4) !== 0 ? this.__data.data.id : getField(this, "id");
+    return (this.__readFields & 8) !== 0 ? this.__data.data.id : getField(this, "id");
   }
 
   get title(): string {
-    return (this.__readFields & 8) !== 0 ? this.__data.data.title : getField(this, "title");
+    return (this.__readFields & 16) !== 0 ? this.__data.data.title : getField(this, "title");
   }
 
   set title(title: string) {
@@ -185,12 +192,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return (this.__readFields & 2) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
+    return (this.__readFields & 4) !== 0 ? this.__data.data.createdAt : getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return (this.__readFields & 16) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
+    return (this.__readFields & 32) !== 0 ? this.__data.data.updatedAt : getField(this, "updatedAt");
   }
+
+  abstract readonly authorIdSnapshot: ReactiveField<Book, number | undefined>;
 
   /**
    * Partial update taking any subset of the entities fields.

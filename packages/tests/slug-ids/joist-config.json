@@ -4,7 +4,7 @@
   "contextType": "Context@src/context",
   "entities": {
     "Author": { "tag": "a" },
-    "Book": { "tag": "book" },
+    "Book": { "fields": { "authorIdSnapshot": { "derived": "async" } }, "tag": "book" },
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "cm" }
   },
   "entitiesDirectory": "./src/entities",

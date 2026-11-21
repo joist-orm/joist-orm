@@ -261,7 +261,7 @@ declare module "joist-core" {
   }
 }
 
-export abstract class CommentCodegen extends BaseEntity<EntityManager, string> implements Entity {
+export abstract class CommentCodegen extends BaseEntity<EntityManager, string, number> implements Entity {
   static readonly tagName = "comment";
   static readonly metadata: EntityMetadata<Comment>;
 

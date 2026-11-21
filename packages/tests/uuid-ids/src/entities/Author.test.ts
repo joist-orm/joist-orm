@@ -45,4 +45,13 @@ describe("Author", () => {
     // Then its public ID is the same identity that was assigned before the flush
     expect(author.id).toBe(assignedId);
   });
+
+  it("exposes UUID database keys without the tag", async () => {
+    // Given an author with a UUID primary key
+    await insertAuthor({ first_name: "a1" });
+    // When the author is loaded by its tagged ID
+    const author = await newEntityManager().load(Author, "a:20000000-0000-0000-0000-000000000000");
+    // Then its database key is the untagged UUID
+    expect(author.idDb).toEqual("20000000-0000-0000-0000-000000000000");
+  });
 });

@@ -161,6 +161,7 @@ export function generateEntityCodegenFile(
         return (this.__data.idCache ??= ${toIdOf}(${metadata}, this.idTaggedMaybe)) as ${entity.idName} | undefined;
       `;
   const idType = getIdType(config);
+  const idDbType = meta.primaryKey.columnType === "int" ? "number" : "string";
 
   const maybeSoftDeleteMethods = meta.deletedAt
     ? code`
@@ -178,7 +179,7 @@ export function generateEntityCodegenFile(
   // Set up the codegen artifacts to extend from the base type if necessary
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
-  const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
+  const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}, ${idDbType}>`;
   // CTI subtype ids have their own SQL defaults, unlike the base table's sequence-backed ids.
   // Locally redeclared fields also replace base policies when STI strengthens notNull.
   const maybeBaseFields = baseEntity

@@ -346,8 +346,21 @@ export function addColumns(b: MigrationBuilder, tableName: string, columns: Colu
  */
 function indexName(tableName: string, columns: string[], unique = false): string | undefined {
   const name = `${tableName}_${columns.join("_")}${unique ? "_unique" : ""}_index`;
-  if (name.length <= 63) return undefined;
-  return `${name.slice(0, 54)}_${createHash("sha1").update(name).digest("hex").slice(0, 8)}`;
+  // Postgres' limit is 63 bytes (not chars), so a multibyte name can overflow while being under 63 chars
+  if (Buffer.byteLength(name) <= 63) return undefined;
+  return `${truncateBytes(name, 54)}_${createHash("sha1").update(name).digest("hex").slice(0, 8)}`;
+}
+
+/** Returns the longest prefix of `s` that fits in `maxBytes` of UTF-8, without splitting a code point. */
+function truncateBytes(s: string, maxBytes: number): string {
+  let bytes = 0;
+  let prefix = "";
+  for (const char of s) {
+    bytes += Buffer.byteLength(char);
+    if (bytes > maxBytes) break;
+    prefix += char;
+  }
+  return prefix;
 }
 
 export function fail(message?: string): never {

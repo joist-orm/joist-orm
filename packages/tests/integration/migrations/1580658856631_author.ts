@@ -485,4 +485,19 @@ export function up(b: MigrationBuilder): void {
     { table: "users", column: "child_id" },
     { table: "users", column: "parent_id" },
   );
+
+  // for testing m2m index names that would exceed Postgres' 63 char limit and collide when truncated
+  createManyToManyTable(
+    b,
+    "users_related_to_users_for_testing_long_index_name_clash",
+    { table: "users", column: "related_from_user_id", collectionName: "relatedToUsers" },
+    { table: "users", column: "related_to_user_id", collectionName: "relatedFromUsers" },
+  );
+  // ...and the same when the table name is multibyte, i.e. under 63 chars but over 63 bytes
+  createManyToManyTable(
+    b,
+    "users_to_users_관련_사용자_with_long_index_clash",
+    { table: "users", column: "korean_index_from_user_id", collectionName: "koreanToUsers" },
+    { table: "users", column: "korean_index_to_user_id", collectionName: "koreanFromUsers" },
+  );
 }

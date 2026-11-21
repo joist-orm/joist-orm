@@ -146,7 +146,11 @@ export type UnionResolvers = {
 
 export interface AdminUserResolvers {
   children: Resolver<AdminUser, {}, readonly User[]>;
+  koreanFromUsers: Resolver<AdminUser, {}, readonly User[]>;
+  koreanToUsers: Resolver<AdminUser, {}, readonly User[]>;
   parents: Resolver<AdminUser, {}, readonly User[]>;
+  relatedFromUsers: Resolver<AdminUser, {}, readonly User[]>;
+  relatedToUsers: Resolver<AdminUser, {}, readonly User[]>;
 }
 
 export interface AdvanceStatusDetailResolvers {
@@ -698,10 +702,14 @@ export interface UserResolvers {
   email: Resolver<User, {}, string>;
   favoritePublisher: Resolver<User, {}, UserFavoritePublisher | null | undefined>;
   id: Resolver<User, {}, string>;
+  koreanFromUsers: Resolver<User, {}, readonly User[]>;
+  koreanToUsers: Resolver<User, {}, readonly User[]>;
   likedComments: Resolver<User, {}, readonly Comment[]>;
   name: Resolver<User, {}, string>;
   originalEmail: Resolver<User, {}, string>;
   parents: Resolver<User, {}, readonly User[]>;
+  relatedFromUsers: Resolver<User, {}, readonly User[]>;
+  relatedToUsers: Resolver<User, {}, readonly User[]>;
   updatedAt: Resolver<User, {}, Date>;
 }
 

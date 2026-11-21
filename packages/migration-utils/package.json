@@ -35,9 +35,6 @@
   "files": [
     "build"
   ],
-  "scripts": {
-    "test": "jest"
-  },
   "peerDependencies": {
     "joist-utils": "workspace:*",
     "pg": "^8.23.0"

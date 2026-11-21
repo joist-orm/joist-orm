@@ -49,7 +49,7 @@
     "change-case": "^5.4.4",
     "graphql": "^17.1.0",
     "pluralize": "^8.0.0",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "ts-poet": "^6.12.0"
   },
   "devDependencies": {

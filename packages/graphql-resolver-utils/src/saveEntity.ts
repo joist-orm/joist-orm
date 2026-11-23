@@ -7,7 +7,7 @@ import {
 } from "joist-core";
 import { type Context } from "joist-test-utils";
 
-/** Given an GraphQL input, creates-or-updates an entity of `type`. */
+/** Creates or updates an entity from GraphQL input, flushing by default. */
 export async function saveEntity<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
@@ -17,7 +17,11 @@ export async function saveEntity<T extends Entity>(
   return saveEntities(ctx, type, [input], opts).then((r) => r[0]);
 }
 
-/** Given GraphQL inputs, creates-or-updates multiple entities of `type`. */
+/**
+ * Creates or updates multiple entities from GraphQL inputs, flushing by default.
+ *
+ * A rejected upsert skips the flush but does not undo pending changes in the EntityManager.
+ */
 export async function saveEntities<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
@@ -27,8 +31,9 @@ export async function saveEntities<T extends Entity>(
   const { em } = ctx;
   const { opts: entityOpts = {}, flush = true } = opts;
   const results = await Promise.allSettled(input.map((input) => em.upsert(type, { ...entityOpts, ...input })));
+  const entities = failIfAnyRejected(results);
   if (flush) {
-    await ctx.em.flush();
+    await em.flush();
   }
-  return failIfAnyRejected(results);
+  return entities;
 }

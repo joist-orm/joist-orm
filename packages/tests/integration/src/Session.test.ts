@@ -1,6 +1,14 @@
 import { type Entity, Plugin, Session, ValidationErrors, getInstanceData, readSessionEntityData } from "joist-orm";
-import { AdvanceStatus, Author, BookAdvance, Tag } from "src/entities";
-import { insertAuthor, insertBook, insertBookAdvance, insertPublisher, insertTag, select } from "src/entities/inserts";
+import { AdvanceStatus, Author, BookAdvance, Color, Publisher, Tag } from "src/entities";
+import {
+  insertAuthor,
+  insertAuthorToTag,
+  insertBook,
+  insertBookAdvance,
+  insertPublisher,
+  insertTag,
+  select,
+} from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("Session", () => {
@@ -1286,6 +1294,178 @@ describe("Session", () => {
       const tag = await session.read({ entity: "t#1", fields: ["name"] });
       // Then both sequential commands completed on the initialized staging graph
       expect(tag.values).toEqual({ name: "edited" });
+    });
+
+    it("previews and commits with an actor preloaded by the factory", async () => {
+      // Given an actor with an existing tag
+      await insertAuthor({ first_name: "Alice" });
+      await insertTag({ name: "existing" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      // And a factory that loads the actor and makes it available to its flush plugin
+      const attributedWrites: string[] = [];
+      class AttributeTagChanges extends Plugin {
+        /** Reports tag changes using the actor from this execution's context. */
+        async beforeValidate(entities: readonly Entity[]): Promise<void> {
+          for (const entity of entities) {
+            if (entity instanceof Tag) await entity.em.ctx.makeApiCall(entity.name);
+          }
+        }
+      }
+      const session = new Session({
+        createEm: async () => {
+          const em = newEntityManager();
+          const actor = await em.load(Author, "a:1", "tags");
+          em.ctx.makeApiCall = async (name: string) => {
+            attributedWrites.push(`${actor.firstName}:${name}`);
+          };
+          em.addPlugin(new AttributeTagChanges());
+          return em;
+        },
+      });
+      // When staging and previewing a rename of the existing tag
+      await session.apply({ op: "update", entity: "t:1", values: { name: "reviewed" } });
+      const review = await session.previewChanges();
+      // Then the preview includes the rename without persisting it
+      expect(review).toMatchObject({
+        status: "valid",
+        changes: [{ id: "t:1", fields: { name: { oldValue: "existing", newValue: "reviewed" } } }],
+      });
+      expect(await select("tags")).toMatchObject([{ name: "existing" }]);
+      // When committing the rename
+      await session.commitChanges();
+      // Then both flushes attributed the edit to the actor, and only commit persisted it
+      expect(attributedWrites).toEqual(["Alice:reviewed", "Alice:reviewed"]);
+      expect(await select("tags")).toMatchObject([{ name: "reviewed" }]);
+    });
+
+    it("rejects a factory edit even if the edited entity is hidden", async () => {
+      // Given a persisted tag that the factory renames and then hides
+      await insertTag({ name: "existing" });
+      class HideTags extends Plugin {
+        /** Hides tags from caller-facing ORM APIs. */
+        canViewEntity(entity: Entity): boolean {
+          return !(entity instanceof Tag);
+        }
+      }
+      const session = new Session({
+        createEm: async () => {
+          const em = newEntityManager();
+          const tag = await em.load(Tag, "t:1");
+          tag.name = "unlogged";
+          em.addPlugin(new HideTags());
+          return em;
+        },
+      });
+      // When committing without any logged commands
+      // Then the unlogged rename is rejected and the stored name remains unchanged
+      await expect(session.commitChanges()).rejects.toThrow("pending changes");
+      expect(await select("tags")).toMatchObject([{ name: "existing" }]);
+    });
+
+    it("rejects a factory edit that only adds a many-to-many membership", async () => {
+      // Given a persisted author and tag that the factory links without changing either entity's fields
+      await insertAuthor({ first_name: "Alice" });
+      await insertTag({ name: "existing" });
+      const session = new Session({
+        createEm: async () => {
+          const em = newEntityManager();
+          const [author, tag] = await Promise.all([em.load(Author, "a:1"), em.load(Tag, "t:1")]);
+          author.tags.add(tag);
+          return em;
+        },
+      });
+      // When committing without any logged commands
+      // Then the unlogged membership is rejected and never saved
+      await expect(session.commitChanges()).rejects.toThrow("pending changes");
+      expect(await select("authors_to_tags")).toEqual([]);
+    });
+
+    it.each(["add", "set"] as const)("rejects a factory %s to an unloaded enum collection", async (operation) => {
+      // Given a persisted publisher whose factory assigns a logo color
+      await insertPublisher({ name: "publisher" });
+      const session = new Session({
+        createEm: async () => {
+          const em = newEntityManager();
+          const publisher = await em.load(Publisher, "p:1");
+          if (operation === "add") publisher.logoColors.add(Color.Red);
+          else publisher.logoColors.set([Color.Red]);
+          return em;
+        },
+      });
+      // When committing without any logged commands
+      // Then the unlogged logo color is rejected and never saved
+      await expect(session.commitChanges()).rejects.toThrow("pending changes");
+      expect(await select("publisher_logo_colors")).toEqual([]);
+    });
+
+    it("rejects a factory transition even if the field returns to its original value", async () => {
+      // Given an advance for a book that has not been approved for signing
+      await insertPublisher({ name: "publisher" });
+      await insertAuthor({ first_name: "Alice" });
+      await insertBook({ title: "Unapproved", author_id: 1 });
+      await insertBookAdvance({ book_id: 1, publisher_id: 1 });
+      // And the factory signs the advance and then revokes the signature
+      const session = new Session({
+        createEm: async () => {
+          const em = newEntityManager();
+          const advance = await em.load(BookAdvance, "ba:1");
+          advance.status = AdvanceStatus.Signed;
+          advance.status = AdvanceStatus.Pending;
+          return em;
+        },
+      });
+      // When committing without any logged commands
+      // Then the unlogged transitions are rejected before their guards can run
+      await expect(session.commitChanges()).rejects.toThrow("pending changes");
+    });
+
+    it("rejects a clean manager previously used for staging", async () => {
+      // Given a factory that caches the manager used to read an existing tag in staging
+      await insertTag({ name: "existing" });
+      const em = newEntityManager();
+      const session = new Session({ createEm: () => em });
+      await session.read({ entity: "t:1", fields: ["name"] });
+      // When replaying on the cached manager
+      // Then replay still requires a different manager, even with no pending edits
+      await expect(session.previewChanges()).rejects.toThrow("Session factory must return a fresh EntityManager");
+    });
+
+    it("rejects a manager inside an open transaction", async () => {
+      // Given a factory that borrows a manager from another operation's transaction
+      const em = newEntityManager();
+      const session = new Session({ createEm: () => em });
+      await em.transaction(async () => {
+        // When requesting a preview in that transaction
+        // Then the factory cannot enlist Session in the existing transaction
+        await expect(session.previewChanges()).rejects.toThrow("fresh writable EntityManager");
+      });
+    });
+
+    it("rejects a manager with a failed flush even without pending edits", async () => {
+      // Given a flush that failed due to an unavailable application service, not due to an edit
+      class Broken extends Plugin {
+        /** Models a failure that makes the manager unusable for later flushes. */
+        beforeValidate(): void {
+          throw new Error("service unavailable");
+        }
+      }
+      const em = newEntityManager();
+      em.addPlugin(new Broken());
+      await expect(em.flush()).rejects.toThrow("service unavailable");
+      const session = new Session({ createEm: () => em });
+      // When requesting a staging query
+      // Then the factory's unusable manager is rejected before any commands or queries can use it
+      await expect(session.query(() => [])).rejects.toThrow("fresh writable EntityManager");
+    });
+
+    it.each(["read-only", "in-memory-writes"] as const)("rejects a manager in %s mode", async (mode) => {
+      // Given a manager that cannot commit writes
+      const em = newEntityManager();
+      em.mode = mode;
+      const session = new Session({ createEm: () => em });
+      // When requesting a staging query
+      // Then the factory must still supply a writable manager
+      await expect(session.query(() => [])).rejects.toThrow("fresh writable EntityManager");
     });
   });
 });

@@ -20,7 +20,12 @@ import {
 } from "./json.ts";
 
 export interface SessionOptions<EM extends EntityManager> {
-  /** Lazily supplies a fresh, empty writable application EM with its context and plugins for each execution. */
+  /**
+   * Lazily supplies a fresh, clean, writable application EM with its context and plugins for each execution.
+   *
+   * The factory may load entities, i.e. the current user & their auth/etc info,
+   * but must not leave pending writes or an open transaction.
+   */
   createEm: () => EM | Promise<EM>;
 }
 
@@ -157,8 +162,10 @@ export class Session<EM extends EntityManager = EntityManager> {
   async #newEm(): Promise<EM> {
     const em = await this.#options.createEm();
     if (this.#executions.has(em)) throw new Error("Session factory must return a fresh EntityManager");
-    if (em.txn || em.entities.length || em.mode !== "writes")
+    const api = getEmInternalApi(em);
+    if (em.txn !== undefined || em.mode !== "writes" || api.hasFailedFlush)
       throw new Error("Session requires a fresh writable EntityManager");
+    if (api.hasPendingWrites) throw new Error("Session factory must return an EntityManager without pending changes");
     this.#executions.add(em);
     return em;
   }

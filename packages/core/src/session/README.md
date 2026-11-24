@@ -16,6 +16,10 @@ if (review.status === "valid") {
 
 ## Execution
 
+`createEm` supplies a fresh, clean, writable EntityManager for staging and each preview or commit.
+It may load persisted entities, such as the signed-in user for flush hooks, and Session uses the
+returned EM with its context and plugins intact.
+
 - `apply` uses ordinary entity APIs and logs caller commands. External command callers receive JSON only.
 - `update` accepts a `values` object like `create`, decodes its fields and references, then calls ordinary `entity.set(values)` once. Entity setters and Joist own mutation behavior and validation.
 - `applyBatch(commands)` applies commands sequentially under one exclusive operation and returns their IDs in order. Later commands can reference entities created earlier in the batch. Each successful command is logged and advances the revision exactly as with `apply`.

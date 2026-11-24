@@ -456,6 +456,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return em.#flushError !== undefined;
       },
 
+      get hasPendingWrites() {
+        // Unlike pendingChanges, which in auth-enabled EMs can hide edits to entities the caller
+        // cannot see, this checks the internal flush queues. It also checks work that can generate
+        // writes during flush, such as set() on an unloaded collection and queued reactions.
+        if (em.#pendingDeletes.length || em.__api.pendingLoads.size || em.#rm.hasPendingWork) return true;
+        for (const entity of em.#maybePendingFlushEntities) {
+          if (getInstanceData(entity).pendingOperation !== "none") return true;
+        }
+        return Object.values(em.#joinRows).some((rows) => rows.toTodo() !== undefined);
+      },
+
       getEntities<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>): readonly T[] {
         const meta = getMetadata(type);
         const entities = em.#entitiesByTag.get(meta.tagName) ?? [];
@@ -3462,6 +3473,9 @@ export interface EntityManagerInternalApi {
 
   /** Whether another flush on this EM would throw FailedFlushError. */
   readonly hasFailedFlush: boolean;
+
+  /** Whether a flush could process pending mutations, regardless of caller visibility. */
+  readonly hasPendingWrites: boolean;
 
   /** Type-indexed canonical membership, including entities hidden from public reads. */
   getEntities<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): readonly T[];

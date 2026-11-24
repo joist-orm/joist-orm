@@ -378,6 +378,21 @@ export class ReactionsManager {
     return this.actionsPendingTypeErrors.size > 0;
   }
 
+  /**
+   * Whether flush still has reactions or transitions to process.
+   *
+   * I.e. signing an advance and then revoking the signature restores its original status,
+   * so the entity itself may look "not changed", but both already-queued transitions might
+   * end up making writes.
+   */
+  get hasPendingWork(): boolean {
+    if (this.pendingTransitions.length || this.hasPendingCommitTransitions() || this.hasPendingTypeErrors) return true;
+    for (const { todo } of this.pendingReactables.values()) {
+      if (todo.size > 0) return true;
+    }
+    return false;
+  }
+
   /** Clears pending reaction and transition work after a successful flush, including flushes with no SQL. */
   clear(): void {
     this.pendingReactables = new Map();

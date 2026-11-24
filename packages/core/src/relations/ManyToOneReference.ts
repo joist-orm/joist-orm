@@ -287,7 +287,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else if (o2m instanceof OneToManyLargeCollection) {
         o2m.remove(this.entity);
       } else if (o2m instanceof OneToOneReferenceImpl) {
-        o2m.set(undefined as any);
+        // The o2o may already point at a replacement (i.e. created in the same flush), which we should keep
+        if (!o2m.isLoaded || o2m.getWithDeleted === this.entity) o2m.set(undefined as any);
       } else {
         throw new Error(`Unhandled ${o2m}`);
       }

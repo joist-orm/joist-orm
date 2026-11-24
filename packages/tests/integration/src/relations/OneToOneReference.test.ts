@@ -148,6 +148,21 @@ describe("OneToOneReference", () => {
     expect((await select("authors")).length).toEqual(0);
   });
 
+  it("can replace a reference by deleting the old entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
+    const em = newEntityManager();
+    const [a1, i1] = await Promise.all([em.load(Author, "a:1", "image"), em.load(Image, "i:1", "author")]);
+    // Given we delete the author's image and give the author a new one
+    em.delete(i1);
+    const i2 = em.create(Image, { type: ImageType.AuthorImage, fileName: "f2", author: a1 });
+    // When we flush (it fails b/c `images.author_id` isn't a deferred unique, but the bug happens before that)
+    await expect(em.flush()).rejects.toThrow();
+    // Then the new image should still belong to the author
+    expect(i2.author.get).toMatchEntity(a1);
+    expect(a1.image.get).toMatchEntity(i2);
+  });
+
   it("throws exception when image is not loaded", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

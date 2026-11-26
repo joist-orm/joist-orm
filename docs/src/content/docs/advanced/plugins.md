@@ -58,6 +58,17 @@ Once registered, the plugin will automatically receive callbacks for any impleme
 
 ## Available Plugin Hooks
 
+### beforeCreate
+
+`beforeCreate(entity: Entity): void` runs synchronously once per new entity, after it is registered with
+its `EntityManager` but before caller-supplied fields are applied or defaults run. It covers `em.create`,
+`em.createPartial`, and the insert paths of `em.upsert` and `em.findOrCreate`, not hydration or updates
+to existing entities.
+
+The hook runs in the context that initiated the creation. Use `isInTrustedContext()` to distinguish
+a direct create from one initiated inside a trusted callback such as `config.setDefault`.
+The separate `config.beforeCreate` lifecycle hook still runs at flush.
+
 ### beforeSetField
 
 Called before a field value is set on an entity via `setField`. This is useful for implementing validation, access control, or auditing on field changes.

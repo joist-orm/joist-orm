@@ -3378,6 +3378,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Check opts.id for an explicitly-set id
     this.#doRegister(entity as any, fields.id);
 
+    // api will be undefined during getFakeInstance
+    const api = getEmInternalApi(this);
+    api?.pluginManager.beforeCreate(entity);
+
     // Set a default createdAt/updatedAt
     const baseMeta = getBaseMeta(getMetadata(entity));
     if (baseMeta.timestampFields) {
@@ -3389,8 +3393,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       setStiDiscriminatorValue(baseMeta, entity);
     }
 
-    // api will be undefined during getFakeInstance
-    const api = getEmInternalApi(this);
     api?.fieldLogger.logCreate(entity);
 
     setOpts(entity, fields, { partial, calledFromConstructor: true });

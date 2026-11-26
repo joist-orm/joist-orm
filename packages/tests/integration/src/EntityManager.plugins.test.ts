@@ -783,6 +783,94 @@ describe("EntityManager.plugins", () => {
     // Then the later plugin can deny access despite the first plugin's approval
     expect(() => image.fileName).toThrow("Filename access revoked");
   });
+
+  describe("beforeCreate", () => {
+    it.withCtx("runs once for a fieldless createPartial", async (ctx) => {
+      // Given a plugin observes creations
+      const plugin = new BeforeCreatePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller creates a tag without supplying any fields
+      const tag = ctx.em.createPartial(Tag, {});
+      // Then the plugin sees one untrusted creation
+      expect(plugin.calls).toMatchEntity([{ entity: tag, trusted: false }]);
+    });
+
+    it.withCtx("sees the entity already registered by its client ID", async (ctx) => {
+      // Given a plugin looks up new tags by their client ID during creation
+      let registered: Entity | undefined;
+      ctx.em.addPlugin(
+        new (class extends Plugin {
+          beforeCreate(entity: Entity): void {
+            registered = entity.em.getEntity(entity.$clientId!);
+          }
+        })(),
+      );
+      // When the caller creates a tag
+      const tag = ctx.em.create(Tag, { name: "new tag" });
+      // Then the plugin could already look up that tag
+      expect(registered).toBe(tag);
+    });
+
+    it.withCtx("runs before caller-supplied fields and defaults", async (ctx) => {
+      // Given a plugin records user creation and email assignments
+      const events: string[] = [];
+      ctx.em.addPlugin(
+        new (class extends Plugin {
+          beforeCreate(): void {
+            events.push("create");
+          }
+
+          beforeSetField(entity: Entity, field: string): void {
+            if (entity instanceof User && (field === "email" || field === "originalEmail")) events.push(field);
+          }
+        })(),
+      );
+      // When the caller supplies an email but lets the original email default
+      ctx.em.create(User, { name: "new user", email: "user@example.com" });
+      // Then creation is observed before either email is assigned
+      expect(events).toEqual(["create", "email", "originalEmail"]);
+    });
+
+    it.withCtx("retains the trusted context of a setDefault callback", async (ctx) => {
+      // Given a plugin observes creations
+      const plugin = new BeforeCreatePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller creates a user whose email default creates a welcome tag
+      const user = ctx.em.create(User, { name: "new user", email: "with-welcome-tag@example.com" });
+      const [tag] = ctx.em.getEntities(Tag);
+      // Then only the tag creation is trusted
+      expect(plugin.calls).toMatchEntity([
+        { entity: user, trusted: false },
+        { entity: tag, trusted: true },
+      ]);
+    });
+
+    it.each(["upsert", "findOrCreate"] as const)("runs once when %s creates a tag", async (method) => {
+      // Given a plugin observes creations and no tag exists
+      const em = newEntityManager();
+      const plugin = new BeforeCreatePlugin();
+      em.addPlugin(plugin);
+      // When the caller asks for a new tag
+      const tag =
+        method === "upsert"
+          ? await em.upsert(Tag, { name: "new tag" })
+          : await em.findOrCreate(Tag, { name: "new tag" });
+      // Then the plugin sees one untrusted creation
+      expect(plugin.calls).toMatchEntity([{ entity: tag, trusted: false }]);
+    });
+
+    it.withCtx("does not run when an upsert hydrates and updates a persisted tag", async (ctx) => {
+      // Given a tag exists in the database but has not been loaded
+      await insertTag({ name: "old name" });
+      // And a plugin observes creations
+      const plugin = new BeforeCreatePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller renames the existing tag by ID
+      await ctx.em.upsert(Tag, { id: "t:1", name: "new name" });
+      // Then the plugin sees no creations
+      expect(plugin.calls).toEqual([]);
+    });
+  });
 });
 
 /** Records reads without accessing any entity getters from the callback. */
@@ -816,5 +904,14 @@ class TrustedFieldReadsPlugin extends Plugin {
 
   canViewEntity(): boolean {
     return true;
+  }
+}
+
+/** Records each creation in the context that initiated it. */
+class BeforeCreatePlugin extends Plugin {
+  readonly calls: { entity: Entity; trusted: boolean }[] = [];
+
+  beforeCreate(entity: Entity): void {
+    this.calls.push({ entity, trusted: isInTrustedContext() });
   }
 }

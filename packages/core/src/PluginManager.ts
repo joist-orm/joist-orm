@@ -17,6 +17,12 @@ interface PluginMethods {
   beforeExecute?(query: ParsedExecuteQuery): void;
 
   /**
+   * Runs synchronously after a new entity is registered and before its fields or defaults are set.
+   * Use `isInTrustedContext()` to distinguish direct creates from creates inside callbacks such as defaults.
+   */
+  beforeCreate?(entity: Entity): void;
+
+  /**
    * Checks read access to this field on this entity. Throw to deny access.
    * On visibility-aware EMs, every untrusted read is checked. Trusted reads can reuse an earlier
    * successful check for the same field on the same entity, but untrusted reads cannot.
@@ -94,6 +100,7 @@ interface PluginMethods {
 
 const syncPluginMethods = [
   "canViewEntity",
+  "beforeCreate",
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
@@ -218,6 +225,7 @@ export class PluginManager implements Required<PluginMethods> {
   // Defined as no-op functions initially instead of using optional chaining for performance reasons, see:
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
+  beforeCreate(entity: Entity): void {}
   beforeGetField(entity: Entity, field: string): void {}
   beforeQuery(query: ParsedReadQuery): void {}
   afterQuery(query: ParsedReadQuery, rows: RowData): void {}

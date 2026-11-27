@@ -73,6 +73,16 @@ export function checkVisibleMutation(entity: Entity, field: string, value: Entit
 /** Target visibility is independent of permission to read the owner's relationship field. */
 export function checkVisibleTarget(entity: Entity, field: string, target: Entity): void {
   if (!getEmInternalApi(entity.em).pluginManager.canViewEntity(target)) {
-    throw new Error(`No read permission for ${getMetadata(entity).type}.${field} target`);
+    throw new UnauthorizedAccessError(entity, field);
+  }
+}
+
+/** Lets JSON projection omit an invisible target without swallowing other read failures. */
+export class UnauthorizedAccessError extends Error {
+  constructor(
+    readonly entity: Entity,
+    readonly field: string,
+  ) {
+    super(`No read permission for ${getMetadata(entity).type}.${field} target`);
   }
 }

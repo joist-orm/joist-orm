@@ -1,11 +1,23 @@
 import { expectTypeOf } from "expect-type";
-import { toJSON } from "joist-orm";
-import { Author, type AuthorId, type BookId, FavoriteShape, type PublisherId, newAuthor } from "src/entities";
+import { type Entity, Plugin, isInTrustedContext, runInTrustedContext, toJSON } from "joist-orm";
+import {
+  Author,
+  type AuthorId,
+  Book,
+  type BookId,
+  Color,
+  FavoriteShape,
+  ParentGroup,
+  type PublisherId,
+  newAuthor,
+  newSmallPublisher,
+} from "src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,
   insertBook,
   insertImage,
+  insertParentGroup,
   insertPublisher,
   insertSmallPublisherGroup,
   insertTag,
@@ -394,5 +406,190 @@ describe("Entity.json", () => {
     // Then the missing id does not prevent nested serialization
     expect(payload).toEqual({ books: [{ id: null, title: "New book" }] });
     expectTypeOf(payload).toEqualTypeOf<{ books: { id: BookId | null; title: string }[] }>();
+  });
+
+  it("unwraps selected persisted lazy fields", async () => {
+    // Given a group with an unloaded array-valued embedding
+    await insertParentGroup({ name: "pg1", lazy_embedding: "[1,2,3]" });
+    const group = await newEntityManager().load(ParentGroup, "parentGroup:1");
+    // When the embedding is selected
+    const payload = await toJSON(group, { lazyEmbedding: true });
+    // Then the original column value is serialized as data, not as entity IDs
+    expect(payload).toStrictEqual({ lazyEmbedding: [1, 2, 3] });
+  });
+
+  it("keeps enum array values", async () => {
+    // Given a publisher whose logo is red
+    const publisher = newSmallPublisher(newEntityManager(), { logoColors: [Color.Red] });
+    // When its logo colors are selected
+    const payload = await toJSON(publisher, "logoColors");
+    // Then the array contains the color code
+    expect(payload).toEqual({ logoColors: [Color.Red] });
+  });
+
+  describe("with access policies", () => {
+    it("applies field grants separately to books in the same collection", async () => {
+      // Given an author with a public book and a private draft
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "Public", author_id: 1 });
+      await insertBook({ title: "Draft", author_id: 1 });
+      // And the draft's title is private
+      const em = newEntityManager();
+      em.addPlugin(
+        new (class extends Plugin {
+          canReadField(entity: Entity, field: string): boolean {
+            return !(entity instanceof Book && entity.id === "b:2" && field === "title");
+          }
+        })(),
+      );
+      const author = await em.load(Author, "a:1");
+      // When both book titles are requested
+      const payload = await toJSON(author, { books: { title: true } });
+      // Then the draft is still present, but its title is omitted
+      expect(payload).toStrictEqual({ books: [{ title: "Public" }, {}] });
+    });
+
+    it("omits a denied relationship's ID alias", async () => {
+      // Given an author with a publisher
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      // And the publisher link is not readable
+      const em = newEntityManager();
+      em.addPlugin(
+        new (class extends Plugin {
+          canReadField(_entity: Entity, field: string): boolean {
+            return field !== "publisher";
+          }
+        })(),
+      );
+      const author = await em.load(Author, "a:1");
+      // When the relationship's ID alias is selected
+      const payload = await toJSON(author, { firstName: true, publisherId: true });
+      // Then the alias is omitted
+      expect(payload).toStrictEqual({ firstName: "a1" });
+    });
+
+    it("does not expose a hidden author's ID through a book", async () => {
+      // Given a visible book whose author is hidden
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      em.addPlugin(
+        new (class extends Plugin {
+          canViewEntity(entity: Entity): boolean {
+            return !(entity instanceof Author);
+          }
+        })(),
+      );
+      const book = await em.load(Book, "b:1");
+      // When only the author ID is requested
+      const payload = await toJSON(book, { authorId: true });
+      // Then the relationship does not expose the hidden target's ID
+      expect(payload).toStrictEqual({ authorId: undefined });
+    });
+
+    it("returns undefined for a hidden single root", async () => {
+      // Given an author that is not visible to the caller
+      const em = newEntityManager();
+      const author = newAuthor(em);
+      em.addPlugin(
+        new (class extends Plugin {
+          canViewEntity(): boolean {
+            return false;
+          }
+        })(),
+      );
+      // When the author is projected
+      const payload = await toJSON(author, "firstName");
+      // Then the caller receives no author object
+      expect(payload).toBeUndefined();
+    });
+
+    it("does not swallow errors from relationship read hooks", async () => {
+      // Given a book with a visible author but a relationship field the caller cannot read
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const denial = new Error("Book author field is private");
+      em.addPlugin(
+        new (class extends Plugin {
+          canViewEntity(): boolean {
+            return true;
+          }
+          beforeGetField(_entity: Entity, field: string): void {
+            if (field === "author" && !isInTrustedContext()) throw denial;
+          }
+        })(),
+      );
+      const book = await em.load(Book, "b:1");
+      // When the relationship is selected
+      const payload = toJSON(book, { author: true });
+      // Then the EM's normal field denial still propagates
+      await expect(payload).rejects.toBe(denial);
+    });
+
+    it("omits hidden roots and collection members without reordering", async () => {
+      // Given three authors, the first and last each with a private and a public book
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+      await insertBook({ title: "Private", author_id: 1 });
+      await insertBook({ title: "First", author_id: 1 });
+      await insertBook({ title: "Last", author_id: 3 });
+      await insertBook({ title: "Private", author_id: 3 });
+      // And the middle author and the private books are hidden
+      const em = newEntityManager();
+      em.addPlugin(
+        new (class extends Plugin {
+          canViewEntity(entity: Entity): boolean {
+            return (
+              entity.id !== "a:2" && !(entity instanceof Book && runInTrustedContext(() => entity.title) === "Private")
+            );
+          }
+        })(),
+      );
+      const authors = await runInTrustedContext(() => em.loadAll(Author, ["a:3", "a:2", "a:1"]));
+      // When projecting the authors and their books
+      const payload = await toJSON(authors, { books: "title" });
+      // Then the remaining authors and books are emitted in their original order
+      expect(payload).toStrictEqual([{ books: [{ title: "Last" }] }, { books: [{ title: "First" }] }]);
+    });
+
+    it("omits bulk data for groups where the field is not readable", async () => {
+      // Given two groups with bulk data
+      await insertParentGroup({ name: "public", bulk_data: { size: 1 } });
+      await insertParentGroup({ name: "private", bulk_data: { size: 2 } });
+      const em = newEntityManager();
+      const groups = await em.loadAll(ParentGroup, ["parentGroup:1", "parentGroup:2"]);
+      // And only the first group permits reading bulk data
+      em.addPlugin(
+        new (class extends Plugin {
+          canReadField(entity: Entity, field: string): boolean {
+            return field !== "bulkData" || entity === groups[0];
+          }
+        })(),
+      );
+      // When the field is selected for both groups
+      const payload = await toJSON(groups, "bulkData");
+      // Then only the public group's data is returned
+      expect(payload).toStrictEqual([{ bulkData: { size: 1 } }, {}]);
+    });
+
+    it("includes denied fields when called from a trusted context", async () => {
+      // Given an author whose first name is not readable
+      const em = newEntityManager();
+      const author = newAuthor(em);
+      em.addPlugin(
+        new (class extends Plugin {
+          canReadField(): boolean {
+            return false;
+          }
+        })(),
+      );
+      // When the author is projected from a hook-like trusted operation
+      const payload = await runInTrustedContext(() => toJSON(author, "firstName"));
+      // Then the first name is included
+      expect(payload).toStrictEqual({ firstName: "a1" });
+    });
   });
 });

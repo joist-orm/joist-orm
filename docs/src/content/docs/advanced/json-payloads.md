@@ -99,3 +99,13 @@ console.log(await a.toJSON({
   }
 }));
 ```
+
+### Access policies
+
+`toJSON` honors the EM plugin hooks `canViewEntity`, `beforeGetField`, and `canReadField`, using the caller's access. When called from a trusted context, such as a hook, it sees every entity and field, like any other read.
+
+- A hidden root or reference target becomes `undefined`. Hidden entities in lists and collections are omitted.
+- A field that `canReadField(entity, field)` rejects is left out of the payload. An ID field like `authorId` is checked as its relationship field (`author`). A custom hint function is checked by its key.
+- An error thrown by `beforeGetField` propagates, so use `canReadField` for fields that `toJSON` should skip quietly.
+
+`toJSON` still loads the whole hint in one trusted `populate` (so the join preloader can batch it), and then applies these checks when it builds the payload.

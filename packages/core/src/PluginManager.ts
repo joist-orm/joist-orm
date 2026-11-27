@@ -37,6 +37,14 @@ interface PluginMethods {
   beforeGetField?(entity: Entity, field: string): void;
 
   /**
+   * Decides whether hinted `toJSON` may select this field, before reading or loading it.
+   *
+   * Receives the canonical field name, or the output key for a custom hint function.
+   * Normal reads still use `beforeGetField` to enforce access.
+   */
+  canReadField?(entity: Entity, field: string): boolean;
+
+  /**
    * Called before a field value is set on an entity via setField.
    *
    * @param entity The entity instance being modified
@@ -100,6 +108,7 @@ interface PluginMethods {
 
 const syncPluginMethods = [
   "canViewEntity",
+  "canReadField",
   "beforeCreate",
   "beforeGetField",
   "beforeSetField",
@@ -185,6 +194,14 @@ export class PluginManager implements Required<PluginMethods> {
               return true;
             };
             this.onVisibilityHook();
+          } else if (method === "canReadField") {
+            // Like `canViewEntity`, every plugin must grant the read
+            this.canReadField = function (entity, field) {
+              for (const plugin of this.#pluginsByCallback.canReadField!) {
+                if (!plugin.canReadField!(entity, field)) return false;
+              }
+              return true;
+            };
           } else {
             this[method] = function (this: PluginManager, ...args: any[]) {
               for (const plugin of this.#pluginsByCallback[method]!) {
@@ -250,6 +267,10 @@ export class PluginManager implements Required<PluginMethods> {
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
 
   canViewEntity(entity: Entity): boolean {
+    return true;
+  }
+
+  canReadField(entity: Entity, field: string): boolean {
     return true;
   }
 }

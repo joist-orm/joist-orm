@@ -1146,6 +1146,56 @@ describe("em.find / exists", () => {
         ].join(""),
       ]);
     });
+
+    it("moves a plugin-added EXISTS with the collection alias it correlates to", async () => {
+      // Given two Authors with a matching Book, but only the first Book has a five-star review
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "match", author_id: 1 });
+      await insertBook({ title: "match", author_id: 2 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+      const em = newEntityManager();
+      // And a plugin that requires each filtered Book to have a five-star review
+      em.addPlugin(
+        new QueryMutatingPlugin((query) => {
+          const book = query.tables.find((table) => table.table === "books") ?? failTest("No books join");
+          addCondition(query, {
+            kind: "exists",
+            negate: false,
+            outerAliases: [book.alias],
+            subquery: {
+              selects: ["1"],
+              tables: [{ alias: "br", table: "book_reviews", join: "primary" }],
+              condition: {
+                kind: "exp",
+                op: "and",
+                conditions: [
+                  {
+                    kind: "raw",
+                    aliases: ["br", book.alias],
+                    condition: `br.book_id = ${book.alias}.id`,
+                    bindings: [],
+                    pruneable: false,
+                  },
+                  { kind: "column", alias: "br", column: "rating", dbType: "int", cond: { kind: "eq", value: 5 } },
+                ],
+              },
+              orderBys: [],
+            },
+          });
+        }),
+      );
+      resetQueryCount();
+      // When finding Authors by their Books' title
+      await em.find(Author, { books: { title: "match" } }, opts);
+      // Then the plugin's EXISTS stays in the same query scope as the Book it references
+      expect(queries).toMatchInlineSnapshot(`
+       [
+         "SELECT a.* FROM authors AS a WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1 AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE br.book_id = b.id AND br.rating = $2)) ORDER BY a.id ASC LIMIT $3",
+       ]
+      `);
+    });
   });
 
   describe("deep sibling auto-detection", () => {

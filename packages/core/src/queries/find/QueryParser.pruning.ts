@@ -127,6 +127,12 @@ function pruneIdOnlyJoins(query: ParsedFindQuery, keepAliases: string[], visible
   }
   for (const table of query.tables) {
     if (table.join === "lateral") pruneUnusedJoins(table.query, [], visibleCtes);
+    // A plugin's ON condition can hold its own EXISTS subqueries.
+    if ((table.join === "inner" || table.join === "outer") && table.condition) {
+      for (const condition of deepFindConditions(table.condition, false)) {
+        if (condition.kind === "exists") pruneUnusedJoins(condition.subquery, [], visibleCtes);
+      }
+    }
   }
   for (const otherTable of query.tables) {
     // Primary, cross, and lateral tables are not otherTable joins eligible for FK substitution.
@@ -151,7 +157,8 @@ function pruneIdOnlyJoins(query: ParsedFindQuery, keepAliases: string[], visible
       !idJoin ||
       otherTable.table !== idJoin.table ||
       otherTable.col1 !== idJoin.col1 ||
-      otherTable.col2 !== idJoin.col2
+      otherTable.col2 !== idJoin.col2 ||
+      otherTable.condition
     ) {
       continue;
     }
@@ -218,8 +225,16 @@ function pruneIdOnlyJoins(query: ParsedFindQuery, keepAliases: string[], visible
 }
 
 /** Returns the aliases needed to evaluate a join's ON clause, excluding the joined alias itself. */
-function joinDependencies(t: JoinTable): string[] {
-  return [parseAlias(t.col1), parseAlias(t.col2)].filter((alias) => alias !== t.alias);
+export function joinDependencies(t: JoinTable): string[] {
+  const aliases = [parseAlias(t.col1), parseAlias(t.col2)];
+  if (t.condition) {
+    for (const c of deepFindConditions(t.condition, false)) {
+      if (c.kind === "column") aliases.push(c.alias);
+      else if (c.kind === "raw") aliases.push(...c.aliases);
+      else aliases.push(...c.outerAliases);
+    }
+  }
+  return aliases.filter((alias) => alias !== t.alias);
 }
 
 /** Marks aliases used by select strings, including generated CTI expressions like `COALESCE(st0.col, st1.col)`. */

@@ -110,6 +110,29 @@ beforeFind(
 }
 ```
 
+To restrict the rows a join can match, set the join's `condition` instead of adding to the query's `WHERE`.
+It is rendered in the join's `ON` clause, so a `LEFT JOIN` null-extends a row that fails it and keeps the
+parent row:
+
+```typescript
+beforeFind(meta: EntityMetadata, operation: FindOperation, query: ParsedFindQuery): void {
+  for (const table of query.tables) {
+    if ((table.join === "inner" || table.join === "outer") && table.table === "publishers") {
+      // I.e. LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id AND (p.name != $1)
+      table.condition = {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          { kind: "column", alias: table.alias, column: "name", dbType: "text", cond: { kind: "ne", value: "hidden" } },
+        ],
+      };
+    }
+  }
+}
+```
+
+When Joist rewrites a collection join into `EXISTS`, the join's `condition` moves into the subquery.
+
 ### beforeQuery
 
 `beforeQuery(query: ParsedReadQuery)` runs once for an entire read statement from `em.query` or

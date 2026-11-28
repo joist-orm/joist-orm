@@ -41,6 +41,21 @@ export interface JoinTable {
   table: string;
   col1: string;
   col2: string;
+  /**
+   * Extra conditions for the join's ON clause, ANDed after `col1 = col2`.
+   *
+   * The parser never sets this; it is for `beforeFind` plugins that restrict which rows a join can
+   * match. On an outer join, a row that fails the condition is null-extended, where the same
+   * condition in WHERE would drop the parent row. I.e. an authorization policy on a LEFT JOINed
+   * `publishers p` hides the publisher while keeping its author.
+   *
+   * - When a collection join becomes an EXISTS, its condition moves into the subquery's WHERE.
+   * - The condition does not keep an otherwise unused join alive, but the aliases it reads are kept
+   *   for as long as its own join is.
+   * - Batched finds treat its values as constants: finds only batch together when their joins have
+   *   identical conditions.
+   */
+  condition?: ParsedExpressionFilter;
   distinct?: boolean;
   /**
    * On a many-to-many join table, identifies its otherTable join.

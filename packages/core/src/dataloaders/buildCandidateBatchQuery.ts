@@ -151,6 +151,8 @@ export function buildCandidateBatchQuery(
     return;
   const primary = query.tables.find((t) => t.join === "primary")!;
   if (!canSelectCandidateEntities(query, primary.alias)) return;
+  // The candidate and exact-match phases rebuild the joins from their columns, which would drop a plugin's ON condition.
+  if (query.tables.some((t) => (t.join === "inner" || t.join === "outer") && t.condition)) return;
 
   // _find: one row per call, containing its tag and the filter values that differ between calls.
   const findArguments = buildFindArguments(query, entries, constantBindings);

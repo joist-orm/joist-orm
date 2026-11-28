@@ -1,4 +1,4 @@
-import { pruneUnusedJoins, selectReferencesAlias } from "src/queries/find/QueryParser.pruning.ts";
+import { joinDependencies, pruneUnusedJoins, selectReferencesAlias } from "src/queries/find/QueryParser.pruning.ts";
 import {
   type JoinTable,
   type ParsedFindQuery,
@@ -207,7 +207,10 @@ function createExistsCondition(
     pruneable: false,
   };
   // I.e. a pure `b.id IS NULL` anti-join becomes `NOT EXISTS (SELECT 1 FROM books b WHERE a.id = b.author_id)`.
-  const conditions = hasOnlyAntiJoin ? [correlation] : [correlation, ...moved];
+  // A plugin's ON condition restricts which children the join matches, so it must also restrict the
+  // subquery, including for NOT EXISTS: a child the join could not match does not count as present.
+  const on = root.condition ? [root.condition] : [];
+  const conditions = hasOnlyAntiJoin ? [correlation, ...on] : [correlation, ...on, ...moved];
   const subquery: ParsedFindQuery = {
     selects: ["1"],
     tables: query.tables
@@ -402,11 +405,6 @@ function addSelectAliases(query: ParsedFindQuery, required: Set<string>, select:
   for (const table of query.tables) {
     if (selectReferencesAlias(select, table.alias)) required.add(table.alias);
   }
-}
-
-/** Returns the aliases needed to evaluate a join's ON clause, excluding the joined alias itself. */
-function joinDependencies(table: JoinTable): string[] {
-  return [parseAlias(table.col1), parseAlias(table.col2)].filter((alias) => alias !== table.alias);
 }
 
 /** Returns true when a condition references this subtree and another scope, i.e. `b.title = 'x' OR c.text = 'x'`. */

@@ -84,10 +84,13 @@ export function buildRawQuery(
 
   // Then the joins
   for (const t of parsed.tables) {
-    if (t.join === "inner") {
-      sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
-    } else if (t.join === "outer") {
-      sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    if (t.join === "inner" || t.join === "outer") {
+      sql += ` ${t.join === "inner" ? "JOIN" : "LEFT OUTER JOIN"} ${as(t)} ON ${t.col1} = ${t.col2}`;
+      const on = t.condition && buildWhereClause(t.condition, false, subqueryRenderer);
+      if (on) {
+        sql += ` AND ${on[0]}`;
+        bindings.push(...on[1]);
+      }
     } else if (t.join === "primary") {
       // handled above
     } else if (t.join === "lateral") {

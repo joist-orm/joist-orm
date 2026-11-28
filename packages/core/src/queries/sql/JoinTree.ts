@@ -139,13 +139,12 @@ type TreeNodeJoins<T extends Entity, J, Nullable extends boolean> =
     : // If `J extends object`, look for an `as` binding and nested relationships.
       // If `J extends object` is false, this is a scalar filter like "b:1" in `{ books: "b:1" }` and we stop here.
       J extends object
-      ?
-          | (J extends { readonly as: infer A extends TableFor<T> }
-              ? Nullable extends true
-                ? LeftJoin<A>
-                : InnerJoin<A>
-              : never)
-          | TreeEntries<T, J, Nullable>
+      ? | (J extends { readonly as: infer A extends TableFor<T> }
+            ? Nullable extends true
+              ? LeftJoin<A>
+              : InnerJoin<A>
+            : never)
+        | TreeEntries<T, J, Nullable>
       : never;
 
 /** Rejects broad tree annotations before checking their supplied keys and values. */

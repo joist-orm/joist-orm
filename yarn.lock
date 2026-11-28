@@ -15217,12 +15217,11 @@ __metadata:
   linkType: hard
 
 "postcss-selector-parser@npm:^6.1.1":
-  version: 6.1.4
-  resolution: "postcss-selector-parser@npm:6.1.4"
+  version: 6.1.6
+  resolution: "postcss-selector-parser@npm:6.1.6"
   dependencies:
-    cssesc: "npm:^3.0.0"
     util-deprecate: "npm:^1.0.2"
-  checksum: 10/68d122d44ea248f570252a08f4967758168b110a7a5349b1d5605d2a10b2ca4bbb257e36b0925053abf35b406955e730febe5a4aa3cf6997ce222d46ec0ab840
+  checksum: 10/5ed61712212c7a2c17049e00d2e1d597703e57c5d49161d2ebf3e7c6d682520b8464a3535767c38005ffd79ea64ede933c32ac121b5f9a05b6617072244168ee
   languageName: node
   linkType: hard
 

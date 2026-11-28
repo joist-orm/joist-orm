@@ -1,4 +1,4 @@
-import { type Entity, Plugin, getField, isInTrustedContext, runInTrustedContext } from "joist-orm";
+import { type Entity, Plugin, getEmInternalApi, getField, isInTrustedContext, runInTrustedContext } from "joist-orm";
 import { Author, Book, ParentGroup } from "src/entities";
 import { insertAuthor, insertBook, insertParentGroup, select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -474,6 +474,94 @@ describe("EntityManager.visibility", () => {
     // Then reentrancy terminates without authorizing the outer read
     expect(() => loaded.ssn).toThrow("Cannot read ssn");
   });
+
+  it("checks an untrusted read once when its plugin caches field reads", async () => {
+    // Given an Author whose name this user can read
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const plugin = new CachingFieldPlugin();
+    em.addPlugin(plugin);
+    const author = await em.load(Author, "a:1");
+    // When the user reads the name through the getter and directly
+    void author.firstName;
+    void author.firstName;
+    getField(author, "firstName");
+    // Then only the first read asks the plugin
+    expect(plugin.checks).toBe(1);
+  });
+
+  it("checks an untrusted read again after its plugin invalidates the entity", async () => {
+    // Given an Author whose name this user has already read
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const plugin = new CachingFieldPlugin();
+    em.addPlugin(plugin);
+    const author = await em.load(Author, "a:1");
+    void author.firstName;
+    // When the plugin's policy changes and it invalidates the Author's reads
+    plugin.denied = true;
+    getEmInternalApi(em).invalidateReadFields(author);
+    // Then the earlier approval no longer applies
+    expect(() => author.firstName).toThrow("Cannot read firstName");
+  });
+
+  it("does not let a trusted read warm a cached field for untrusted callers", async () => {
+    // Given an Author whose name this user cannot read
+    await insertAuthor({ first_name: "private" });
+    const em = newEntityManager();
+    const plugin = new CachingFieldPlugin();
+    plugin.denied = true;
+    em.addPlugin(plugin);
+    const author = await em.load(Author, "a:1");
+    // When trusted code reads the name first
+    runInTrustedContext(() => author.firstName);
+    // Then the user's read is still checked
+    expect(() => author.firstName).toThrow("Cannot read firstName");
+  });
+
+  it("checks every untrusted read when another plugin does not cache field reads", async () => {
+    // Given an Author whose name this user can read
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const plugin = new CachingFieldPlugin();
+    em.addPlugin(plugin);
+    // And a second plugin that has not promised to invalidate its approvals
+    em.addPlugin(new FieldVisibilityPlugin("ssn"));
+    const author = await em.load(Author, "a:1");
+    // When the user reads the name twice
+    void author.firstName;
+    void author.firstName;
+    // Then both reads ask the plugins
+    expect(plugin.checks).toBe(2);
+  });
+
+  it("checks every untrusted read of a new entity even when its plugin caches field reads", async () => {
+    // Given a new Author on an EM whose plugin caches field reads
+    const em = newEntityManager();
+    const plugin = new CachingFieldPlugin();
+    em.addPlugin(plugin);
+    const author = em.create(Author, { firstName: "a1" });
+    // And the checks made while assigning the name are set aside
+    plugin.checks = 0;
+    // When the user reads the unsaved name twice
+    void author.firstName;
+    void author.firstName;
+    // Then both reads ask the plugin, because its answer may differ once the Author is saved
+    expect(plugin.checks).toBe(2);
+  });
+
+  it("rechecks cached reads when a plugin that does not cache field reads is added", async () => {
+    // Given an Author whose name this user has read on an EM that caches field reads
+    await insertAuthor({ first_name: "private" });
+    const em = newEntityManager();
+    em.addPlugin(new CachingFieldPlugin());
+    const author = await em.load(Author, "a:1");
+    void author.firstName;
+    // When a plugin that hides the name, and does not cache, is installed
+    em.addPlugin(new FieldVisibilityPlugin("firstName"));
+    // Then the earlier approval cannot bypass the new plugin
+    expect(() => author.firstName).toThrow("Cannot read firstName");
+  });
 });
 
 /** Models a plugin-maintained synchronous decision and later policy changes. */
@@ -498,5 +586,18 @@ class FieldVisibilityPlugin extends VisibilityPlugin {
 
   beforeGetField(_entity: Entity, field: string): void {
     if (field === this.field && !this.allowed && !isInTrustedContext()) throw new Error(`Cannot read ${field}`);
+  }
+}
+
+/** Counts its untrusted firstName checks, and promises to invalidate cached reads when its answer changes. */
+class CachingFieldPlugin extends VisibilityPlugin {
+  override readonly cacheFieldReads = true;
+  checks = 0;
+  denied = false;
+
+  beforeGetField(_entity: Entity, field: string): void {
+    if (field !== "firstName" || isInTrustedContext()) return;
+    this.checks++;
+    if (this.denied) throw new Error("Cannot read firstName");
   }
 }

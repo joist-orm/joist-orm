@@ -69,6 +69,17 @@ The hook runs in the context that initiated the creation. Use `isInTrustedContex
 a direct create from one initiated inside a trusted callback such as `config.setDefault`.
 The separate `config.beforeCreate` lifecycle hook still runs at flush.
 
+### beforeDelete
+
+`beforeDelete(entity: Entity): void` runs synchronously once per entity when `em.delete` first marks it
+deleted, before any cascades or unhooking. Throw to deny the delete; Joist calls the hook for every entity
+in an `em.delete([...])` call before marking any of them, so a throw leaves all of them undeleted.
+
+The hook runs in the context that initiated the delete. Cascaded deletes, whether of loaded relations
+during `em.delete` or of unloaded relations during `em.flush`, run in a trusted context, so use
+`isInTrustedContext()` to distinguish them from direct deletes.
+The separate `config.beforeDelete` lifecycle hook still runs at flush.
+
 ### beforeSetField
 
 Called before a field value is set on an entity via `setField`. This is useful for implementing validation, access control, or auditing on field changes.

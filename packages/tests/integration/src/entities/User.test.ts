@@ -3,7 +3,7 @@ import { User } from "src/entities";
 import { insertUser, select } from "src/entities/inserts";
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2 } from "src/testDates";
-import { newEntityManager } from "src/testEm";
+import { knex, newEntityManager } from "src/testEm";
 
 const PASSWORD = "correct.horse.battery.staple";
 const PASSWORD_ENCODED = "Y29ycmVjdC5ob3JzZS5iYXR0ZXJ5LnN0YXBsZQ==";
@@ -114,4 +114,61 @@ describe("User", () => {
     // Then the marker has the Date codec's physical db type, an ISO string
     expect(marker).toEqual("2000-01-01T00:00:00.000Z");
   });
+
+  it("persists self-referencing m2ms whose default index names exceed 63 chars", async () => {
+    // Given two users related through a m2m table with a long name and two columns sharing a long prefix
+    const em = newEntityManager();
+    const [u1, u2] = [
+      em.create(User, { name: "u1", email: "u1@test.com" }),
+      em.create(User, { name: "u2", email: "u2@test.com" }),
+    ];
+    u1.relatedToUsers.add(u2);
+    // When it is saved
+    await em.flush();
+    // Then the relation round trips in both directions
+    const em2 = newEntityManager();
+    const [r1, r2] = await em2.loadAll(User, [u1.idTagged, u2.idTagged]);
+    expect((await r1.relatedToUsers.load()).map((u) => u.name)).toEqual(["u2"]);
+    expect((await r2.relatedFromUsers.load()).map((u) => u.name)).toEqual(["u1"]);
+    // And each index got its own name, i.e. Postgres did not truncate them into one
+    expect(await indexNames("users_related_to_users_for_testing_long_index_name_clash")).toMatchInlineSnapshot(`
+     [
+       "users_related_to_users_for_testing_long_index_name_cla_832f51fc",
+       "users_related_to_users_for_testing_long_index_name_cla_ec92f229",
+       "users_related_to_users_for_testing_long_index_name_clash_pkey",
+     ]
+    `);
+  });
+
+  it("persists self-referencing m2ms whose default index names exceed 63 bytes of multibyte chars", async () => {
+    // Given two users related through a m2m table whose name is multibyte, so its 54 char prefix is over 54 bytes
+    const em = newEntityManager();
+    const [u1, u2] = [
+      em.create(User, { name: "u1", email: "u1@test.com" }),
+      em.create(User, { name: "u2", email: "u2@test.com" }),
+    ];
+    u1.koreanToUsers.add(u2);
+    // When it is saved
+    await em.flush();
+    // Then the relation round trips in both directions
+    const em2 = newEntityManager();
+    const [r1, r2] = await em2.loadAll(User, [u1.idTagged, u2.idTagged]);
+    expect((await r1.koreanToUsers.load()).map((u) => u.name)).toEqual(["u2"]);
+    expect((await r2.koreanFromUsers.load()).map((u) => u.name)).toEqual(["u1"]);
+    // And each index got its own name, within 63 bytes
+    const names = await indexNames("users_to_users_관련_사용자_with_long_index_clash");
+    expect(names.every((n) => Buffer.byteLength(n) <= 63)).toBe(true);
+    expect(names).toMatchInlineSnapshot(`
+     [
+       "users_to_users_관련_사용자_with_long_index_clash__0007a787",
+       "users_to_users_관련_사용자_with_long_index_clash__9e53bccf",
+       "users_to_users_관련_사용자_with_long_index_clash_pkey",
+     ]
+    `);
+  });
 });
+
+async function indexNames(table: string): Promise<string[]> {
+  const { rows } = await knex.raw("SELECT indexname FROM pg_indexes WHERE tablename = ? ORDER BY indexname", [table]);
+  return rows.map((r: { indexname: string }) => r.indexname);
+}

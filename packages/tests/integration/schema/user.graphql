@@ -1,3 +1,8 @@
+extend type Query {
+  user(id: ID!): User!
+  users(filter: UserFilter, limit: Int, offset: Int): UsersPage!
+}
+
 extend type Mutation {
   saveUser(input: SaveUserInput!): SaveUserResult!
 }
@@ -16,6 +21,10 @@ type User {
   originalEmail: String!
   parents: [User!]!
   children: [User!]!
+  relatedFromUsers: [User!]!
+  relatedToUsers: [User!]!
+  koreanFromUsers: [User!]!
+  koreanToUsers: [User!]!
 }
 
 input SaveUserInput {
@@ -33,11 +42,6 @@ type SaveUserResult {
 }
 
 union UserFavoritePublisher = LargePublisher | SmallPublisher
-
-extend type Query {
-  user(id: ID!): User!
-  users(filter: UserFilter, limit: Int, offset: Int): UsersPage!
-}
 
 type UsersPage {
   entities: [User!]!

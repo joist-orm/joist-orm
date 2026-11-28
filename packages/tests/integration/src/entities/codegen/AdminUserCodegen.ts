@@ -123,8 +123,12 @@ export abstract class AdminUserCodegen extends User implements Entity {
   declare readonly authorManyToOne: ManyToOneReference<AdminUser, Author, undefined>;
   declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
   declare readonly likedComments: Collection<AdminUser, Comment>;
+  declare readonly relatedFromUsers: Collection<AdminUser, User>;
+  declare readonly relatedToUsers: Collection<AdminUser, User>;
   declare readonly parents: Collection<AdminUser, User>;
   declare readonly children: Collection<AdminUser, User>;
+  declare readonly koreanFromUsers: Collection<AdminUser, User>;
+  declare readonly koreanToUsers: Collection<AdminUser, User>;
 
   get id(): AdminUserId {
     return this.idMaybe || failNoIdYet("AdminUser");

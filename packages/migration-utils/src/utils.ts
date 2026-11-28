@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   type ColumnDefinition,
   type ColumnDefinitions,
@@ -28,7 +30,7 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
   // another table, assume we'll be doing a lot of lookups on this column and should fk it.
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.addIndex(tableName, [name], { method: "btree" });
+      b.addIndex(tableName, [name], { method: "btree", name: indexName(tableName, [name]) });
     }
   });
 
@@ -62,7 +64,7 @@ export function createSubTable(
   // another table, assume we'll be doing a lot of lookups on this column and should fk it.
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.addIndex(subTableName, [name], { method: "btree" });
+      b.addIndex(subTableName, [name], { method: "btree", name: indexName(subTableName, [name]) });
     }
   });
 }
@@ -317,8 +319,12 @@ export function createManyToManyTable(
     },
     options,
   );
-  b.createIndex(tableName, [column1, column2], { unique: true, ifNotExists: options?.ifNotExists });
-  b.createIndex(tableName, [column2]); // Improves lookup performance when querying just column2
+  b.createIndex(tableName, [column1, column2], {
+    unique: true,
+    ifNotExists: options?.ifNotExists,
+    name: indexName(tableName, [column1, column2], true),
+  });
+  b.createIndex(tableName, [column2], { name: indexName(tableName, [column2]) }); // Improves lookup performance when querying just column2
 }
 
 /** Adds columns + auto-indexes any foreign keys. */
@@ -326,9 +332,35 @@ export function addColumns(b: MigrationBuilder, tableName: string, columns: Colu
   b.addColumns(tableName, columns);
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.addIndex(tableName, [name], { method: "btree" });
+      b.addIndex(tableName, [name], { method: "btree", name: indexName(tableName, [name]) });
     }
   });
+}
+
+/**
+ * Returns the index name node-pg-migrate would generate, unless that is over Postgres' 63 char limit.
+ *
+ * Postgres silently truncates longer names, so two indexes on the same table can end up with the same name.
+ * In that case we keep a prefix of the name (so it still sorts next to its table) and replace the tail with
+ * a hash of the full name, which keeps it deterministic and unique.
+ */
+function indexName(tableName: string, columns: string[], unique = false): string | undefined {
+  const name = `${tableName}_${columns.join("_")}${unique ? "_unique" : ""}_index`;
+  // Postgres' limit is 63 bytes (not chars), so a multibyte name can overflow while being under 63 chars
+  if (Buffer.byteLength(name) <= 63) return undefined;
+  return `${truncateBytes(name, 54)}_${createHash("sha1").update(name).digest("hex").slice(0, 8)}`;
+}
+
+/** Returns the longest prefix of `s` that fits in `maxBytes` of UTF-8, without splitting a code point. */
+function truncateBytes(s: string, maxBytes: number): string {
+  let bytes = 0;
+  let prefix = "";
+  for (const char of s) {
+    bytes += Buffer.byteLength(char);
+    if (bytes > maxBytes) break;
+    prefix += char;
+  }
+  return prefix;
 }
 
 export function fail(message?: string): never {

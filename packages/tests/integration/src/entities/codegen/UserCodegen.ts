@@ -91,8 +91,12 @@ export interface UserFields {
   manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
+  relatedFromUsers: { kind: "m2m"; type: User };
+  relatedToUsers: { kind: "m2m"; type: User };
   parents: { kind: "m2m"; type: User };
   children: { kind: "m2m"; type: User };
+  koreanFromUsers: { kind: "m2m"; type: User };
+  koreanToUsers: { kind: "m2m"; type: User };
   createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
 }
@@ -157,8 +161,12 @@ export interface UserOpts {
   createdComments?: Comment[];
   directs?: User[];
   likedComments?: Comment[];
+  relatedFromUsers?: User[];
+  relatedToUsers?: User[];
   parents?: User[];
   children?: User[];
+  koreanFromUsers?: User[];
+  koreanToUsers?: User[];
 }
 
 export interface UserIdsOpts {
@@ -168,8 +176,12 @@ export interface UserIdsOpts {
   createdCommentIds?: CommentId[] | null;
   directIds?: UserId[] | null;
   likedCommentIds?: CommentId[] | null;
+  relatedFromUserIds?: UserId[] | null;
+  relatedToUserIds?: UserId[] | null;
   parentIds?: UserId[] | null;
   childIds?: UserId[] | null;
+  koreanFromUserIds?: UserId[] | null;
+  koreanToUserIds?: UserId[] | null;
 }
 
 export interface UserFilter {
@@ -191,8 +203,12 @@ export interface UserFilter {
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  relatedFromUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  relatedToUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   parents?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   children?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  koreanFromUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  koreanToUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
   favoritePublisherSmallPublisher?: EntityFilter<SmallPublisher, IdOf<SmallPublisher>, FilterOf<SmallPublisher>, null>;
@@ -219,8 +235,12 @@ export interface UserGraphQLFilter {
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  relatedFromUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  relatedToUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  koreanFromUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  koreanToUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherId?: ValueGraphQLFilter<IdOf<UserFavoritePublisher>>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
@@ -302,11 +322,31 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string, numb
   readonly directs: Collection<User, User> = hasMany();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
   readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
+  readonly relatedFromUsersRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m(
+    "relatedFromUsers",
+    "relatedToUsersRecursive",
+  );
+  readonly relatedToUsersRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m(
+    "relatedToUsers",
+    "relatedFromUsersRecursive",
+  );
   readonly parentsRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("parents", "childrenRecursive");
   readonly childrenRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("children", "parentsRecursive");
+  readonly koreanFromUsersRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m(
+    "koreanFromUsers",
+    "koreanToUsersRecursive",
+  );
+  readonly koreanToUsersRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m(
+    "koreanToUsers",
+    "koreanFromUsersRecursive",
+  );
   readonly likedComments: Collection<User, Comment> = hasManyToMany(); // users_to_comments liked_by_user_id comment_id
+  readonly relatedFromUsers: Collection<User, User> = hasManyToMany(); // users_related_to_users_for_testing_long_index_name_clash related_from_user_id related_to_user_id
+  readonly relatedToUsers: Collection<User, User> = hasManyToMany(); // users_related_to_users_for_testing_long_index_name_clash related_to_user_id related_from_user_id
   readonly parents: Collection<User, User> = hasManyToMany(); // users_to_parents child_id parent_id
   readonly children: Collection<User, User> = hasManyToMany(); // users_to_parents parent_id child_id
+  readonly koreanFromUsers: Collection<User, User> = hasManyToMany(); // users_to_users_관련_사용자_with_long_index_clash korean_index_from_user_id korean_index_to_user_id
+  readonly koreanToUsers: Collection<User, User> = hasManyToMany(); // users_to_users_관련_사용자_with_long_index_clash korean_index_to_user_id korean_index_from_user_id
   readonly favoritePublisher: PolymorphicReference<User, UserFavoritePublisher, undefined> = hasOnePolymorphic();
 
   get id(): UserId {

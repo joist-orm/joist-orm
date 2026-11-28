@@ -456,6 +456,24 @@ describe("EntityManager.visibility", () => {
     // Then the trusted caller cannot authorize the untrusted caller's result
     await expect(Promise.all([trusted, untrusted])).rejects.toThrow("Cannot read bulkData");
   });
+
+  it("stops a reentrant read of a field beyond an entity's first 32 fields", async () => {
+    // Given a hook that reads Author.ssn, the 34th Author field, while deciding permission
+    await insertAuthor({ first_name: "a1", ssn: "private" });
+    const em = newEntityManager();
+    class ReentrantPlugin extends VisibilityPlugin {
+      beforeGetField(entity: Entity, field: string): void {
+        if (field !== "ssn") return;
+        getField(entity, field);
+        throw new Error("Cannot read ssn");
+      }
+    }
+    em.addPlugin(new ReentrantPlugin());
+    const loaded = await em.load(Author, "a:1");
+    // When the hook reenters the getter before rejecting access
+    // Then reentrancy terminates without authorizing the outer read
+    expect(() => loaded.ssn).toThrow("Cannot read ssn");
+  });
 });
 
 /** Models a plugin-maintained synchronous decision and later policy changes. */

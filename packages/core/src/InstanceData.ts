@@ -22,8 +22,15 @@ export class InstanceData {
   data: Record<string, any>;
   /** Present only on visibility-aware entities; untrusted reads never reuse these approvals. */
   trustedReadFields: number[] | undefined = undefined;
-  /** Reentrancy is transient, independent of whether a read may be cached. */
-  activeReadFields: Set<string> | undefined = undefined;
+  /**
+   * The fields whose read hooks are running, as one bit per field read index.
+   *
+   * Reentrancy is transient, independent of whether a read may be cached. These are bits rather than a
+   * Set of names because visibility-aware EMs update them on every untrusted field read.
+   */
+  activeReadFields: number = 0;
+  /** The bits for field read indexes 32 and above; allocated only when such a field is read. */
+  activeReadFieldsExtra: number[] | undefined = undefined;
   /** Number/untagged ID conversions are cached once; assigned entity IDs never change. */
   idCache: string | number | undefined = undefined;
   /** A bag to keep the original values, allocated on first mutation (most entities are never mutated). */

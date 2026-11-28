@@ -64,7 +64,7 @@
     "oxfmt": "0.78.0",
     "oxlint": "1.93.0",
     "pg": "^8.23.1",
-    "semantic-release": "^25.0.9",
+    "semantic-release": "^26.0.1",
     "tsdown": "0.23.7",
     "typescript": "7.0.2"
   },

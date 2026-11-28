@@ -30,8 +30,10 @@ interface PluginMethods {
 
   /**
    * Checks read access to this field on this entity. Throw to deny access.
-   * On visibility-aware EMs, every untrusted read is checked. Trusted reads can reuse an earlier
-   * successful check for the same field on the same entity, but untrusted reads cannot.
+   * On visibility-aware EMs, every untrusted read is checked, unless every `beforeGetField` plugin sets
+   * {@link Plugin.cacheFieldReads}; then an approved read is reused until `invalidateReadFields`.
+   * Trusted reads can reuse an earlier successful check for the same field on the same entity, but an
+   * untrusted read never reuses a trusted approval.
    * Use `isInTrustedContext()` if the field policy distinguishes ORM reads from caller reads.
    *
    * Ordinary EMs skip this hook once the field's getter is warm. Unset fields and internal reads
@@ -139,6 +141,22 @@ export abstract class Plugin {
   // didn't do this, then multiple EMs with the same plugin instance could keep each other from being garbage collected.
   [emsSymbol]: WeakRef<EntityManager>[] = [];
 
+  /**
+   * Whether Joist may reuse this plugin's approval of an untrusted field read.
+   *
+   * On an EM with a `canViewEntity` hook, Joist otherwise runs `beforeGetField` on every untrusted
+   * read, because it cannot know when the plugin's answer changes. A plugin that sets this to
+   * `true` takes on that duty: it must call `getEmInternalApi(em).invalidateReadFields(entity)`
+   * whenever its answer for any field of `entity` may change, i.e. when an authorization plugin
+   * learns the entity moved to a different scope.
+   *
+   * Every `beforeGetField` plugin on the EM must opt in for reads to be cached. Reads of a new
+   * entity are never cached, so a plugin may treat unsaved entities differently without
+   * invalidating them when they are saved. EMs without a `canViewEntity` hook already keep
+   * approved reads warm, with or without this flag.
+   */
+  readonly cacheFieldReads: boolean = false;
+
   maybeCloneForNewEm(): this | undefined {
     return undefined;
   }
@@ -164,9 +182,19 @@ export interface Plugin extends PluginMethods {}
 export class PluginManager implements Required<PluginMethods> {
   #plugins = new Set<Plugin>();
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
+  /**
+   * Whether an approved untrusted field read stays warm, so later reads skip `beforeGetField`.
+   *
+   * False only when the EM has a `canViewEntity` hook and a `beforeGetField` plugin that has not
+   * set {@link Plugin.cacheFieldReads}.
+   */
+  cachesUntrustedReads = true;
+
   constructor(
     public readonly em: EntityManager,
     private readonly onVisibilityHook: () => void,
+    /** Forgets the warm reads of every loaded entity, because they predate a stricter read policy. */
+    private readonly resetReadFields: () => void,
   ) {}
 
   /** Returns whether any registered plugin implements `method`, i.e. so callers can skip building its args. */
@@ -232,6 +260,13 @@ export class PluginManager implements Required<PluginMethods> {
         }
       }
     }
+
+    // Reads that were warmed under the previous policy must be checked again under a stricter one.
+    const cachesUntrustedReads =
+      !this.hasHook("canViewEntity") ||
+      (this.#pluginsByCallback.beforeGetField ?? []).every((plugin) => plugin.cacheFieldReads);
+    if (this.cachesUntrustedReads && !cachesUntrustedReads) this.resetReadFields();
+    this.cachesUntrustedReads = cachesUntrustedReads;
   }
 
   get plugins(): readonly Plugin[] {

@@ -1,5 +1,5 @@
 import DataLoader, { type BatchLoadFn, type Options } from "dataloader";
-import { getInstanceData, useTrustedReadCache } from "src/BaseEntity.ts";
+import { getInstanceData } from "src/BaseEntity.ts";
 import { BatchLoader } from "src/batchloaders/BatchLoader.ts";
 import { type enumCollectionLoadOperation } from "src/batchloaders/enumCollectionBatchLoader.ts";
 import { loadBatchLoader, type loadOperation } from "src/batchloaders/loadBatchLoader.ts";
@@ -30,7 +30,7 @@ import { setAsyncDefaults, setSyncDefaults } from "src/defaults.ts";
 import { type Driver } from "src/drivers/index.ts";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { type Entity, type Entity as EntityW, type IdType, isEntity } from "src/Entity.ts";
-import { getField, setField } from "src/fields.ts";
+import { getField, resetReadFields, setField } from "src/fields.ts";
 import { FlushLock } from "src/flush/FlushLock.ts";
 import { JoinRows, type ManyToManyLike } from "src/flush/JoinRows.ts";
 import type { PendingChange } from "src/flush/PendingChanges.ts";
@@ -408,10 +408,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.driver = opts.driver ?? opts.em!.driver;
     this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
 
-    const pluginManager = new PluginManager(this, () => {
-      this.#hasVisibilityHook = true;
-      for (const entity of this.#entitiesArray) useTrustedReadCache(entity);
-    });
+    const pluginManager = new PluginManager(
+      this,
+      () => {
+        this.#hasVisibilityHook = true;
+        // Reads warmed before the hook was installed were never checked by it.
+        for (const entity of this.#entitiesArray) resetReadFields(entity);
+      },
+      () => {
+        for (const entity of this.#entitiesArray) resetReadFields(entity);
+      },
+    );
 
     if (opts.em) {
       this.#hooks = {
@@ -454,6 +461,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get hasFailedFlush() {
         return em.#flushError !== undefined;
+      },
+
+      invalidateReadFields(entity: Entity): void {
+        resetReadFields(entity);
       },
 
       get hasPendingWrites() {
@@ -3491,6 +3502,14 @@ export interface EntityManagerInternalApi {
 
   /** Whether another flush on this EM would throw FailedFlushError. */
   readonly hasFailedFlush: boolean;
+
+  /**
+   * Makes the next read of each of `entity`'s fields run `beforeGetField` again.
+   *
+   * A plugin that sets `cacheFieldReads` calls this when its answer for the entity may have changed.
+   * Approvals given to trusted callers are kept: they do not depend on the plugin's untrusted policy.
+   */
+  invalidateReadFields(entity: Entity): void;
 
   /** Whether a flush could process pending mutations, regardless of caller visibility. */
   readonly hasPendingWrites: boolean;

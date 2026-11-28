@@ -20,8 +20,16 @@ export class InstanceData {
   rowIndex: number = 0;
   /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
   data: Record<string, any>;
-  /** Present only on visibility-aware entities; untrusted reads never reuse these approvals. */
-  trustedReadFields: number[] | undefined = undefined;
+  /**
+   * The fields a trusted caller has read, as one bit per field read index.
+   *
+   * Only visibility-aware EMs set these. They are kept apart from the entity's `__readFields` words,
+   * which any caller's generated getter trusts, so an approval given to trusted code never lets an
+   * untrusted caller skip its read hooks.
+   */
+  trustedReadFields: number = 0;
+  /** The bits for field read indexes 32 and above; allocated only when such a field is read. */
+  trustedReadFieldsExtra: number[] | undefined = undefined;
   /**
    * The fields whose read hooks are running, as one bit per field read index.
    *

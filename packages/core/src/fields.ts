@@ -14,8 +14,17 @@ type EntityReadWords = Entity & Record<ReadWordName, number>;
 /**
  * Returns the current value of `fieldName`, marking the entity for read locking if the field is configured.
  *
- * Ordinary EMs skip hooks once a field is warm. Visibility-aware EMs
- * check every untrusted read and cache trusted reads separately.
+ * Each entity tracks three sets of field bits, all laid out by field read index:
+ *
+ * - Warm reads, in the entity's `__readFields` words. Generated getters test these inline, so a
+ *   warm field is readable by any caller without running read hooks.
+ * - Trusted reads, in `InstanceData.trustedReadFields`. Visibility-aware EMs record a trusted
+ *   caller's reads here instead, so they never warm a field for an untrusted caller.
+ * - Active reads, in `InstanceData.activeReadFields`, while a field's read hooks are running.
+ *
+ * Ordinary EMs skip hooks once a field is warm. Visibility-aware EMs check every untrusted read,
+ * unless their `beforeGetField` plugins set `cacheFieldReads`; then an approved read stays warm
+ * until the plugin calls `invalidateReadFields`.
  *
  * Install plugins before reading entities; adding one later does not replay cached reads.
  * Generated getters and direct application calls are protected by default. Only ORM
@@ -27,10 +36,23 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
   const index = instanceData.metadata.fieldReadIndexes[fieldName];
   if (typeof index !== "number") fail(`Unknown field ${instanceData.metadata.type}.${fieldName}`);
   // Direct getField calls use the same warm-read fast path as generated getters.
-  if ((getWarmReadWord(entity, instanceData, index >>> 5) & (1 << (index & 31))) !== 0) {
+  if ((getFieldReadWord(entity, index >>> 5) & (1 << (index & 31))) !== 0) {
+    return instanceData.data[fieldName];
+  }
+  // Test the bit first: it is cheaper than the context lookup, and unset for most untrusted reads.
+  if (
+    hasReadField(instanceData.trustedReadFields, instanceData.trustedReadFieldsExtra, index) &&
+    isInTrustedContext()
+  ) {
     return instanceData.data[fieldName];
   }
   return readField(entity, instanceData, fieldName, isInternal, index);
+}
+
+/** Makes the next read of each of `entity`'s fields run its read hooks again; see `invalidateReadFields`. */
+export function resetReadFields(entity: Entity): void {
+  const { fieldReadWordCount } = getInstanceData(entity).metadata;
+  for (let word = 0; word < fieldReadWordCount; word++) setFieldReadWord(entity, word, 0);
 }
 
 /**
@@ -242,9 +264,9 @@ function readField(
   index: number,
 ): any {
   const { em, metadata } = instanceData;
-  // Ordinary EMs pay this check only once, as once its __readFields bit is set, then
+  // EMs that cache reads pay this check only once, as once its __readFields bit is set, then
   // getField/readField is never called on subsequent getter calls.
-  const shouldMarkReadField = runFieldReadHooks(entity, instanceData, fieldName, index);
+  const isOutermostRead = runFieldReadHooks(entity, instanceData, fieldName, index);
 
   const field = metadata.allFields[fieldName];
   if (!isInternal && field?.assertUnchanged) em.assertUnchanged(entity);
@@ -258,8 +280,8 @@ function readField(
   // IDs are always assigned into data.id, so even their unassigned reads can stay warm.
   // Other unset new fields stay cold: inserts may supply defaults later, without a read
   // turning into an explicit `undefined` for defaults/isFieldSet.
-  if (shouldMarkReadField && (fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
-    markWarmRead(entity, instanceData, index);
+  if (isOutermostRead && (fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
+    markReadField(entity, instanceData, index);
   }
   return data[fieldName];
 }
@@ -267,15 +289,7 @@ function readField(
 /**
  * Invokes cold-read hooks without letting a reentrant read authorize the outer read.
  *
- * This function is solely for `beforeGetField` calls and the behavior is:
- *
- * - visibility-aware EMs (i.e. EMs with an AuthPlugin.canViewEntity hook) get to "pretend"
- *   to set the `__readFields` bit all the time, but really we've rewritten `__readFields` to
- *   be a getter that _always returns zero_ for untrusted callers, b/c their auth decision
- *   could always change.
- * - ordinary EMs only conditionally set the `__readFields` bit, because for them it's a real
- *   bit (not a getter), and trusted callers need to leave it unset, so the plugins that are
- *   potentially "early-returning/ignoring all trusted callers" get to see the 1st untrusted call.
+ * Returns false for a reentrant read, i.e. a hook that reads the field it is deciding on.
  */
 function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName: string, index: number): boolean {
   const plugins = getEmInternalApi(instanceData.em).pluginManager;
@@ -295,10 +309,7 @@ function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName
 
   try {
     plugins.beforeGetField(entity, fieldName);
-
-    // Decide whether we can set the __readFields bit, see jsdocs above.
-    const isVisAwareEm = instanceData.trustedReadFields !== undefined;
-    return isVisAwareEm || !isInTrustedContext();
+    return true;
   } catch (error) {
     // A reentrant ID getter may have cached a conversion before the outer hook failed.
     if (fieldName === "id") instanceData.idCache = undefined;
@@ -324,26 +335,31 @@ function markApplicationReadField(entity: Entity, index: number, read: boolean):
 }
 
 /**
- * Reads the warm-read word that a generated getter would see for the current caller.
+ * Records a successful read, so that later reads by a caller it is safe for can skip the hooks.
  *
- * Visibility-aware entities replace their `__readFields` words with accessors. Read their state
- * directly: a keyed access to an accessor is far slower than these checks, and untrusted callers
- * pay it on every field read because their reads never stay warm.
+ * - An untrusted caller's read warms the field for everyone, if the EM caches untrusted reads.
+ *   Ordinary EMs always do. Visibility-aware EMs only do when their plugins promise to invalidate,
+ *   and never for a new entity: a policy for unsaved data usually differs from the one that applies
+ *   once the row exists, and no plugin hook marks the moment an entity stops being new.
+ * - A trusted caller's read is never warmed for everyone. Plugins usually approve trusted reads
+ *   without checking them, so the first untrusted read must still reach the hooks. Visibility-aware
+ *   EMs remember it for later trusted callers; ordinary EMs leave it cold, as they always have.
  */
-function getWarmReadWord(entity: Entity, instanceData: InstanceData, word: number): number {
-  const trusted = instanceData.trustedReadFields;
-  if (trusted === undefined) return getFieldReadWord(entity, word);
-  return isInTrustedContext() ? (trusted[word] ?? 0) : 0;
-}
-
-/** Publishes a successful read's warm bit; an untrusted read on a visibility-aware entity has none to publish. */
-function markWarmRead(entity: Entity, instanceData: InstanceData, index: number): void {
-  const trusted = instanceData.trustedReadFields;
-  if (trusted === undefined) {
+function markReadField(entity: Entity, instanceData: InstanceData, index: number): void {
+  const plugins = getEmInternalApi(instanceData.em).pluginManager;
+  const isVisibilityAware = plugins.hasHook("canViewEntity");
+  if (plugins.hasHook("beforeGetField") && isInTrustedContext()) {
+    if (!isVisibilityAware) return;
+    const bit = 1 << (index & 31);
+    const extraWord = (index >>> 5) - 1;
+    if (extraWord < 0) {
+      instanceData.trustedReadFields |= bit;
+    } else {
+      const extra = (instanceData.trustedReadFieldsExtra ??= []);
+      extra[extraWord] = (extra[extraWord] ?? 0) | bit;
+    }
+  } else if (plugins.cachesUntrustedReads && !(isVisibilityAware && instanceData.isNewEntity)) {
     markApplicationReadField(entity, index, true);
-  } else if (isInTrustedContext()) {
-    const word = index >>> 5;
-    trusted[word] = (trusted[word] ?? 0) | (1 << (index & 31));
   }
 }
 

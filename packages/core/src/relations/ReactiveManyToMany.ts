@@ -1,5 +1,4 @@
 import { manyToManyBatchLoader } from "src/batchloaders/manyToManyBatchLoader.ts";
-import { checkBeforeGetField } from "src/fields.ts";
 import {
   type Entity,
   type EntityMetadata,
@@ -348,26 +347,45 @@ class PluginReactiveManyToMany<
   U extends Entity,
   H extends ReactiveHint<T>,
 > extends ReactiveManyToManyImpl<T, U, H> {
+  /** Whether this collection's read hook is running, to stop a reentrant read from rerunning it. */
+  #isCheckingRead = false;
+
   override get get(): U[] {
-    checkBeforeGetField(this.entity, this.fieldName);
+    this.#checkBeforeGet();
     const members = runInTrustedContext(() => super.get);
     return visibleMembers(this.entity, members);
   }
 
   override get getWithDeleted(): U[] {
-    checkBeforeGetField(this.entity, this.fieldName);
+    this.#checkBeforeGet();
     const members = runInTrustedContext(() => super.getWithDeleted);
     return visibleMembers(this.entity, members);
   }
 
   override async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
-    checkBeforeGetField(this.entity, this.fieldName);
+    this.#checkBeforeGet();
     const members = await runInTrustedContext(() => super.load(opts));
     return visibleMembers(this.entity, members);
   }
 
   override get isLoaded(): boolean {
     return runInTrustedContext(() => super.isLoaded);
+  }
+
+  /**
+   * Checks the caller's access to this collection before trusted code calculates its membership.
+   *
+   * A collection has no column, and so no field read index for `checkBeforeGetField` to track
+   * reentrancy by. This relation is already one object per entity and field, so it holds the flag.
+   */
+  #checkBeforeGet(): void {
+    if (this.#isCheckingRead) return;
+    this.#isCheckingRead = true;
+    try {
+      getEmInternalApi(this.entity.em).pluginManager.beforeGetField(this.entity, this.fieldName);
+    } finally {
+      this.#isCheckingRead = false;
+    }
   }
 }
 

@@ -27,7 +27,7 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
   const index = instanceData.metadata.fieldReadIndexes[fieldName];
   if (typeof index !== "number") fail(`Unknown field ${instanceData.metadata.type}.${fieldName}`);
   // Direct getField calls use the same warm-read fast path as generated getters.
-  if ((getFieldReadWord(entity, index >>> 5) & (1 << (index & 31))) !== 0) {
+  if ((getWarmReadWord(entity, instanceData, index >>> 5) & (1 << (index & 31))) !== 0) {
     return instanceData.data[fieldName];
   }
   return readField(entity, instanceData, fieldName, isInternal, index);
@@ -38,7 +38,10 @@ export function getField(entity: Entity, fieldName: string, isInternal = false):
  * without reading or caching its value.
  */
 export function checkBeforeGetField(entity: Entity, field: string): void {
-  runFieldReadHooks(entity, getInstanceData(entity), field);
+  const instanceData = getInstanceData(entity);
+  const index = instanceData.metadata.fieldReadIndexes[field];
+  if (typeof index !== "number") fail(`Unknown field ${instanceData.metadata.type}.${field}`);
+  runFieldReadHooks(entity, instanceData, field, index);
 }
 
 /** Reads stored state for ORM bookkeeping without authorizing or warming a public read. */
@@ -241,7 +244,7 @@ function readField(
   const { em, metadata } = instanceData;
   // Ordinary EMs pay this check only once, as once its __readFields bit is set, then
   // getField/readField is never called on subsequent getter calls.
-  const shouldMarkReadField = runFieldReadHooks(entity, instanceData, fieldName);
+  const shouldMarkReadField = runFieldReadHooks(entity, instanceData, fieldName, index);
 
   const field = metadata.allFields[fieldName];
   if (!isInternal && field?.assertUnchanged) em.assertUnchanged(entity);
@@ -256,7 +259,7 @@ function readField(
   // Other unset new fields stay cold: inserts may supply defaults later, without a read
   // turning into an explicit `undefined` for defaults/isFieldSet.
   if (shouldMarkReadField && (fieldName === "id" || fieldName in data) && (!isInternal || !field?.assertUnchanged)) {
-    markApplicationReadField(entity, index, true);
+    markWarmRead(entity, instanceData, index);
   }
   return data[fieldName];
 }
@@ -274,13 +277,22 @@ function readField(
  *   bit (not a getter), and trusted callers need to leave it unset, so the plugins that are
  *   potentially "early-returning/ignoring all trusted callers" get to see the 1st untrusted call.
  */
-function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName: string): boolean {
+function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName: string, index: number): boolean {
   const plugins = getEmInternalApi(instanceData.em).pluginManager;
   if (!plugins.hasHook("beforeGetField")) return true;
 
-  if (instanceData.activeReadFields?.has(fieldName)) return false;
-  const active = (instanceData.activeReadFields ??= new Set<string>());
-  active.add(fieldName);
+  // Most entity types have fewer than 32 fields, so their active bits fit in the first word.
+  const bit = 1 << (index & 31);
+  const extraWord = (index >>> 5) - 1;
+  if (extraWord < 0) {
+    if ((instanceData.activeReadFields & bit) !== 0) return false;
+    instanceData.activeReadFields |= bit;
+  } else {
+    const extra = (instanceData.activeReadFieldsExtra ??= []);
+    if (((extra[extraWord] ?? 0) & bit) !== 0) return false;
+    extra[extraWord] = (extra[extraWord] ?? 0) | bit;
+  }
+
   try {
     plugins.beforeGetField(entity, fieldName);
 
@@ -292,7 +304,8 @@ function runFieldReadHooks(entity: Entity, instanceData: InstanceData, fieldName
     if (fieldName === "id") instanceData.idCache = undefined;
     throw error;
   } finally {
-    active.delete(fieldName);
+    if (extraWord < 0) instanceData.activeReadFields &= ~bit;
+    else instanceData.activeReadFieldsExtra![extraWord] &= ~bit;
   }
 }
 
@@ -308,6 +321,30 @@ function markApplicationReadField(entity: Entity, index: number, read: boolean):
   const word = index >>> 5;
   const value = getFieldReadWord(entity, word);
   setFieldReadWord(entity, word, read ? value | bit : value & ~bit);
+}
+
+/**
+ * Reads the warm-read word that a generated getter would see for the current caller.
+ *
+ * Visibility-aware entities replace their `__readFields` words with accessors. Read their state
+ * directly: a keyed access to an accessor is far slower than these checks, and untrusted callers
+ * pay it on every field read because their reads never stay warm.
+ */
+function getWarmReadWord(entity: Entity, instanceData: InstanceData, word: number): number {
+  const trusted = instanceData.trustedReadFields;
+  if (trusted === undefined) return getFieldReadWord(entity, word);
+  return isInTrustedContext() ? (trusted[word] ?? 0) : 0;
+}
+
+/** Publishes a successful read's warm bit; an untrusted read on a visibility-aware entity has none to publish. */
+function markWarmRead(entity: Entity, instanceData: InstanceData, index: number): void {
+  const trusted = instanceData.trustedReadFields;
+  if (trusted === undefined) {
+    markApplicationReadField(entity, index, true);
+  } else if (isInTrustedContext()) {
+    const word = index >>> 5;
+    trusted[word] = (trusted[word] ?? 0) | (1 << (index & 31));
+  }
 }
 
 /** Reads the same warm-read words used by generated getters. */

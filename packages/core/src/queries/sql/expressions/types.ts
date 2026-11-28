@@ -56,13 +56,11 @@ export type ExpressionValue<V, J extends QueryJoinList> = unknown extends V
             ? ExpressionValue<ExprArgs<V>[0], J> | null
             : V extends { readonly coalesce: readonly unknown[] }
               ? CoalesceValue<ExprArgs<V>, J>
-              :
-                  | Exclude<ExpressionValue<ExprArgs<V>[number], J>, null>
-                  | (null extends CoalesceValue<ExprArgs<V>, J> ? null : never)
+              : | Exclude<ExpressionValue<ExprArgs<V>[number], J>, null>
+                | (null extends CoalesceValue<ExprArgs<V>, J> ? null : never)
           : V extends { readonly case: infer A }
-            ?
-                | ExpressionValue<CaseArmValue<A>, J>
-                | (A extends readonly [...unknown[], { readonly else: unknown }] ? never : null)
+            ? | ExpressionValue<CaseArmValue<A>, J>
+              | (A extends readonly [...unknown[], { readonly else: unknown }] ? never : null)
             : WidenLiteral<V>;
 
 /** Turns literal types such as "Alice" and 18 into string and number, including array elements. */
@@ -103,9 +101,8 @@ type BranchResult<V> = unknown extends V
 type CoalesceValue<A extends readonly unknown[], J extends QueryJoinList> = A extends readonly [infer H, ...infer T]
   ? Exclude<ExpressionValue<H, J>, null> | (null extends ExpressionValue<H, J> ? CoalesceValue<T, J> : never)
   : A extends readonly [...infer Before, infer Last]
-    ?
-        | Exclude<ExpressionValue<A[number], J>, null>
-        | (null extends ExpressionValue<Last, J> ? (null extends CoalesceValue<Before, J> ? null : never) : never)
+    ? | Exclude<ExpressionValue<A[number], J>, null>
+      | (null extends ExpressionValue<Last, J> ? (null extends CoalesceValue<Before, J> ? null : never) : never)
     : ExpressionValue<A[number], J> | null;
 
 /** Conditions affect which value is chosen, but do not make that value nullable through a LEFT join. */

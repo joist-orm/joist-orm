@@ -104,25 +104,24 @@ function getTestId(_: EntityManager, entity: Entity): string {
 export type MatchedEntity<T> =
   T extends ReadonlyArray<infer U>
     ? ReadonlyArray<MatchedEntity<U>>
-    :
-        | undefined
-        | T
-        | {
-            [K in keyof T]?: T[K] extends Reference<any, infer U, any>
-              ? MatchedEntity<U> | U
-              : T[K] extends ReadOnlyCollection<any, infer U>
-                ? Array<MatchedEntity<U> | U>
-                : T[K] extends Property<any, infer V>
-                  ? V
-                  : T[K] extends Entity | null | undefined
-                    ? MatchedEntity<T[K]> | T[K] | null | undefined
-                    : T[K] extends ReadonlyArray<(infer U) | undefined>
-                      ? readonly (MatchedEntity<U> | U | undefined)[]
-                      : T[K] extends ReadonlyArray<infer U> | null
-                        ? readonly (MatchedEntity<U> | U | null)[]
-                        : // We recurse similar to a DeepPartial
-                          MatchedEntity<T[K]> | null;
-          };
+    : | undefined
+      | T
+      | {
+          [K in keyof T]?: T[K] extends Reference<any, infer U, any>
+            ? MatchedEntity<U> | U
+            : T[K] extends ReadOnlyCollection<any, infer U>
+              ? Array<MatchedEntity<U> | U>
+              : T[K] extends Property<any, infer V>
+                ? V
+                : T[K] extends Entity | null | undefined
+                  ? MatchedEntity<T[K]> | T[K] | null | undefined
+                  : T[K] extends ReadonlyArray<(infer U) | undefined>
+                    ? readonly (MatchedEntity<U> | U | undefined)[]
+                    : T[K] extends ReadonlyArray<infer U> | null
+                      ? readonly (MatchedEntity<U> | U | null)[]
+                      : // We recurse similar to a DeepPartial
+                        MatchedEntity<T[K]> | null;
+        };
 
 /**
  * Make a "new actual" based on the subset shape of expected.

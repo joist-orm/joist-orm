@@ -2053,10 +2053,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   delete(entities: Entity[]): void;
   delete(entityOrArray: Entity | Entity[]): void {
+    const entities = toArray(entityOrArray);
+    // Notify plugins in the caller's context, before the trusted re-entry below, and before marking any
+    // entity so that a plugin can deny the whole call by throwing.
+    const { pluginManager } = getEmInternalApi(this);
+    for (const entity of entities) if (!entity.isDeletedEntity) pluginManager.beforeDelete(entity);
     if (this.#hasVisibilityHook && !isInTrustedContext()) {
-      return runInTrustedContext(() => this.delete(toArray(entityOrArray)));
+      return runInTrustedContext(() => this.#doDelete(entities));
     }
-    for (const entity of toArray(entityOrArray)) {
+    this.#doDelete(entities);
+  }
+
+  /** Marks `entities` deleted and queues their cascades, after plugins have approved them. */
+  #doDelete(entities: Entity[]): void {
+    for (const entity of entities) {
       // Early return if already deleted.
       const alreadyMarked = getInstanceData(entity).markDeleted();
       if (!alreadyMarked) continue;
@@ -2064,8 +2074,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#hasAnyDeletes = true;
       // Any derived fields that read this entity will need recalc-d
       this.#rm.queueAllDownstreamFields(entity, "deleted");
-      // Synchronously unhook the entity if the relations are loaded
-      getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
+      // Synchronously unhook the entity if the relations are loaded. Cascades are Joist's work, not the caller's,
+      // so run them trusted, the same as the flush-time cascades, so plugins see them as trusted deletes.
+      const cascades = getCascadeDeleteRelations(entity);
+      if (cascades.length > 0 && !isInTrustedContext()) {
+        runInTrustedContext(() => cascades.forEach((r) => r.maybeCascadeDelete()));
+      } else {
+        cascades.forEach((r) => r.maybeCascadeDelete());
+      }
       // And queue the cascade deletes
       this.#pendingDeletes.push(entity);
     }

@@ -871,6 +871,74 @@ describe("EntityManager.plugins", () => {
       expect(plugin.calls).toEqual([]);
     });
   });
+
+  describe("beforeDelete", () => {
+    it.withCtx("runs once for a direct delete", async (ctx) => {
+      // Given a tag exists
+      const tag = ctx.em.create(Tag, { name: "t1" });
+      // And a plugin observes deletions
+      const plugin = new BeforeDeletePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller deletes the tag twice
+      ctx.em.delete(tag);
+      ctx.em.delete(tag);
+      // Then the plugin sees one untrusted deletion
+      expect(plugin.calls).toMatchEntity([{ entity: tag, trusted: false }]);
+    });
+
+    it.withCtx("can deny a delete by throwing", async (ctx) => {
+      // Given two tags exist
+      const [t1, t2] = [ctx.em.create(Tag, { name: "t1" }), ctx.em.create(Tag, { name: "t2" })];
+      // And a plugin denies deleting t2
+      ctx.em.addPlugin(
+        new (class extends Plugin {
+          beforeDelete(entity: Entity): void {
+            if (entity === t2) throw new Error("Cannot delete t2");
+          }
+        })(),
+      );
+      // When the caller deletes both tags
+      expect(() => ctx.em.delete([t1, t2])).toThrow("Cannot delete t2");
+      // Then neither tag is deleted
+      expect(ctx.em.getEntities(Tag).filter((t) => t.isDeletedEntity)).toEqual([]);
+    });
+
+    it.withCtx("sees cascaded deletes", async (ctx) => {
+      // Given an author with a book
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const a1 = await ctx.em.load(Author, "a:1", "books");
+      const [b1] = a1.books.get;
+      // And a plugin observes deletions
+      const plugin = new BeforeDeletePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller deletes the author
+      ctx.em.delete(a1);
+      // Then the plugin sees the author and its trusted cascaded book
+      expect(plugin.calls).toMatchEntity([
+        { entity: a1, trusted: false },
+        { entity: b1, trusted: true },
+      ]);
+    });
+
+    it.withCtx("sees cascaded deletes of unloaded relations during flush", async (ctx) => {
+      // Given an author with a book that is not loaded
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const a1 = await ctx.em.load(Author, "a:1");
+      // And a plugin observes deletions
+      const plugin = new BeforeDeletePlugin();
+      ctx.em.addPlugin(plugin);
+      // When the caller deletes the author and flushes
+      ctx.em.delete(a1);
+      await ctx.em.flush();
+      // Then the plugin sees the author and then its trusted cascaded book
+      expect(plugin.calls).toMatchEntity([
+        { entity: a1, trusted: false },
+        { entity: "b:1", trusted: true },
+      ]);
+    });
+  });
 });
 
 /** Records reads without accessing any entity getters from the callback. */
@@ -912,6 +980,15 @@ class BeforeCreatePlugin extends Plugin {
   readonly calls: { entity: Entity; trusted: boolean }[] = [];
 
   beforeCreate(entity: Entity): void {
+    this.calls.push({ entity, trusted: isInTrustedContext() });
+  }
+}
+
+/** Records each deletion in the context that initiated it. */
+class BeforeDeletePlugin extends Plugin {
+  readonly calls: { entity: Entity; trusted: boolean }[] = [];
+
+  beforeDelete(entity: Entity): void {
     this.calls.push({ entity, trusted: isInTrustedContext() });
   }
 }

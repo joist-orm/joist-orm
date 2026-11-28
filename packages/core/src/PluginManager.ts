@@ -23,6 +23,12 @@ interface PluginMethods {
   beforeCreate?(entity: Entity): void;
 
   /**
+   * Runs synchronously when an entity is first marked deleted, before any cascade or unhooking. Throw to deny.
+   * Use `isInTrustedContext()` to distinguish direct deletes from deletes inside callbacks such as cascades.
+   */
+  beforeDelete?(entity: Entity): void;
+
+  /**
    * Checks read access to this field on this entity. Throw to deny access.
    * On visibility-aware EMs, every untrusted read is checked. Trusted reads can reuse an earlier
    * successful check for the same field on the same entity, but untrusted reads cannot.
@@ -110,6 +116,7 @@ const syncPluginMethods = [
   "canViewEntity",
   "canReadField",
   "beforeCreate",
+  "beforeDelete",
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
@@ -243,6 +250,7 @@ export class PluginManager implements Required<PluginMethods> {
   // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
 
   beforeCreate(entity: Entity): void {}
+  beforeDelete(entity: Entity): void {}
   beforeGetField(entity: Entity, field: string): void {}
   beforeQuery(query: ParsedReadQuery): void {}
   afterQuery(query: ParsedReadQuery, rows: RowData): void {}

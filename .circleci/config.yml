@@ -108,7 +108,7 @@ jobs:
           condition:
             and:
               - equal: [release, << pipeline.git.branch >>]
-              - equal: ["24", << parameters.node-version >>]
+              - equal: ["26", << parameters.node-version >>]
           steps:
             - run:
                 name: Release

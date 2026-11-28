@@ -17940,16 +17940,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^6.12.0":
-  version: 6.12.0
-  resolution: "ts-poet@npm:6.12.0"
-  dependencies:
-    dprint-node: "npm:^1.0.8"
-  checksum: 10/0b0c2802625f2ecb3341abce998dd4c5797d16656871202c790a1dc8ca154c4ab923cee8cba816d00764766bd2c1a5d11517c0d21ce77819f174ba78e2aa732d
-  languageName: node
-  linkType: hard
-
-"ts-poet@npm:^6.12.1":
+"ts-poet@npm:^6.12.0, ts-poet@npm:^6.12.1":
   version: 6.12.1
   resolution: "ts-poet@npm:6.12.1"
   dependencies:

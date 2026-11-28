@@ -665,22 +665,28 @@ export function parseFindQuery(
           order: value as OrderBy,
         });
       } else if (field.kind === "m2o") {
-        // Do we already this table joined in?
-        let table = tables.find((t) => t.table === field.otherMetadata().tableName);
-        if (table) {
-          addTablePerClassJoinsAndClassTag(query, field.otherMetadata(), table.alias, false);
-          addOrderBy(field.otherMetadata(), table.alias, value);
+        const column = field.serde.columns[0].columnName;
+        const fa = getMaybeCtiAlias(meta, field, meta, alias);
+        const fk = kqDot(fa, column);
+        // Do we already have this relation joined in? Match the FK, not only the table: the same table can
+        // be the primary table (i.e. `Author.mentor`) or joined through another m2o (i.e. `Book.author`
+        // when ordering by `Book.reviewer`).
+        const joined = tables.find(
+          (t) =>
+            (t.join === "inner" || t.join === "outer") && t.table === field.otherMetadata().tableName && t.col1 === fk,
+        );
+        if (joined) {
+          addTablePerClassJoinsAndClassTag(query, field.otherMetadata(), joined.alias, false);
+          addOrderBy(field.otherMetadata(), joined.alias, value);
         } else {
           const table = field.otherMetadata().tableName;
           const a = getAlias(table);
-          const column = field.serde.columns[0].columnName;
-          const fa = getMaybeCtiAlias(meta, field, meta, alias);
           // If we don't have a join, don't force this to be an inner join
           tables.push({
             alias: a,
             table,
             join: "outer",
-            col1: kqDot(fa, column),
+            col1: fk,
             col2: kqDot(a, "id"),
             distinct: false,
           });

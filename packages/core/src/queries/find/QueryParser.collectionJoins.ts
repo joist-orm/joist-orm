@@ -520,7 +520,10 @@ function collectAllAliases(cond: ParsedExpressionCondition, out: Set<string>): v
   } else if (cond.kind === "exp") {
     for (const c of cond.conditions) collectAllAliases(c, out);
   } else if (cond.kind === "exists") {
-    // I.e. an EXISTS subquery is already a scoped unit; outer movement decisions should not inspect its internals.
+    // An EXISTS subquery is already a scoped unit, so outer movement decisions do not inspect its internals.
+    // But its correlation reads the outer aliases: if one of those is a collection join that becomes its
+    // own EXISTS, this condition must move with it, i.e. a plugin's `EXISTS (... WHERE br.book_id = b.id)`.
+    for (const a of cond.outerAliases) out.add(a);
   } else {
     assertNever(cond);
   }
